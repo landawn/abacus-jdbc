@@ -286,7 +286,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record matches the condition
      */
     @Override
     Optional<T> findOnlyOne(final Condition cond) throws UncheckedSQLException, DuplicateResultException;
@@ -310,7 +310,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -336,7 +336,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -362,7 +362,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record matches the condition
      */
     @Override
     Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException, DuplicateResultException;
@@ -388,7 +388,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -417,7 +417,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -845,7 +845,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record matches the condition
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
     @Override
@@ -876,7 +876,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record matches the condition
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
@@ -906,7 +906,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record is found
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @see #queryForUniqueNonNull(String, Condition, Class)
@@ -1614,6 +1614,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * <p><b>WARNING:</b> Do not store or cache the array parameter passed to the consumer, as it is
      * reused for every row. Process the values immediately within the consumer.</p>
      *
+     * <p>A {@link RuntimeException} thrown by {@code rowConsumer} propagates to the caller and ends the
+     * iteration; the statement and result set are still closed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.foreach(
@@ -1628,7 +1631,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
-     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
+     *         its result fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1649,6 +1652,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * <p><b>WARNING:</b> Do not store or cache the array parameter passed to the consumer, as it is
      * reused for every row. Process the values immediately within the consumer.</p>
      *
+     * <p>A {@link RuntimeException} thrown by {@code rowConsumer} propagates to the caller and ends the
+     * iteration; the statement and result set are still closed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * userDao.foreach(
@@ -1661,7 +1667,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
-     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
+     *         its result fails
      */
     @SuppressWarnings("deprecation")
     @Beta

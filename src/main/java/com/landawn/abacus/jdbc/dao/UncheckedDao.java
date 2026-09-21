@@ -85,7 +85,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -98,7 +98,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -126,7 +126,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty,
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -139,7 +140,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty,
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -152,7 +154,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty,
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -165,7 +168,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null},
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -178,7 +182,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnIndexes} is {@code null} or empty,
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -191,7 +196,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnNames} is {@code null} or empty,
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -204,7 +210,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or {@code stmtCreator} is {@code null},
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
      *         throws {@link SQLException}
      */
@@ -219,7 +226,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or {@code stmtCreator} is {@code null}
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or {@code stmtCreator} is {@code null},
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
      *         throws {@link SQLException}
      */
@@ -275,9 +283,10 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @param entity the entity to insert or update
      * @param matchPropNames the list of property names that uniquely identify the record
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
-     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
+     *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws DuplicateResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
      * @see #upsert(Object, Condition)
      */
     @Override

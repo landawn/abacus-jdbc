@@ -142,6 +142,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *
      * @param entities the collection of entities to update
      * @return the total number of rows updated
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
@@ -167,6 +169,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows updated
      * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
@@ -191,6 +195,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param propNamesToUpdate the property names to update for all entities (must not be {@code null} or empty)
      * @return the total number of rows updated
      * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
@@ -220,6 +226,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows updated
      * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}

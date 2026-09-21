@@ -127,6 +127,13 @@ public @interface Transactional {
      *   <li>{@link Propagation#NEVER} - Execute non-transactionally, fail if transaction exists</li>
      * </ul>
      *
+     * <p>The two context-demanding policies are enforced at <em>invocation</em> time, before the method
+     * body runs, and both report an {@link IllegalStateException}: {@link Propagation#MANDATORY} when the
+     * calling thread has no active transaction on the DAO's {@code DataSource}, and
+     * {@link Propagation#NEVER} when it does. A stream-returning method combined with a propagation other
+     * than {@link Propagation#SUPPORTS}/{@link Propagation#MANDATORY} is instead rejected at DAO
+     * initialization with {@code UnsupportedOperationException} (see the type-level documentation).</p>
+     *
      * <p>Example scenarios:</p>
      * <pre>{@code
      * // Main business operation - needs transaction

@@ -283,6 +283,36 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
+    @Tag("2025")
+    public void testExportCsvFromResultSet_NullOutputIsRejectedBeforeReadingMetadata() throws SQLException {
+        // The output check is free; resolveExportColumnNames() is a driver metadata round-trip, so the cheap
+        // argument check must come first.
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.exportCsv(mockResultSet, Arrays.asList("col1"), (File) null));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.exportCsv(mockResultSet, Arrays.asList("col1"), (Writer) null));
+
+        verify(mockResultSet, never()).getMetaData();
+    }
+
+    @Test
+    @Tag("2025")
+    public void testImportBuilderNullTargetDataSourceIsRejectedByItsDeclaredParameterName() {
+        // JdbcUtil.getConnection(ds) would also reject it, but its message names 'ds'; the builder must name
+        // the parameter the caller actually passed.
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
+
+        final DataTransferUtil.DatasetImportBuilder datasetBuilder = DataTransferUtil.importFrom(mockDataset).columns(List.of("col1"));
+        IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> datasetBuilder.to((DataSource) null, "INSERT INTO test VALUES (?)"));
+        assertTrue(failure.getMessage().contains("targetDataSource"), failure.getMessage());
+
+        final DataTransferUtil.RowImportBuilder<String> rowBuilder = DataTransferUtil.importFrom(List.of("row").iterator())
+                .parameterSetter((query, row) -> {
+                });
+        failure = assertThrows(IllegalArgumentException.class, () -> rowBuilder.to((DataSource) null, "INSERT INTO test VALUES (?)"));
+        assertTrue(failure.getMessage().contains("targetDataSource"), failure.getMessage());
+    }
+
+    @Test
     public void testImportDataColumnTypeMapInvalidKeyIsRejectedEvenForEmptyDataset() throws SQLException {
         // Regression: a columnTypeMap key that is not a column of the dataset must be rejected per the documented
         // contract (@throws IllegalArgumentException), even when the dataset is empty. Previously the validation

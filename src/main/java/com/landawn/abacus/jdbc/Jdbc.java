@@ -1022,7 +1022,9 @@ public final class Jdbc {
          * within each primary entity.
          *
          * <p>This method assumes the {@code targetClass} has identifiable ID properties (e.g., annotated
-         * with {@code @Id}).</p>
+         * with {@code @Id}). The ID selection is resolved when the returned extractor is applied, so an
+         * {@code IllegalArgumentException} is raised then - not by this method - when no ID property can be
+         * inferred or an inferred ID column is missing from the result set.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -2235,6 +2237,10 @@ public final class Jdbc {
          * <p>Each terminal operation snapshots the builder's configured getters. The builder may therefore
          * be reused or changed to create another mapper without altering mappers that were already built.</p>
          *
+         * <p>Every mapper built here resolves the snapshotted getters against the {@code ResultSet}'s column count
+         * on its first row, so the mapper's {@code apply} method throws an {@link IllegalArgumentException} if a
+         * configured column index exceeds that count.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowMapper<Map<String, Object>> mapper = RowMapper.builder()
@@ -2258,7 +2264,7 @@ public final class Jdbc {
              * This getter will be applied to any column index for which a specific getter has not been configured.
              *
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
-            * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
+             * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
             RowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
@@ -4208,6 +4214,11 @@ public final class Jdbc {
          * <p>Calling a terminal {@code to(...)} operation snapshots the configured getters. Later changes
          * to this builder affect only mappers built afterward.</p>
          *
+         * <p>Every mapper built here resolves the snapshotted getters against the {@code ResultSet}'s column labels
+         * on its first row, matching a configured name case-insensitively when no exact-case match exists, so the
+         * mapper's {@code apply} method throws an {@link IllegalArgumentException} if a configured column name is not
+         * among the result columns.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiRowMapper<User> userMapper = BiRowMapper.builder()
@@ -4233,7 +4244,7 @@ public final class Jdbc {
              * This getter will be applied to any column name for which a specific getter has not been configured.
              *
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
-            * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
+             * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
             BiRowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
@@ -4508,7 +4519,7 @@ public final class Jdbc {
              * @param <T> target type
              * @param targetClass the class to map rows to
              * @return a new stateful {@code BiRowMapper<T>}
-            * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+             * @throws IllegalArgumentException if {@code targetClass} is {@code null}
              */
             @SequentialOnly
             @Stateful
@@ -4533,7 +4544,7 @@ public final class Jdbc {
              * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property are silently skipped;
              * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column (for bean target classes)
              * @return a new stateful {@code BiRowMapper<T>}
-            * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+             * @throws IllegalArgumentException if {@code targetClass} is {@code null}
              */
             @SequentialOnly
             @Stateful
@@ -4746,7 +4757,7 @@ public final class Jdbc {
          * Performs this operation on the given {@code ResultSet}.
          *
          * @param rs the {@code ResultSet} positioned at the current row to be consumed.
-         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
+         * @throws SQLException if reading a column value of the current row, or the result set metadata needed to locate it, fails.
          */
         @Override
         void accept(ResultSet rs) throws SQLException;
@@ -4984,7 +4995,7 @@ public final class Jdbc {
          *
          * @param rs the {@code ResultSet} positioned at the current row to be consumed.
          * @param columnLabels the list of column labels from the result set metadata.
-         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
+         * @throws SQLException if reading a column value of the current row fails.
          */
         @Override
         void accept(ResultSet rs, List<String> columnLabels) throws SQLException;
@@ -5406,7 +5417,7 @@ public final class Jdbc {
          * @param outputRow the array to be populated with data from the current row; must not be {@code null}
          * @throws IllegalArgumentException if a built-in extractor receives a null or undersized output array,
          *         or a builder-configured column index exceeds the result set's column count
-         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
+         * @throws SQLException if reading the current row's column values, or the result set metadata needed to map them, fails.
          */
         @Override
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
@@ -5421,7 +5432,7 @@ public final class Jdbc {
          *
          * @param entityClassForFetch the entity class whose properties guide the type mapping.
          * @return a new stateful {@code RowExtractor}.
-         * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null} or is not a bean class with getter/setter methods.
          */
         @SequentialOnly
         @Stateful
@@ -5439,7 +5450,7 @@ public final class Jdbc {
          * @param entityClassForFetch the entity class for type mapping.
          * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code RowExtractor}.
-         * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null} or is not a bean class with getter/setter methods.
          */
         @SequentialOnly
         @Stateful
@@ -5457,7 +5468,7 @@ public final class Jdbc {
          * @param entityClassForFetch the entity class for type mapping.
          * @param columnLabels the explicit list of column labels to use for mapping.
          * @return a new stateful {@code RowExtractor}.
-         * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null} or is not a bean class with getter/setter methods.
          */
         @SequentialOnly
         @Stateful
@@ -5485,7 +5496,7 @@ public final class Jdbc {
          * @param columnLabels an optional list of column labels to use for mapping. If {@code null} or empty, they are discovered from the {@code ResultSet}.
          * @param prefixAndPropNameMap an optional map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code RowExtractor}.
-         * @throws IllegalArgumentException if {@code entityClassForFetch} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null} or is not a bean class with getter/setter methods.
          */
         @SequentialOnly
         @Stateful
@@ -5644,7 +5655,7 @@ public final class Jdbc {
              * This getter will be applied to any column index for which a specific getter has not been configured.
              *
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
-            * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
+             * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
             RowExtractorBuilder(final ColumnGetter<?> defaultColumnGetter) {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
@@ -6055,7 +6066,7 @@ public final class Jdbc {
          * @param rs the {@code ResultSet} to extract from.
          * @param columnIndex the 1-based index of the column.
          * @return the extracted value of type {@code V}.
-         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
+         * @throws SQLException if reading the value of column {@code columnIndex} in the current row fails, e.g. the index is invalid or the value cannot be converted.
          */
         V get(ResultSet rs, int columnIndex) throws SQLException;
 
@@ -6471,6 +6482,11 @@ public final class Jdbc {
              * Creates a {@code RowMapper} that reads a JSON string from the first column and deserializes it
              * into an object of the specified target type.
              *
+             * <p>Deserialization happens when the returned mapper is applied, not when this method is called:
+             * the mapper propagates a {@code ParsingException} if the first column's text is not valid JSON for
+             * {@code targetType}, and an {@code UncheckedIOException} if a delegated value reader reports an
+             * I/O failure while materializing a value.</p>
+             *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * // Assumes column 1 contains a JSON string like '{"id":1, "name":"John"}'
@@ -6492,6 +6508,11 @@ public final class Jdbc {
             /**
              * Creates a {@code RowMapper} that reads an XML string from the first column and deserializes it
              * into an object of the specified target type.
+             *
+             * <p>Deserialization happens when the returned mapper is applied, not when this method is called:
+             * the mapper propagates a {@code ParsingException} if the first column's text is not valid XML for
+             * {@code targetType}, and an {@code UncheckedIOException} if a delegated value reader reports an
+             * I/O failure while materializing a value.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code

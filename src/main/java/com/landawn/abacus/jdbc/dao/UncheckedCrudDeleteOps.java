@@ -90,7 +90,10 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities to delete
      * @return the total number of rows deleted
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
@@ -114,7 +117,10 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
      * @throws IllegalArgumentException if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
@@ -133,7 +139,10 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param ids the collection of IDs to delete
      * @return the total number of rows deleted
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
@@ -157,7 +166,10 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
      * @throws IllegalArgumentException if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override

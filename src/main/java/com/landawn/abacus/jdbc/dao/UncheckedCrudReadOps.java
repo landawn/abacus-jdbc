@@ -447,7 +447,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
 
     /**
      * Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.
-     * Throws {@link DuplicateResultException} if more than one record is found.
+     * Throws {@link DuplicateResultException} if more than one record matches the given {@code id}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -464,7 +464,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
     @Override
@@ -473,7 +473,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
 
     /**
      * Returns an {@code Optional} describing the unique non-null value of a single property for the entity with the specified ID.
-     * Throws {@link DuplicateResultException} if more than one record is found.
+     * Throws {@link DuplicateResultException} if more than one record matches the given {@code id}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -492,7 +492,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
@@ -501,7 +501,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
 
     /**
      * Returns an {@code Optional} describing the unique non-null value mapped by the row mapper for the entity with the specified ID.
-     * Throws {@link DuplicateResultException} if more than one record is found.
+     * Throws {@link DuplicateResultException} if more than one record matches the given {@code id}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -520,7 +520,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @see #queryForUniqueNonNull(String, Object, Class)
@@ -545,7 +545,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Override
     default Optional<T> get(final ID id) throws UncheckedSQLException, DuplicateResultException {
@@ -569,7 +569,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws UncheckedSQLException, DuplicateResultException {
@@ -594,7 +594,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Override
     T getOrNull(final ID id) throws UncheckedSQLException, DuplicateResultException;
@@ -619,7 +619,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Override
     T getOrNull(final ID id, final Collection<String> selectPropNames) throws UncheckedSQLException, DuplicateResultException;
@@ -636,6 +636,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param ids the collection of entity IDs
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -660,6 +662,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param batchSize the size of each batch
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -686,6 +690,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                        All properties will be selected if {@code null}
      * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -715,6 +721,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param batchSize the size of each batch
      * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -794,7 +802,9 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *
      * @param ids the collection of IDs to count
      * @return the number of records in the database whose IDs are contained in {@code ids}
-     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
+     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws ArithmeticException if the total count across all ID batches exceeds the range of an {@code int}
@@ -830,7 +840,10 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or the entity's single ID value is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
-     * @throws DuplicateResultException if the id of the entity matches more than one database record
+     * @throws DuplicateResultException if more than one record matches the entity's id
+     * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
+     *                                       place because its class is treated as an immutable bean (a record, a builder-based
+     *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
     @Override
@@ -861,7 +874,10 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty,
      *                                  or the entity's single ID value is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
-     * @throws DuplicateResultException if the id of the entity matches more than one database record
+     * @throws DuplicateResultException if more than one record matches the entity's id
+     * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
+     *                                       place because its class is treated as an immutable bean (a record, a builder-based
+     *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
     @Override
@@ -890,6 +906,11 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its id is being extracted)
+     * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
+     *                                       place because its class is treated as an immutable bean (a record, a builder-based
+     *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
     @Override
@@ -915,6 +936,11 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its id is being extracted)
+     * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
+     *                                       place because its class is treated as an immutable bean (a record, a builder-based
+     *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
     @Override
@@ -945,6 +971,11 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or the first element of a nonempty {@code entities} collection is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its id is being extracted)
+     * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
+     *                                       place because its class is treated as an immutable bean (a record, a builder-based
+     *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
     @Override
@@ -982,6 +1013,11 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  {@code entities} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its id is being extracted)
+     * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
+     *                                       place because its class is treated as an immutable bean (a record, a builder-based
+     *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
     @Override

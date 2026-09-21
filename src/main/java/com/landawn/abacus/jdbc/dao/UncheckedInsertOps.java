@@ -84,7 +84,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param namedInsertSql the named INSERT SQL statement
      * @param entity the entity providing the parameter values
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null},
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
@@ -104,7 +105,10 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
+     *         binding, or executing an INSERT statement fails
      * @see #batchSave(Collection, int)
      */
     @Override
@@ -126,7 +130,10 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
+     *         binding, or executing an INSERT statement fails
      */
     @Override
     void batchSave(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
@@ -144,7 +151,10 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entities the collection of entities to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
+     *         binding, or executing an INSERT statement fails
      */
     @Override
     default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave) throws UncheckedSQLException {
@@ -166,7 +176,10 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
+     *         binding, or executing an INSERT statement fails
      */
     @Override
     void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize) throws UncheckedSQLException;
@@ -184,8 +197,12 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param namedInsertSql the named INSERT SQL statement
      * @param entities the entities providing parameter values
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty,
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
+     *         binding, or executing an INSERT statement fails
      */
     @Beta
     @Override
@@ -208,8 +225,12 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entities the entities providing parameter values
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive,
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
+     *         binding, or executing an INSERT statement fails
      */
     @Beta
     @Override

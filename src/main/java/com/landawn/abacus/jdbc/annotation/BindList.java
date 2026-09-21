@@ -110,7 +110,9 @@ public @interface BindList {
     /**
      * Specifies the template-variable name that this collection/array parameter should expand into.
      * The value must exactly match the template variable referenced in the {@link Query} SQL
-     * (for example, {@code @BindList("ids")} must correspond to {@code ... WHERE id IN ({ids})}).
+     * (for example, {@code @BindList("ids")} must correspond to {@code ... WHERE id IN ({ids})}); a name
+     * with no matching {@code {name}} token, and two parameters resolving to the same token, both fail DAO
+     * initialization with {@code IllegalArgumentException}.
      *
      * <p>If left empty, the actual method parameter name is used as the template-variable name;
      * this requires compiling with the {@code -parameters} javac flag, otherwise initialization

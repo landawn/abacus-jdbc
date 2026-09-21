@@ -269,7 +269,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches the condition
      */
     Optional<T> findOnlyOne(final Condition cond) throws SQLException, DuplicateResultException;
 
@@ -285,7 +285,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -304,7 +304,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -322,7 +322,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches the condition
      */
     Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws SQLException, DuplicateResultException;
 
@@ -339,7 +339,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -359,7 +359,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
-     * @throws DuplicateResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -1323,7 +1323,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * Returns a lazy Stream of entities with selected properties.
      * Only specified properties are loaded for each entity.
      * Any {@link SQLException} raised during stream consumption is wrapped as an
-     * {@link UncheckedSQLException}. The stream must be closed
+     * {@link UncheckedSQLException}. Mapping selected columns to the entity type can also raise
+     * {@link IllegalArgumentException} during consumption. The stream must be closed
      * (e.g. via try-with-resources) to release the underlying JDBC resources.
      *
      * @param selectPropNames the properties to select, {@code null} for all
@@ -1781,6 +1782,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * <p><b>WARNING:</b> Do not store or cache the array parameter as it is reused for every row.</p>
      *
+     * <p>A {@link RuntimeException} thrown by {@code rowConsumer} propagates to the caller and ends the
+     * iteration; the statement and result set are still closed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * dao.foreach(
@@ -1800,8 +1804,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowConsumer consumer that receives reusable row array
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
-     *         callback throws {@link SQLException}
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1819,12 +1822,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * <p><b>WARNING:</b> Do not store or cache the array parameter as it is reused for every row.</p>
      *
+     * <p>A {@link RuntimeException} thrown by {@code rowConsumer} propagates to the caller and ends the
+     * iteration; the statement and result set are still closed.</p>
+     *
      * @param cond the search condition
      * @param rowConsumer consumer that receives reusable row array
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
-     *         callback throws {@link SQLException}
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @SuppressWarnings("deprecation")
     @Beta

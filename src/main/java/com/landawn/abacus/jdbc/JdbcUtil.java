@@ -49,6 +49,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BinaryOperator;
 import java.util.function.Function;
@@ -1109,7 +1110,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param rs The {@link ResultSet} to close. If {@code null}, the method does nothing.
-     * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
+     * @throws UncheckedSQLException if closing {@code rs} fails with an SQL exception.
      * @see #closeQuietly(ResultSet)
      */
     public static void close(final ResultSet rs) throws UncheckedSQLException {
@@ -1141,7 +1142,8 @@ public final class JdbcUtil {
      *
      * @param rs The {@link ResultSet} to close. If {@code null}, no action is taken.
      * @param closeStatement If {@code true}, the {@link Statement} that created the {@code ResultSet} will also be closed.
-     * @throws UncheckedSQLException if locating a requested associated statement or connection, or closing any requested JDBC resource, fails with an SQL exception.
+     * @throws UncheckedSQLException if locating the result set's statement (only when {@code closeStatement} is {@code true}),
+     *         or closing the result set or that statement, fails with an SQL exception.
      * @see #close(ResultSet, boolean, boolean)
      * @see #closeQuietly(ResultSet, boolean)
      */
@@ -1250,7 +1252,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param stmt The {@link Statement} to close. If {@code null}, the method does nothing.
-     * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
+     * @throws UncheckedSQLException if closing {@code stmt} fails with an SQL exception.
      * @see #closeQuietly(Statement)
      */
     public static void close(final Statement stmt) throws UncheckedSQLException {
@@ -1280,7 +1282,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param conn The {@link Connection} to close. If {@code null}, the method does nothing.
-     * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
+     * @throws UncheckedSQLException if closing {@code conn} fails with an SQL exception.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see #closeQuietly(Connection)
      * @deprecated This method is deprecated because it directly closes the connection, which is often not the desired
@@ -6304,6 +6306,9 @@ public final class JdbcUtil {
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
+     * @throws UnsupportedOperationException if the JDBC driver does not implement
+     *         {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it);
+     *         no batch is executed in that case, so use {@link #executeBatchUpdate(javax.sql.DataSource, String, List)} with such a driver.
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Long#MAX_VALUE}.
      * @see PreparedStatement#executeLargeBatch()
@@ -6345,6 +6350,9 @@ public final class JdbcUtil {
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
+     * @throws UnsupportedOperationException if the JDBC driver does not implement
+     *         {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it);
+     *         no batch is executed in that case, so use {@link #executeBatchUpdate(javax.sql.DataSource, String, List, int)} with such a driver.
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Long#MAX_VALUE}.
      * @see PreparedStatement#executeLargeBatch()
@@ -6415,6 +6423,9 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws UnsupportedOperationException if the JDBC driver does not implement
+     *         {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it);
+     *         no batch is executed in that case, so use {@link #executeBatchUpdate(Connection, String, List)} with such a driver.
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Long#MAX_VALUE}.
      * @see PreparedStatement#executeLargeBatch()
@@ -6457,6 +6468,9 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty, or if {@code batchSize} is not positive,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws UnsupportedOperationException if the JDBC driver does not implement
+     *         {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it);
+     *         no batch is executed in that case, so use {@link #executeBatchUpdate(Connection, String, List, int)} with such a driver.
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Long#MAX_VALUE}.
      * @see PreparedStatement#executeLargeBatch()
@@ -6843,6 +6857,9 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link PreparedStatement} to execute.
      * @return The number of rows affected by the statement, as a long value.
+     * @throws UnsupportedOperationException if the JDBC driver does not implement
+     *         {@link PreparedStatement#executeLargeUpdate()} (the JDBC 4.2 default implementation throws it);
+     *         the statement is not executed in that case, so use {@link #executeUpdate(PreparedStatement)} with such a driver.
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static long executeLargeUpdate(final PreparedStatement stmt) throws SQLException {
@@ -6913,6 +6930,9 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link Statement} whose batch to execute.
      * @return An array of update counts as long values, one per batch entry.
+     * @throws UnsupportedOperationException if the JDBC driver does not implement
+     *         {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it);
+     *         the batch is not executed in that case, so use {@link #executeBatch(Statement)} with such a driver.
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static long[] executeLargeBatch(final Statement stmt) throws SQLException {
@@ -9436,11 +9456,29 @@ public final class JdbcUtil {
      * absent from {@link #sqlTypeGetterMap}.
      */
     private static final OutParameterGetter objOutParameterGetter = new OutParameterGetter() {
+        /**
+         * Reads the out parameter at the given 1-based index with {@link CallableStatement#getObject(int)},
+         * letting the driver choose the Java representation for the parameter's SQL type.
+         *
+         * @param stmt The {@link CallableStatement} to read from.
+         * @param outParameterIndex The 1-based index of the out parameter.
+         * @return The out parameter value as returned by the driver.
+         * @throws SQLException if reading the registered output parameter fails, including invalid addressing or a closed callable statement.
+         */
         @Override
         public Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException {
             return stmt.getObject(outParameterIndex);
         }
 
+        /**
+         * Reads the out parameter with the given name with {@link CallableStatement#getObject(String)},
+         * letting the driver choose the Java representation for the parameter's SQL type.
+         *
+         * @param stmt The {@link CallableStatement} to read from.
+         * @param outParameterName The name of the out parameter.
+         * @return The out parameter value as returned by the driver.
+         * @throws SQLException if reading the registered output parameter fails, including invalid addressing or a closed callable statement.
+         */
         @Override
         public Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException {
             return stmt.getObject(outParameterName);
@@ -10167,6 +10205,8 @@ public final class JdbcUtil {
      * @return A new {@link DBLock} instance bound to {@code ds} and {@code tableName}.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is blank or otherwise invalid.
      * @throws UncheckedSQLException if a database operation fails while initializing the lock table.
+     * @throws IllegalStateException if the lock table still does not exist after the {@code CREATE TABLE} attempt.
+     * @throws RejectedExecutionException if the shared scheduler refuses the periodic lock-refresh task.
      * @see DBLock
      */
     public static DBLock createDBLock(final javax.sql.DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -10299,6 +10339,8 @@ public final class JdbcUtil {
      * @param sqlAction The SQL action to be executed asynchronously.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses the submitted task.
      */
     @Beta
     public static ContinuableFuture<Void> runAsync(final Throwables.Runnable<Exception> sqlAction) throws IllegalArgumentException {
@@ -10328,6 +10370,8 @@ public final class JdbcUtil {
      * @param sqlAction2 The second SQL action to be executed asynchronously.
      * @return A Tuple2 containing two ContinuableFuture objects representing the results of the asynchronous computations.
      * @throws IllegalArgumentException if {@code sqlAction1} or {@code sqlAction2} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses one of the submitted tasks; an already accepted task keeps running.
      */
     @Beta
     public static Tuple2<ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1,
@@ -10362,6 +10406,8 @@ public final class JdbcUtil {
      * @param sqlAction3 The third SQL action to be executed asynchronously.
      * @return A Tuple3 containing three ContinuableFuture objects representing the results of the asynchronous computations.
      * @throws IllegalArgumentException if {@code sqlAction1}, {@code sqlAction2}, or {@code sqlAction3} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses one of the submitted tasks; already accepted tasks keep running.
      */
     @Beta
     public static Tuple3<ContinuableFuture<Void>, ContinuableFuture<Void>, ContinuableFuture<Void>> runAsync(final Throwables.Runnable<Exception> sqlAction1,
@@ -10393,6 +10439,8 @@ public final class JdbcUtil {
      * @param sqlAction The SQL action to be executed with the parameter.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses the submitted task.
      */
     @Beta
     public static <T> ContinuableFuture<Void> runAsync(final T parameter, final Throwables.Consumer<? super T, Exception> sqlAction)
@@ -10423,6 +10471,8 @@ public final class JdbcUtil {
      * @param sqlAction The SQL action to be executed with the parameters.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses the submitted task.
      */
     @Beta
     public static <T, U> ContinuableFuture<Void> runAsync(final T parameter1, final U parameter2,
@@ -10458,6 +10508,8 @@ public final class JdbcUtil {
      * @param sqlAction The SQL action to be executed with the parameters.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses the submitted task.
      */
     @Beta
     public static <A, B, C> ContinuableFuture<Void> runAsync(final A parameter1, final B parameter2, final C parameter3,
@@ -10485,6 +10537,8 @@ public final class JdbcUtil {
      * @param sqlAction The SQL action that produces a result.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses the submitted task.
      */
     @Beta
     public static <R> ContinuableFuture<R> callAsync(final Callable<? extends R> sqlAction) throws IllegalArgumentException {
@@ -10515,6 +10569,8 @@ public final class JdbcUtil {
      * @param sqlAction2 The second SQL action that produces a result.
      * @return A Tuple2 containing two ContinuableFutures representing the results of the asynchronous computations.
      * @throws IllegalArgumentException if {@code sqlAction1} or {@code sqlAction2} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses one of the submitted tasks; an already accepted task keeps running.
      */
     @Beta
     public static <R1, R2> Tuple2<ContinuableFuture<R1>, ContinuableFuture<R2>> callAsync(final Callable<? extends R1> sqlAction1,
@@ -10552,6 +10608,8 @@ public final class JdbcUtil {
      * @param sqlAction3 The third SQL action that produces a result.
      * @return A Tuple3 containing three ContinuableFutures representing the results of the asynchronous computations.
      * @throws IllegalArgumentException if {@code sqlAction1}, {@code sqlAction2}, or {@code sqlAction3} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses one of the submitted tasks; already accepted tasks keep running.
      */
     @Beta
     public static <R1, R2, R3> Tuple3<ContinuableFuture<R1>, ContinuableFuture<R2>, ContinuableFuture<R3>> callAsync(final Callable<? extends R1> sqlAction1,
@@ -10583,6 +10641,8 @@ public final class JdbcUtil {
      * @param sqlAction The SQL action that takes a parameter and produces a result.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses the submitted task.
      */
     @Beta
     public static <T, R> ContinuableFuture<R> callAsync(final T parameter, final Throwables.Function<? super T, ? extends R, Exception> sqlAction)
@@ -10615,6 +10675,8 @@ public final class JdbcUtil {
      * @param sqlAction The SQL action that takes two parameters and produces a result.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses the submitted task.
      */
     @Beta
     public static <T, U, R> ContinuableFuture<R> callAsync(final T parameter1, final U parameter2,
@@ -10651,6 +10713,8 @@ public final class JdbcUtil {
      * @param sqlAction The SQL action that takes three parameters and produces a result.
      * @return A ContinuableFuture representing the result of the asynchronous computation.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down (as happens during JVM shutdown).
+     * @throws RejectedExecutionException if the shared asynchronous executor refuses the submitted task.
      */
     @Beta
     public static <A, B, C, R> ContinuableFuture<R> callAsync(final A parameter1, final B parameter2, final C parameter3,

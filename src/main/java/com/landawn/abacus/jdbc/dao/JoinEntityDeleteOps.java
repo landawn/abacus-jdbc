@@ -24,6 +24,7 @@ import java.util.List;
 import javax.sql.DataSource;
 
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.exception.UncheckedInterruptedException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -69,10 +70,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @param entity the entity for which to delete join entities
      * @param joinEntityClass the class of the join entities to delete
      * @return the total number of deleted records
-     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class,
-     *                                  or a join being deleted has a disallowed null/default key,
-     *                                  or {@code entity} is {@code null} when a join is processed
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null},
+     *                                  or if no join property of the specified type is found in the entity class,
+     *                                  or a join being deleted has a disallowed null/default key
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -140,7 +142,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class,
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -149,6 +152,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
         if (N.isEmpty(entities)) {
             return 0;
         }
+
+        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
         @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
@@ -221,11 +226,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                           property name that exists in the entity class and is annotated
      *                           with {@code @JoinedBy}
      * @return the total number of deleted records. Returns 0 if no matching records were found
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
-     *                                  properly annotated with {@code @JoinedBy},
-     *                                  or a join being deleted has a disallowed null/default key,
-     *                                  or {@code entity} is {@code null} when a join is processed
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code joinEntityPropName} is {@code null} or empty,
+     *                                  or does not exist or is not properly annotated with {@code @JoinedBy},
+     *                                  or a join being deleted has a disallowed null/default key
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -271,10 +276,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                           with {@code @JoinedBy}
      * @return the total number of deleted records across all parent entities. Returns 0 if no
      *         matching records were found or if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if the {@code joinEntityPropName} does not exist or is not
-     *                                  properly annotated with {@code @JoinedBy},
+     * @throws IllegalArgumentException if {@code joinEntityPropName} is {@code null} or empty,
+     *                                  or does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -298,7 +304,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -360,13 +367,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
+     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
      *             transaction; prefer {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
-     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Deprecated
     @Beta
@@ -402,13 +411,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
+     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
-     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Deprecated
     @Beta
@@ -442,7 +453,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -502,13 +514,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records, or 0 if {@code entities} or {@code joinEntityPropNames} is empty
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
+     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
      *             transaction; prefer {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
-     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Deprecated
     @Beta
@@ -543,13 +557,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any property name in
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
+     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
-     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Deprecated
     @Beta
@@ -583,7 +599,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -609,13 +626,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
-     *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
+     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
+     *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
      */
     @Deprecated
     @Beta
@@ -649,13 +668,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
+     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
-     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Deprecated
     @Beta
@@ -682,7 +703,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                 If {@code null} or empty, this method returns 0 immediately
      * @return the total number of deleted records
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -711,13 +733,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @param inParallel if {@code true}, join entities will be deleted in parallel
      * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
-     *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
+     * @deprecated parallel deletion cannot be performed within a single transaction; prefer
+     *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
      */
     @Deprecated
     @Beta
@@ -750,13 +774,15 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
+     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
-     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Deprecated
     @Beta

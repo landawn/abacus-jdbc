@@ -37,7 +37,8 @@ import java.lang.annotation.Target;
  * prefix-bind properties of the annotated argument: {@code @Bind("a.b")} supplies the value for
  * that entire token, while {@code @Bind("a")} does not expand a bean into {@code :a.b}.
  * Nested properties can instead be read automatically from a single <b>unannotated</b> bean
- * parameter (see below). A binding name absent from static SQL fails DAO initialization unless
+ * parameter (see below). A binding name absent from static SQL fails DAO initialization with
+ * {@code IllegalArgumentException} unless
  * {@link Query#fragmentsContainNamedParameters()} is enabled, in which case the name may be
  * supplied by an SQL fragment and is checked when binding the expanded query.</p>
  *
@@ -71,7 +72,8 @@ import java.lang.annotation.Target;
  * void insertUser(User user) throws SQLException;
  *
  * // NOT supported: prefix-binding an entity with @Bind("u") and then referring to :u.name.
- * // DAO initialization fails; use the single unannotated bean parameter form above instead.
+ * // DAO initialization fails with IllegalArgumentException; use the single unannotated bean
+ * // parameter form above instead.
  * }</pre>
  *
  * <p>Best practices:</p>
@@ -114,14 +116,26 @@ public @interface Bind {
      * List<Order> findOrders(@Bind("customerId") Long customerId, @Bind("orderStatus") String status) throws SQLException;
      * }</pre>
      *
-     * <p><b>Empty value:</b> an empty {@code value} (the default) is effectively invalid: for a named
-     * query it matches no named parameter and fails DAO initialization, and on a non-procedure positional
-     * query any {@code @Bind} is rejected outright. On a stored procedure, {@code @Bind} is all-or-nothing:
+     * <p><b>Empty value:</b> an empty {@code value} (the default) is effectively invalid and always fails
+     * DAO initialization, but the exception type depends on which check the method reaches first. An empty
+     * name matches no named parameter, so a named query whose {@code @Bind} names are verified against the
+     * static SQL reports {@code IllegalArgumentException}; the binding setup that rejects an empty
+     * {@code @Bind} name outright reports {@code UnsupportedOperationException}, and is the only check left
+     * for a positional stored-procedure call or when {@link Query#fragmentsContainNamedParameters()} defers
+     * the static-SQL check. On a non-procedure positional query any {@code @Bind} at all &mdash; empty or
+     * not &mdash; is rejected with {@code UnsupportedOperationException}. On a stored procedure,
+     * {@code @Bind} is all-or-nothing:
      * either give <i>every</i> statement parameter a non-empty {@code @Bind} name, or omit {@code @Bind}
      * from all of them for purely positional binding &mdash; an empty-valued {@code @Bind}, or one present
-     * on only some of the parameters, fails DAO initialization.
+     * on only some of the parameters, fails DAO initialization with {@code UnsupportedOperationException}.
      * (This differs from {@code @SqlFragment}/{@code @BindList}, where an empty value falls back to the
      * method parameter name &mdash; which requires compiling with the {@code -parameters} flag.)</p>
+     *
+     * <p><b>Non-empty value:</b> on a named query a name that does not appear in the static SQL fails DAO
+     * initialization with {@code IllegalArgumentException}, while two parameters bound to the same name, or
+     * a named parameter of the SQL left unbound (the reserved system-time parameters excepted when
+     * {@link Query#injectCurrentTimeParameters()} is enabled), fail with
+     * {@code UnsupportedOperationException}.</p>
      *
      * @return the named-parameter token to bind to (without the leading colon); empty by default
      */

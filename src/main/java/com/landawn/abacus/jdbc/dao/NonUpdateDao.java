@@ -36,6 +36,10 @@ import com.landawn.abacus.annotation.Beta;
  * (and upsert-style inserts that overwrite existing rows) at runtime with an
  * {@link UnsupportedOperationException}. (This SQL-kind gate is enforced centrally by the DAO proxy.)</p>
  *
+ * <p>The SQL argument is validated <i>before</i> its kind is inspected, so a {@code null} or empty
+ * {@code sql}/{@code namedSql} still fails with the same {@link IllegalArgumentException} a full
+ * {@link Dao} throws, never with a misleading {@link UnsupportedOperationException}.</p>
+ *
  * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>
  *

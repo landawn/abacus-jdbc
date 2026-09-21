@@ -716,7 +716,10 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the columnIndex is not valid; if reading this result set's metadata fails; if converting an
+     *         Oracle date/timestamp value or materializing a returned {@link Blob} or {@link Clob} fails, including when
+     *         the LOB is longer than {@link Integer#MAX_VALUE}; if a database access error occurs or this method is called
+     *         on a closed result set
      */
     @Override
     public Object getObject(int columnIndex) throws SQLException {
@@ -817,9 +820,18 @@ final class ResultSetProxy implements ResultSet {
      * underlying {@link ResultSet#findColumn(String)}. Like the index form, the getter strategy is
      * cached only after the first non-null read for that label.</p>
      *
+     * <p>A {@code null} {@code columnLabel} is not rejected here: the label cache tolerates a
+     * {@code null} key and the label is handed to {@link ResultSet#findColumn(String)}, so the
+     * resulting failure is whatever the driver reports for a {@code null} label &mdash; normally a
+     * {@link SQLException}, but a {@link NullPointerException} from a driver that dereferences the
+     * label is also possible.</p>
+     *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the columnLabel is {@code null} or is not valid; if reading this result set's metadata fails;
+     *         if converting an Oracle date/timestamp value or materializing a returned {@link Blob} or {@link Clob} fails,
+     *         including when the LOB is longer than {@link Integer#MAX_VALUE}; if a database access error occurs or this
+     *         method is called on a closed result set
      */
     @Override
     public Object getObject(String columnLabel) throws SQLException {

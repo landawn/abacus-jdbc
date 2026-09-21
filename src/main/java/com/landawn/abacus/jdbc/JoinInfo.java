@@ -270,11 +270,11 @@ public final class JoinInfo {
      *                                   if the referenced entity type is not a valid bean/entity class;
      *                                   if join column types are incompatible between source and referenced entities;
      *                                   or if the many-to-many intermediate entity class is not found or improperly configured.
+     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      *
      * @see JoinedBy
      * @see com.landawn.abacus.jdbc.annotation.DaoConfig
      * @see #isManyToManyJoin()
-     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      */
     JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowNullOrDefaultJoinKeys) {
         N.checkArgNotNull(entityClass, cs.entityClass);
@@ -935,7 +935,8 @@ public final class JoinInfo {
      *         of selected property names and the batch size (a {@code null} or empty collection yields the default
      *         all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
      *         in the batch onto a {@link PreparedStatement}. The SQL-builder function requires a positive batch size
-     *         and throws {@link IllegalArgumentException} for zero or a negative value.
+     *         and throws {@link IllegalArgumentException} for zero or a negative value; because that parameter is a boxed
+     *         {@link Integer}, a {@code null} batch size fails with a {@link NullPointerException} while unboxing instead.
      * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
      *
      * @see Dsl#PSC
@@ -1048,7 +1049,10 @@ public final class JoinInfo {
      * non-map) join property, only the first matching entity is used; for a map-valued join property,
      * exactly one matching entity per key is expected and more than one match throws
      * {@link IllegalArgumentException}. A source entity with no matching joined entity receives an
-     * empty collection/map or {@code null} for a single-valued property, replacing any stale value.</p>
+     * empty collection/map or {@code null} for a single-valued property, replacing any stale value.
+     * The source entities are mutated in place as the iteration proceeds and the operation is not
+     * atomic; see {@link #setJoinPropEntities(Collection, Map)} for the partial-update behavior on
+     * failure.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1061,12 +1065,16 @@ public final class JoinInfo {
      *
      * @param entities the source entities to populate with joined entities.
      * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities.
-     * @throws UnsupportedOperationException if this is a many-to-many join; use {@link #setJoinPropEntities(Collection, Map)}
-     *                                  with keys derived from the junction table instead.
-     * @throws NullPointerException if {@code entities} is {@code null} for a supported one-to-many or many-to-one join
+     * @throws UnsupportedOperationException if this is a many-to-many join &mdash; use {@link #setJoinPropEntities(Collection, Map)}
+     *                                  with keys derived from the junction table instead &mdash; or if the {@code @JoinedBy} join
+     *                                  property is read-only, so the matched join entities cannot be stored back onto the source entity.
+     * @throws NullPointerException if {@code entities} is {@code null} for a supported one-to-many or many-to-one join,
+     *                                  or if {@code entities} or {@code joinPropEntities} contains a {@code null} element
+     *                                  (its join key cannot be read). A {@code null} {@code joinPropEntities} is treated as empty.
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
-     *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
-     *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}.
+     *                                  if a source entity has a {@code null}/default join key value while the owning DAO does not set
+     *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}, or if the declared collection or map type
+     *                                  of the join property has no supported construction path.
      *
      * @see #setJoinPropEntities(Collection, Map)
      */
@@ -1102,6 +1110,12 @@ public final class JoinInfo {
      * or {@code null} for a single-entity property. Thus each invocation replaces stale association
      * values. The {@code entities} collection is iterated in its natural order and is not modified.</p>
      *
+     * <p>The source entities themselves are mutated in place as the iteration proceeds, and the operation
+     * is not atomic. If it fails part way through &mdash; on a disallowed {@code null}/default join key, or
+     * on a map-valued join property with more than one match for a key &mdash; the entities already visited
+     * keep their newly assigned join values while the remaining ones keep their previous values. Nothing
+     * is rolled back.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
@@ -1116,10 +1130,15 @@ public final class JoinInfo {
      * @param entities the source entities to populate with joined entities.
      * @param groupedPropEntities a map of grouped joined entities keyed by the join key used to match source entities
      *                            (the source key for one-to-many; the junction-table-derived key for many-to-many).
-     * @throws NullPointerException if {@code entities} is {@code null}, or if it is nonempty and {@code groupedPropEntities} is {@code null}
+     * @throws NullPointerException if {@code entities} is {@code null}, if it is nonempty and {@code groupedPropEntities}
+     *                                  is {@code null}, or if {@code entities} contains a {@code null} element (its join
+     *                                  key cannot be read)
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
-     *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
-     *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}.
+     *                                  if a source entity has a {@code null}/default join key value while the owning DAO does not set
+     *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}, or if the declared collection or map type
+     *                                  of the join property has no supported construction path.
+     * @throws UnsupportedOperationException if the {@code @JoinedBy} join property is read-only, so the matched join
+     *                                  entities cannot be stored back onto the source entity.
      */
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
@@ -1190,6 +1209,7 @@ public final class JoinInfo {
      * @param propInfo one of {@link #srcPropInfos}.
      * @param entity the source entity to read the join-key value from.
      * @return the property value, possibly {@code null} or a type default when such values are allowed.
+     * @throws NullPointerException if {@code entity} is {@code null}, since the join-key property cannot be read from it.
      * @throws IllegalArgumentException if the value is {@code null} or its type default and
      *                                  {@link #allowNullOrDefaultJoinKeys} is {@code false}.
      */
@@ -1255,10 +1275,10 @@ public final class JoinInfo {
      * @return an unmodifiable map of property names to JoinInfo objects, never {@code null}, empty if no join properties exist.
      * @throws IllegalArgumentException if any argument is {@code null}, or a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
      *                                  (this is raised the first time the map is built and cached for the given key).
+     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      *
      * @see JoinedBy
      * @see DaoConfig
-     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      */
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) {
         N.checkArgNotNull(daoClass, cs.daoClass);
@@ -1334,10 +1354,10 @@ public final class JoinInfo {
      * @throws IllegalArgumentException if any argument is {@code null}, no {@code @JoinedBy} join property is found with the given name on the entity,
      *                                  or if a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
      *                                  (surfaced while building the underlying join-info map).
+     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)
-     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      */
     public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) {
         N.checkArgNotNull(daoClass, cs.daoClass);
@@ -1407,10 +1427,10 @@ public final class JoinInfo {
      * @return an unmodifiable list of property names that join to the specified entity class, never {@code null}, empty if none found.
      * @throws IllegalArgumentException if any argument is {@code null}, or a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
      *                                  (surfaced while building the underlying join-info map).
+     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)
-     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
             final Class<?> joinPropEntityClass) {

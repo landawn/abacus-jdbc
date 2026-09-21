@@ -84,6 +84,43 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 .getMessage().contains("ds"));
     }
 
+    @Test
+    public void testNullDataSourceOrConnectionIsRejectedBeforeAnyDatabaseAccess() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass((DataSource) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass((Connection) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClassByQuery((DataSource) null, "users", "SELECT 1"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClassByQuery((Connection) null, "users", "SELECT 1"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateSelectSql((DataSource) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateSelectSql((Connection) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateInsertSql((DataSource) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateInsertSql((Connection) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql((DataSource) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql((Connection) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql((DataSource) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql((Connection) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql((DataSource) null, "users"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql((Connection) null, "users"));
+    }
+
+    @Test
+    public void testBlankEntityNameIsRejectedEvenWhenClassNameIsConfigured() {
+        // A blank entityName used to reach the generator and emit an empty @Table name instead of failing.
+        final Connection unusedConnection = Mockito.mock(Connection.class);
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("Users").build();
+
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(unusedConnection, " ", "SELECT * FROM users WHERE 1 > 2", config));
+        Mockito.verifyNoInteractions(unusedConnection);
+    }
+
+    @Test
+    public void testFieldMappingRejectsBlankColumnName() {
+        // columnName is the selector of the mapping: a null one used to surface as an NPE from inside the
+        // generator's key-mapper, and a blank one silently matched no column at all.
+        assertThrows(IllegalArgumentException.class, () -> new FieldMapping(null, "createdAt", java.util.Date.class));
+        assertThrows(IllegalArgumentException.class, () -> new FieldMapping(" ", "createdAt", java.util.Date.class));
+    }
+
     private Connection connection;
     private PreparedStatement preparedStatement;
     private ResultSet resultSet;

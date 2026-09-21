@@ -58,7 +58,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * cacheable ({@code void}/{@code Void}, {@code Iterator}, or any lazy sequence type &mdash; the Abacus
  * {@code Stream}, {@code EntryStream} and {@code Seq} as well as {@code java.util.stream.BaseStream})
  * causes DAO initialization to fail with {@code UnsupportedOperationException}. In addition, {@link #maxLiveTimeMillis()}
- * and {@link #maxIdleTimeMillis()} must be {@code >= 0}, and {@code 0 <= minSize() <= maxSize()} must hold.</p>
+ * and {@link #maxIdleTimeMillis()} must be {@code >= 0}, and {@code 0 <= minSize() <= maxSize()} must hold;
+ * violating either range rule fails DAO initialization with {@code UnsupportedOperationException} as well.
+ * These range checks run only when caching is effectively enabled for the method, so an
+ * {@code @CacheResult(enabled = false)} carrying out-of-range values is ignored rather than rejected.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -237,8 +240,9 @@ public @interface CacheResult {
      * {@link com.landawn.abacus.util.Immutable} are stored and returned as-is, except populated
      * optional/nullable wrappers whose contents may require copying. Other values pass through
      * the selected serializer even if their Java types are immutable. Selecting
-     * {@link CacheSerialization#KRYO} requires Kryo on the classpath whenever copying is needed;
-     * otherwise caching such a value fails at runtime with {@code UnsupportedOperationException}.</p>
+     * {@link CacheSerialization#KRYO} requires Kryo on the classpath whenever copying is needed; this is
+     * not checked at DAO creation, so without Kryo the first attempt to cache a value that needs copying
+     * fails at invocation time with {@code UnsupportedOperationException}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -130,9 +130,10 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @param entity the entity to insert or update (must not be {@code null})
      * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
-     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
+     *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws DuplicateResultException if more than one record matches
+     * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
      */
     @Override
     default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException, DuplicateResultException {
@@ -204,8 +205,10 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
-     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws IllegalStateException if more than one existing record matches one entity's unique key
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
+     *         existing row or executing the required INSERT or UPDATE statement fails
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities) throws UncheckedSQLException {
@@ -230,8 +233,10 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
-     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws IllegalStateException if more than one existing record matches one entity's unique key
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
+     *         existing row or executing the required INSERT or UPDATE statement fails
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException {
@@ -268,8 +273,10 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty,
      *                                  or, for nonempty input, the first entity is {@code null} or a match property does not exist
-     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws IllegalStateException if more than one existing record matches one entity's unique key
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
+     *         existing row or executing the required INSERT or UPDATE statement fails
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws UncheckedSQLException {
@@ -309,10 +316,12 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null}/empty,
      *                                  if {@code batchSize} is not positive,
+     *                                  if the first element of {@code entities} is {@code null},
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
-     *                                  or if the first element of {@code entities} is {@code null}
-     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws IllegalStateException if more than one existing record matches one entity's unique key
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
+     *         existing row or executing the required INSERT or UPDATE statement fails
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize)

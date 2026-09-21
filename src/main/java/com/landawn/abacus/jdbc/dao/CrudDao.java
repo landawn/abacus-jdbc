@@ -183,7 +183,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws IllegalStateException if more than one existing record matches one entity's unique key
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
      */
     default List<T> batchUpsert(final Collection<? extends T> entities) throws SQLException {
         return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -210,7 +211,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws IllegalStateException if more than one existing record matches one entity's unique key
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -248,7 +250,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                                  or, for nonempty input, the first entity is {@code null} or a match property does not exist
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws IllegalStateException if more than one existing record matches one entity's unique key
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws SQLException {
         return batchUpsert(entities, matchPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -283,11 +286,12 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null}/empty,
      *                                  if {@code batchSize} is not positive,
+     *                                  if the first element of {@code entities} is {@code null},
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
-     *                                  or if the first element of {@code entities} is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
-     * @throws IllegalStateException if more than one existing record matches one entity's unique key
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws SQLException {
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);

@@ -22,6 +22,10 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * <p>A {@code Transaction} exposes an identifier, the effective {@link IsolationLevel},
  * lifecycle state, and explicit commit or rollback operations.</p>
  *
+ * <p>An implementation may bind a transaction to the thread that started it, in which case the
+ * lifecycle methods below throw {@link IllegalStateException} when they are invoked from any other
+ * thread — {@link SqlTransaction}, the built-in implementation, does exactly that.</p>
+ *
  * @see IsolationLevel
  * @see Status
  */

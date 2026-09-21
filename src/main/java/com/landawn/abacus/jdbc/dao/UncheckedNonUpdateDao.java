@@ -37,6 +37,10 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * {@code SELECT} and {@code INSERT} statements at runtime (any other SQL kind fails with
  * {@link UnsupportedOperationException}), enforced centrally by the DAO proxy.</p>
  *
+ * <p>The SQL argument is validated <i>before</i> its kind is inspected, so a {@code null} or empty
+ * {@code sql}/{@code namedSql} still fails with the same {@link IllegalArgumentException} a full
+ * {@link UncheckedDao} throws, never with a misleading {@link UnsupportedOperationException}.</p>
+ *
  * <p>This is useful for DAOs where update and delete operations should be prevented,
  * such as append-only data stores, immutable records, or when you want to ensure data is never modified
  * after creation.</p>

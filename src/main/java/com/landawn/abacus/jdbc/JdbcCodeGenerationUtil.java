@@ -73,6 +73,8 @@ import com.landawn.abacus.util.function.TriFunction;
 import com.landawn.abacus.util.stream.Collectors;
 import com.landawn.abacus.util.stream.Stream;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -91,9 +93,9 @@ import lombok.experimental.Accessors;
  * {@code generateInsertSql} / {@code generateNamedInsertSql} / {@code generateUpdateSql} /
  * {@code generateNamedUpdateSql} overload throws {@link IllegalArgumentException} when the supplied
  * {@code ds}/{@code conn} is {@code null}, or when a supplied
- * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank; the column-excluding and update
- * overloads additionally throw {@link IllegalArgumentException} when no columns remain to build the
- * statement (e.g. all columns were excluded).</p>
+ * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank; every overload additionally
+ * throws {@link IllegalArgumentException} when no columns remain to build the statement, whether
+ * because the table itself reports none or because all of them were excluded.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -265,7 +267,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the entity class
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if the connection/data source is {@code null}, the table name is {@code null}, blank, or malformed,
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code tableName} is {@code null}, blank, or malformed,
      *         or the derived class or field names are invalid or collide
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
      */
@@ -323,7 +325,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the entity class
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if the connection/data source is {@code null}, the table name is {@code null}, blank, or malformed,
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is {@code null}, blank, or malformed,
      *         or the derived class or field names are invalid or collide
      * @throws UncheckedSQLException if querying rows or metadata, or closing the query's JDBC resources fails
      */
@@ -491,7 +493,8 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if the configuration cannot produce valid Java source (for example,
      *             generated names are invalid or collide, an annotation is unusable, or a field is both
      *             read-only and non-updatable)
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if reading {@code rs}'s column metadata fails, or if looking up the
+     *             primary-key metadata through the statement/connection behind {@code rs} fails
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     static String generateEntityClass(final String entityName, final ResultSet rs, final EntityCodeConfig config) {
@@ -1201,7 +1204,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank.
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
      *         This also applies to malformed qualified table names or blank column labels reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
      */
@@ -1233,7 +1236,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
      *         This also applies to malformed qualified table names or blank column labels reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
@@ -1362,7 +1365,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank.
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
      *         This also applies to malformed qualified table names or blank column labels reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
      */
@@ -1393,7 +1396,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
      *         This also applies to malformed qualified table names or blank column labels reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
@@ -2292,7 +2295,8 @@ public final class JdbcCodeGenerationUtil {
      * @param insertSql the INSERT SQL statement to convert
      * @return an UPDATE SQL statement derived from the INSERT statement
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the INSERT SQL is null/empty, invalid, or cannot be converted
-     * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails while resolving the database product info
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
+     * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the database product info
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql) {
@@ -2335,7 +2339,8 @@ public final class JdbcCodeGenerationUtil {
      * @param whereClause the WHERE clause to append (without the {@code WHERE} keyword). May be null/empty.
      * @return an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the INSERT SQL is null/empty, invalid, or cannot be converted
-     * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails while resolving the database product info
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
+     * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the database product info
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause) {
@@ -3380,11 +3385,21 @@ public final class JdbcCodeGenerationUtil {
          * Maps a database column to an optional generated field name and Java field type.
          * A {@code null} field name or type leaves that part to the configured/default converter.
          *
-         * @param columnName database column name used to select this mapping
+         * @param columnName database column name used to select this mapping; must not be {@code null} or blank
          * @param fieldName generated Java field name, or {@code null} to use the field-name converter
          * @param fieldType generated Java field type, or {@code null} to use the field-type converter
          */
         public record FieldMapping(String columnName, String fieldName, Class<?> fieldType) {
+            /**
+             * Rejects a mapping that can never select a column, so the mistake surfaces at the
+             * construction site instead of as a deep {@code NullPointerException} while the mapping
+             * table is being built.
+             *
+             * @throws IllegalArgumentException if {@code columnName} is {@code null} or blank
+             */
+            public FieldMapping {
+                N.checkArgNotBlank(columnName, cs.columnName);
+            }
         }
 
         /**

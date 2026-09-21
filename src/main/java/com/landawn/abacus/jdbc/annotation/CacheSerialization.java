@@ -30,7 +30,8 @@ public enum CacheSerialization {
 
     /**
      * Uses Kryo to deep-copy cached values that require copying. Requires Kryo on the classpath;
-     * without it, copying such a value fails with {@code UnsupportedOperationException}.
+     * without it, DAO creation still succeeds and the failure surfaces at invocation time &mdash; the
+     * first attempt to cache a value that needs copying throws {@code UnsupportedOperationException}.
      */
     KRYO,
 

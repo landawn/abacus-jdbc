@@ -727,4 +727,19 @@ public class CrudDaoTest extends TestBase {
 
     // TODO: batchUpsert(entities, uniquePropNamesForQuery, batchSize) full signature (lines 1303-1380)
     // involves Seq.of, batchInsert, batchUpdate, SqlTransaction, and EntityId/Seid — requires DB integration.
+
+    // batchUpsert/batchRefresh derive the entity class from the first element of the collection; a null first
+    // element must be rejected with a meaningful IAE instead of a bare NPE out of first.getClass().
+    @Test
+    @Tag("2025")
+    public void testBatchOverloads_NullFirstElement_ThrowIae() throws SQLException {
+        final IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final List<IdAnnotatedEntity> withNullFirst = Arrays.asList((IdAnnotatedEntity) null);
+        final String expected = "The first element in the specified collection 'entities' cannot be null";
+
+        assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullFirst, 2)).getMessage());
+        assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullFirst, List.of("name"), 5)).getMessage());
+        assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchRefresh(withNullFirst, 5)).getMessage());
+        assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchRefresh(withNullFirst, List.of("name"), 5)).getMessage());
+    }
 }

@@ -343,7 +343,11 @@ public final class DaoUtil {
      * @param isEntityId whether the IDs are {@link EntityId} instances
      * @param isMap whether the IDs are {@link Map} instances
      * @return a condition matching any row whose id is in {@code ids}
-     * @throws IllegalArgumentException if the selected condition builder receives invalid ID properties or an empty ID collection
+     * @throws IllegalArgumentException if {@code ids} is empty; if {@code isEntityId} and an element is {@code null} or is an
+     *                                  {@link EntityId} with no keys; if {@code isMap} and the non-null elements are not all
+     *                                  {@link Map}s, or one of them is empty or has a key that is not a non-blank {@link String};
+     *                                  or if {@code idPropNameList} holds more than one name and either it names a property that
+     *                                  is not readable from the ids or every element of {@code ids} is {@code null}
      */
     @SuppressWarnings("unchecked")
     static Condition idsToCondition(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap) {

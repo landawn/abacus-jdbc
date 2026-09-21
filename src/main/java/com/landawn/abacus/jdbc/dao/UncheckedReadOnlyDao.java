@@ -39,6 +39,10 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * overloads reject any non-{@code SELECT} statement at runtime with an {@link UnsupportedOperationException},
  * enforced centrally by the DAO proxy.)</p>
  *
+ * <p>The SQL argument is validated <i>before</i> its kind is inspected, so a {@code null} or empty
+ * {@code sql}/{@code namedSql} still fails with the same {@link IllegalArgumentException} a full
+ * {@link UncheckedDao} throws, never with a misleading {@link UnsupportedOperationException}.</p>
+ *
  * <p>Use cases include:</p>
  * <ul>
  *   <li>Reporting databases where data should never be modified</li>

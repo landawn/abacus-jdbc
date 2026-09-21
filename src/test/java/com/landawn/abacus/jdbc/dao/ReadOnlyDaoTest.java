@@ -21,7 +21,9 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.query.condition.Condition;
 
 /**
  * {@code ReadOnlyDao} restricts a DAO to SELECT statements only. The SQL-kind gate for
@@ -111,6 +113,32 @@ public class ReadOnlyDaoTest extends TestBase {
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery("INSERT INTO test(name) VALUES (:name)"));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQuery(ParsedSql.parse("UPDATE test SET name = :name")));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareNamedQueryForLargeResult("DELETE FROM test WHERE id = :id"));
+    }
+
+    @Test
+    public void testPrepareSqlGate_NullSqlNamesTheDeclaredParameter() throws SQLException {
+        final TestReadOnlyDao dao = createDao();
+
+        // The centralized SQL-kind gate must name the parameter the way the overload declares it (and the way
+        // a full Dao's JdbcUtil.prepare* does): 'sql' for prepareQuery*, 'namedSql' for prepareNamedQuery*.
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareQuery((String) null)).getMessage().contains("'sql'"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareQueryForLargeResult((String) null)).getMessage().contains("'sql'"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((String) null)).getMessage().contains("'namedSql'"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQueryForLargeResult((String) null)).getMessage()
+                .contains("'namedSql'"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((ParsedSql) null)).getMessage().contains("'namedSql'"));
+    }
+
+    @Test
+    public void testQueryForSingleColumn_BlankPropNameNamesTheDeclaredParameter() throws SQLException {
+        final TestReadOnlyDao dao = createDao();
+        final Condition cond = Filters.eq("id", 1);
+
+        // The DaoImpl proxy must name the public parameter (singleSelectPropName), not its own local variable.
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.queryForInt(null, cond)).getMessage().contains("singleSelectPropName"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.queryForString("", cond)).getMessage().contains("singleSelectPropName"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.queryForSingleValue(null, cond, String.class)).getMessage()
+                .contains("singleSelectPropName"));
     }
 
     @Test

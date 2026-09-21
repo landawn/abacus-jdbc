@@ -2109,4 +2109,25 @@ public class JoinEntityHelperTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> dao.deleteAllJoinEntities(entity, executor));
         assertThrows(IllegalArgumentException.class, () -> dao.deleteAllJoinEntities(entities, executor));
     }
+
+    // The Collection+Class overloads must reject a null joinEntityClass naming the PUBLIC parameter instead of
+    // letting JoinInfo surface its internal joinPropEntityClass name - while an empty collection stays a pure
+    // no-op that never resolves join metadata at all.
+    @Test
+    @Tag("2025")
+    public void testCollectionByClassOverloads_NullClassNamesJoinEntityClass() throws SQLException {
+        final TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        final List<TestEntity> oneEntity = List.of(new TestEntity());
+
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.deleteJoinEntities(oneEntity, (Class<?>) null)).getMessage()
+                .contains("joinEntityClass"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntities(oneEntity, (Class<?>) null)).getMessage()
+                .contains("joinEntityClass"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(oneEntity, (Class<?>) null)).getMessage()
+                .contains("joinEntityClass"));
+
+        assertEquals(0, dao.deleteJoinEntities(List.<TestEntity> of(), (Class<?>) null));
+        dao.loadJoinEntities(List.<TestEntity> of(), (Class<?>) null);
+        dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), (Class<?>) null);
+    }
 }

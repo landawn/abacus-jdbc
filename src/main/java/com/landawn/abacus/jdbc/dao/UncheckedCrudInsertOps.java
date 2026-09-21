@@ -75,6 +75,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity to insert (must not be {@code null})
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
+     *         and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
      *         keys fails
      */
@@ -99,6 +101,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToInsert} is {@code null} or empty
+     * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
+     *         {@code propNamesToInsert} includes an ID property and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
      *         keys fails
      */
@@ -120,7 +124,10 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entity the entity whose properties will be bound to the named parameters
      * @return the ID of the inserted entity (either database-generated or entity-provided)
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null},
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
+     *         enabled and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
      *         keys fails
      */
@@ -145,8 +152,12 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities to insert
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
-     *         keys fails
+     * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
+     *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities) throws UncheckedSQLException {
@@ -168,8 +179,12 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
-     *         keys fails
+     * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
+     *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
     List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
@@ -189,8 +204,12 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
-     *         keys fails
+     * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
+     *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UncheckedSQLException {
@@ -207,8 +226,12 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty, or if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
-     *         keys fails
+     * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
+     *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws UncheckedSQLException;
@@ -228,9 +251,14 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
-     *         keys fails
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty,
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
+     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Beta
     @Override
@@ -247,9 +275,14 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
-     *         keys fails
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive,
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
+     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Beta
     @Override

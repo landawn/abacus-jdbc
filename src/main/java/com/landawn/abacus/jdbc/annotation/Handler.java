@@ -117,6 +117,11 @@ public @interface Handler {
      * then {@code Jdbc.HandlerFactory}. If neither yields a handler, DAO initialization fails with
      * {@code IllegalArgumentException}.</p>
      *
+     * <p>The DAO's own {@link Jdbc.Handler}-typed fields are collected whether or not any qualifier
+     * references them, and each must be {@code static final} (automatic for an interface field, but not
+     * for one declared in a nested class) with a name unique across the DAO and its nested classes;
+     * violating either rule also fails DAO initialization with {@code IllegalArgumentException}.</p>
+     *
      * @return the handler qualifier name; empty (default) means resolve a handler by {@link #impl()} instead
      */
     String qualifier() default "";

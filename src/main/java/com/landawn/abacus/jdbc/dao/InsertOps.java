@@ -88,7 +88,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param namedInsertSql the named INSERT SQL statement
      * @param entity the entity providing the parameter values
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null},
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -105,6 +106,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * }</pre>
      *
      * @param entities the collection of entities to insert
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      * @see #batchSave(Collection, int)
@@ -127,6 +130,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -139,6 +144,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entities the collection of entities to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -155,6 +162,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -166,7 +175,10 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param namedInsertSql the named INSERT SQL statement
      * @param entities the entities providing parameter values
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty,
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -183,7 +195,10 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entities the entities providing parameter values
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive,
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
+     *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */

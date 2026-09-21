@@ -31,7 +31,12 @@
  * {@code ReadOps}, {@code InsertOps}, {@code UpdateOps}, and {@code DeleteOps}) rooted at
  * {@link com.landawn.abacus.jdbc.dao.DaoBase}, so each variant exposes exactly the operations
  * its mutation policy allows — disallowed operations are absent from the type rather than
- * failing with {@link UnsupportedOperationException} at runtime.</p>
+ * failing with {@link UnsupportedOperationException} at runtime. The raw-SQL
+ * {@code prepareQuery}/{@code prepareNamedQuery} overloads are the one exception: they remain
+ * present on the restricted variants, so their SQL kind is checked at runtime and a disallowed
+ * statement does fail with {@link UnsupportedOperationException} — after the SQL argument itself
+ * has been validated, so a {@code null} or empty statement still yields
+ * {@link IllegalArgumentException}.</p>
  *
  * <p>{@link com.landawn.abacus.jdbc.dao.JoinEntityHelper} and
  * {@link com.landawn.abacus.jdbc.dao.CrudJoinEntityHelper} provide operations for entity

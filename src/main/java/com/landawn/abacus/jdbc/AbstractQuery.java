@@ -3764,8 +3764,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                        An empty collection adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or a collection/array batch contains a null row
-     * @throws SQLException if a database access error occurs
      * @throws ClassCastException if the first row is a collection or reference array and a later non-null row is not of the same kind
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     public This addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException {
@@ -3827,8 +3827,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                        An empty iterator adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or a collection/array batch contains a null row
-     * @throws SQLException if a database access error occurs
      * @throws ClassCastException if the first row is a collection or reference array and a later non-null row is not of the same kind
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @SuppressWarnings("rawtypes")
@@ -4453,6 +4453,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param max the new max rows limit; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
+     * @throws UnsupportedOperationException if the JDBC driver does not implement
+     *         {@link java.sql.Statement#setLargeMaxRows(long)} (the JDBC 4.2 default implementation throws it);
+     *         use {@link #setMaxRows(int)} with such a driver
      * @throws SQLException if a database access error occurs (including a negative {@code max} rejected by the driver)
      * @see java.sql.Statement#setLargeMaxRows(long)
      */
@@ -5580,7 +5583,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param entityClassForExtractor the class used to provide metadata for mapping columns in the result set; must not be {@code null}
      * @return A {@code Dataset} containing the results with entity-aware column mapping
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or is not a bean/entity class
+     * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or is not a bean/entity class;
+     *         a {@code null} argument closes this query before the exception is thrown, whereas a non-bean
+     *         {@code entityClassForExtractor} leaves the statement open
      * @throws SQLException if a database access error occurs
      * @see Jdbc.ResultExtractor#toDataset(Class)
      */
@@ -6020,7 +6025,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param func the function to apply to the {@code Dataset} resulting from the query
      * @return The result produced by applying the function to the {@code Dataset}
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or is not a bean/entity class, or if {@code func} is {@code null}
+     * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or is not a bean/entity class, or if {@code func} is {@code null};
+     *         a {@code null} argument closes this query before the exception is thrown, whereas a non-bean
+     *         {@code entityClassForExtractor} leaves the statement open
      * @throws SQLException if a database access error occurs
      * @throws E if the function throws an exception
      * @see Jdbc.ResultExtractor#toDataset(Class)
@@ -6088,7 +6095,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param entityClassForExtractor the class used to provide metadata for column mapping
      * @param consumer the consumer to apply to the {@code Dataset} resulting from the query
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or is not a bean/entity class, or if {@code consumer} is {@code null}
+     * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or is not a bean/entity class, or if {@code consumer} is {@code null};
+     *         a {@code null} argument closes this query before the exception is thrown, whereas a non-bean
+     *         {@code entityClassForExtractor} leaves the statement open
      * @throws SQLException if a database access error occurs
      * @throws E if the consumer action throws an exception
      * @see Jdbc.ResultExtractor#toDataset(Class)
@@ -10183,6 +10192,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return The number of rows affected by the update as a long value
      * @throws IllegalStateException if this query is closed
+     * @throws UnsupportedOperationException if the JDBC driver does not implement
+     *         {@link java.sql.PreparedStatement#executeLargeUpdate()} (the JDBC 4.2 default implementation
+     *         throws it); use {@link #update()} with such a driver
      * @throws SQLException if a database access error occurs or the SQL statement produces a ResultSet
      * @see #update()
      * @see #largeBatchUpdate()
@@ -10222,6 +10234,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return An array containing the number of rows affected by each update in the batch as long values
      * @throws IllegalStateException if this query is closed
+     * @throws UnsupportedOperationException if the JDBC driver does not implement
+     *         {@link java.sql.Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it);
+     *         use {@link #batchUpdate()} with such a driver
      * @throws SQLException if a database access error occurs or any command in the batch fails
      * @see #batchUpdate()
      * @see #largeUpdate()
@@ -10521,7 +10536,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param <R> the type of result produced by the SQL operation
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
-     * @return A ContinuableFuture representing the result of the asynchronous execution
+     * @return A ContinuableFuture representing the result of the asynchronous execution.
+     *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
+     *         this method; it is held by the returned future and surfaces from it (as an
+     *         {@code ExecutionException} from {@code get()}).
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws RejectedExecutionException if the executor refuses the task; no future is returned
@@ -10576,7 +10594,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <R> the type of result produced by the SQL operation
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
      * @param executor the executor to use for asynchronous execution. Must not be {@code null}.
-     * @return A ContinuableFuture representing the result of the asynchronous execution
+     * @return A ContinuableFuture representing the result of the asynchronous execution.
+     *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
+     *         this method; it is held by the returned future and surfaces from it (as an
+     *         {@code ExecutionException} from {@code get()}).
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if sqlAction or executor is null
      * @throws RejectedExecutionException if the executor refuses the task; no future is returned
@@ -10626,7 +10647,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * }</pre>
      *
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
-     * @return A ContinuableFuture representing the completion of the asynchronous execution
+     * @return A ContinuableFuture representing the completion of the asynchronous execution.
+     *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
+     *         this method; it is held by the returned future and surfaces from it (as an
+     *         {@code ExecutionException} from {@code get()}).
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws RejectedExecutionException if the executor refuses the task; no future is returned
@@ -10682,7 +10706,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @param sqlAction the SQL action to be executed asynchronously. Must not be {@code null}.
      * @param executor the executor to use for asynchronous execution. Must not be {@code null}.
-     * @return A ContinuableFuture representing the completion of the asynchronous execution
+     * @return A ContinuableFuture representing the completion of the asynchronous execution.
+     *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
+     *         this method; it is held by the returned future and surfaces from it (as an
+     *         {@code ExecutionException} from {@code get()}).
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if sqlAction or executor is null
      * @throws RejectedExecutionException if the executor refuses the task; no future is returned

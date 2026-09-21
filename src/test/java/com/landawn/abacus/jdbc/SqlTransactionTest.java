@@ -162,8 +162,9 @@ public class SqlTransactionTest extends TestBase {
 
     @Test
     public void testConstructorValidatesArgumentsInSignatureOrder() {
+        // The message must name the declared parameter (ds), the same way JdbcUtil.beginTransaction(ds, ...) does.
         assertTrue(assertThrows(IllegalArgumentException.class, () -> new SqlTransaction(null, null, null, null, true))
-                .getMessage().contains("dataSource"));
+                .getMessage().contains("'ds'"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> new SqlTransaction(null, connection, IsolationLevel.NONE, null, false))
                 .getMessage().contains("isolationLevel"));
         Mockito.verifyNoInteractions(connection);

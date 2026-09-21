@@ -142,7 +142,11 @@ public @interface Cache {
      * Specifies the implementation class for the DAO cache.
      * The implementation must implement {@link DaoCache} and declare a constructor that accepts
      * two parameters: {@code (int capacity, long evictDelay)}. The DAO proxy resolves that exact
-     * constructor signature when it creates the cache.
+     * constructor signature when it creates the cache; a class that does not declare it fails DAO
+     * initialization with {@code IllegalArgumentException} (unlike the {@link #capacity()}/
+     * {@link #evictDelayMillis()} range violations, which fail with
+     * {@code UnsupportedOperationException}). A constructor that itself throws, or that cannot be
+     * invoked reflectively, propagates the corresponding runtime exception.
      *
      * <p>By default, {@link Jdbc.DefaultDaoCache} is used, which is backed by a
      * keyed object pool with TTL and idle-time-based eviction. You can provide

@@ -51,7 +51,9 @@ import com.landawn.abacus.util.RegExUtil;
  * {@link com.landawn.abacus.util.u.Optional Optional&lt;ID&gt;}. A return type narrower than the DAO ID
  * type is rejected during DAO creation because a generated ID could not be returned safely. A batch
  * INSERT may return {@code void} or {@code List<ID>}; raw lists and incompatible element types are rejected.
- * On a DAO whose entity class has no id property, an INSERT method must return {@code void}.</p>
+ * On a DAO whose entity class has no id property, an INSERT method must return {@code void}. Each of
+ * those three return-type rules is enforced at DAO creation and a violation fails with
+ * {@code UnsupportedOperationException}.</p>
  *
  * <p>Method parameters are bound to named parameters in the SQL through {@link Bind}.
  * Variable-length lists use the separate {@link BindList} curly-brace template expansion and cannot
@@ -199,7 +201,10 @@ public @interface Query {
      * (see {@link SqlSource}) or in a {@link SqlScript} field on the DAO.
      * Referencing SQL by id keeps complex or reused statements out of the annotated method,
      * enabling better organization and reusability.
-     * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}.
+     * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}, and
+     * must resolve to a non-empty SQL statement; an id that is not a Java identifier, or that no
+     * {@link SqlSource} entry and no {@link SqlScript} field defines, fails DAO initialization with
+     * {@code IllegalArgumentException}.
      *
      * <p>An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry
      * (across {@link #value()} and {@code id}) fails DAO initialization &mdash; with
@@ -356,6 +361,13 @@ public @interface Query {
      *   <li>When using output parameters that need to be registered and retrieved</li>
      * </ul>
      *
+     * <p><b>Procedure-only features:</b> {@link OutParameter @OutParameter}/{@link OutParameters @OutParameters}
+     * and the {@link QueryOperation#listAll}, {@link QueryOperation#queryAll}, {@link QueryOperation#streamAll}
+     * and {@link QueryOperation#executeAndGetOutParameters} operations all require {@code procedure = true};
+     * using any of them while this element is {@code false} fails DAO initialization with
+     * {@code UnsupportedOperationException}. Conversely, {@link BindList @BindList} is <em>not</em> supported
+     * on a procedure call, also failing with {@code UnsupportedOperationException}.</p>
+     *
      * @return {@code true} if the SQL is a stored procedure call; {@code false} (default) otherwise
      * @see OutParameter
      * @see OutParameters
@@ -445,6 +457,11 @@ public @interface Query {
      *   <li>An optional second {@code int} parameter overrides {@link #batchSize()} at call time</li>
      *   <li>No other parameters are supported for batch methods</li>
      * </ul>
+     *
+     * <p>A batch method whose statement parameters do not have that exact shape, or that carries a
+     * {@link BindList @BindList} parameter (the {@code Collection} already supplies the batch rows and
+     * cannot also be expanded into {@code IN}-clause placeholders), fails DAO initialization with
+     * {@code UnsupportedOperationException}.</p>
      *
      * <p>Performance considerations:</p>
      * <ul>
@@ -539,7 +556,9 @@ public @interface Query {
      * <p>Important notes:</p>
      * <ul>
      *   <li>The collection/array must be the method's only statement/query parameter; fragment and
-     *       other framework-recognized auxiliary parameters are not statement parameters</li>
+     *       other framework-recognized auxiliary parameters are not statement parameters. Setting this
+     *       element on a method with any other number of statement parameters fails DAO initialization
+     *       with {@code UnsupportedOperationException}</li>
      *   <li>The JDBC driver and database must support binding the supplied Java collection/array
      *       as one value; this option does not call {@code Connection.createArrayOf}</li>
      *   <li>Not commonly needed for standard SQL; primarily for database-specific features</li>

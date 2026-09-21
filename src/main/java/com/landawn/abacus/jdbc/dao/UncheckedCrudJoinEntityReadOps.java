@@ -101,7 +101,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override
@@ -130,7 +130,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override
@@ -164,7 +164,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override
@@ -200,7 +200,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override
@@ -236,7 +236,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override
@@ -268,7 +268,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override
@@ -308,7 +308,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override
@@ -350,7 +350,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override
@@ -394,7 +394,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override
@@ -440,7 +440,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     @Override

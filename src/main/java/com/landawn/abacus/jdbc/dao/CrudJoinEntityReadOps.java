@@ -116,7 +116,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default Optional<T> get(final ID id, final Class<?> joinEntityClass) throws SQLException, DuplicateResultException {
@@ -152,7 +152,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws SQLException, DuplicateResultException {
@@ -183,7 +183,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
@@ -217,7 +217,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
@@ -250,7 +250,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
@@ -281,7 +281,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final Class<?> joinEntityClass) throws SQLException, DuplicateResultException {
@@ -320,7 +320,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws SQLException, DuplicateResultException {
@@ -360,7 +360,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
@@ -404,7 +404,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
@@ -450,7 +450,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)

@@ -137,7 +137,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param stmt the prepared statement to own; must not be {@code null}
      * @param namedSql the parsed named SQL; must not be {@code null} and must expose one name per placeholder
-     * @throws IllegalArgumentException if an argument is {@code null} or the parsed parameter metadata is inconsistent
+     * @throws IllegalArgumentException if {@code stmt} is {@code null} (rejected by the superclass constructor,
+     *         before this query takes ownership of it), if {@code namedSql} is {@code null}, or if
+     *         {@code namedSql} does not report exactly one parameter name per placeholder; in the latter two
+     *         cases {@code stmt} is closed before the exception is thrown
      */
     NamedQuery(final PreparedStatement stmt, final ParsedSql namedSql) {
         super(stmt);
@@ -3984,10 +3987,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param parameters an object containing the parameters (bean, map, collection, reference array, or single value)
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code parameters} is {@code null}, is of an unsupported type, or is a
-     *         bean that lacks a property matching one of the named parameters in the SQL (except the reserved
-     *         system date/time parameter names {@code now}, {@code sysTime} and {@code sysDate}, which are
-     *         skipped and left unbound when no matching property exists — bind them separately)
+     * @throws IllegalArgumentException if {@code parameters} is {@code null}; if it is a bean that lacks a
+     *         property matching one of the named parameters in the SQL (except the reserved system date/time
+     *         parameter names {@code now}, {@code sysTime} and {@code sysDate}, which are skipped and left
+     *         unbound when no matching property exists — bind them separately); or if it is none of a bean,
+     *         {@code Map}, {@code Collection}, reference array or {@code EntityId} and the SQL does not have
+     *         exactly one parameter placeholder
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#getNamedParameters(String)
      */
@@ -4082,8 +4087,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterNamesToSet the names of the parameters (and matching property names) to bind
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code entity} is {@code null} or is not a bean/record class,
-     *         if {@code parameterNamesToSet} is {@code null}, if a listed property does not exist on the
-     *         entity, or if a listed name is not a parameter in the SQL query
+     *         if {@code parameterNamesToSet} is {@code null} or contains a {@code null} element, if a listed
+     *         property does not exist on the entity, or if a listed name is not a parameter in the SQL query
      * @throws SQLException if a database access error occurs
      * @see Beans#getPropNameList(Class)
      * @see Beans#getPropNames(Class, Collection)
@@ -4245,9 +4250,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param batchParameters a collection of parameter objects for batch processing
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code batchParameters} is {@code null} or contains invalid parameter objects
-     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}; if a row is {@code null}, or
+     *         the first row is none of a bean, {@code Map}, {@code Collection}, reference array or
+     *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
+     *         lacks a property matching one of the named parameters, other than the reserved {@code now},
+     *         {@code sysTime} and {@code sysDate} names
      * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId}, and a later non-null row is not of the same kind
+     * @throws SQLException if a database access error occurs
      * @see #setParameters(Object)
      * @see #addBatch()
      */
@@ -4311,9 +4320,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param batchParameters an iterator providing parameter objects for batch processing
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code batchParameters} is {@code null} or contains invalid parameter objects
-     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}; if a row is {@code null}, or
+     *         the first row is none of a bean, {@code Map}, {@code Collection}, reference array or
+     *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
+     *         lacks a property matching one of the named parameters, other than the reserved {@code now},
+     *         {@code sysTime} and {@code sysDate} names
      * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId}, and a later non-null row is not of the same kind
+     * @throws SQLException if a database access error occurs
      * @see #setParameters(Object)
      * @see #addBatchParameters(Collection)
      * @see #addBatch()

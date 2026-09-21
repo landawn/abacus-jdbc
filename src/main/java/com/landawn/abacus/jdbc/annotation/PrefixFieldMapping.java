@@ -86,7 +86,9 @@ public @interface PrefixFieldMapping {
      * Specifies the mapping between column prefixes and object field paths.
      * The format is a comma-separated list of prefix=fieldPath pairs.
      *
-     * <p>Format: {@code "prefix1=fieldPath1, prefix2=fieldPath2, ..."}</p>
+     * <p>Format: {@code "prefix1=fieldPath1, prefix2=fieldPath2, ..."}. The value is parsed at DAO
+     * initialization time; an entry that carries no {@code =} separator (for example {@code "addr"})
+     * cannot be parsed into a prefix/path pair and fails with {@code IllegalArgumentException}.</p>
      *
      * <p>Two distinct syntaxes are involved &mdash; do not confuse them:</p>
      * <ul>

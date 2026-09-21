@@ -207,9 +207,9 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
+     * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
     @Beta
     @NonDBOperation
@@ -269,7 +269,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param namedSql the named SQL query string with :paramName placeholders
      * @return a NamedQuery instance
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty,
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      * @throws UncheckedSQLException if acquiring a required database connection fails
@@ -287,7 +288,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param namedSql the pre-parsed named query
      * @return a NamedQuery instance
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null},
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      * @throws UncheckedSQLException if acquiring a required database connection fails
@@ -338,7 +340,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param namedSql the named SQL query string
      * @return a NamedQuery configured for large results
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty,
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      * @throws UncheckedSQLException if acquiring a required database connection fails
@@ -355,7 +358,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param namedSql the pre-parsed named query
      * @return a NamedQuery configured for large results
-     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null},
+     *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      * @throws UncheckedSQLException if acquiring a required database connection fails

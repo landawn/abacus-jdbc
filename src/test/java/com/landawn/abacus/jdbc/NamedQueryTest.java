@@ -3539,6 +3539,20 @@ public class NamedQueryTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> namedQuery.setParameters("notABean", Arrays.asList("param1")));
     }
 
+    @Test
+    public void testSetParameters_EntityWithNames_NullNamesOnBean() throws SQLException {
+        // The two existing null-names tests pass a non-bean first argument, so they exit at the bean-class check
+        // and never reach the parameterNamesToSet guard.
+        final TestEntity entity = new TestEntity();
+        entity.setParam1("x");
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setParameters(entity, (java.util.Collection<String>) null));
+
+        assertTrue(failure.getMessage().contains("parameterNamesToSet"));
+        verify(mockPreparedStatement).close();
+    }
+
     // --- setParameters(T, TriParametersSetter): exception closes query (L4133) ---
 
     @Test

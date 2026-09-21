@@ -106,9 +106,9 @@ public @interface SqlFragment {
      *
      * <p>The resolved name must correspond to a {@code {name}} token in the surrounding
      * {@link Query @Query} SQL, and each fragment parameter on a method must target a distinct token;
-     * two parameters resolving to the same token fail DAO initialization with
-     * {@code IllegalArgumentException}. Because the substitution rewrites the SQL text (it is not a
-     * JDBC bind), supply only trusted, pre-validated strings.</p>
+     * a name with no matching token, and two parameters resolving to the same token, both fail DAO
+     * initialization with {@code IllegalArgumentException}. Because the substitution rewrites the SQL text
+     * (it is not a JDBC bind), supply only trusted, pre-validated strings.</p>
      *
      * @return the template-variable name; empty means use the method parameter name (requires {@code -parameters})
      */
