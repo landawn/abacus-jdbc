@@ -94,6 +94,29 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals(3, count("copy_tgt"));
     }
 
+    @Test
+    public void testCopy_AllColumnsPreservesLiteralMetadataNames() throws SQLException {
+        try (Connection conn = ds.getConnection(); Statement stmt = conn.createStatement()) {
+            final String columns = "(\"a.b\" INT, \"\"\"quoted\"\"\" INT, \" padded \" INT)";
+            stmt.execute("CREATE TABLE copy_literal_src " + columns);
+            stmt.execute("CREATE TABLE copy_literal_tgt " + columns);
+            try {
+                stmt.execute("INSERT INTO copy_literal_src VALUES (11, 22, 33)");
+                assertEquals(1, DataTransferUtil.copyTable(conn, "copy_literal_src").to(conn, "copy_literal_tgt"));
+                try (ResultSet rs = stmt.executeQuery("SELECT * FROM copy_literal_tgt")) {
+                    assertTrue(rs.next());
+                    assertEquals(11, rs.getInt(1));
+                    assertEquals(22, rs.getInt(2));
+                    assertEquals(33, rs.getInt(3));
+                    assertFalse(rs.next());
+                }
+            } finally {
+                stmt.execute("DROP TABLE copy_literal_src");
+                stmt.execute("DROP TABLE copy_literal_tgt");
+            }
+        }
+    }
+
     // copy(..., selectColumnNames = null) drives the empty-columns branch of generateSelectSql/generateInsertSql.
     @Test
     public void testCopy_TableToTable_NullColumns_GeneratesFullSql() throws SQLException {

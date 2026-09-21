@@ -31,8 +31,8 @@ import java.lang.annotation.Target;
  * {@code @Handler}/{@code @OutParameter} instances). It is an independent parameter annotation
  * applied to a single collection/array parameter whose elements are joined into one SQL fragment.</p>
  *
- * <p>Unlike {@link BindList} — which expands a collection into a parenthesized list of JDBC
- * placeholders for an {@code IN} clause — {@code @SqlFragmentList} rewrites the SQL text itself
+ * <p>Unlike {@link BindList} — which expands a collection into a comma-separated list of JDBC
+ * placeholders (with parentheses supplied by the SQL template) — {@code @SqlFragmentList} rewrites the SQL text itself
  * with the comma-joined elements (with no surrounding parentheses and no value binding). Use it
  * for trusted, whitelisted tokens such as column lists, table names, sort keys, or other
  * pre-approved SQL fragments; do not use it for caller-supplied data.</p>

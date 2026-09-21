@@ -47,6 +47,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @param entity the entity to delete (must have its ID populated)
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     int delete(final T entity) throws SQLException;
@@ -66,6 +67,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @param id the ID of the entity to delete
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     int deleteById(final ID id) throws SQLException;
@@ -84,7 +86,9 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *
      * @param entities the collection of entities to delete
      * @return the total number of rows deleted
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     default int batchDelete(final Collection<? extends T> entities) throws SQLException {
         return batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -106,7 +110,9 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
      * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     int batchDelete(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
@@ -124,7 +130,9 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *
      * @param ids the collection of IDs to delete
      * @return the total number of rows deleted
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     default int batchDeleteByIds(final Collection<? extends ID> ids) throws SQLException {
         return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -146,7 +154,9 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
      * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws SQLException;
 

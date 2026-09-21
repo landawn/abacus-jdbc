@@ -879,6 +879,137 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(sql.contains("WHERE"));
     }
 
+    @Test
+    public void testGeneratedUpdateGroupsAdditionalOrPredicate() throws SQLException {
+        final String condition = "status = 'OPEN' OR status = 'PENDING'";
+        assertEquals("UPDATE order_history SET status = ? WHERE id = ? AND (" + condition + ")",
+                JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", List.of("created_at"), List.of("id"), condition));
+        assertEquals("UPDATE order_history SET status = :status WHERE id = :id AND (" + condition + ")",
+                JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", List.of("created_at"), List.of("id"), condition));
+
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:update_predicate_grouping", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE update_guard (id INT PRIMARY KEY, status VARCHAR(20))");
+            for (boolean named : new boolean[] { false, true }) {
+                stmt.execute("DELETE FROM update_guard");
+                stmt.execute("INSERT INTO update_guard VALUES (1, 'OPEN'), (2, 'PENDING'), (3, 'CLOSED')");
+                final String sql = named
+                        ? JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "update_guard", null, List.of("id"), condition)
+                        : JdbcCodeGenerationUtil.generateUpdateSql(conn, "update_guard", null, List.of("id"), condition);
+
+                final int affected = named ? JdbcUtil.executeUpdate(conn, sql, java.util.Map.of("status", "DONE", "id", 1))
+                        : JdbcUtil.executeUpdate(conn, sql, "DONE", 1);
+                assertEquals(1, affected);
+                try (ResultSet rows = stmt.executeQuery("SELECT status FROM update_guard ORDER BY id")) {
+                    assertTrue(rows.next());
+                    assertEquals("DONE", rows.getString(1));
+                    assertTrue(rows.next());
+                    assertEquals("PENDING", rows.getString(1));
+                    assertTrue(rows.next());
+                    assertEquals("CLOSED", rows.getString(1));
+                    assertFalse(rows.next());
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testGenerateEntityClassDetectsPrimaryKeyOfDelimitedSinglePartName() throws SQLException {
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        final ResultSet noPrimaryKeys = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(preparedStatement);
+        when(preparedStatement.getConnection()).thenReturn(connection);
+        when(databaseMetaData.getPrimaryKeys(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.anyString())).thenReturn(noPrimaryKeys);
+        when(databaseMetaData.getPrimaryKeys(null, null, "order_history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(true, false);
+        when(pkRs.getString("COLUMN_NAME")).thenReturn("id");
+
+        final String source = JdbcCodeGenerationUtil.generateEntityClass("\"order_history\"", resultSet, null);
+
+        assertTrue(source.contains("    @Id\n"), source);
+        Mockito.verify(databaseMetaData).getPrimaryKeys(null, null, "order_history");
+    }
+
+    @Test
+    public void testGenerateEntityClassPrimaryKeysFollowIdentifierCaseRules() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:codegen_primary_key_case", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE case_fold_table (pk_code INT PRIMARY KEY, value_text VARCHAR(20))");
+            stmt.execute("CREATE SCHEMA fold_schema");
+            stmt.execute("CREATE TABLE fold_schema.case_fold_table (pk_code INT PRIMARY KEY, value_text VARCHAR(20))");
+            stmt.execute("CREATE SCHEMA \"MixedSchema\"");
+            stmt.execute("CREATE TABLE \"MixedSchema\".\"MixedTable\" (\"customKey\" INT PRIMARY KEY, value_text VARCHAR(20))");
+
+            for (String tableName : List.of("case_fold_table", "fold_schema.case_fold_table")) {
+                final String source = JdbcCodeGenerationUtil.generateEntityClass(conn, tableName);
+                assertTrue(source.contains("    @Id\n"), source);
+                assertTrue(source.contains("public class CaseFoldTable"), source);
+                assertTrue(source.contains("    private int pkCode;"), source);
+            }
+
+            final String quotedSource = JdbcCodeGenerationUtil.generateEntityClass(conn, "\"MixedSchema\".\"MixedTable\"");
+            assertTrue(quotedSource.contains("    @Id\n"), quotedSource);
+            assertTrue(quotedSource.contains("@Column(name = \"customKey\")"), quotedSource);
+        }
+    }
+
+    @Test
+    public void testGenerateEntityClassPrimaryKeysStayInCurrentSchema() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:codegen_primary_key_schema_" + System.nanoTime(), "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE SCHEMA other_schema");
+            stmt.execute("CREATE TABLE public.shared_table (local_key INT PRIMARY KEY, other_key INT)");
+            stmt.execute("CREATE TABLE other_schema.shared_table (local_key INT, other_key INT PRIMARY KEY)");
+
+            final String localSource = JdbcCodeGenerationUtil.generateEntityClass(conn, "shared_table");
+            assertTrue(localSource.contains("    @Id\n    @Column(name = \"LOCAL_KEY\")"), localSource);
+            assertFalse(localSource.contains("    @Id\n    @Column(name = \"OTHER_KEY\")"), localSource);
+
+            final String qualifiedSource = JdbcCodeGenerationUtil.generateEntityClass(conn, "other_schema.shared_table");
+            assertFalse(qualifiedSource.contains("    @Id\n    @Column(name = \"LOCAL_KEY\")"), qualifiedSource);
+            assertTrue(qualifiedSource.contains("    @Id\n    @Column(name = \"OTHER_KEY\")"), qualifiedSource);
+
+            conn.setSchema("OTHER_SCHEMA");
+            final String switchedSource = JdbcCodeGenerationUtil.generateEntityClass(conn, "shared_table");
+            assertFalse(switchedSource.contains("    @Id\n    @Column(name = \"LOCAL_KEY\")"), switchedSource);
+            assertTrue(switchedSource.contains("    @Id\n    @Column(name = \"OTHER_KEY\")"), switchedSource);
+        }
+    }
+
+    @Test
+    public void testGenerateEntityClassPrimaryKeysFollowSchemaSearchPath() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:codegen_primary_key_search_path_" + System.nanoTime(), "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE SCHEMA other_schema");
+            stmt.execute("CREATE TABLE other_schema.path_table (other_key INT PRIMARY KEY, payload VARCHAR(20))");
+            stmt.execute("SET SCHEMA_SEARCH_PATH PUBLIC, OTHER_SCHEMA");
+            assertEquals("PUBLIC", conn.getSchema());
+
+            final String source = JdbcCodeGenerationUtil.generateEntityClass(conn, "path_table");
+
+            assertTrue(source.contains("    @Id\n    @Column(name = \"OTHER_KEY\")"), source);
+            assertEquals("PUBLIC", conn.getSchema());
+        }
+    }
+
+    @Test
+    public void testGenerateEntityClassPrimaryKeysFallBackWhenColumnOriginIsUnsupported() throws SQLException {
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(resultSet.getStatement()).thenReturn(preparedStatement);
+        when(preparedStatement.getConnection()).thenReturn(connection);
+        when(connection.getCatalog()).thenReturn("current_catalog");
+        when(connection.getSchema()).thenReturn("current_schema");
+        when(resultSetMetaData.getTableName(1)).thenThrow(new java.sql.SQLFeatureNotSupportedException("column origin unavailable"));
+        when(databaseMetaData.getPrimaryKeys("current_catalog", "current_schema", "order_history")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(true, false);
+        when(pkRs.getString("COLUMN_NAME")).thenReturn("id");
+
+        final String source = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, null);
+
+        assertTrue(source.contains("    @Id\n"), source);
+        Mockito.verify(databaseMetaData).getPrimaryKeys("current_catalog", "current_schema", "order_history");
+    }
+
     // generateNamedUpdateSql(DataSource, tableName, excludedColumnNames, keyColumnNames, whereClause) - line 1656
     @Test
     public void testGenerateNamedUpdateSql_DataSource_WithExcludedColumnsAndWhere() throws SQLException {

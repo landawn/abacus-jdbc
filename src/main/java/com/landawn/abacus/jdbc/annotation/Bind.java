@@ -33,10 +33,13 @@ import java.lang.annotation.Target;
  * {@code :token} that this argument supplies.</p>
  *
  * <p>The annotation binds a single value (any type with a registered Abacus {@code Type}) to the
- * named parameter whose token matches {@link #value()} <i>verbatim</i>. Property paths like
- * {@code :a.b} are supported only through a single <b>unannotated</b> bean parameter (see below) —
- * an {@code @Bind} value that does not literally appear as a named parameter in the SQL fails DAO
- * initialization.</p>
+ * named parameter whose token matches {@link #value()} <i>verbatim</i>. It does not traverse or
+ * prefix-bind properties of the annotated argument: {@code @Bind("a.b")} supplies the value for
+ * that entire token, while {@code @Bind("a")} does not expand a bean into {@code :a.b}.
+ * Nested properties can instead be read automatically from a single <b>unannotated</b> bean
+ * parameter (see below). A binding name absent from static SQL fails DAO initialization unless
+ * {@link Query#fragmentsContainNamedParameters()} is enabled, in which case the name may be
+ * supplied by an SQL fragment and is checked when binding the expanded query.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

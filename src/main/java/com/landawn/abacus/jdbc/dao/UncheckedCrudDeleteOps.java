@@ -91,6 +91,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities to delete
      * @return the total number of rows deleted
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     default int batchDelete(final Collection<? extends T> entities) throws UncheckedSQLException {
@@ -114,6 +115,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @return the total number of rows deleted
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
@@ -132,6 +134,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param ids the collection of IDs to delete
      * @return the total number of rows deleted
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     default int batchDeleteByIds(final Collection<? extends ID> ids) throws UncheckedSQLException {
@@ -155,6 +158,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @return the total number of rows deleted
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UncheckedSQLException;

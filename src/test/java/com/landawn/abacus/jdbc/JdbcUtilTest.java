@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -74,6 +75,7 @@ import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.TriConsumer;
+import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
 
 public class JdbcUtilTest extends TestBase {
@@ -3821,7 +3823,7 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(1, thrown.getSuppressed().length);
         assertSame(rollbackFailure, thrown.getSuppressed()[0]);
         verify(mockConnection).rollback();
-        verify(mockConnection).setAutoCommit(true);
+        verify(mockConnection, never()).setAutoCommit(true);
     }
 
     @Test
@@ -3843,7 +3845,7 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(1, thrown.getSuppressed().length);
         assertSame(rollbackFailure, thrown.getSuppressed()[0]);
         verify(mockConnection).rollback();
-        verify(mockConnection).setAutoCommit(true);
+        verify(mockConnection, never()).setAutoCommit(true);
     }
 
     @Test
@@ -3852,11 +3854,9 @@ public class JdbcUtilTest extends TestBase {
         final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
         final SQLException batchFailure = new SQLException("batch failed");
         final IllegalStateException rollbackFailure = new IllegalStateException("rollback failed unchecked");
-        final AssertionError restoreFailure = new AssertionError("restore auto-commit failed");
 
         when(mockConnection.getAutoCommit()).thenReturn(true);
         org.mockito.Mockito.doNothing().when(mockConnection).setAutoCommit(false);
-        doThrow(restoreFailure).when(mockConnection).setAutoCommit(true);
         doThrow(batchFailure).when(mockPreparedStatement).executeBatch();
         doThrow(rollbackFailure).when(mockConnection).rollback();
 
@@ -3864,7 +3864,8 @@ public class JdbcUtilTest extends TestBase {
                 () -> JdbcUtil.executeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2));
 
         assertSame(batchFailure, thrown);
-        assertArrayEquals(new Throwable[] { rollbackFailure, restoreFailure }, thrown.getSuppressed());
+        assertArrayEquals(new Throwable[] { rollbackFailure }, thrown.getSuppressed());
+        verify(mockConnection, never()).setAutoCommit(true);
     }
 
     @Test
@@ -3873,11 +3874,9 @@ public class JdbcUtilTest extends TestBase {
         final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 });
         final SQLException commitFailure = new SQLException("large commit failed");
         final AssertionError rollbackFailure = new AssertionError("large rollback failed unchecked");
-        final IllegalStateException restoreFailure = new IllegalStateException("restore auto-commit failed unchecked");
 
         when(mockConnection.getAutoCommit()).thenReturn(true);
         org.mockito.Mockito.doNothing().when(mockConnection).setAutoCommit(false);
-        doThrow(restoreFailure).when(mockConnection).setAutoCommit(true);
         when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { 1, 1 });
         doThrow(commitFailure).when(mockConnection).commit();
         doThrow(rollbackFailure).when(mockConnection).rollback();
@@ -3886,7 +3885,8 @@ public class JdbcUtilTest extends TestBase {
                 () -> JdbcUtil.executeLargeBatchUpdate(mockConnection, "UPDATE account SET status = ?", parameters, 2));
 
         assertSame(commitFailure, thrown);
-        assertArrayEquals(new Throwable[] { rollbackFailure, restoreFailure }, thrown.getSuppressed());
+        assertArrayEquals(new Throwable[] { rollbackFailure }, thrown.getSuppressed());
+        verify(mockConnection, never()).setAutoCommit(true);
     }
 
     @Test
@@ -3906,7 +3906,7 @@ public class JdbcUtilTest extends TestBase {
         assertSame(sharedFailure, thrown);
         assertEquals(0, thrown.getSuppressed().length);
         verify(mockConnection).rollback();
-        verify(mockConnection).setAutoCommit(true);
+        verify(mockConnection, never()).setAutoCommit(true);
     }
 
     @Test
@@ -3927,7 +3927,7 @@ public class JdbcUtilTest extends TestBase {
         assertSame(sharedFailure, thrown);
         assertEquals(0, thrown.getSuppressed().length);
         verify(mockConnection).rollback();
-        verify(mockConnection).setAutoCommit(true);
+        verify(mockConnection, never()).setAutoCommit(true);
     }
 
     @Test
@@ -4533,5 +4533,57 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(SqlOperation.UPDATE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $$abc$$) UPDATE t SET a = 1"));
         assertEquals(SqlOperation.DELETE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $tag$abc$tag$) DELETE FROM t"));
         assertEquals(SqlOperation.DELETE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $t1$abc$t1$) DELETE FROM t"));
+    }
+
+    @Test
+    public void testRowIteratorsRememberExhaustion() throws SQLException {
+        for (int variant = 0; variant < 4; variant++) {
+            final ResultSet rs = mock(ResultSet.class);
+            when(rs.getMetaData()).thenReturn(mockResultSetMetaData);
+            when(rs.next()).thenReturn(true, false).thenThrow(new SQLException("Cursor is already after the last row"));
+            final ObjIteratorEx<Integer> iter = rowIterator(rs, variant);
+
+            assertEquals(1, iter.next());
+            assertFalse(iter.hasNext());
+            assertFalse(iter.hasNext());
+            assertThrows(NoSuchElementException.class, iter::next);
+            assertEquals(0, iter.count());
+            iter.advance(1);
+            assertFalse(iter.hasNext());
+            verify(rs, org.mockito.Mockito.times(2)).next();
+        }
+    }
+
+    @Test
+    public void testRowIteratorCountAndAdvanceRememberExhaustion() throws SQLException {
+        for (int variant : new int[] { 0, 2 }) {
+            for (boolean count : new boolean[] { true, false }) {
+                final ResultSet rs = mock(ResultSet.class);
+                when(rs.getMetaData()).thenReturn(mockResultSetMetaData);
+                when(rs.next()).thenReturn(true, false).thenThrow(new SQLException("Cursor is already after the last row"));
+                final ObjIteratorEx<Integer> iter = rowIterator(rs, variant);
+
+                assertTrue(iter.hasNext());
+                if (count) {
+                    assertEquals(1, iter.count());
+                } else {
+                    iter.advance(2);
+                }
+
+                assertFalse(iter.hasNext());
+                assertEquals(0, iter.count());
+                assertThrows(NoSuchElementException.class, iter::next);
+                verify(rs, org.mockito.Mockito.times(2)).next();
+            }
+        }
+    }
+
+    private static ObjIteratorEx<Integer> rowIterator(final ResultSet rs, final int variant) {
+        return switch (variant) {
+            case 0 -> JdbcUtil.iterate(rs, (RowMapper<Integer>) row -> 1, null);
+            case 1 -> JdbcUtil.iterate(rs, row -> true, row -> 1, null);
+            case 2 -> JdbcUtil.iterate(rs, (BiRowMapper<Integer>) (row, labels) -> 1, null);
+            default -> JdbcUtil.iterate(rs, (row, labels) -> true, (row, labels) -> 1);
+        };
     }
 }

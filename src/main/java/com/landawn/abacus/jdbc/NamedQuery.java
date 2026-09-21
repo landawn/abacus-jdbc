@@ -126,8 +126,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     private final int parameterCount;
 
     /**
-     * Lazily built index from parameter name to its 1-based parameter positions, used only when
-     * {@code parameterCount >= MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP}; {@code null} until first needed.
+     * Lazily built index from parameter name to its 1-based parameter positions. The named setters
+     * use it when {@code parameterCount >= MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP}; selective bean
+     * binding also uses it for smaller queries. It is {@code null} until first needed.
      */
     private Map<String, IntList> paramNameIndexMap;
 
@@ -829,8 +830,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws ArithmeticException if the BigInteger value will not fit in a {@code long}; when this is thrown the underlying statement is also closed
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setLong(final String parameterName, final BigInteger value) throws IllegalArgumentException, SQLException {
@@ -1577,7 +1578,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>This method converts a java.time.LocalTime to java.sql.Time for database operations.
      * LocalTime represents a time without a time-zone in the ISO-8601 calendar system,
-     * such as 10:15:30.
+     * such as 10:15:30. Fractional seconds are discarded by {@link java.sql.Time#valueOf(LocalTime)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1754,7 +1755,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}, or the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTimestamp(final String parameterName, final ZonedDateTime value) throws IllegalArgumentException, SQLException {
@@ -1783,7 +1784,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}, or the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTimestamp(final String parameterName, final OffsetDateTime value) throws IllegalArgumentException, SQLException {
@@ -1814,7 +1815,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}, or the parameter name is not found in the SQL query
      * @throws SQLException if a database access error occurs
      */
     public NamedQuery setTimestamp(final String parameterName, final Instant value) throws IllegalArgumentException, SQLException {
@@ -1838,8 +1839,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * // Storing serialized object
      * ByteArrayOutputStream baos = new ByteArrayOutputStream();
-     * ObjectOutputStream oos = new ObjectOutputStream(baos);
-     * oos.writeObject(myObject);
+     * try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+     *     oos.writeObject(myObject);
+     * }
      * query.setBytes("serializedData", baos.toByteArray());
      *
      * // Setting null
@@ -1901,7 +1903,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>This method is used to set very large ASCII values. The JDBC driver will read
      * the data from the stream as needed. The stream should contain only ASCII characters.
-     * Note that the stream will be read when the query is executed, not when this method is called.
+     * The driver may read the stream during binding or execution; keep it open until execution completes.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2034,7 +2036,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>This method is used to set very large binary values such as images, documents,
      * or other binary data. The JDBC driver will read the data from the stream as needed.
-     * The stream will be read when the query is executed, not when this method is called.
+     * The driver may read the stream during binding or execution; keep it open until execution completes.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3460,7 +3462,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the object containing the parameter value, or {@code null} to set SQL {@code NULL}
      * @param sqlType the SQL type (from java.sql.Types) to be used
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query,
+     *                                  or {@code sqlType} is not a standard {@code java.sql.Types} constant
      * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
      * @see java.sql.Types
      */
@@ -3535,7 +3538,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param scaleOrLength for numeric types, the number of digits after the decimal point;
      *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query,
+     *                                  or {@code sqlType} is not a standard {@code java.sql.Types} constant
      * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
      * @see java.sql.Types
      */
@@ -3747,7 +3751,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param <T> parameter value type
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
-     * @param value the object containing the parameter value, or {@code null} to set SQL {@code NULL}
+     * @param value the object passed to the type handler; the handler determines how {@code null} is bound
      * @param type the Type handler to use for setting the parameter. Must not be {@code null}.
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code type} is {@code null}, or the parameter name is not found in the SQL query
@@ -3977,8 +3981,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * matching (so {@code :user_name} resolves to a {@code userName} property) — otherwise an
      * {@link IllegalArgumentException} is thrown. The value of that property is bound
      * to every occurrence of the named parameter in the SQL. Named parameters in the SQL that are
-     * not listed in {@code parameterNamesToSet} are left unbound by this call — bind them separately
-     * before executing the query.
+     * not listed in {@code parameterNamesToSet} are left unchanged: previously bound values are
+     * retained, and parameters that remain unbound must be bound separately before execution.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4088,6 +4092,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *     q.setInt("max_age", c.getMaxAge());
      *     if (c.getActive() != null) {
      *         q.setBoolean("is_active", c.getActive());
+     *     } else {
+     *         q.setNull("is_active", Types.BOOLEAN);
      *     }
      * });
      * }</pre>
@@ -4160,6 +4166,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code batchParameters} is {@code null} or contains invalid parameter objects
      * @throws SQLException if a database access error occurs
+     * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId}, and a later non-null row is not of the same kind
      * @see #setParameters(Object)
      * @see #addBatch()
      */
@@ -4208,15 +4215,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * query.addBatchParameters(userIterator)
      *      .batchUpdate();
      *
-     * // Using a stream for large data sets
-     * query.addBatchParameters(
+     * // Using a separately prepared query and a stream of parameter objects
+     * anotherQuery.addBatchParameters(
      *     userRepository.findAllActive()
      *                  .stream()
      *                  .filter(u -> u.getLastLogin().isAfter(oneMonthAgo))
      *                  .iterator()
      * ).batchUpdate();
      *
-     * // Processing data in chunks to avoid loading everything into memory
+     * // Consume an existing stream; all rows are queued before the batch executes.
      * insertQuery.addBatchParameters(streamOfRecords.iterator())
      *            .batchUpdate();
      * }</pre>
@@ -4225,6 +4232,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code batchParameters} is {@code null} or contains invalid parameter objects
      * @throws SQLException if a database access error occurs
+     * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId}, and a later non-null row is not of the same kind
      * @see #setParameters(Object)
      * @see #addBatchParameters(Collection)
      * @see #addBatch()

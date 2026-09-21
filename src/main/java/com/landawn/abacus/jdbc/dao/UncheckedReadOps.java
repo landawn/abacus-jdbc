@@ -129,7 +129,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *
      * @param cond the condition to match
      * @return an Optional containing the first matching record, or empty if no match found
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} is {@code null},
+     *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -151,9 +152,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row to the desired type
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
-     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
@@ -181,9 +182,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
-     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
@@ -202,7 +203,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @return an Optional containing the first matching record, or empty if no match found
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} is {@code null},
+     *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -226,9 +228,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
-     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
@@ -252,9 +254,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
-     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
@@ -270,12 +272,13 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *
      * @param cond the condition to match
      * @return an Optional containing the single matching record, or empty if no match found
-     * @throws DuplicateResultException if more than one record is found
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} is {@code null},
+     *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record is found
      */
     @Override
-    Optional<T> findOnlyOne(final Condition cond) throws DuplicateResultException, UncheckedSQLException;
+    Optional<T> findOnlyOne(final Condition cond) throws UncheckedSQLException, DuplicateResultException;
 
     /**
      * Finds exactly one record matching the condition and maps it using the row mapper.
@@ -294,13 +297,13 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
-     * @throws DuplicateResultException if more than one record is found
-     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException, DuplicateResultException;
 
     /**
      * Finds exactly one record matching the condition and maps it using the bi-row mapper.
@@ -319,13 +322,13 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
-     * @throws DuplicateResultException if more than one record is found
-     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws DuplicateResultException, UncheckedSQLException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException, DuplicateResultException;
 
     /**
      * Finds exactly one record matching the condition, selecting only the specified properties.
@@ -342,12 +345,13 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @return an Optional containing the single matching record, or empty if no match found
-     * @throws DuplicateResultException if more than one record is found
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} is {@code null},
+     *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record is found
      */
     @Override
-    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws DuplicateResultException, UncheckedSQLException;
+    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException, DuplicateResultException;
 
     /**
      * Finds exactly one record with selected properties and maps it using the row mapper.
@@ -368,14 +372,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
-     * @throws DuplicateResultException if more than one record is found
-     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws DuplicateResultException, UncheckedSQLException;
+            throws UncheckedSQLException, DuplicateResultException;
 
     /**
      * Finds exactly one record with selected properties and maps it using the bi-row mapper.
@@ -396,14 +400,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
-     * @throws DuplicateResultException if more than one record is found
-     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws DuplicateResultException, UncheckedSQLException;
+            throws UncheckedSQLException, DuplicateResultException;
 
     /**
      * Returns an {@code OptionalBoolean} holding the value of a single boolean column for the first
@@ -778,9 +782,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an {@code Optional} containing the mapped value, or an empty {@code Optional} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
-     * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForSingleNonNull(String, Condition, Class)
      */
     @Beta
@@ -806,14 +810,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return a <i>present</i> {@code Nullable} holding the converted value (possibly {@code null} for a
      *         SQL {@code NULL}) when exactly one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
-     * @throws DuplicateResultException if more than one record is found
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record is found
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
     @Override
     <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws DuplicateResultException, UncheckedSQLException;
+            throws UncheckedSQLException, DuplicateResultException;
 
     /**
      * Returns an {@code Optional} holding the unique non-null value of a single column for the record
@@ -836,14 +840,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param targetValueType the class of the target value type
      * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
      *         matches the condition or the matched value is SQL {@code NULL}
-     * @throws DuplicateResultException if more than one record is found
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record is found
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws DuplicateResultException, UncheckedSQLException;
+            throws UncheckedSQLException, DuplicateResultException;
 
     /**
      * Returns an {@code Optional} holding the unique non-null value of a single column for the record
@@ -866,16 +870,16 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an {@code Optional} containing the unique mapped value, or an empty {@code Optional} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
-     * @throws DuplicateResultException if more than one record is found
-     * @throws UncheckedSQLException if a database access error occurs
      * @see #queryForUniqueNonNull(String, Condition, Class)
      */
     @Beta
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws DuplicateResultException, UncheckedSQLException;
+            throws UncheckedSQLException, DuplicateResultException;
 
     /**
      * Executes a query and returns the results as a Dataset containing all matching records.
@@ -941,6 +945,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
     <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws UncheckedSQLException;
@@ -971,6 +976,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor)
@@ -1005,6 +1011,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
     <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws UncheckedSQLException;
@@ -1038,6 +1045,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor)
@@ -1053,7 +1061,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *
      * @param cond the condition to match
      * @return a list of matching entities, or an empty list if none match
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} is {@code null},
+     *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -1162,7 +1171,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param selectPropNames the properties (columns) to be selected, or {@code null} to select all
      * @param cond the condition to match
      * @return a list of entities with selected properties, or an empty list if no record matches the condition
-     * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code cond} is {@code null},
+     *                                  or selected result columns cannot be mapped to the entity type
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override

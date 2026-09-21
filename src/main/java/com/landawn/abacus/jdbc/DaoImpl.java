@@ -808,13 +808,14 @@ final class DaoImpl {
 
     /**
      * Builds the execution function for a single-value (non-list) return type. The returned function executes the
-     * prepared query and converts the result to {@code returnType}: the matching {@code queryForXxx} variant for the
-     * optional primitive types, and {@code queryForSingleValue}/{@code queryForUniqueValue} (falling back to the
+     * prepared query and converts the result to {@code returnType}: the matching {@code queryForXxx} variant or a
+     * uniqueness-checking row mapper for primitive optionals, and {@code queryForSingleValue}/{@code queryForUniqueValue} (falling back to the
      * type's default value when no row is found) for plain scalar types, honoring the uniqueness contract of
      * find-only-one/query-for-unique methods.
      *
      * @param <R> the result type
-     * @param returnType the single-value return type of the DAO method
+     * @param returnType the single-value return type of the DAO method; primitive optionals enforce
+     *                  uniqueness while retaining their existing SQL {@code NULL}-to-primitive-default semantics
      * @param method the DAO method, used to determine uniqueness semantics
      * @param queryOperation the operation type declared for the method
      * @return a function executing a prepared query and returning the single result value
@@ -822,22 +823,57 @@ final class DaoImpl {
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createSingleQueryFunction(final Class<?> returnType, final Method method,
             final QueryOperation queryOperation) {
+        final boolean unique = isQueryForUnique(method, queryOperation) || isFindOnlyOne(method, queryOperation);
+
         if (u.OptionalBoolean.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForBoolean();
+            return unique
+                    ? (preparedQuery,
+                            args) -> (R) preparedQuery.findOnlyOne((Jdbc.RowMapper<u.OptionalBoolean>) rs -> u.OptionalBoolean.of(rs.getBoolean(1)))
+                                    .orElse(u.OptionalBoolean.empty())
+                    : (preparedQuery, args) -> (R) preparedQuery.queryForBoolean();
         } else if (u.OptionalChar.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForChar();
+            return unique
+                    ? (preparedQuery,
+                            args) -> (R) preparedQuery
+                                    .findOnlyOne((Jdbc.RowMapper<u.OptionalChar>) rs -> u.OptionalChar.of(N.<Character> typeOf(char.class).get(rs, 1)))
+                                    .orElse(u.OptionalChar.empty())
+                    : (preparedQuery, args) -> (R) preparedQuery.queryForChar();
         } else if (u.OptionalByte.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForByte();
+            return unique
+                    ? (preparedQuery,
+                            args) -> (R) preparedQuery.findOnlyOne((Jdbc.RowMapper<u.OptionalByte>) rs -> u.OptionalByte.of(rs.getByte(1)))
+                                    .orElse(u.OptionalByte.empty())
+                    : (preparedQuery, args) -> (R) preparedQuery.queryForByte();
         } else if (u.OptionalShort.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForShort();
+            return unique
+                    ? (preparedQuery,
+                            args) -> (R) preparedQuery.findOnlyOne((Jdbc.RowMapper<u.OptionalShort>) rs -> u.OptionalShort.of(rs.getShort(1)))
+                                    .orElse(u.OptionalShort.empty())
+                    : (preparedQuery, args) -> (R) preparedQuery.queryForShort();
         } else if (u.OptionalInt.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForInt();
+            return unique
+                    ? (preparedQuery,
+                            args) -> (R) preparedQuery.findOnlyOne((Jdbc.RowMapper<u.OptionalInt>) rs -> u.OptionalInt.of(rs.getInt(1)))
+                                    .orElse(u.OptionalInt.empty())
+                    : (preparedQuery, args) -> (R) preparedQuery.queryForInt();
         } else if (u.OptionalLong.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForLong();
+            return unique
+                    ? (preparedQuery,
+                            args) -> (R) preparedQuery.findOnlyOne((Jdbc.RowMapper<u.OptionalLong>) rs -> u.OptionalLong.of(rs.getLong(1)))
+                                    .orElse(u.OptionalLong.empty())
+                    : (preparedQuery, args) -> (R) preparedQuery.queryForLong();
         } else if (u.OptionalFloat.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForFloat();
+            return unique
+                    ? (preparedQuery,
+                            args) -> (R) preparedQuery.findOnlyOne((Jdbc.RowMapper<u.OptionalFloat>) rs -> u.OptionalFloat.of(rs.getFloat(1)))
+                                    .orElse(u.OptionalFloat.empty())
+                    : (preparedQuery, args) -> (R) preparedQuery.queryForFloat();
         } else if (u.OptionalDouble.class.isAssignableFrom(returnType)) {
-            return (preparedQuery, args) -> (R) preparedQuery.queryForDouble();
+            return unique
+                    ? (preparedQuery,
+                            args) -> (R) preparedQuery.findOnlyOne((Jdbc.RowMapper<u.OptionalDouble>) rs -> u.OptionalDouble.of(rs.getDouble(1)))
+                                    .orElse(u.OptionalDouble.empty())
+                    : (preparedQuery, args) -> (R) preparedQuery.queryForDouble();
         } else {
             // u.Optional/u.Nullable returns never reach here: the sole caller handles them (with the
             // element type, not the wrapper class) before falling back to this function.
@@ -857,6 +893,9 @@ final class DaoImpl {
      * that executes the prepared query and maps the result accordingly (list, single value, map keyed by id,
      * procedure result sets with out parameters, stream, etc.). Incompatible return-type/operation combinations are
      * rejected eagerly here, at proxy-creation time, rather than at first invocation.
+     * For an optional result annotated with {@code @MergedById}, find-only-one and query-for-unique
+     * semantics are checked after rows have been merged: several rows with the same entity ID
+     * represent one result, while multiple distinct merged entities cause {@link DuplicateResultException}.
      *
      * @param <R> the result type
      * @param entityClass the entity class of the DAO
@@ -871,6 +910,7 @@ final class DaoImpl {
      * @param isProcedure {@code true} if the SQL is a stored procedure call
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @return a function executing a prepared query and returning the mapped result
+     * @throws IllegalArgumentException if {@code mappedByKey} does not identify a property of the result entity class
      * @throws UnsupportedOperationException if the return type is not supported by the declared
      *         {@link QueryOperation}, or a required generic element type cannot be resolved
      */
@@ -1362,7 +1402,7 @@ final class DaoImpl {
                             return (R) c;
                         }
                     } else {
-                        if (isFindOnlyOne(method, queryOperation) && N.size(mergedEntities) > 1) {
+                        if ((isFindOnlyOne(method, queryOperation) || isQueryForUnique(method, queryOperation)) && N.size(mergedEntities) > 1) {
                             throw new DuplicateResultException("More than one record found by the query defined or generated in method: " + method.getName());
                         }
 
@@ -1584,7 +1624,8 @@ final class DaoImpl {
      * parameter positions, named-parameter bindings, and batch/fragment configuration. When the SQL contains the
      * reserved system-time named parameters and auto-binding is enabled, the returned setter also binds the current
      * time (one clock reading shared by all of them) to those parameters. Named-parameter bindings are validated
-     * eagerly here, at proxy-creation time.
+     * eagerly here, at proxy-creation time; names introduced by SQL fragments are resolved when the
+     * expanded query is prepared.
      *
      * @param queryInfo the parsed metadata of the method's SQL query
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
@@ -1836,7 +1877,7 @@ final class DaoImpl {
             }
         }
 
-        if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam) {
+        if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam && !queryInfo.fragmentsContainNamedParameters) {
             final boolean hasNow = queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_NOW);
             final boolean hasSysTime = queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_TIME);
             final boolean hasSysDate = queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_DATE);
@@ -1871,7 +1912,8 @@ final class DaoImpl {
     /**
      * Validates the {@code @Bind} names of a named-query method: every name must be non-empty, no two method
      * parameters may bind to the same name, and the bound names must exactly cover the named parameters in the SQL
-     * (excluding the reserved system-time parameters when they are auto-set).
+     * (excluding the reserved system-time parameters when they are auto-set). When fragments may add named
+     * parameters, additional binding names are checked by the named query after fragment expansion.
      *
      * @param queryInfo the parsed metadata of the method's SQL query
      * @param boundParamNames the {@code @Bind} names declared on the method's parameters
@@ -1909,7 +1951,8 @@ final class DaoImpl {
         }
 
         final List<String> missingParamNames = N.difference(requiredSqlParamNameSet, boundParamNameSet);
-        final List<String> extraParamNames = N.difference(boundParamNameSet, sqlParamNameSet);
+        final List<String> extraParamNames = queryInfo.fragmentsContainNamedParameters ? java.util.Collections.emptyList()
+                : N.difference(boundParamNameSet, sqlParamNameSet);
 
         if (N.notEmpty(missingParamNames) || N.notEmpty(extraParamNames)) {
             throw new UnsupportedOperationException("In method: " + fullClassMethodName
@@ -1978,6 +2021,9 @@ final class DaoImpl {
      * @param isSingleReturnTypeMethod {@code true} if the method returns a single value
      * @param isListQueryMethod {@code true} if the method is a list query
      * @return the prepared and configured query; the caller is responsible for closing it
+     * @throws IllegalArgumentException if the expanded SQL or a named parameter binding is invalid
+     * @throws UnsupportedOperationException if an argument value uses an unsupported parameter-binding shape
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the query fails
      */
     @SuppressWarnings({ "rawtypes", "unused" })
@@ -2053,9 +2099,9 @@ final class DaoImpl {
 
             if (queryInfo.isBatch) {
                 if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam) {
-                    final boolean hasNow = queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_NOW);
-                    final boolean hasSysTime = queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_TIME);
-                    final boolean hasSysDate = queryInfo.parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_DATE);
+                    final boolean hasNow = parsedSql.namedParameters().contains(JdbcUtil.PN_NOW);
+                    final boolean hasSysTime = parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_TIME);
+                    final boolean hasSysDate = parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_DATE);
 
                     if (hasNow || hasSysTime || hasSysDate) {
                         preparedQuery.configAddBatchAction((q, s) -> {
@@ -2078,6 +2124,22 @@ final class DaoImpl {
                 }
             } else {
                 preparedQuery.settParameters(args, parametersSetter);
+
+                if (queryInfo.isNamedQuery && queryInfo.autoSetSysTimeParam && queryInfo.fragmentsContainNamedParameters) {
+                    // Fragments may introduce any of the aliases. Bind them together after expansion so
+                    // aliases from both the static SQL and the fragments share the same clock reading.
+                    final java.sql.Timestamp currentTimestamp = Dates.currentTimestamp();
+
+                    if (parsedSql.namedParameters().contains(JdbcUtil.PN_NOW)) {
+                        setSysTimestampParam(preparedQuery, JdbcUtil.PN_NOW, currentTimestamp);
+                    }
+                    if (parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_TIME)) {
+                        setSysTimestampParam(preparedQuery, JdbcUtil.PN_SYS_TIME, currentTimestamp);
+                    }
+                    if (parsedSql.namedParameters().contains(JdbcUtil.PN_SYS_DATE)) {
+                        setSysDateParam(preparedQuery, JdbcUtil.PN_SYS_DATE, new java.sql.Date(currentTimestamp.getTime()));
+                    }
+                }
             }
 
             return preparedQuery;
@@ -5781,7 +5843,7 @@ final class DaoImpl {
                         //                "@Bind parameters are required for named query but none is defined in method: " + fullClassMethodName);
                         //    }
 
-                        if (isNamedQuery) {
+                        if (isNamedQuery && !queryInfo.fragmentsContainNamedParameters) {
                             final List<String> tmp = IntStream.range(0, paramLen)
                                     .mapToObj(i -> Stream.of(method.getParameterAnnotations()[i]).select(Bind.class).first().orElseNull())
                                     .skipNulls()
@@ -7248,6 +7310,12 @@ final class DaoImpl {
         return daoInstance;
     }
 
+    /**
+     * Executes a batch save using the supplied named SQL, reusing a statement across chunks.
+     *
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, or executing a batch fails
+     */
     @SuppressWarnings("rawtypes")
     private static void executeBatchSave(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize)
             throws SQLException {
@@ -7260,16 +7328,23 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Executes a batch insert and extracts the returned identifiers in input order.
+     *
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
+     */
     @SuppressWarnings("rawtypes")
     private static List<Object> executeBatchInsert(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
-            final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester) throws Exception {
+            final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester)
+            throws SQLException {
         if (entities.size() <= batchSize) {
             return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                     .addBatchParameters(entities)
                     .batchInsert(keyExtractor, isDefaultIdTester);
         } else {
             try (NamedQuery namedQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames).closeAfterExecution(false)) {
-                return Seq.of(entities)
+                return Seq.of(entities, SQLException.class)
                         .split(batchSize)
                         .flatmap(batch -> namedQuery.addBatchParameters(batch).batchInsert(keyExtractor, isDefaultIdTester))
                         .toList();
@@ -7277,10 +7352,16 @@ final class DaoImpl {
         }
     }
 
+    /**
+     * Inserts one run of entities using the same ID-generation policy and assigns returned IDs.
+     *
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
+     */
     @SuppressWarnings("rawtypes")
     private static void executeBatchInsertRun(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
             final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester,
-            final BiConsumer<Object, Object> idSetter, final Logger daoLogger) throws Exception {
+            final BiConsumer<Object, Object> idSetter, final Logger daoLogger) throws SQLException {
         List<Object> ids = executeBatchInsert(proxy, namedInsertSql, entities, batchSize, generatedKeyColumnNames, keyExtractor, isDefaultIdTester);
 
         if (JdbcUtil.isAllNullIds(ids)) {
@@ -7307,6 +7388,9 @@ final class DaoImpl {
      * Replaces join-property values after a batch load. Query result grouping omits keys with no
      * matching row, so explicit empty groups are added to prevent stale values from surviving only
      * because the caller supplied more than one source entity.
+     *
+     * @throws IllegalArgumentException if a join key is null/default when disallowed by the DAO configuration,
+     *                                  or a map-valued join has multiple matching rows
      */
     private static void replaceLoadedJoinPropEntities(final JoinInfo joinInfo, final Collection<?> entities,
             final Map<Object, List<Object>> groupedPropEntities) {
@@ -7401,6 +7485,8 @@ final class DaoImpl {
         final boolean isProcedure;
         /** Whether the SQL uses named parameters (derived from the parsed SQL or the fragment hint). */
         final boolean isNamedQuery;
+        /** Whether SQL fragments may introduce named parameters absent from the static SQL. */
+        final boolean fragmentsContainNamedParameters;
 
         /**
          * Constructs a new {@code QueryInfo} from annotation attributes and derived SQL properties.
@@ -7441,6 +7527,7 @@ final class DaoImpl {
             this.isSelect = isSelect;
             this.isInsert = isInsert;
             this.isProcedure = isProcedure;
+            this.fragmentsContainNamedParameters = fragmentsContainNamedParameters;
             isNamedQuery = N.notEmpty(this.parsedSql.namedParameters()) || fragmentsContainNamedParameters;
 
             if (fragmentsContainNamedParameters && (this.parsedSql.parameterCount() > 0 && N.isEmpty(this.parsedSql.namedParameters()))) {

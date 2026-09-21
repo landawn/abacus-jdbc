@@ -908,9 +908,7 @@ public final class Jdbc {
                     downstreamAccumulator.accept(container, valueExtractor.apply(rs));
                 }
 
-                for (final Map.Entry<K, D> entry : result.entrySet()) {
-                    entry.setValue(downstreamFinisher.apply(entry.getValue()));
-                }
+                result.replaceAll((k, value) -> downstreamFinisher.apply(value));
 
                 return result;
             };
@@ -975,7 +973,8 @@ public final class Jdbc {
         /**
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List} of entities.
          * The mapping from columns to entity properties is done automatically based on column names
-         * and property names in the {@code targetClass}.
+         * and property names in the {@code targetClass}. Reference arrays, maps, lists, and single-column
+         * scalar targets are also supported, as described by {@link BiRowMapper#to(Class)}.
          *
          * <p>The returned {@code ResultExtractor} is stateless and safe to reuse: a fresh stateful
          * {@code BiRowMapper} is created internally for each {@code ResultSet} that is processed, so
@@ -1021,8 +1020,10 @@ public final class Jdbc {
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
-         * // For a query like "SELECT u.*, o.* FROM users u JOIN orders o ON u.id = o.user_id"
-         * // where User has a List<Order> property.
+         * // Assumes User has an ID property and a List<Order> property named "orders".
+         * // Alias joined columns to their property paths, for example:
+         * // SELECT u.id AS id, u.name AS name, o.id AS "orders.id"
+         * // FROM users u JOIN orders o ON u.id = o.user_id
          * ResultExtractor<List<User>> extractor = ResultExtractor.toMergedList(User.class);
          * }</pre>
          *
@@ -1140,7 +1141,8 @@ public final class Jdbc {
          * <pre>{@code
          * // For columns labeled 'u.id' and 'u.name', maps them to the 'user' property's 'id' and 'name'.
          * Map<String, String> prefixMap = Map.of("u", "user");
-         * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(User.class, prefixMap);
+         * // UserView has a nested User property named "user".
+         * ResultExtractor<Dataset> extractor = ResultExtractor.toDataset(UserView.class, prefixMap);
          * }</pre>
          *
          * @param entityClassForExtractor the class used to map fields from columns
@@ -1695,9 +1697,7 @@ public final class Jdbc {
                     downstreamAccumulator.accept(container, valueExtractor.apply(rs, columnLabels));
                 }
 
-                for (final Map.Entry<K, D> entry : result.entrySet()) {
-                    entry.setValue(downstreamFinisher.apply(entry.getValue()));
-                }
+                result.replaceAll((k, value) -> downstreamFinisher.apply(value));
 
                 return result;
             };
@@ -1760,7 +1760,9 @@ public final class Jdbc {
 
         /**
          * Creates a {@code BiResultExtractor} that converts a {@code ResultSet} into a {@code List} of entities.
-         * The mapping from columns to entity properties is done automatically.
+         * The mapping from columns to entity properties is done automatically. Reference arrays,
+         * maps, lists, and single-column scalar targets are also supported, as described by
+         * {@link BiRowMapper#to(Class)}.
          *
          * <p>
          * The returned {@code BiResultExtractor} is stateless and safe to reuse: a fresh stateful
@@ -3022,7 +3024,7 @@ public final class Jdbc {
         /**
          * Creates a stateful {@code BiRowMapper} that maps a row to an instance of the specified {@code targetClass}.
          * It automatically maps column values to the properties of the target object based on matching names.
-         * This factory supports mapping to beans, {@code Map}s, {@code List}s, arrays, and (for single-column results)
+         * This factory supports mapping to beans, {@code Map}s, {@code List}s, reference arrays, and (for single-column results)
          * scalar/value types such as {@code String}, {@code Integer}, or {@code LocalDate}.
          *
          * <p>
@@ -3123,6 +3125,9 @@ public final class Jdbc {
          * target the column is omitted entirely (the list is compacted, so list index no longer equals
          * column index when a filter drops columns).</p>
          *
+         * <p>Column configuration is cached only after every column is configured successfully. If a
+         * filter, converter, or property lookup fails, the next invocation retries configuration.</p>
+         *
          * @param <T> target type
          * @param targetClass the class to map rows to (bean, array, {@code Map}, {@code List}, or single-column scalar type)
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping;
@@ -3131,8 +3136,8 @@ public final class Jdbc {
          *                            may be {@code null}, in which case the original column name is used
          * @param ignoreUnmatchedColumns if {@code true}, columns that pass the filter but cannot be matched
          * to a property of {@code targetClass} are silently skipped;
-         * if {@code false}, an {@code IllegalArgumentException} is thrown by the returned mapper on its
-         * first invocation when an unmatched column is encountered (only relevant for bean targets).
+         * if {@code false}, an {@code IllegalArgumentException} is thrown by the returned mapper whenever
+         * initialization encounters an unmatched column (only relevant for bean targets).
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
          * @throws IllegalArgumentException if {@code targetClass} is {@code null}, or if a non-trivial
          *         {@code columnNameFilter}/{@code columnNameConverter} is supplied together with a
@@ -3172,7 +3177,7 @@ public final class Jdbc {
                             if (columnLabels == null) {
                                 columnCount = columnLabelList.size();
 
-                                columnLabels = columnLabelList.toArray(new String[columnCount]);
+                                final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
 
                                 for (int i = 0; i < columnCount; i++) {
                                     if (columnNameFilterToBeUsed.test(columnLabels[i])) {
@@ -3181,6 +3186,8 @@ public final class Jdbc {
                                         columnLabels[i] = null;
                                     }
                                 }
+
+                                this.columnLabels = columnLabels;
                             }
 
                             final Object[] a = Array.newInstance(targetClass.getComponentType(), columnCount);
@@ -3220,7 +3227,7 @@ public final class Jdbc {
                             final int columnCount = columnLabelList.size();
 
                             if (columnLabels == null) {
-                                columnLabels = columnLabelList.toArray(new String[columnCount]);
+                                final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
 
                                 for (int i = 0; i < columnCount; i++) {
                                     if (columnNameFilterToBeUsed.test(columnLabels[i])) {
@@ -3229,6 +3236,8 @@ public final class Jdbc {
                                         columnLabels[i] = null;
                                     }
                                 }
+
+                                this.columnLabels = columnLabels;
                             }
 
                             @SuppressWarnings("rawtypes")
@@ -3257,7 +3266,9 @@ public final class Jdbc {
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             if (columnLabels == null) {
                                 columnCount = columnLabelList.size();
-                                columnLabels = columnLabelList.toArray(new String[columnCount]);
+                                final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
+
+                                this.columnLabels = columnLabels;
                             }
 
                             @SuppressWarnings("rawtypes")
@@ -3279,7 +3290,7 @@ public final class Jdbc {
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             if (columnLabels == null) {
                                 columnCount = columnLabelList.size();
-                                columnLabels = columnLabelList.toArray(new String[columnCount]);
+                                final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
 
                                 for (int i = 0; i < columnCount; i++) {
                                     if (columnNameFilterToBeUsed.test(columnLabels[i])) {
@@ -3288,6 +3299,8 @@ public final class Jdbc {
                                         columnLabels[i] = null;
                                     }
                                 }
+
+                                this.columnLabels = columnLabels;
                             }
 
                             @SuppressWarnings("rawtypes")
@@ -3320,7 +3333,7 @@ public final class Jdbc {
                             final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(targetClass);
 
                             columnCount = columnLabelList.size();
-                            columnLabels = columnLabelList.toArray(new String[columnCount]);
+                            final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
                             propInfos = new PropInfo[columnCount];
                             columnTypes = new Type[columnCount];
 
@@ -3393,6 +3406,8 @@ public final class Jdbc {
                                     columnTypes[i] = null;
                                 }
                             }
+
+                            this.columnLabels = columnLabels;
                         }
 
                         final Object result = entityInfo.createBeanResult();
@@ -3441,7 +3456,7 @@ public final class Jdbc {
         /**
          * Creates a stateful {@code BiRowMapper} for a target entity class, using a map to resolve
          * column name prefixes to nested property paths. This is useful for mapping results from JOIN
-         * queries where columns are prefixed (e.g., {@code "u_id"}, {@code "a_street"}).
+         * queries where column labels use dot-separated prefixes (e.g., {@code "u.id"}, {@code "a.street"}).
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
@@ -3453,7 +3468,8 @@ public final class Jdbc {
          * // For columns labeled "u.id" and "a.street", maps "u" to the 'user' property and "a" to the 'address' property,
          * // resolving them to user.id and address.street respectively.
          * Map<String, String> prefixMap = Map.of("u", "user", "a", "address");
-         * BiRowMapper<User> mapper = BiRowMapper.to(User.class, prefixMap);
+         * // UserProfile has nested properties named "user" and "address".
+         * BiRowMapper<UserProfile> mapper = BiRowMapper.to(UserProfile.class, prefixMap);
          * }</pre>
          *
          * @param <T> target entity type
@@ -3518,7 +3534,7 @@ public final class Jdbc {
                         final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClass);
 
                         columnCount = columnLabelList.size();
-                        columnLabels = columnLabelList.toArray(new String[columnCount]);
+                        final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
                         propInfos = new PropInfo[columnCount];
                         columnTypes = new Type[columnCount];
 
@@ -3574,6 +3590,8 @@ public final class Jdbc {
                                 columnTypes[i] = propInfos[i].dbType;
                             }
                         }
+
+                        this.columnLabels = columnLabels;
                     }
 
                     final Object result = entityInfo.createBeanResult();
@@ -3716,6 +3734,7 @@ public final class Jdbc {
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it caches the converted key names.
          * It should not be cached, shared across different query structures, or used in parallel streams.
+         * Failed name conversion is retried on the next invocation; partially converted keys are not cached.
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -3744,6 +3763,7 @@ public final class Jdbc {
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it caches the converted key names.
          * It should not be cached, shared across different query structures, or used in parallel streams.
+         * Failed name conversion is retried on the next invocation; partially converted keys are not cached.
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -3773,11 +3793,13 @@ public final class Jdbc {
                 @Override
                 public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
                     if (keyNames == null) {
-                        keyNames = new String[columnLabels.size()];
+                        final String[] convertedNames = new String[columnLabels.size()];
 
                         for (int i = 0, size = columnLabels.size(); i < size; i++) {
-                            keyNames[i] = columnNameConverter.apply(columnLabels.get(i));
+                            convertedNames[i] = columnNameConverter.apply(columnLabels.get(i));
                         }
+
+                        keyNames = convertedNames;
                     }
 
                     final int columnCount = keyNames.length;
@@ -3850,6 +3872,7 @@ public final class Jdbc {
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it caches converted key names and reuses an internal array.
          * It should not be cached, shared across different query structures, or used in parallel streams.
+         * Failed name conversion is retried on the next invocation; partially converted keys are not cached.
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -3886,12 +3909,14 @@ public final class Jdbc {
                     final int columnCount = columnLabels.size();
 
                     if (outputValuesForRowExtractor == null) {
-                        outputValuesForRowExtractor = new Object[columnCount];
-                        keyNames = new String[columnCount];
+                        final String[] convertedNames = new String[columnCount];
 
                         for (int i = 0; i < columnCount; i++) {
-                            keyNames[i] = columnNameConverter.apply(columnLabels.get(i));
+                            convertedNames[i] = columnNameConverter.apply(columnLabels.get(i));
                         }
+
+                        keyNames = convertedNames;
+                        outputValuesForRowExtractor = new Object[columnCount];
                     }
 
                     rowExtractor.accept(rs, outputValuesForRowExtractor);
@@ -4467,7 +4492,7 @@ public final class Jdbc {
              * explicitly configured non-default getters continue to take precedence.</p>
              *
              * <p>Note: when {@code targetClass} is a bean class, the returned mapper's {@code apply} method throws
-             * an {@link IllegalArgumentException} on its first invocation if a result column cannot be mapped to
+             * an {@link IllegalArgumentException} whenever initialization finds a result column that cannot be mapped to
              * any property; use {@link #to(Class, boolean)} with {@code true} to ignore unmatched columns.</p>
              *
              * @param <T> target type
@@ -4491,7 +4516,7 @@ public final class Jdbc {
              *
              * <p>Note: when {@code targetClass} is a bean class and {@code ignoreUnmatchedColumns} is
              * {@code false}, the returned mapper's {@code apply} method throws an {@link IllegalArgumentException}
-             * on its first invocation if a result column cannot be mapped to any property.</p>
+             * whenever initialization finds a result column that cannot be mapped to any property.</p>
              *
              * @param <T> target type
              * @param targetClass the class to map rows to
@@ -4599,7 +4624,7 @@ public final class Jdbc {
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
-                                rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
+                                final ColumnGetter<?>[] columnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
 
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
                                 final PropInfo[] localPropInfos = new PropInfo[rsColumnCount];
@@ -4629,13 +4654,14 @@ public final class Jdbc {
                                                     + " mapping to column: " + columnLabels[i]);
                                         }
                                     } else {
-                                        if (rsColumnGetters[i] == ColumnGetter.GET_OBJECT) {
-                                            rsColumnGetters[i] = ColumnGetter.forType(localPropInfos[i].dbType);
+                                        if (columnGetters[i] == ColumnGetter.GET_OBJECT) {
+                                            columnGetters[i] = ColumnGetter.forType(localPropInfos[i].dbType);
                                         }
                                     }
                                 }
 
                                 propInfos = localPropInfos;
+                                rsColumnGetters = columnGetters;
                             }
 
                             final Object result = entityInfo.createBeanResult();
@@ -5329,8 +5355,8 @@ public final class Jdbc {
 
     /**
      * A functional interface for extracting data from the current row of a {@code ResultSet} into a
-     * target {@code Object} array. Unlike {@link RowMapper}, which creates a new object per row,
-     * {@code RowExtractor} populates a pre-allocated array, making it more efficient for bulk data
+     * target {@code Object} array. {@code RowExtractor} populates a caller-provided array, avoiding
+     * a separate allocation for each row when that array is reused. It is used for bulk data
      * extraction into a {@link Dataset}.
      *
      * <p>Instances can be created via the factory methods {@link #forType(Class)} or
@@ -5368,6 +5394,8 @@ public final class Jdbc {
          *
          * @param rs the {@code ResultSet} positioned at a valid row; must not be {@code null}
          * @param outputRow the array to be populated with data from the current row; must not be {@code null}
+         * @throws IllegalArgumentException if a built-in extractor receives a null or undersized output array,
+         *         or a builder-configured column index exceeds the result set's column count
          * @throws SQLException if a database access error occurs
          */
         @Override
@@ -5816,7 +5844,9 @@ public final class Jdbc {
              * parallel streams.</p>
              *
              * <p>Note: the returned extractor's {@code accept} method throws an {@link IllegalArgumentException}
-             * if the supplied output array is {@code null} or shorter than the result set's column count.</p>
+             * if the supplied output array is {@code null} or shorter than the result set's column count,
+             * or a configured column index exceeds that count. SQL errors occur when {@code accept} reads
+             * the metadata or column values, rather than when this builder method is called.</p>
              *
              * @return a new stateful {@code RowExtractor}
              */
@@ -5846,6 +5876,13 @@ public final class Jdbc {
                         }
                     }
 
+                    /**
+                     * Resolves the snapshotted getters against the result set's column count.
+                     *
+                     * @param columnCount the number of result columns
+                     * @return the getter for each result column
+                     * @throws IllegalArgumentException if a configured index exceeds {@code columnCount}
+                     */
                     private ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
                         final ColumnGetter<?>[] columnGetters = new ColumnGetter<?>[columnCount];
                         final ColumnGetter<?> defaultColumnGetter = configuredColumnGetters.get(0);
@@ -5875,6 +5912,10 @@ public final class Jdbc {
      * <p>Pre-defined getters are provided for all common JDBC types (e.g., {@link #GET_BOOLEAN},
      * {@link #GET_INT}, {@link #GET_STRING}, etc.). Custom getters can be created using lambda expressions
      * or the {@link #forType(Class)} / {@link #forType(Type)} factory methods.</p>
+     *
+     * <p>The primitive getters, such as {@link #GET_INT} and {@link #GET_BOOLEAN}, return the JDBC
+     * default value ({@code 0} or {@code false}) for SQL {@code NULL}. To preserve null, use a
+     * wrapper-type getter such as {@code ColumnGetter.forType(Integer.class)}.</p>
      *
      * <p><b>Naming note:</b> the value-fetching method is {@link #get(ResultSet, int)} (this interface's
      * single abstract method); the static {@code forType(...)} methods are <i>factories</i> that
@@ -6339,8 +6380,8 @@ public final class Jdbc {
 
             /**
              * Returns the pre-defined {@link #GET_OBJECT} mapper cast to the caller's inferred type.
-             * The actual value returned at runtime is always the raw column object; the generic
-             * type parameter {@code T} is unchecked.
+             * The runtime value is produced by {@link JdbcUtil#getColumnValue(ResultSet, int)},
+             * including its driver-specific normalization; the generic type parameter {@code T} is unchecked.
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -6629,8 +6670,9 @@ public final class Jdbc {
      * execution. Values can be retrieved by their 1-based parameter index or by parameter name,
      * depending on how the underlying {@link OutParam} was registered.
      *
-     * <p>This type is not directly instantiable by callers; instances are produced by the framework
-     * (e.g., by {@code CallableQuery} methods that accept a list of {@code OutParam}s).</p>
+     * <p>This type is not directly instantiable by callers; instances are produced by
+     * {@link CallableQuery#executeAndGetOutParameters()} and related methods, or by
+     * {@link JdbcUtil#getOutParameters(CallableStatement, List)}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -6799,7 +6841,7 @@ public final class Jdbc {
          * This method is invoked after the DAO method completes, whether successfully or with an exception.
          * Handlers are invoked in the reverse order of their {@link #beforeInvoke} calls; if this
          * handler's {@code beforeInvoke} did not run (because an earlier handler failed) then {@code afterInvoke}
-         * is not invoked for it. It can be used for logging results, result transformation, or resource cleanup.
+         * is not invoked for it. It can be used for inspecting results, logging, or resource cleanup.
          *
          * <p>Exceptions thrown from this method are logged and attached as suppressed exceptions to any primary
          * failure from the DAO method itself (they never replace it); if the DAO method completed normally, the
@@ -6893,11 +6935,10 @@ public final class Jdbc {
          *
          * @param handlerClass the handler class to instantiate and register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
-         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if it is abstract or otherwise cannot be
-         *         instantiated (e.g. it has no accessible no-argument constructor). The reflective instantiation is performed
-         *         by {@code N.newInstance(Class)}.
+         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, abstract, or lacks a required constructor.
+         * @throws RuntimeException if reflective construction is inaccessible or the constructor fails.
          */
-        public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException {
+        public static boolean register(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException, RuntimeException {
             N.checkArgNotNull(handlerClass, cs.handlerClass);
 
             return register(N.newInstance(handlerClass));
@@ -6942,7 +6983,7 @@ public final class Jdbc {
          * @param qualifier the unique identifier for the handler.
          * @param handler the handler instance to register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
-         * @throws IllegalArgumentException if {@code qualifier} is empty or {@code handler} is {@code null}.
+         * @throws IllegalArgumentException if {@code qualifier} is {@code null} or empty, or {@code handler} is {@code null}.
          */
         public static boolean register(final String qualifier, final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotEmpty(qualifier, cs.qualifier);
@@ -6970,7 +7011,7 @@ public final class Jdbc {
          *
          * @param qualifier the unique identifier for the handler.
          * @return the handler instance, or {@code null} if not found.
-         * @throws IllegalArgumentException if {@code qualifier} is empty.
+         * @throws IllegalArgumentException if {@code qualifier} is {@code null} or empty.
          */
         public static Handler<?> get(final String qualifier) { //NOSONAR
             N.checkArgNotEmpty(qualifier, cs.qualifier);
@@ -7076,10 +7117,11 @@ public final class Jdbc {
          * @param handlerClass the class of the handler to retrieve or create.
          * @return the existing or newly created handler instance. May be {@code null} only if {@code N.newInstance} returns
          *         {@code null} for the given class.
-         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if a new instance has to be created and
-         *         the class is abstract or otherwise cannot be instantiated (e.g. it has no accessible no-argument constructor).
+         * @throws IllegalArgumentException if {@code handlerClass} is {@code null}, or if construction is needed and the class
+         *         is abstract or lacks a required constructor.
+         * @throws RuntimeException if construction is needed and reflective access or the constructor fails.
          */
-        public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
+        public static Handler<?> getOrCreate(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException, RuntimeException { //NOSONAR
             N.checkArgNotNull(handlerClass, cs.handlerClass);
 
             Handler<?> result = get(handlerClass);
@@ -7226,8 +7268,9 @@ public final class Jdbc {
      * An interface for caching the results of DAO method calls. Implementations can provide
      * various caching strategies (e.g., in-memory, distributed) to improve application performance.
      *
-     * <p>The default cache key format is: {@code fullMethodName#tableName#jsonArrayOfParameters}.</p>
-     * <p>Example: {@code com.example.UserDao.findById#users#[123]}</p>
+     * <p>The default cache key format is {@code fullMethodName#tableName#serializedParameters}.
+     * Arguments are serialized with Kryo when available, otherwise with JSON. Treat this key as opaque;
+     * its argument encoding can depend on the runtime classpath.</p>
      *
      * <p>Two built-in implementations are provided:</p>
      * <ul>
@@ -7247,6 +7290,8 @@ public final class Jdbc {
          * @param capacity the maximum number of entries in the cache.
          * @param evictDelay the interval in milliseconds for the eviction scheduler to run.
          * @return a new {@code DaoCache} instance.
+         * @throws IllegalArgumentException if {@code capacity} or {@code evictDelay} is negative.
+         * @throws IllegalStateException if JVM shutdown has begun and the backing pool cannot register its shutdown hook.
          */
         static DaoCache create(final int capacity, final long evictDelay) {
             return new DefaultDaoCache(capacity, evictDelay);
@@ -7286,6 +7331,7 @@ public final class Jdbc {
          *
          * @param capacity the initial capacity of the backing map.
          * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}.
+         * @throws IllegalArgumentException if {@code capacity} is negative.
          */
         static DaoCache createByMap(final int capacity) {
             return new DaoCacheByMap(capacity);
@@ -7419,7 +7465,7 @@ public final class Jdbc {
     public static final class DefaultDaoCache implements DaoCache {
         /**
          * The backing pool storing cached results by cache key, enforcing the capacity limit and
-         * TTL/idle-time eviction configured at construction.
+         * TTL/idle-time eviction configured when each entry is stored.
          */
         private final KeyedObjectPool<String, PoolableAdapter<Object>> pool;
 
@@ -7437,6 +7483,8 @@ public final class Jdbc {
          *
          * @param capacity the maximum number of entries the cache can hold.
          * @param evictDelay the interval in milliseconds for the background eviction thread.
+         * @throws IllegalArgumentException if {@code capacity} or {@code evictDelay} is negative.
+         * @throws IllegalStateException if JVM shutdown has begun and the backing pool cannot register its shutdown hook.
          */
         public DefaultDaoCache(final int capacity, final long evictDelay) {
             pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay);
@@ -7453,6 +7501,7 @@ public final class Jdbc {
          * @param methodSignature a tuple containing method metadata (unused).
          * @return the cached result, or {@code null} if no live entry exists for the key (a miss, or the entry expired/was evicted).
          * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         * @throws IllegalStateException if the backing pool has been closed during JVM shutdown.
          */
         @Override
         @SuppressWarnings("unused")
@@ -7481,6 +7530,7 @@ public final class Jdbc {
          * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null}
          *         or the backing pool rejected the entry.
          * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         * @throws IllegalStateException if {@code result} is non-null and the backing pool has been closed during JVM shutdown.
          */
         @Override
         @SuppressWarnings("unused")
@@ -7513,7 +7563,9 @@ public final class Jdbc {
          * @param methodSignature a tuple containing method metadata (unused).
          * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null}
          *         or the backing pool rejected the entry.
-         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}, or if {@code result} is non-null
+         *         and {@code liveTime} or {@code maxIdleTime} is not positive.
+         * @throws IllegalStateException if {@code result} is non-null and the backing pool has been closed during JVM shutdown.
          */
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
@@ -7550,6 +7602,9 @@ public final class Jdbc {
          * @param args the method arguments (unused).
          * @param methodSignature a tuple containing method metadata; its method and return type decide the zero-row-count short-circuit.
          * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         * @throws NullPointerException if {@code methodSignature} is {@code null}, or its return type is null for a built-in update method.
+         * @throws ClassCastException if a built-in numeric update method supplies a non-null result that is not a {@code Number}.
+         * @throws IllegalStateException if invalidation is required and the backing pool has been closed during JVM shutdown.
          */
         @Override
         @SuppressWarnings("unused")
@@ -7574,6 +7629,11 @@ public final class Jdbc {
             }
         }
 
+        /**
+         * Removes every entry from the backing pool.
+         *
+         * @throws IllegalStateException if the backing pool has been closed during JVM shutdown.
+         */
         @Override
         public void clear() {
             pool.clear();
@@ -7604,6 +7664,7 @@ public final class Jdbc {
          * Creates a {@code DaoCacheByMap} with a {@code ConcurrentHashMap} of a specified initial capacity.
          *
          * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}.
+         * @throws IllegalArgumentException if {@code capacity} is negative.
          */
         public DaoCacheByMap(final int capacity) {
             this(new ConcurrentHashMap<>(capacity));
@@ -7635,6 +7696,12 @@ public final class Jdbc {
             return cache.get(defaultCacheKey);
         }
 
+        /**
+         * Stores a non-null result in the backing map.
+         *
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         * @throws UnsupportedOperationException if {@code result} is non-null and the backing map does not support insertion.
+         */
         @Override
         @SuppressWarnings("unused")
         public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
@@ -7655,6 +7722,7 @@ public final class Jdbc {
          * are ignored because this implementation does not support TTL-based eviction.
          *
          * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         * @throws UnsupportedOperationException if {@code result} is non-null and the backing map does not support insertion.
          */
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
@@ -7678,6 +7746,9 @@ public final class Jdbc {
          * {@code int}/{@code long} result of {@code 0}).
          *
          * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
+         * @throws NullPointerException if {@code methodSignature} is {@code null}, or its return type is null for a built-in update method.
+         * @throws ClassCastException if a built-in numeric update method supplies a non-null result that is not a {@code Number}.
+         * @throws UnsupportedOperationException if invalidation is required and the backing map does not support removal.
          */
         @Override
         @SuppressWarnings("unused")
@@ -7702,6 +7773,11 @@ public final class Jdbc {
             }
         }
 
+        /**
+         * Removes every entry from the backing map.
+         *
+         * @throws UnsupportedOperationException if the backing map does not support clearing.
+         */
         @Override
         public void clear() {
             cache.clear();

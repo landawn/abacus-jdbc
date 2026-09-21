@@ -56,6 +56,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
+import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.u.OptionalBoolean;
 import com.landawn.abacus.util.u.OptionalByte;
@@ -114,6 +115,60 @@ public class AbstractQueryTest extends TestBase {
         final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> new TestQuery(null));
 
         assertTrue(thrown.getMessage().contains("stmt"));
+    }
+
+
+    @Test
+    public void testQueryForBigIntegerPropagatesInvalidIntegerText() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getString(1)).thenReturn("not-an-integer");
+
+        assertThrows(NumberFormatException.class, query::queryForBigInteger);
+
+        verify(rs).close();
+        verify(preparedStatement).close();
+    }
+
+    @Test
+    public void testQueryRejectsLiveResultSetReturnedByExtractor() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+
+        assertThrows(UnsupportedOperationException.class, () -> query.query(resultSet -> resultSet));
+
+        verify(rs).close();
+        verify(preparedStatement).close();
+    }
+
+    @Test
+    public void testQueryRejectsLiveResultSetReturnedByBiExtractor() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
+
+        assertThrows(UnsupportedOperationException.class, () -> query.query((resultSet, labels) -> resultSet));
+
+        verify(rs).close();
+        verify(preparedStatement).close();
+    }
+
+    @Test
+    public void testStreamAllResultSetsRejectsLiveResultSetDuringConsumption() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.execute()).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(rs);
+        when(preparedStatement.getUpdateCount()).thenReturn(-1);
+        when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
+
+        try (Stream<ResultSet> results = query.streamAllResultSets((resultSet, labels) -> resultSet)) {
+            verify(preparedStatement, never()).execute();
+            assertThrows(UnsupportedOperationException.class, results::toList);
+        }
+
+        verify(rs, Mockito.atLeastOnce()).close();
+        verify(preparedStatement).close();
     }
 
     @Test
@@ -1026,6 +1081,43 @@ public class AbstractQueryTest extends TestBase {
     }
 
     @Test
+    public void testClose_RestoresOriginalLimitAfterMixingMaxRowsSetters() throws SQLException {
+        final AtomicReference<Long> rowLimit = new AtomicReference<>(50L);
+        when(preparedStatement.getMaxRows()).thenAnswer(invocation -> rowLimit.get().intValue());
+        when(preparedStatement.getLargeMaxRows()).thenAnswer(invocation -> rowLimit.get());
+        Mockito.doAnswer(invocation -> {
+            rowLimit.set(((Integer) invocation.getArgument(0)).longValue());
+            return null;
+        }).when(preparedStatement).setMaxRows(anyInt());
+        Mockito.doAnswer(invocation -> {
+            rowLimit.set(invocation.getArgument(0));
+            return null;
+        }).when(preparedStatement).setLargeMaxRows(anyLong());
+
+        query.setMaxRows(200).setLargeMaxRows(300L).setMaxRows(400);
+        assertEquals(400L, rowLimit.get().longValue());
+
+        query.close();
+
+        assertEquals(50L, rowLimit.get().longValue());
+        verify(preparedStatement, never()).getLargeMaxRows();
+    }
+
+    @Test
+    public void testClose_RestoresOriginalLargeLimitAfterUsingMaxRows() throws SQLException {
+        final long originalLimit = (long) Integer.MAX_VALUE + 100;
+        when(preparedStatement.getLargeMaxRows()).thenReturn(originalLimit);
+        when(preparedStatement.getMaxRows()).thenThrow(new SQLException("Row limit exceeds the int range"));
+
+        query.setLargeMaxRows(500L).setMaxRows(200).setLargeMaxRows(300L);
+        query.close();
+
+        verify(preparedStatement).setLargeMaxRows(originalLimit);
+        verify(preparedStatement, never()).getMaxRows();
+        verify(preparedStatement).close();
+    }
+
+    @Test
     public void testClose_WhenResetLargeMaxRowsFails_LogsWarning() throws SQLException {
         when(preparedStatement.getLargeMaxRows()).thenReturn(75L);
         doThrow(new SQLException("reset largeMaxRows failed")).when(preparedStatement).setLargeMaxRows(75L);
@@ -1847,6 +1939,64 @@ public class AbstractQueryTest extends TestBase {
         verify(preparedStatement, never()).close();
     }
 
+    @Test
+    public void testStreamAllResultSetsClosingBeforeTraversalLeavesReusableStatementUntouched() throws SQLException {
+        query.closeAfterExecution(false);
+        when(preparedStatement.getMoreResults()).thenThrow(new SQLException("Statement has not been executed"));
+
+        try (Stream<String> results = query.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
+            assertNotNull(results);
+        }
+        try (Stream<String> results = query.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")) {
+            assertNotNull(results);
+        }
+
+        verify(preparedStatement, never()).execute();
+        verify(preparedStatement, never()).getMoreResults();
+        verify(preparedStatement, never()).getUpdateCount();
+        verify(preparedStatement, never()).close();
+        assertFalse(query.isClosed);
+    }
+
+    @Test
+    public void testStreamAllResultSetsClosingBeforeTraversalStillClosesOwnedStatement() throws SQLException {
+        for (final boolean withColumnLabels : new boolean[] { false, true }) {
+            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+            final TestQuery ownedQuery = new TestQuery(statement);
+
+            try (Stream<String> results = withColumnLabels
+                    ? ownedQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")
+                    : ownedQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
+                assertNotNull(results);
+            }
+
+            verify(statement, never()).execute();
+            verify(statement, never()).getMoreResults();
+            verify(statement).close();
+            assertTrue(ownedQuery.isClosed);
+        }
+    }
+
+    @Test
+    public void testStreamAllResultSetsFailedExecutionDoesNotDrainReusableStatementOnClose() throws SQLException {
+        final SQLException executionFailure = new SQLException("execution failed");
+        when(preparedStatement.execute()).thenThrow(executionFailure);
+        when(preparedStatement.getMoreResults()).thenThrow(new SQLException("Statement has not been executed"));
+        query.closeAfterExecution(false);
+
+        try (Stream<String> results = query.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
+            final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
+            assertSame(executionFailure, thrown.getCause());
+        }
+        try (Stream<String> results = query.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")) {
+            final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
+            assertSame(executionFailure, thrown.getCause());
+        }
+
+        verify(preparedStatement, never()).getMoreResults();
+        verify(preparedStatement, never()).close();
+    }
+
     // TODO: L142 (static initializer) - uncovered branch requires method with parameterTypes[0] != int, edge case not testable
     // TODO: L7427, L7477 (stream(RowFilter/BiRowFilter) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods
     // TODO: L7688-L7689, L7741-L7742 (streamAllResultSets(Extractor/BiExtractor) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods
@@ -2164,6 +2314,42 @@ public class AbstractQueryTest extends TestBase {
 
         assertSame(newerFailure, thrown);
         assertArrayEquals(new Throwable[] { olderFailure }, thrown.getSuppressed());
+    }
+
+    @Test
+    public void testClosePreservesStatementCleanupFailureWhenCloseHandlerAlsoFails() throws SQLException {
+        final RuntimeException statementFailure = new RuntimeException("statement reset failed");
+        final AssertionError handlerFailure = new AssertionError("close handler failed");
+        when(preparedStatement.getFetchSize()).thenReturn(10);
+        query.setFetchSize(20);
+        doThrow(statementFailure).when(preparedStatement).setFetchSize(10);
+        query.onClose(() -> {
+            throw handlerFailure;
+        });
+
+        final RuntimeException thrown = assertThrows(RuntimeException.class, query::close);
+
+        assertSame(statementFailure, thrown);
+        assertArrayEquals(new Throwable[] { handlerFailure }, thrown.getSuppressed());
+        verify(preparedStatement).close();
+        assertDoesNotThrow(query::close);
+    }
+
+    @Test
+    public void testCloseDoesNotSuppressStatementCleanupFailureOntoItself() throws SQLException {
+        final AssertionError failure = new AssertionError("cleanup failed");
+        when(preparedStatement.getFetchSize()).thenReturn(10);
+        query.setFetchSize(20);
+        doThrow(failure).when(preparedStatement).setFetchSize(10);
+        query.onClose(() -> {
+            throw failure;
+        });
+
+        final AssertionError thrown = assertThrows(AssertionError.class, query::close);
+
+        assertSame(failure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+        verify(preparedStatement).close();
     }
 
     @Test

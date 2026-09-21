@@ -47,7 +47,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p><strong>Restriction:</strong> {@code @CacheResult} (together with {@link Cache @Cache} and
  * {@link RefreshCache @RefreshCache}) is only honored on cacheable DAOs &mdash; {@code NonUpdateDao} or
  * {@code ReadOnlyDao} subtypes (and their {@code Unchecked} variants). Applying it to a DAO that supports
- * update/delete operations fails with
+ * update/delete operations at the type level, or enabling it for an eligible method on such a DAO, fails with
  * {@code UnsupportedOperationException} at DAO initialization time. Use {@link Cache @Cache} on the same
  * DAO interface to configure the shared cache pool (capacity, eviction sweep interval, and
  * implementation), and {@link RefreshCache @RefreshCache} on selected methods to invalidate cached
@@ -233,10 +233,12 @@ public @interface CacheResult {
      * </ul>
      *
      * <p>Serialization provides isolation between cached objects and application code,
-     * preventing unintended modifications to cached data. Values that are already immutable are stored
-     * and returned as-is, without copying, whichever strategy is selected. Selecting
-     * {@link CacheSerialization#KRYO} requires Kryo on the classpath; otherwise caching a mutable value
-     * fails at runtime with {@code UnsupportedOperationException}.</p>
+     * preventing unintended modifications to cached data. Values implementing
+     * {@link com.landawn.abacus.util.Immutable} are stored and returned as-is, except populated
+     * optional/nullable wrappers whose contents may require copying. Other values pass through
+     * the selected serializer even if their Java types are immutable. Selecting
+     * {@link CacheSerialization#KRYO} requires Kryo on the classpath whenever copying is needed;
+     * otherwise caching such a value fails at runtime with {@code UnsupportedOperationException}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -48,6 +48,121 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
 @TestInstance(Lifecycle.PER_CLASS)
 public class JdbcUtilIntegrationTest extends TestBase {
 
+    @Test
+    public void testFailedBatchRollbackDoesNotCommitPendingChanges() throws SQLException {
+        for (final boolean largeBatch : new boolean[] { false, true }) {
+            for (final boolean failCommit : new boolean[] { false, true }) {
+                final String url = "jdbc:h2:mem:failed_batch_rollback_" + largeBatch + "_" + failCommit;
+                try (Connection conn = java.sql.DriverManager.getConnection(url, "sa", "");
+                     Connection observer = java.sql.DriverManager.getConnection(url, "sa", "");
+                     Statement stmt = conn.createStatement()) {
+                    stmt.execute("CREATE TABLE pending_batch (id INT PRIMARY KEY)");
+                    final Connection failingConnection = (Connection) java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(),
+                            new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+                                if (method.getName().equals("rollback") || failCommit && method.getName().equals("commit")) {
+                                    throw new SQLException("Simulated " + method.getName() + " failure");
+                                }
+                                try {
+                                    return method.invoke(conn, args);
+                                } catch (final java.lang.reflect.InvocationTargetException e) {
+                                    throw e.getCause();
+                                }
+                            });
+                    final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { failCommit ? 2 : 1 });
+
+                    assertThrows(SQLException.class, () -> {
+                        if (largeBatch) {
+                            JdbcUtil.executeLargeBatchUpdate(failingConnection, "INSERT INTO pending_batch VALUES (?)", parameters, 1);
+                        } else {
+                            JdbcUtil.executeBatchUpdate(failingConnection, "INSERT INTO pending_batch VALUES (?)", parameters, 1);
+                        }
+                    });
+
+                    assertFalse(conn.getAutoCommit(), "A failed rollback must leave the transaction under caller control");
+                    try (Statement observerStatement = observer.createStatement();
+                         ResultSet rs = observerStatement.executeQuery("SELECT COUNT(*) FROM pending_batch")) {
+                        assertTrue(rs.next());
+                        assertEquals(0, rs.getInt(1), "Cleanup must not commit the batch's pending inserts");
+                    }
+                    conn.rollback();
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testMetadataLookupFoldsUnquotedSchemaAndCatalog() throws SQLException {
+        for (final boolean lowerCase : new boolean[] { false, true }) {
+            final String url = "jdbc:h2:mem:metadata_case_" + lowerCase + (lowerCase ? ";DATABASE_TO_LOWER=TRUE" : "");
+            try (Connection conn = java.sql.DriverManager.getConnection(url, "sa", "");
+                 Statement stmt = conn.createStatement()) {
+                stmt.execute("CREATE SCHEMA app_schema");
+                stmt.execute("CREATE TABLE app_schema.\"MixedCase\" (id INT)");
+                final String expectedColumn = lowerCase ? "id" : "ID";
+                final String schema = lowerCase ? "APP_SCHEMA" : "app_schema";
+                final String catalog = lowerCase ? conn.getCatalog().toUpperCase(java.util.Locale.ROOT)
+                        : conn.getCatalog().toLowerCase(java.util.Locale.ROOT);
+
+                assertTrue(JdbcUtil.tableExists(conn, schema + ".\"MixedCase\""));
+                assertEquals(List.of(expectedColumn), JdbcUtil.getColumnNames(conn, schema + ".\"MixedCase\""));
+                assertTrue(JdbcUtil.tableExists(conn, catalog + "." + schema + ".\"MixedCase\""));
+                assertEquals(List.of(expectedColumn), JdbcUtil.getColumnNames(conn, catalog + "." + schema + ".\"MixedCase\""));
+                assertTrue(JdbcUtil.dropTableIfExists(conn, schema + ".\"MixedCase\""));
+                assertFalse(JdbcUtil.tableExists(conn, schema + ".\"MixedCase\""));
+            }
+        }
+    }
+
+    @Test
+    public void testMetadataLookupAndDropDistinguishQuotedCaseVariants() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:metadata_distinct_case", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE items (unquoted_id INT)");
+            stmt.execute("CREATE TABLE \"items\" (quoted_id INT)");
+
+            assertEquals(List.of("UNQUOTED_ID"), JdbcUtil.getColumnNames(conn, "items"));
+            assertEquals(List.of("QUOTED_ID"), JdbcUtil.getColumnNames(conn, "\"items\""));
+            assertTrue(JdbcUtil.dropTableIfExists(conn, "items"));
+            assertTrue(JdbcUtil.tableExists(conn, "\"items\""));
+            assertFalse(JdbcUtil.tableExists(conn, "items"));
+            assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(conn, "items"));
+        }
+    }
+
+    @Test
+    public void testMetadataLookupPreservesResolvedCurrentSchemaCase() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:metadata_current_schema_case", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE SCHEMA \"MixedSchema\"");
+            stmt.execute("CREATE TABLE \"MixedSchema\".items (id INT)");
+            conn.setSchema("MixedSchema");
+
+            assertTrue(JdbcUtil.tableExists(conn, "items"));
+            assertEquals(List.of("ID"), JdbcUtil.getColumnNames(conn, "items"));
+            assertFalse(JdbcUtil.tableExists(conn, "mixedschema.\"ITEMS\""));
+        }
+    }
+
+    @Test
+    public void testMetadataLookupEscapesLiteralSchemaAndTableNames() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:metadata_literal_names", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            final String schema = "s\\chema_%";
+            final String table = "\"a\\b_%\"";
+            final String qualifiedName = "\"" + schema + "\"." + table;
+            stmt.execute("CREATE SCHEMA \"" + schema + "\"");
+            stmt.execute("CREATE TABLE " + qualifiedName + " (id INT)");
+
+            assertTrue(JdbcUtil.tableExists(conn, qualifiedName));
+            assertEquals(List.of("ID"), JdbcUtil.getColumnNames(conn, qualifiedName));
+
+            conn.setSchema(schema);
+            assertTrue(JdbcUtil.tableExists(conn, table));
+            assertEquals(List.of("ID"), JdbcUtil.getColumnNames(conn, table));
+            assertFalse(JdbcUtil.tableExists(conn, "\"a\\bXmissing\""));
+        }
+    }
+
     public static class Widget {
         private Long id;
         private String name;

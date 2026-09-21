@@ -454,6 +454,49 @@ public class DaoUtilTest extends TestBase {
     }
 
     @Test
+    public void testCompletionKeepsFirstRuntimeFailureWhenLaterFutureFailsWithSqlException() {
+        for (final boolean unchecked : new boolean[] { false, true }) {
+            final IllegalArgumentException first = new IllegalArgumentException("first task");
+            final SQLException later = new SQLException("later task");
+            final List<ContinuableFuture<Void>> futures = List.of(ContinuableFuture.run(() -> {
+                throw first;
+            }, Runnable::run), ContinuableFuture.run(() -> {
+                throw later;
+            }, Runnable::run));
+
+            final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> {
+                if (unchecked) {
+                    DaoUtil.uncheckedComplete(futures);
+                } else {
+                    DaoUtil.complete(futures);
+                }
+            });
+            assertSame(first, thrown);
+            assertEquals(1, thrown.getSuppressed().length);
+            assertSame(later, thrown.getSuppressed()[0]);
+
+            final IllegalArgumentException firstSum = new IllegalArgumentException("first sum task");
+            final SQLException laterSum = new SQLException("later sum task");
+            final List<ContinuableFuture<Integer>> counts = List.of(ContinuableFuture.call(() -> {
+                throw firstSum;
+            }, Runnable::run), ContinuableFuture.call(() -> {
+                throw laterSum;
+            }, Runnable::run));
+
+            final IllegalArgumentException sumThrown = assertThrows(IllegalArgumentException.class, () -> {
+                if (unchecked) {
+                    DaoUtil.uncheckedCompleteSum(counts);
+                } else {
+                    DaoUtil.completeSum(counts);
+                }
+            });
+            assertSame(firstSum, sumThrown);
+            assertEquals(1, sumThrown.getSuppressed().length);
+            assertSame(laterSum, sumThrown.getSuppressed()[0]);
+        }
+    }
+
+    @Test
     public void testCompleteSum_ThrowsOnOverflow() {
         final List<ContinuableFuture<Integer>> futures = Arrays.asList(ContinuableFuture.completed(Integer.MAX_VALUE), ContinuableFuture.completed(1));
 

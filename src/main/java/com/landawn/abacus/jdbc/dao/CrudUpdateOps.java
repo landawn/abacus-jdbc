@@ -50,6 +50,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param entity the entity with updated values (must have its ID populated)
      * @return the number of rows updated (typically 1 if successful, 0 if not found)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     int update(final T entity) throws SQLException;
@@ -71,8 +72,9 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param entity the entity containing the values to update
      * @param propNamesToUpdate the property names to update (must not be {@code null} or empty)
      * @return the number of rows updated
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToUpdate} is {@code null} or empty
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if a database access error occurs
      */
     int update(final T entity, final Collection<String> propNamesToUpdate) throws SQLException;
 
@@ -91,6 +93,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     default int update(final String propName, final Object propValue, final ID id) throws SQLException {
@@ -119,6 +122,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     int update(final Map<String, Object> updateProps, final ID id) throws SQLException;
@@ -137,7 +141,9 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *
      * @param entities the collection of entities to update
      * @return the total number of rows updated
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     default int batchUpdate(final Collection<? extends T> entities) throws SQLException {
         return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -160,7 +166,9 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows updated
      * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
@@ -181,8 +189,10 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for all entities (must not be {@code null} or empty)
      * @return the total number of rows updated
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws SQLException {
         return batchUpdate(entities, propNamesToUpdate, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -208,8 +218,10 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows updated
-     * @throws SQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws SQLException;
 

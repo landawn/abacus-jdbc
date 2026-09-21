@@ -44,10 +44,11 @@ import com.landawn.abacus.annotation.Beta;
  *
  * <p><strong>Note:</strong> Marked {@link Beta} along with {@link Cache} and {@link CacheResult}.</p>
  *
- * <p><strong>Init-time validation:</strong> {@code @RefreshCache} is only meaningful together with
- * {@link CacheResult @CacheResult}. If a DAO (or any of its super-interfaces or methods) declares
- * {@code @RefreshCache} while nothing on it is annotated with {@code @CacheResult}, DAO initialization
- * fails with {@code UnsupportedOperationException}.</p>
+ * <p><strong>Init-time validation:</strong> if cache invalidation is enabled for at least one
+ * eligible DAO method, caching must also be enabled for at least one eligible method through
+ * {@link CacheResult @CacheResult}; otherwise DAO initialization fails with
+ * {@code UnsupportedOperationException}. Disabled annotations, type-level filters matching no
+ * methods, and {@link NonDBOperation} methods do not satisfy that requirement.</p>
  *
  * <p>Note: caching (and therefore cache invalidation) is only honored on cacheable DAOs
  * ({@code NonUpdateDao} or {@code ReadOnlyDao} subtypes and their {@code Unchecked} variants), whose only write operations are the built-in

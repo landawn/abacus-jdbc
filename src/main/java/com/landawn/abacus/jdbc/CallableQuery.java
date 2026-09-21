@@ -88,9 +88,9 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * <p><b>Note on named parameters:</b> unlike {@link NamedQuery} (which resolves parameter names against the
  * SQL it parses and reports an unknown name with an {@link IllegalArgumentException}), the name-based
  * {@code setXxx(String parameterName, ...)} and {@code registerOutParameter(String parameterName, ...)}
- * methods of this class forward the name directly to the JDBC driver. An invalid, blank, or {@code null}
- * {@code parameterName} therefore surfaces as a driver-specific {@link SQLException}, not an
- * {@code IllegalArgumentException}.</p>
+ * methods of this class forward the name directly to the JDBC driver. Unknown or blank names are
+ * therefore validated by the driver. OUT-parameter registration rejects a {@code null} name with
+ * {@link IllegalArgumentException}; the named value setters leave null-name validation to the driver.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -449,9 +449,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if a database access error occurs
      * @throws ArithmeticException if the BigInteger value is outside the range of a long.
      *         When this is thrown the underlying statement is also closed.
+     * @throws SQLException if a database access error occurs
      */
     public CallableQuery setLong(final String parameterName, final BigInteger value) throws SQLException {
         if (value == null) {
@@ -882,6 +882,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets the specified named parameter to a LocalTime value.
+     * Fractional seconds are discarded when converting to {@link java.sql.Time}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -974,6 +975,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}
      * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final ZonedDateTime value) throws SQLException {
@@ -995,6 +997,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}
      * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final OffsetDateTime value) throws SQLException {
@@ -1016,6 +1019,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}
      * @throws SQLException if a database access error occurs
      */
     public CallableQuery setTimestamp(final String parameterName, final Instant value) throws SQLException {
@@ -1562,7 +1566,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the object containing the input parameter value
      * @param sqlType the SQL type code defined in {@link java.sql.Types}
      * @param scaleOrLength for DECIMAL/NUMERIC types, the scale (number of digits after the decimal point);
-     *                      for stream-backed types (e.g. {@code LONGVARCHAR}) the length of the data;
+     *                      for {@link InputStream} or {@link Reader} values, the length of the data;
      *                      for all other types this value is ignored
      * @return this CallableQuery instance for method chaining
      * @throws SQLException if a database access error occurs
@@ -1611,7 +1615,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the object containing the input parameter value, or {@code null} to set SQL {@code NULL}
      * @param sqlType the {@link SQLType} to be used
      * @param scaleOrLength for DECIMAL/NUMERIC types, the scale (number of digits after the decimal point);
-     *                      for stream-backed types (e.g. {@code LONGVARCHAR}) the length of the data;
+     *                      for {@link InputStream} or {@link Reader} values, the length of the data;
      *                      for all other types this value is ignored
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code sqlType} is {@code null}
@@ -1639,7 +1643,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @param <T> parameter value type
      * @param parameterName the name of the parameter
-     * @param value the object containing the input parameter value, or {@code null} to set SQL {@code NULL}
+     * @param value the object passed to the type handler; the handler determines how {@code null} is bound
      * @param type the {@link Type} handler to use for setting the parameter. Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code type} is {@code null}
@@ -2575,7 +2579,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return the result of applying the function
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws IllegalArgumentException if {@code func} is {@code null}
-     * @throws SQLException if a database access error occurs or the function throws an exception
+     * @throws SQLException if a database access error occurs or the function throws {@code SQLException}
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.BiResultExtractor)
@@ -2619,7 +2623,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return the result of applying the bi-function
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws IllegalArgumentException if {@code func} is {@code null}
-     * @throws SQLException if a database access error occurs or the function throws an exception
+     * @throws SQLException if a database access error occurs or the function throws {@code SQLException}
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
      */
@@ -2686,7 +2690,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return the result of applying the tri-function
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws IllegalArgumentException if {@code func} is {@code null}
-     * @throws SQLException if a database access error occurs or the function throws an exception
+     * @throws SQLException if a database access error occurs or the function throws {@code SQLException}
      * @see Jdbc.OutParam
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      */
@@ -2744,7 +2748,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param consumer the consumer to apply to the executed CallableStatement. Must not be {@code null}.
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws IllegalArgumentException if {@code consumer} is {@code null}
-     * @throws SQLException if a database access error occurs or the consumer throws an exception
+     * @throws SQLException if a database access error occurs or the consumer throws {@code SQLException}
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      * @see JdbcUtil#streamAllResultSets(Statement, Jdbc.ResultExtractor)
      */
@@ -2784,7 +2788,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                 Must not be {@code null}.
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws IllegalArgumentException if {@code consumer} is {@code null}
-     * @throws SQLException if a database access error occurs or the consumer throws an exception
+     * @throws SQLException if a database access error occurs or the consumer throws {@code SQLException}
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
      */
     @Override
@@ -2838,7 +2842,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                 3. Boolean indicating if the first result is a ResultSet
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws IllegalArgumentException if {@code consumer} is {@code null}
-     * @throws SQLException if a database access error occurs or the consumer throws an exception
+     * @throws SQLException if a database access error occurs or the consumer throws {@code SQLException}
      * @see Jdbc.OutParam
      */
     public void executeThenAccept(final Throwables.TriConsumer<? super CallableStatement, List<Jdbc.OutParam>, Boolean, SQLException> consumer)
@@ -3005,10 +3009,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see Jdbc.ResultExtractor
      */
     public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor)
-            throws IllegalStateException, IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException, UnsupportedOperationException {
         assertNotClosed();
 
         checkArgNotNull(resultExtractor, cs.resultExtractor);
@@ -3065,10 +3070,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see Jdbc.BiResultExtractor
      */
     public <R> Tuple2<R, Jdbc.OutParamResult> queryAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
-            throws IllegalStateException, IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException, UnsupportedOperationException {
         assertNotClosed();
 
         checkArgNotNull(resultExtractor, cs.resultExtractor);
@@ -3163,10 +3169,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalStateException if this CallableQuery is closed
      * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if a database access error occurs
+     * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see Jdbc.ResultExtractor
      */
     public <R> Tuple2<List<R>, Jdbc.OutParamResult> queryAllResultSetsAndGetOutParameters(final Jdbc.ResultExtractor<? extends R> resultExtractor)
-            throws IllegalStateException, IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException, UnsupportedOperationException {
         assertNotClosed();
 
         checkArgNotNull(resultExtractor, cs.resultExtractor);
@@ -3233,12 +3240,13 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if a database access error occurs, the stored procedure fails,
-     *                      or the result extraction fails
+     *                      or the result extractor throws {@code SQLException}
+     * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see #query2ResultSetsAndGetOutParameters(BiResultExtractor, BiResultExtractor)
      * @see #listAllResultSetsAndGetOutParameters(Class)
      */
     public <R> Tuple2<List<R>, Jdbc.OutParamResult> queryAllResultSetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R> resultExtractor)
-            throws IllegalStateException, IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException, UnsupportedOperationException {
         assertNotClosed();
 
         checkArgNotNull(resultExtractor, cs.resultExtractor);
@@ -3308,12 +3316,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if either {@code resultExtractor1} or {@code resultExtractor2} is {@code null}
      * @throws SQLException if a database access error occurs or the stored procedure fails
+     * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see #query3ResultSetsAndGetOutParameters(BiResultExtractor, BiResultExtractor, BiResultExtractor)
      * @see #queryAllResultSetsAndGetOutParameters(BiResultExtractor)
      */
     @Beta
     public <R1, R2> Tuple3<R1, R2, Jdbc.OutParamResult> query2ResultSetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
-            final Jdbc.BiResultExtractor<? extends R2> resultExtractor2) throws IllegalStateException, IllegalArgumentException, SQLException {
+            final Jdbc.BiResultExtractor<? extends R2> resultExtractor2)
+            throws IllegalStateException, IllegalArgumentException, SQLException, UnsupportedOperationException {
         assertNotClosed();
 
         checkArgNotNull(resultExtractor1, cs.resultExtractor1);
@@ -3398,13 +3408,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code resultExtractor1}, {@code resultExtractor2}, or {@code resultExtractor3} is {@code null}
      * @throws SQLException if a database access error occurs or the stored procedure fails
+     * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see #query2ResultSetsAndGetOutParameters(BiResultExtractor, BiResultExtractor)
      * @see #queryAllResultSetsAndGetOutParameters(BiResultExtractor)
      */
     @Beta
     public <R1, R2, R3> Tuple4<R1, R2, R3, Jdbc.OutParamResult> query3ResultSetsAndGetOutParameters(final Jdbc.BiResultExtractor<? extends R1> resultExtractor1,
             final Jdbc.BiResultExtractor<? extends R2> resultExtractor2, final Jdbc.BiResultExtractor<? extends R3> resultExtractor3)
-            throws IllegalStateException, IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException, UnsupportedOperationException {
         assertNotClosed();
 
         checkArgNotNull(resultExtractor1, cs.resultExtractor1);
@@ -3481,17 +3492,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param <T> the target type for row mapping
-     * @param targetType the class of type T to map each row to. Must not be {@code null}.
-     *                   The class must have a default constructor.
+     * @param targetType the class to map each row to; supports bean, reference-array, {@code Map},
+     *                   {@code List}, and single-column scalar targets as described by
+     *                   {@link Jdbc.BiRowMapper#to(Class)}. Must not be {@code null}.
      * @return a {@code Tuple2} containing:
      *         <ul>
      *           <li>First element: List of mapped objects from the result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
      * @throws SQLException if a database access error occurs, the stored procedure fails,
-     *                      or the mapping fails
+     *                      or the mapping throws {@code SQLException}
      * @see #listAndGetOutParameters(RowMapper)
      * @see #listAndGetOutParameters(BiRowMapper)
      */
@@ -3545,7 +3557,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws SQLException if a database access error occurs, the stored procedure fails,
-     *                      or the row mapper throws an exception
+     *                      or the row mapper throws {@code SQLException}
      * @see #listAndGetOutParameters(Class)
      * @see #listAndGetOutParameters(RowFilter, RowMapper)
      */
@@ -3852,7 +3864,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}
+     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
      * @throws SQLException if a database access error occurs or the stored procedure fails
      * @see #listAllResultSetsAndGetOutParameters(RowMapper)
      * @see #queryAllResultSetsAndGetOutParameters(BiResultExtractor)
@@ -4222,11 +4234,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The method performs the following cleanup operations:</p>
      * <ol>
      *   <li>Calls {@code clearParameters()} on the {@code CallableStatement}; a warning is
-     *       logged if this fails (the failure is not propagated)</li>
+     *       logged if it throws {@link SQLException}, and that exception is not propagated</li>
      *   <li>Delegates to {@code super.closeStatement()} to close the statement and release resources</li>
      * </ol>
      *
-     * <p>This method is idempotent - calling it multiple times has no additional effect.</p>
+     * <p>{@link #close()} ensures this cleanup is invoked at most once for this query.</p>
      *
      * @see #closeAfterExecution(boolean)
      */
@@ -4247,6 +4259,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * stored procedure are only guaranteed to be final once all results have been processed —
      * SQL Server and Oracle in particular will report null/stale OUT values if extra result sets
      * or update counts remain in the call's buffer.
+     *
+     * @throws SQLException if advancing through or closing the remaining results fails
      */
     private void drainRemainingResultsForOutParams() throws SQLException {
         // getMoreResults() returns true when the next result is a ResultSet (auto-closing the

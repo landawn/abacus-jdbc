@@ -25,12 +25,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * Insert capability of {@link Dao}: {@code save}/{@code batchSave}. Extends {@link DaoBase}.
  *
  * <p><b>{@code save} vs {@code insert}:</b> the {@code save}/{@code batchSave} methods declared here
- * return {@code void} — they insert the entity without returning any generated id. When the DAO
- * manages an id, {@link CrudInsertOps} additionally offers {@code insert}/{@code batchInsert}, which
- * perform the same INSERT but <em>return</em> the generated id(s). The two verbs describe the same
- * database operation and differ only in whether the generated key is returned; a {@code CrudDao}
- * therefore exposes both, and its {@code upsert} is implemented on top of {@code insert} while a
- * plain {@code Dao.upsert} is implemented on top of {@code save}.</p>
+ * return {@code void} and do not retrieve database-generated IDs or write them back to the entities.
+ * When the DAO manages an ID, {@link CrudInsertOps} additionally offers {@code insert}/{@code batchInsert},
+ * which return the inserted IDs and populate generated IDs on the entities. A {@code CrudDao} exposes
+ * both, and its {@code upsert} uses {@code insert} while a plain {@code Dao.upsert} uses {@code save}.</p>
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
@@ -53,6 +51,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param entity the entity to insert
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     void save(final T entity) throws SQLException;
@@ -71,6 +70,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entity the entity to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     void save(final T entity, final Collection<String> propNamesToSave) throws SQLException;
@@ -88,6 +88,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param namedInsertSql the named INSERT SQL statement
      * @param entity the entity providing the parameter values
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     void save(final String namedInsertSql, final T entity) throws SQLException;
@@ -103,6 +104,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * }</pre>
      *
      * @param entities the collection of entities to insert
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
      * @see #batchSave(Collection, int)
      */
@@ -124,6 +126,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
      */
     void batchSave(final Collection<? extends T> entities, final int batchSize) throws SQLException;
@@ -135,6 +138,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entities the collection of entities to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
      */
     default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave) throws SQLException {
@@ -150,6 +154,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
      */
     void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize) throws SQLException;
@@ -161,6 +166,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param namedInsertSql the named INSERT SQL statement
      * @param entities the entities providing parameter values
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -177,6 +183,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
      */
     @Beta

@@ -43,6 +43,10 @@ import com.landawn.abacus.util.Throwables;
  * <p>Contains no actual database read or write operation; those live in {@link ReadOps}, {@link InsertOps},
  * {@link UpdateOps} and {@link DeleteOps}, which all extend this interface.</p>
  *
+ * <p>Statement creation and configuration expose checked {@link SQLException}s. Acquiring a connection
+ * from the data source can fail with {@link com.landawn.abacus.exception.UncheckedSQLException} before
+ * a statement is created. The unchecked hierarchy translates the checked failures as well.</p>
+ *
  * <p>Asynchronous DAO actions are exposed through {@link #callAsync(Throwables.Function)} and
  * {@link #runAsync(Throwables.Consumer)}. Their returned futures should be observed so execution
  * failures are not silently discarded.</p>
@@ -131,9 +135,10 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param sql the SQL query string
      * @return a PreparedQuery instance for the specified query
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -156,6 +161,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      * @see Filters
      */
@@ -183,6 +189,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -195,10 +202,12 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param sql the SQL query string
      * @return a PreparedQuery configured for large results
-     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
      * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -214,6 +223,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery configured for large results
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
@@ -232,6 +242,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery configured for large results
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -257,9 +268,10 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param namedSql the named SQL query string with :paramName placeholders
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
-     * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -274,9 +286,10 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @param namedSql the pre-parsed named query
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}
-     * @throws SQLException if a database access error occurs
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -292,6 +305,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -309,6 +323,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -321,9 +336,11 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param namedSql the named SQL query string
      * @return a NamedQuery configured for large results
-     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -336,9 +353,11 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *
      * @param namedSql the pre-parsed named query
      * @return a NamedQuery configured for large results
-     * @throws SQLException if a database access error occurs
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if a database access error occurs
      */
     @Beta
     @NonDBOperation
@@ -354,6 +373,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery configured for large results
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -371,6 +391,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery configured for large results
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      */
     @Beta
@@ -396,10 +417,15 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * printFuture.get();
      * }</pre>
      *
+     * <p>Exceptions thrown by {@code sqlAction}, including {@link SQLException}, are retained by
+     * the returned future and reported when its result is retrieved. Executor rejection occurs
+     * during submission and is propagated directly.</p>
+     *
      * @param <R> the result type
      * @param sqlAction function that performs database operations
      * @return ContinuableFuture with the operation result
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
+     * @throws java.util.concurrent.RejectedExecutionException if the executor rejects the submitted action
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -430,11 +456,16 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * }
      * }</pre>
      *
+     * <p>Exceptions thrown by {@code sqlAction}, including {@link SQLException}, are retained by
+     * the returned future and reported when its result is retrieved. Executor rejection occurs
+     * during submission and is propagated directly.</p>
+     *
      * @param <R> the result type
      * @param sqlAction function that performs database operations
      * @param executor the executor to run the operation
      * @return ContinuableFuture with the operation result
      * @throws IllegalArgumentException if {@code sqlAction} or {@code executor} is {@code null}
+     * @throws java.util.concurrent.RejectedExecutionException if the executor rejects the submitted action
      */
     @Beta
     @NonDBOperation
@@ -461,9 +492,14 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * future.get();
      * }</pre>
      *
+     * <p>Exceptions thrown by {@code sqlAction}, including {@link SQLException}, are retained by
+     * the returned future and reported when its result is retrieved. Executor rejection occurs
+     * during submission and is propagated directly.</p>
+     *
      * @param sqlAction consumer that performs database operations
      * @return ContinuableFuture that completes when operation finishes
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
+     * @throws java.util.concurrent.RejectedExecutionException if the executor rejects the submitted action
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -499,10 +535,15 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * }
      * }</pre>
      *
+     * <p>Exceptions thrown by {@code sqlAction}, including {@link SQLException}, are retained by
+     * the returned future and reported when its result is retrieved. Executor rejection occurs
+     * during submission and is propagated directly.</p>
+     *
      * @param sqlAction consumer that performs database operations
      * @param executor the executor to run the operation
      * @return ContinuableFuture that completes when operation finishes
      * @throws IllegalArgumentException if {@code sqlAction} or {@code executor} is {@code null}
+     * @throws java.util.concurrent.RejectedExecutionException if the executor rejects the submitted action
      */
     @Beta
     @NonDBOperation

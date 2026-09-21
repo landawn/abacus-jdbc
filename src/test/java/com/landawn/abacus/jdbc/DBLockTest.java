@@ -587,9 +587,8 @@ public class DBLockTest extends TestBase {
 
             // Delete the backing row behind the lock's back: the next refresh sees 0 rows updated
             // and evicts the now-stale entry from the in-memory pool.
-            // DBLock quotes the table identifier (case-sensitive lowercase in H2), so quote it here too.
             try (Connection c = ds.getConnection()) {
-                JdbcUtil.executeUpdate(c, "DELETE FROM \"live_lock_tbl\" WHERE target = ?", "res-live");
+                JdbcUtil.executeUpdate(c, "DELETE FROM live_lock_tbl WHERE target = ?", "res-live");
             }
 
             final long deadline = System.currentTimeMillis() + 6_000L;
@@ -602,6 +601,104 @@ public class DBLockTest extends TestBase {
                 lock.close();
             }
         }
+    }
+
+    @Test
+    public void testLockLifecycleIsIndependentOfAmbientTransaction() throws Exception {
+        final org.h2.jdbcx.JdbcDataSource ds = new org.h2.jdbcx.JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:independent_lock_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
+
+        try (Connection observer = ds.getConnection(); DBLock lock = new DBLock(ds, "\"independent_locks\"")) {
+            JdbcUtil.executeUpdate(observer, "CREATE TABLE business_data(id INT)");
+            final String code;
+
+            try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
+                JdbcUtil.executeUpdate(ds, "INSERT INTO business_data VALUES (1)");
+                code = lock.tryLock("resource", 60_000, 0);
+                assertNotNull(code);
+                assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM business_data").queryForInt().orElse(-1));
+            }
+
+            assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM business_data").queryForInt().orElse(-1));
+
+            try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
+                assertTrue(lock.unlock("resource", code));
+                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+            }
+
+            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+            assertNotNull(lock.tryLock("close-resource", 60_000, 0));
+
+            try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
+                lock.close();
+                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+            }
+        }
+    }
+
+    @Test
+    public void testLockConnectionsEnableAutoCommitAndRefreshIndependently() throws Exception {
+        final org.h2.jdbcx.JdbcDataSource database = new org.h2.jdbcx.JdbcDataSource();
+        database.setURL("jdbc:h2:mem:manual_lock_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
+        final DataSource ds = mock(DataSource.class);
+        when(ds.getConnection()).thenAnswer(invocation -> {
+            final Connection conn = database.getConnection();
+            conn.setAutoCommit(false);
+            return conn;
+        });
+
+        try (Connection observer = database.getConnection(); DBLock lock = new DBLock(ds, "\"manual_locks\"")) {
+            ((ScheduledFuture<?>) getField(lock, "scheduledFuture")).cancel(false);
+            final String code = lock.tryLock("resource", 60_000, 0);
+            assertNotNull(code);
+            assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"manual_locks\"").queryForInt().orElse(-1));
+
+            JdbcUtil.executeUpdate(observer, "UPDATE \"manual_locks\" SET expiry_time = TIMESTAMP '2000-01-01 00:00:00'");
+            try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
+                lock.refreshLocks();
+                assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"manual_locks\" WHERE expiry_time > CURRENT_TIMESTAMP")
+                        .queryForInt().orElse(-1));
+            }
+
+            assertTrue(lock.unlock("resource", code));
+            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"manual_locks\"").queryForInt().orElse(-1));
+        }
+    }
+
+    @Test
+    public void testLockConnectionConfigurationFailureClosesConnection() throws Exception {
+        final LockFixture fixture = newLockFixture();
+        final java.sql.SQLException failure = new java.sql.SQLException("auto-commit setup failed");
+        org.mockito.Mockito.doThrow(failure).when(fixture.connection).setAutoCommit(true);
+
+        final com.landawn.abacus.exception.UncheckedSQLException thrown = assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                () -> fixture.lock.unlock("resource", "code"));
+
+        assertEquals(failure, thrown.getCause());
+        verify(fixture.connection).close();
+        verify(fixture.connection, never()).prepareStatement(anyString());
+    }
+
+    @Test
+    public void testLockAndUnlockPreserveSuccessfulUpdatesWhenConnectionCloseFails() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 1);
+        org.mockito.Mockito.doThrow(new java.sql.SQLException("close failed")).when(fixture.connection).close();
+
+        final String code = fixture.lock.tryLock("close-failure", 60_000, 0);
+
+        assertNotNull(code);
+        assertEquals(1, targetCodePool(fixture.lock).size());
+        assertTrue(fixture.lock.unlock("close-failure", code));
+        assertTrue(targetCodePool(fixture.lock).isEmpty());
+        verify(fixture.connection, times(3)).close();
+    }
+
+    private static Object getField(final Object target, final String name) throws Exception {
+        final Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        return field.get(target);
     }
 
     // TODO: L207 — tableExists returns false after creation (defensive; createTableIfNotExists +

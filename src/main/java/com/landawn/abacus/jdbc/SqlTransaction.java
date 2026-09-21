@@ -266,10 +266,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param isolationLevel the isolation level for this transaction, must not be {@code null}
      * @param creator the originator type (see {@link CreatedBy}) used to identify the registry slot and diagnostic ID; must not be {@code null}
      * @param closeConnection if {@code true}, the connection will be released back to {@code ds} when the transaction completes
-     * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails
      * @throws IllegalArgumentException if {@code conn}, {@code isolationLevel}, or {@code creator} is {@code null}, if
      *         {@code isolationLevel} is {@link IsolationLevel#NONE}, or if {@code ds} is {@code null}
      *         while {@code closeConnection} is {@code true}
+     * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails
      */
     @SuppressWarnings("deprecation")
     SqlTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
@@ -504,14 +504,14 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }
      * }</pre>
      *
-     * @throws UncheckedSQLException if an SQL error occurs during the commit; in that case an
-     *         automatic rollback is also attempted, and any rollback failure is suppressed in
-     *         favour of this exception
      * @throws IllegalStateException if called from a thread other than the transaction's owner
      *         thread, or if the outermost commit is attempted while the transaction is not in
      *         {@link Status#ACTIVE} or {@link Status#MARKED_ROLLBACK}. If this transaction
      *         scope has already completed (reference count already below zero), the call is
      *         logged and ignored rather than throwing.
+     * @throws UncheckedSQLException if an SQL error occurs while restoring a nested scope's isolation level,
+     *         committing, or rolling back a rollback-only transaction. A failed database commit triggers
+     *         an automatic rollback; any rollback failure is suppressed on the commit exception.
      */
     @Override
     public void commit() throws UncheckedSQLException {
@@ -533,13 +533,15 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *        (outermost) scope; for a nested scope the commit is deferred to the outermost scope and this action is
      *        <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
      * @throws IllegalArgumentException if {@code actionAfterCommit} is {@code null}
-     * @throws UncheckedSQLException if an SQL error occurs during the commit; in that case an
-     *         automatic rollback is also attempted
      * @throws IllegalStateException if called from a thread other than the transaction's owner
      *         thread, or if the outermost commit is attempted while the transaction is neither
      *         {@link Status#ACTIVE} nor {@link Status#MARKED_ROLLBACK}. If this transaction
      *         scope has already completed (reference count already below zero), the call is
      *         logged and ignored rather than throwing.
+     * @throws UncheckedSQLException if an SQL error occurs while restoring a nested scope's isolation level,
+     *         committing, or rolling back a rollback-only transaction. A failed database commit triggers
+     *         an automatic rollback; any rollback failure is suppressed on the commit exception.
+     * @throws RuntimeException if connection cleanup or {@code actionAfterCommit} fails after a successful commit
      */
     void commit(final Runnable actionAfterCommit) throws UncheckedSQLException {
         N.checkArgNotNull(actionAfterCommit, cs.actionAfterCommit);
@@ -648,13 +650,13 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }
      * }</pre>
      *
-     * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if called from a thread other than the transaction's owner
      *         thread, or if the outermost rollback is attempted while the transaction status is
      *         not {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK}, or
      *         {@link Status#FAILED_COMMIT}. If this transaction scope has already completed
      *         (reference count already below zero), the call is logged and ignored rather
      *         than throwing.
+     * @throws UncheckedSQLException if an SQL error occurs during rollback or while restoring a nested scope's isolation level
      * @deprecated replaced by {@link #rollbackIfNotCommitted()}
      */
     @Deprecated
@@ -673,12 +675,14 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * @param actionAfterRollback the action to be executed after the rollback completes in this (outermost) scope; for a nested scope the rollback is deferred to the outermost scope and this action is <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
      * @throws IllegalArgumentException if {@code actionAfterRollback} is {@code null}
-     * @throws UncheckedSQLException if an SQL error occurs during the rollback
      * @throws IllegalStateException if called from a thread other than the transaction's owner
      *         thread, or if the transaction status is not {@link Status#ACTIVE},
      *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}. If this transaction
      *         scope has already completed (reference count already below zero), the call is
      *         logged and ignored rather than throwing.
+     * @throws UncheckedSQLException if an SQL error occurs during rollback or while restoring a nested scope's isolation level
+     * @throws RuntimeException if connection cleanup or {@code actionAfterRollback} fails without an earlier rollback failure;
+     *         otherwise the cleanup or callback failure is suppressed on that earlier failure
      */
     void rollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
         N.checkArgNotNull(actionAfterRollback, cs.actionAfterRollback);
@@ -739,10 +743,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * }
      * }</pre>
      *
-     * @throws UncheckedSQLException if an SQL error occurs during the rollback
-     * @throws IllegalStateException if the transaction is in an unexpected status (other than {@link Status#ACTIVE},
-     *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}) when the rollback is actually performed,
-     *         or if called from a thread other than the transaction's owner thread
+     * @throws IllegalStateException if called from a thread other than the transaction's owner thread
+     * @throws UncheckedSQLException if an SQL error occurs during rollback or while restoring a nested scope's isolation level
      */
     @Override
     public void rollbackIfNotCommitted() throws UncheckedSQLException {
@@ -787,8 +789,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * resets the connection state, and executes the post-rollback callback.
      *
      * <p>The method sets the transaction status to {@link Status#FAILED_ROLLBACK} before attempting
-     * the rollback, and updates it to {@link Status#ROLLED_BACK} upon success. The connection is
-     * always reset and closed (if applicable) regardless of the rollback outcome.</p>
+     * the rollback, and updates it to {@link Status#ROLLED_BACK} upon success. Connection state is
+     * restored only after a successful rollback; changing auto-commit or isolation after a failed
+     * rollback could commit the pending work. An owned connection is released in either case.</p>
      *
      * @param actionAfterRollback the action to be executed after rollback, must not be {@code null}
      * @throws UncheckedSQLException if an SQL error occurs during the rollback
@@ -870,8 +873,25 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * <p>Package-private so {@link JdbcUtil#beginTransaction} can invoke it on the failure path after a
      * partially-constructed transaction (constructor succeeded, then {@link #incrementAndGetRef} threw), so the
      * polluted connection is restored before being released back to the pool.</p>
+     *
+     * <p>SQL exceptions from restoring connection state are logged. Unchecked cleanup failures are
+     * propagated after the remaining cleanup steps have been attempted; subsequent failures are suppressed.</p>
+     *
+     * <p>After a failed rollback, state restoration is skipped to avoid implicitly committing pending
+     * work. An owned connection is released; a caller-owned connection remains in its current state
+     * and must be recovered or discarded by its owner.</p>
+     *
+     * @throws RuntimeException if restoring or releasing the connection fails with an unchecked exception
      */
     void resetAndCloseConnection() {
+        if (_status == Status.FAILED_ROLLBACK) {
+            if (_closeConnection) {
+                JdbcUtil.releaseConnection(_conn, _ds);
+            }
+
+            return;
+        }
+
         Throwable cleanupFailure = null;
 
         try {
@@ -936,7 +956,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws UncheckedSQLException if a database error occurs while setting the isolation level
      */
     @SuppressWarnings("deprecation")
-    synchronized int incrementAndGetRef(final IsolationLevel isolationLevel, final boolean forUpdateOnly) {
+    synchronized int incrementAndGetRef(final IsolationLevel isolationLevel, final boolean forUpdateOnly) throws UncheckedSQLException {
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
         N.checkArgument(isolationLevel != IsolationLevel.NONE,
                 "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
@@ -1031,9 +1051,13 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * and the transaction is considered complete. For counts greater than zero, the previous isolation
      * level and for-update-only flag are restored from their stacks.</p>
      *
+     * <p>If restoring a nested scope fails, its reference count and settings are retained for a
+     * retry. The connection's nested isolation level is restored on a best-effort basis, and any
+     * failure of that recovery is suppressed on the original failure.</p>
+     *
      * @return the new reference count after decrementing
-     * @throws UncheckedSQLException if a database error occurs while restoring the isolation level
      * @throws IllegalStateException if called from a thread other than the transaction's owner thread
+     * @throws UncheckedSQLException if a database error occurs while restoring the isolation level
      */
     synchronized int decrementAndGetRef() throws UncheckedSQLException {
         assertOwnerThread();
@@ -1078,7 +1102,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                     } else {
                         _conn.setTransactionIsolation(_isolationLevel.intValue());
                     }
-                } catch (final SQLException e) {
+                } catch (final SQLException | RuntimeException | Error e) {
                     // Capture the level we failed to restore to before resetting the field below,
                     // otherwise the log would report the (rolled-back) inner level instead of the target.
                     final IsolationLevel failedTargetIsolationLevel = _isolationLevel;
@@ -1093,22 +1117,26 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                     _isolationLevel = preIsolationLevel;
                     _isForUpdateOnly = preIsForUpdateOnly;
                     _refCount.incrementAndGet();
-                    logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, failedTargetIsolationLevel);
-                    throw new UncheckedSQLException(e);
-                } catch (final RuntimeException | Error e) {
-                    final IsolationLevel failedTargetIsolationLevel = _isolationLevel;
 
-                    if (isolationPoppedFromStack) {
-                        _isolationLevelStack.push(_isolationLevel);
+                    final Throwable failure = e instanceof SQLException sqlException ? new UncheckedSQLException(sqlException) : e;
+
+                    // The driver may have changed the physical isolation before reporting failure.
+                    // Keep it aligned with the nested scope that remains active after this failed exit.
+                    try {
+                        _conn.setTransactionIsolation(preIsolationLevel == IsolationLevel.DEFAULT ? _originalIsolationLevel : preIsolationLevel.intValue());
+                    } catch (final Throwable recoveryFailure) { //NOSONAR - preserve the original scope-exit failure
+                        if (recoveryFailure != failure && recoveryFailure != e) {
+                            failure.addSuppressed(recoveryFailure);
+                        }
                     }
-                    if (forUpdateOnlyPoppedFromStack) {
-                        _isForUpdateOnlyStack.push(_isForUpdateOnly);
-                    }
-                    _isolationLevel = preIsolationLevel;
-                    _isForUpdateOnly = preIsForUpdateOnly;
-                    _refCount.incrementAndGet();
+
                     logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, failedTargetIsolationLevel);
-                    throw e;
+
+                    if (failure instanceof RuntimeException runtimeException) {
+                        throw runtimeException;
+                    }
+
+                    throw (Error) failure;
                 }
             }
 
@@ -1205,12 +1233,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param <E> the exception type that may be thrown during execution
      * @param cmd the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
      * @throws IllegalArgumentException if {@code cmd} is {@code null}
-     * @throws E if the {@code Runnable} throws an exception
      * @throws IllegalStateException if called from a thread other than the transaction's owner
      *         thread, or if, after {@code cmd} completes normally, another transaction has been
      *         opened on this thread for the same data source and creator and was not closed. If
      *         {@code cmd} itself throws, the latter condition is instead attached to that
      *         exception as a suppressed exception.
+     * @throws E if the {@code Runnable} throws an exception
      */
     public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws E {
         N.checkArgNotNull(cmd, cs.cmd);
@@ -1278,12 +1306,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param cmd the {@code Callable} to be executed outside of this transaction, must not be {@code null}
      * @return the result returned by the {@code Callable}
      * @throws IllegalArgumentException if {@code cmd} is {@code null}
-     * @throws E if the {@code Callable} throws an exception
      * @throws IllegalStateException if called from a thread other than the transaction's owner
      *         thread, or if, after {@code cmd} completes normally, another transaction has been
      *         opened on this thread for the same data source and creator and was not closed. If
      *         {@code cmd} itself throws, the latter condition is instead attached to that
      *         exception as a suppressed exception.
+     * @throws E if the {@code Callable} throws an exception
      */
     public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<? extends R, E> cmd) throws E {
         N.checkArgNotNull(cmd, cs.cmd);
@@ -1327,13 +1355,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * } // Automatically calls close(), which calls rollbackIfNotCommitted()
      * }</pre>
      *
-     * @throws UncheckedSQLException if an SQL error occurs during the rollback operation
-     * @throws IllegalStateException if the transaction is in an unexpected status when the rollback is actually performed,
-     *         or if called from a thread other than the transaction's owner thread
+     * @throws IllegalStateException if called from a thread other than the transaction's owner thread
+     * @throws UncheckedSQLException if an SQL error occurs during rollback or while restoring a nested scope's isolation level
      * @see #rollbackIfNotCommitted()
      */
     @Override
-    public void close() {
+    public void close() throws UncheckedSQLException {
         rollbackIfNotCommitted();
     }
 

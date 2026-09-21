@@ -2,6 +2,7 @@ package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -11,7 +12,9 @@ import java.lang.reflect.Modifier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.GenericApplicationContext;
 
 import com.landawn.abacus.TestBase;
 
@@ -73,6 +76,44 @@ public class SpringApplicationContextTest extends TestBase {
         setApplicationContext(appContext);
 
         assertSame("bean", target.getBean("beanName", String.class));
+    }
+
+    @Test
+    public void testBeanCreationFailuresPropagateFromEveryLookup() {
+        final BeanCreationException failure = new BeanCreationException("beanName", "creation failed");
+        when(appContext.getBean("beanName")).thenThrow(failure);
+        when(appContext.getBean(String.class)).thenThrow(failure);
+        when(appContext.getBean("beanName", String.class)).thenThrow(failure);
+        target.setApplicationContext(appContext);
+
+        try {
+            assertSame(failure, assertThrows(BeanCreationException.class, () -> target.getBean("beanName")));
+            assertSame(failure, assertThrows(BeanCreationException.class, () -> target.getBean(String.class)));
+            assertSame(failure, assertThrows(BeanCreationException.class, () -> target.getBean("beanName", String.class)));
+        } finally {
+            target.setApplicationContext(null);
+        }
+    }
+
+    @Test
+    public void testLookupValidationDependsOnContextAvailabilityAndState() {
+        assertNull(target.getBean((String) null));
+        assertNull(target.getBean((Class<?>) null));
+        assertNull(target.getBean(null, String.class));
+
+        try (GenericApplicationContext context = new GenericApplicationContext()) {
+            target.setApplicationContext(context);
+            assertThrows(IllegalStateException.class, () -> target.getBean((String) null));
+            assertThrows(IllegalStateException.class, () -> target.getBean((Class<?>) null));
+            assertThrows(IllegalStateException.class, () -> target.getBean(null, String.class));
+
+            context.refresh();
+            assertThrows(IllegalArgumentException.class, () -> target.getBean((String) null));
+            assertThrows(IllegalArgumentException.class, () -> target.getBean((Class<?>) null));
+            assertThrows(IllegalArgumentException.class, () -> target.getBean(null, String.class));
+        } finally {
+            target.setApplicationContext(null);
+        }
     }
 
     private void setApplicationContext(final ApplicationContext context) throws Exception {

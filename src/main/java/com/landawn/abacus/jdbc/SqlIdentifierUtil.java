@@ -63,6 +63,7 @@ final class SqlIdentifierUtil {
      * @param identifier the decoded (undelimited) identifier text
      * @param quote the quote string to wrap with
      * @return the delimited identifier
+     * @throws NullPointerException if {@code identifier} or {@code quote} is {@code null}.
      */
     static String quoteIdentifier(final String identifier, final String quote) {
         // Escape any embedded quote character by doubling it, then wrap, so identifiers containing
@@ -248,7 +249,7 @@ final class SqlIdentifierUtil {
      * @param columnName the raw, caller-supplied column name
      * @param dbProductInfo the resolved database product, or {@code null} if it is unknown
      * @return the rendered column name
-     * @throws IllegalArgumentException if {@code columnName} is blank or is not a single identifier
+     * @throws IllegalArgumentException if {@code columnName} is {@code null} or blank or is not a single identifier
      */
     static String renderColumnName(final String columnName, final ProductInfo dbProductInfo) {
         N.checkArgNotBlank(columnName, cs.columnName);
@@ -273,7 +274,7 @@ final class SqlIdentifierUtil {
      * @param explicitlyDelimited whether the caller's original text delimited this name, in which
      *        case it is re-quoted even if the decoded text is a simple identifier
      * @return the rendered column name
-     * @throws IllegalArgumentException if {@code columnName} is blank
+     * @throws IllegalArgumentException if {@code columnName} is {@code null} or blank
      */
     static String checkColumnName(final String columnName, final ProductInfo dbProductInfo, final boolean explicitlyDelimited) {
         N.checkArgNotBlank(columnName, cs.columnName);

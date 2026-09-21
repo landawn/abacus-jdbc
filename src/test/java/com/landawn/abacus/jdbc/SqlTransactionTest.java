@@ -515,6 +515,78 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
+    public void testFailedNestedExitRestoresPhysicalIsolationBeforeRetry() throws SQLException {
+        final Throwable[] failures = { new SQLException("isolation changed before SQL failure"),
+                new IllegalStateException("isolation changed before unchecked failure"), new AssertionError("isolation changed before error") };
+
+        for (final Throwable failure : failures) {
+            final Connection mutableConnection = Mockito.mock(Connection.class);
+            final AtomicInteger physicalIsolation = new AtomicInteger(Connection.TRANSACTION_READ_COMMITTED);
+            when(mutableConnection.getAutoCommit()).thenReturn(true);
+            when(mutableConnection.getTransactionIsolation()).thenAnswer(invocation -> physicalIsolation.get());
+            Mockito.doAnswer(invocation -> {
+                physicalIsolation.set(invocation.getArgument(0));
+                return null;
+            }).when(mutableConnection).setTransactionIsolation(ArgumentMatchers.anyInt());
+
+            final SqlTransaction transaction = new SqlTransaction(null, mutableConnection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, false);
+            transaction.incrementAndGetRef(IsolationLevel.DEFAULT, false);
+            transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, true);
+
+            final AtomicBoolean failNextRestore = new AtomicBoolean(true);
+            Mockito.doAnswer(invocation -> {
+                final int requestedIsolation = invocation.getArgument(0);
+                physicalIsolation.set(requestedIsolation);
+                if (requestedIsolation == Connection.TRANSACTION_READ_COMMITTED && failNextRestore.getAndSet(false)) {
+                    throw failure;
+                }
+                return null;
+            }).when(mutableConnection).setTransactionIsolation(ArgumentMatchers.anyInt());
+
+            try {
+                final Throwable thrown = assertThrows(Throwable.class, transaction::commit);
+                assertSame(failure, thrown instanceof UncheckedSQLException ? thrown.getCause() : thrown);
+                assertEquals(IsolationLevel.SERIALIZABLE, transaction.isolationLevel());
+                assertEquals(Connection.TRANSACTION_SERIALIZABLE, mutableConnection.getTransactionIsolation());
+                assertTrue(transaction.isForUpdateOnly());
+                verify(mutableConnection, never()).commit();
+
+                transaction.commit();
+                transaction.rollbackIfNotCommitted();
+                assertEquals(IsolationLevel.DEFAULT, transaction.isolationLevel());
+                assertEquals(Connection.TRANSACTION_READ_COMMITTED, mutableConnection.getTransactionIsolation());
+                assertFalse(transaction.isForUpdateOnly());
+                transaction.commit();
+                verify(mutableConnection).commit();
+            } finally {
+                transaction.rollbackIfNotCommitted();
+            }
+        }
+    }
+
+    @Test
+    public void testFailedNestedExitPreservesIsolationRecoveryFailure() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        transaction.incrementAndGetRef(IsolationLevel.SERIALIZABLE, true);
+        final SQLException failure = new SQLException("cannot restore outer isolation");
+        final IllegalStateException recoveryFailure = new IllegalStateException("cannot recover nested isolation");
+        doThrow(failure).when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        doThrow(recoveryFailure).when(connection).setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+
+        try {
+            final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, transaction::commit);
+            assertSame(failure, thrown.getCause());
+            assertArrayEquals(new Throwable[] { recoveryFailure }, thrown.getSuppressed());
+            assertEquals(IsolationLevel.SERIALIZABLE, transaction.isolationLevel());
+            assertTrue(transaction.isForUpdateOnly());
+        } finally {
+            doNothing().when(connection).setTransactionIsolation(ArgumentMatchers.anyInt());
+            transaction.rollbackIfNotCommitted();
+            transaction.rollbackIfNotCommitted();
+        }
+    }
+
+    @Test
     public void testIsForUpdateOnly() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
@@ -1264,7 +1336,7 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
-    public void testRollback_CleanupFailureDoesNotMaskRollbackSqlFailure() throws SQLException {
+    public void testRollback_DoesNotResetConnectionAfterRollbackSqlFailure() throws SQLException {
         final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
         doThrow(new SQLException("rollback-boom")).when(connection).rollback();
         doThrow(new AssertionError("cleanup-error")).when(connection).setAutoCommit(true);
@@ -1272,8 +1344,8 @@ public class SqlTransactionTest extends TestBase {
         final UncheckedSQLException ex = assertThrows(UncheckedSQLException.class, tran::rollback);
 
         assertEquals("rollback-boom", ex.getCause().getMessage());
-        assertEquals(1, ex.getSuppressed().length);
-        assertEquals("cleanup-error", ex.getSuppressed()[0].getMessage());
+        assertEquals(0, ex.getSuppressed().length);
+        verify(connection, never()).setAutoCommit(true);
         verify(connection).close();
     }
 
@@ -1282,12 +1354,53 @@ public class SqlTransactionTest extends TestBase {
         final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
         final AssertionError sharedFailure = new AssertionError("shared rollback/cleanup failure");
         doThrow(sharedFailure).when(connection).rollback();
-        doThrow(sharedFailure).when(connection).setAutoCommit(true);
+        doThrow(sharedFailure).when(connection).close();
 
         final AssertionError thrown = assertThrows(AssertionError.class, tran::rollback);
 
         assertSame(sharedFailure, thrown);
         assertEquals(0, thrown.getSuppressed().length);
+    }
+
+    @Test
+    public void testFailedRollbackDoesNotImplicitlyCommitPendingWork() throws Exception {
+        final String url = "jdbc:h2:mem:failed_rollback_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1";
+
+        try (Connection actual = java.sql.DriverManager.getConnection(url); Connection observer = java.sql.DriverManager.getConnection(url)) {
+            JdbcUtil.executeUpdate(actual, "CREATE TABLE pending_work(id INT)");
+            final Connection failingConnection = Mockito.mock(Connection.class, org.mockito.AdditionalAnswers.delegatesTo(actual));
+            final SqlTransaction transaction = new SqlTransaction(null, failingConnection, IsolationLevel.DEFAULT,
+                    SqlTransaction.CreatedBy.JDBC_UTIL, false);
+            transaction.incrementAndGetRef(IsolationLevel.DEFAULT, false);
+            JdbcUtil.executeUpdate(actual, "INSERT INTO pending_work VALUES (1)");
+            final SQLException rollbackFailure = new SQLException("rollback unavailable");
+            doThrow(rollbackFailure).when(failingConnection).rollback();
+
+            try {
+                final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, transaction::rollbackIfNotCommitted);
+                assertSame(rollbackFailure, thrown.getCause());
+                assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+                assertFalse(actual.getAutoCommit());
+                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM pending_work").queryForInt().orElse(-1));
+                verify(failingConnection, never()).setAutoCommit(true);
+                verify(failingConnection, never()).setTransactionIsolation(org.mockito.ArgumentMatchers.anyInt());
+            } finally {
+                actual.rollback();
+            }
+        }
+    }
+
+    @Test
+    public void testFailedRollbackReleasesOwnedConnectionWithoutRestoringState() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource);
+        clearInvocations(connection);
+        doThrow(new SQLException("rollback unavailable")).when(connection).rollback();
+
+        assertThrows(UncheckedSQLException.class, transaction::rollbackIfNotCommitted);
+
+        verify(connection).close();
+        verify(connection, never()).setAutoCommit(org.mockito.ArgumentMatchers.anyBoolean());
+        verify(connection, never()).setTransactionIsolation(org.mockito.ArgumentMatchers.anyInt());
     }
 
     @Test

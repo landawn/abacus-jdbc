@@ -44,15 +44,15 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * implementation throws because ID generation is normally handled by the database.</p>
      *
      * @return the generated ID
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws UnsupportedOperationException if client-side ID generation is not supported
+     * @throws UncheckedSQLException if a database access error occurs
      * @deprecated ID generation should typically be handled by the database. Override this method
      *             only when a client-side ID generation strategy is required.
      */
     @Deprecated
     @NonDBOperation
     @Override
-    default ID generateId() throws UncheckedSQLException, UnsupportedOperationException {
+    default ID generateId() throws UnsupportedOperationException, UncheckedSQLException {
         throw new UnsupportedOperationException("ID generation is not supported by default");
     }
 
@@ -74,8 +74,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param entity the entity to insert (must not be {@code null})
      * @return the ID of the inserted entity (either database-generated or entity-provided)
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     ID insert(final T entity) throws UncheckedSQLException;
@@ -97,8 +97,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity to insert (must not be {@code null})
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @return the ID of the inserted entity (either database-generated or entity-provided)
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToInsert} is {@code null} or empty
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     ID insert(final T entity, final Collection<String> propNamesToInsert) throws UncheckedSQLException;
@@ -118,8 +118,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entity the entity whose properties will be bound to the named parameters
      * @return the ID of the inserted entity (either database-generated or entity-provided)
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     ID insert(final String namedInsertSql, final T entity) throws UncheckedSQLException;
@@ -183,8 +183,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UncheckedSQLException {
@@ -200,8 +200,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws UncheckedSQLException;

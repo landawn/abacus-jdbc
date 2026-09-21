@@ -68,9 +68,10 @@ import java.sql.Connection;
  */
 public enum IsolationLevel {
     /**
-     * Represents the default transaction isolation level of the underlying database.
+     * Preserves the isolation level currently configured on the connection.
      * When this level is specified, no explicit {@code Connection.setTransactionIsolation(...)}
-     * call is made, allowing the database system to apply its own configured default.
+     * call is made. For a nested transaction scope, this inherits the enclosing scope's effective
+     * isolation level rather than resetting it to the database default.
      *
      * <p>This is often the most practical choice when the application relies on the
      * database administrator to configure the appropriate default isolation for the system,

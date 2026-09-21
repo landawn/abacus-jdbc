@@ -74,6 +74,11 @@ import com.landawn.abacus.util.Strings;
  * unique per-acquisition {@code code}, so only the holder that supplies the matching {@code code}
  * can release a given lock.</p>
  *
+ * <p>Lock-table operations use their own auto-commit connections so acquisition, renewal, and
+ * release are visible independently of the caller's transaction. Supply a data source that
+ * returns independent connections, rather than a proxy that always returns the caller's
+ * transaction-bound connection.</p>
+ *
  * <p>Instances are normally obtained through {@link JdbcUtil#createDBLock(DataSource, String)} rather
  * than constructed directly. The {@link #close()} method should be called when the lock is no
  * longer needed to stop the background refresh task and release any locks still held.</p>
@@ -243,15 +248,14 @@ public final class DBLock implements AutoCloseable {
      *         {@code null}, empty, blank, or not a valid qualified identifier.
      * @throws UncheckedSQLException if any database operation fails during initialization (e.g., table creation).
      * @throws IllegalStateException if the lock table cannot be verified after the creation attempt.
+     * @throws java.util.concurrent.RejectedExecutionException if the lock refresh task cannot be scheduled.
      */
-    DBLock(final DataSource ds, final String tableName) {
+    DBLock(final DataSource ds, final String tableName) throws UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
 
         this.ds = ds;
-        final Connection conn = JdbcUtil.getConnection(ds);
-
-        try {
+        try (Connection conn = openLockConnection()) {
             final String sqlTableName = JdbcUtil.toQualifiedSqlIdentifier(conn, tableName, cs.tableName);
 
             removeExpiredLockSQL = "DELETE FROM " + sqlTableName + " WHERE target = ? AND (expiry_time < ? OR update_time < ?)"; //NOSONAR
@@ -282,8 +286,6 @@ public final class DBLock implements AutoCloseable {
         } catch (final SQLException e) {
             logger.warn(e, "Failed to initialize DBLock(tableName={})", tableName);
             throw new UncheckedSQLException(e);
-        } finally {
-            JdbcUtil.releaseConnection(conn, ds);
         }
 
         scheduledFuture = scheduledExecutor.scheduleWithFixedDelay(this::refreshLocks, 1000L, 1000L, TimeUnit.MILLISECONDS);
@@ -298,55 +300,49 @@ public final class DBLock implements AutoCloseable {
             return;
         }
 
-        try {
-            final Connection refreshConn = JdbcUtil.getConnection(ds);
-            try {
-                int refreshed = 0;
-                int staleRemoved = 0;
-                int failed = 0;
+        try (Connection refreshConn = openLockConnection()) {
+            int refreshed = 0;
+            int staleRemoved = 0;
+            int failed = 0;
 
-                // Iterate the ConcurrentHashMap directly: its iteration is weakly consistent and the
-                // stale-entry removal below is the atomic remove(key, value), so no point-in-time
-                // snapshot is needed.
-                for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
-                    final LockInfo info = entry.getValue();
+            // Iterate the ConcurrentHashMap directly: its iteration is weakly consistent and the
+            // stale-entry removal below is the atomic remove(key, value), so no point-in-time
+            // snapshot is needed.
+            for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
+                final LockInfo info = entry.getValue();
 
-                    // Guard each entry individually: a JDBC driver or DataSource may report a transient
-                    // failure as either SQLException or RuntimeException. Neither form may abort the
-                    // batch and leave all later locks un-refreshed.
-                    try {
-                        final Timestamp now = Dates.currentTimestamp();
-                        final Timestamp expiry = expiryTimestamp(now, info.liveTime());
+                // Guard each entry individually: a JDBC driver or DataSource may report a transient
+                // failure as either SQLException or RuntimeException. Neither form may abort the
+                // batch and leave all later locks un-refreshed.
+                try {
+                    final Timestamp now = Dates.currentTimestamp();
+                    final Timestamp expiry = expiryTimestamp(now, info.liveTime());
 
-                        final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code());
+                    final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code());
 
-                        if (updated == 0) {
-                            // Remove from pool only if the cached lock instance is still present
-                            if (targetCodePool.remove(entry.getKey(), info)) {
-                                staleRemoved++;
+                    if (updated == 0) {
+                        // Remove from pool only if the cached lock instance is still present
+                        if (targetCodePool.remove(entry.getKey(), info)) {
+                            staleRemoved++;
 
-                                if (logger.isWarnEnabled()) {
-                                    logger.warn("Removed stale lock from pool(target={})", entry.getKey());
-                                }
+                            if (logger.isWarnEnabled()) {
+                                logger.warn("Removed stale lock from pool(target={})", entry.getKey());
                             }
-                        } else {
-                            refreshed++;
                         }
-                    } catch (final Exception e) {
-                        failed++;
+                    } else {
+                        refreshed++;
+                    }
+                } catch (final Exception e) {
+                    failed++;
 
-                        if (logger.isWarnEnabled()) {
-                            logger.warn(e, "Failed to refresh DB lock(target={})", entry.getKey());
-                        }
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(e, "Failed to refresh DB lock(target={})", entry.getKey());
                     }
                 }
+            }
 
-                if (logger.isDebugEnabled() && (refreshed > 0 || staleRemoved > 0 || failed > 0)) {
-                    logger.debug("Refreshed DB locks(refreshed={}, staleRemoved={}, failed={}, active={})", refreshed, staleRemoved, failed,
-                            targetCodePool.size());
-                }
-            } finally {
-                JdbcUtil.releaseConnection(refreshConn, ds);
+            if (logger.isDebugEnabled() && (refreshed > 0 || staleRemoved > 0 || failed > 0)) {
+                logger.debug("Refreshed DB locks(refreshed={}, staleRemoved={}, failed={}, active={})", refreshed, staleRemoved, failed, targetCodePool.size());
             }
         } catch (final Exception e) {
             if (logger.isWarnEnabled()) {
@@ -449,9 +445,10 @@ public final class DBLock implements AutoCloseable {
      * lock duration (live time) and acquisition timeout.
      *
      * <p>The acquired lock will automatically expire after {@code liveTime} milliseconds if not
-     * refreshed. A background task automatically refreshes active locks to prevent premature
-     * expiration during long-running operations. The method will wait for up to {@code timeout}
-     * milliseconds to acquire the lock.</p>
+     * refreshed. A background task attempts to refresh active locks with a one-second delay between cycles. Choose a
+     * {@code liveTime} that allows for this interval, database latency, and scheduling delays;
+     * renewal is not guaranteed before expiry. The {@code timeout} controls acquisition retries
+     * and does not impose a timeout on individual database calls.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -577,7 +574,7 @@ public final class DBLock implements AutoCloseable {
             now = Dates.currentTimestamp();
 
             try {
-                if (JdbcUtil.executeUpdate(ds, lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0) {
+                if (executeLockUpdate(lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0) {
                     // Linearize successful acquisition with close(), which synchronizes on the same
                     // monitor. A plain post-insert volatile check still allowed close() to run after
                     // that check but before this method returned, so lock() could report success for
@@ -585,7 +582,7 @@ public final class DBLock implements AutoCloseable {
                     synchronized (this) {
                         if (isClosed) {
                             try {
-                                JdbcUtil.executeUpdate(ds, unlockSQL, target, code);
+                                executeLockUpdate(unlockSQL, target, code);
                             } catch (final Exception cleanupFailure) {
                                 logger.warn(cleanupFailure, "Failed to remove DB lock acquired concurrently with close(target={})", target);
                             }
@@ -677,7 +674,7 @@ public final class DBLock implements AutoCloseable {
         try {
             final Timestamp now = Dates.currentTimestamp();
 
-            if ((JdbcUtil.executeUpdate(ds, removeExpiredLockSQL, target, now, Dates.addMilliseconds(now, -MAX_IDLE_TIME)) > 0) && logger.isInfoEnabled()) {
+            if ((executeLockUpdate(removeExpiredLockSQL, target, now, Dates.addMilliseconds(now, -MAX_IDLE_TIME)) > 0) && logger.isInfoEnabled()) {
                 logger.info("Removed expired DB lock(target={})", target);
             }
         } catch (final Exception e) {
@@ -731,7 +728,7 @@ public final class DBLock implements AutoCloseable {
      * @throws IllegalArgumentException if {@code target} or {@code code} is {@code null} or empty.
      * @throws UncheckedSQLException if a database access error occurs during the unlock operation.
      */
-    public boolean unlock(final String target, final String code) {
+    public boolean unlock(final String target, final String code) throws UncheckedSQLException {
         assertNotClosed();
         N.checkArgNotEmpty(target, cs.target);
         N.checkArgNotEmpty(code, cs.code);
@@ -741,7 +738,7 @@ public final class DBLock implements AutoCloseable {
         final boolean unlocked;
 
         try {
-            unlocked = JdbcUtil.executeUpdate(ds, unlockSQL, target, code) > 0;
+            unlocked = executeLockUpdate(unlockSQL, target, code) > 0;
         } catch (final SQLException e) {
             logger.warn(e, "Failed to release DB lock(target={})", target);
             throw new UncheckedSQLException(e);
@@ -821,7 +818,7 @@ public final class DBLock implements AutoCloseable {
         // Release all held locks from the database
         for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
             try {
-                JdbcUtil.executeUpdate(ds, unlockSQL, entry.getKey(), entry.getValue().code());
+                executeLockUpdate(unlockSQL, entry.getKey(), entry.getValue().code());
                 logger.debug("Released DB lock(target={}) during close", entry.getKey());
             } catch (final Exception e) {
                 if (logger.isWarnEnabled()) {
@@ -843,6 +840,55 @@ public final class DBLock implements AutoCloseable {
     private void assertNotClosed() {
         if (isClosed) {
             throw new IllegalStateException("This DBLock has been closed");
+        }
+    }
+
+    /**
+     * Opens an independently owned connection for immediately visible lock-table changes.
+     *
+     * @return an auto-commit connection that the caller must close
+     * @throws SQLException if obtaining or configuring the connection fails
+     */
+    private Connection openLockConnection() throws SQLException {
+        final Connection conn = ds.getConnection();
+
+        try {
+            if (!conn.getAutoCommit()) {
+                conn.setAutoCommit(true);
+            }
+
+            return conn;
+        } catch (final SQLException | RuntimeException | Error e) {
+            try {
+                conn.close();
+            } catch (final SQLException | RuntimeException | Error closeFailure) {
+                if (closeFailure != e) {
+                    e.addSuppressed(closeFailure);
+                }
+            }
+
+            throw e;
+        }
+    }
+
+    /**
+     * Executes a lock-table change without enlisting in an ambient transaction.
+     *
+     * @param sql the lock-table statement
+     * @param parameters the positional parameter values
+     * @return the affected row count
+     * @throws SQLException if opening the connection or executing the statement fails
+     */
+    @SuppressWarnings("deprecation")
+    private int executeLockUpdate(final String sql, final Object... parameters) throws SQLException {
+        final Connection conn = openLockConnection();
+
+        try {
+            return JdbcUtil.executeUpdate(conn, sql, parameters);
+        } finally {
+            // The update is already committed. A close failure must not turn successful
+            // acquisition into a retry and leave a lock that was never registered locally.
+            JdbcUtil.closeQuietly(conn);
         }
     }
 

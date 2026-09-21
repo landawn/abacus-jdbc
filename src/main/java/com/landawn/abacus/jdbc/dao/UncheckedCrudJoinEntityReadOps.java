@@ -33,7 +33,9 @@ import com.landawn.abacus.util.u.Optional;
  * the read/load methods to narrow the declared exception from {@code SQLException} to {@code UncheckedSQLException}.
  *
  * <p>This interface enables efficient loading of related entities when retrieving data by ID,
- * making it ideal for entities with complex relationships that need to be fetched together.</p>
+ * making it ideal for entities with complex relationships that need to be fetched together.
+ * A null or empty source-property selection loads all default source properties; a restricted selection
+ * also includes the required source join keys.</p>
  *
  * <p>Join entities are populated <i>in place</i>: the loaded related entities are set directly onto the
  * corresponding {@code @JoinedBy} properties of the entity instance returned by each {@code get},
@@ -92,13 +94,16 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param id the entity ID to retrieve
      * @param joinEntityClass the class of the join entities to load
      * @return an Optional containing the entity with join entities loaded, or empty if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
-    default Optional<T> get(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, UncheckedSQLException {
+    default Optional<T> get(final ID id, final Class<?> joinEntityClass) throws UncheckedSQLException, DuplicateResultException {
         return Optional.ofNullable(getOrNull(id, joinEntityClass));
     }
 
@@ -118,13 +123,15 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return an Optional containing the entity with join entities loaded as specified, or empty if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null},
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
-    default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
+    default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException, DuplicateResultException {
         return Optional.ofNullable(getOrNull(id, includeAllJoinEntities));
     }
 
@@ -148,14 +155,17 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @return an Optional containing the entity with selected properties and join entities loaded, or empty if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws DuplicateResultException, UncheckedSQLException {
+            throws UncheckedSQLException, DuplicateResultException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClass));
     }
 
@@ -180,14 +190,17 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
      * @return an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws DuplicateResultException, UncheckedSQLException {
+            throws UncheckedSQLException, DuplicateResultException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClasses));
     }
 
@@ -213,14 +226,16 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return an Optional containing the entity with selected properties and join entities as specified, or empty if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null},
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicateResultException, UncheckedSQLException {
+            throws UncheckedSQLException, DuplicateResultException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, includeAllJoinEntities));
     }
 
@@ -241,13 +256,16 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param id the entity ID to retrieve
      * @param joinEntityClass the class of the join entities to load
      * @return the entity with specified join entities loaded, or {@code null} if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
-    default T getOrNull(final ID id, final Class<?> joinEntityClass) throws DuplicateResultException, UncheckedSQLException {
+    default T getOrNull(final ID id, final Class<?> joinEntityClass) throws UncheckedSQLException, DuplicateResultException {
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
 
         if (result != null) {
@@ -276,13 +294,15 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return the entity with join entities loaded as specified, or {@code null} if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null},
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
-    default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
+    default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException, DuplicateResultException {
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
 
         if (result != null && includeAllJoinEntities) {
@@ -312,14 +332,17 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @return the entity with selected properties and join entities loaded, or {@code null} if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws DuplicateResultException, UncheckedSQLException {
+            throws UncheckedSQLException, DuplicateResultException {
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
 
         if (result != null) {
@@ -350,14 +373,17 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
      * @return the entity with selected properties and specified join entities loaded, or {@code null} if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws DuplicateResultException, UncheckedSQLException {
+            throws UncheckedSQLException, DuplicateResultException {
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
 
         if (result != null && N.notEmpty(joinEntityClasses)) {
@@ -391,14 +417,16 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return the entity with selected properties and join entities as specified, or {@code null} if not found
-     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
+     * @throws IllegalArgumentException if {@code id} is {@code null},
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     @Override
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicateResultException, UncheckedSQLException {
+            throws UncheckedSQLException, DuplicateResultException {
         final T result = DaoUtil.getCrudReadOps(this)
                 .getOrNull(id, includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames);
 
@@ -426,13 +454,17 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param ids the collection of IDs to retrieve
      * @param joinEntityClass the class of the join entities to load for each entity
      * @return a list of entities with the specified join entities loaded
-     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class,
+     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntityClass) throws DuplicateResultException, UncheckedSQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntityClass) throws UncheckedSQLException, DuplicateResultException {
         return batchGet(ids, null, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -455,12 +487,15 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return a list of entities with join entities loaded as specified
-     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws IllegalArgumentException if nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws DuplicateResultException, UncheckedSQLException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws UncheckedSQLException, DuplicateResultException {
         return batchGet(ids, null, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -484,14 +519,18 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClass the class of the join entities to load for each entity
      * @return a list of entities with selected properties and join entities loaded
-     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class,
+     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class
+     * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws DuplicateResultException, UncheckedSQLException {
+            throws UncheckedSQLException, DuplicateResultException {
         return batchGet(ids, sourceSelectPropNames, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -515,14 +554,18 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClasses the collection of join entity classes to load for each entity
      * @return a list of entities with selected properties and specified join entities loaded
-     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class,
+     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class
+     * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws DuplicateResultException, UncheckedSQLException {
+            throws UncheckedSQLException, DuplicateResultException {
         return batchGet(ids, sourceSelectPropNames, joinEntityClasses, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -548,13 +591,16 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return a list of entities with selected properties and join entities as specified
-     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws IllegalArgumentException if nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws DuplicateResultException, UncheckedSQLException {
+            throws UncheckedSQLException, DuplicateResultException {
         return batchGet(ids, sourceSelectPropNames, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -581,14 +627,18 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and join entities loaded
-     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property of the specified type is found in the entity class,
+     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property of the specified type is found in the entity class
+     * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass,
-            final int batchSize) throws DuplicateResultException, UncheckedSQLException {
+            final int batchSize) throws UncheckedSQLException, DuplicateResultException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)
@@ -629,14 +679,18 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and specified join entities loaded
-     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property is found for one of the specified types in the entity class,
+     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
+     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property is found for one of the specified types in the entity class
+     * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses,
-            final int batchSize) throws DuplicateResultException, UncheckedSQLException {
+            final int batchSize) throws UncheckedSQLException, DuplicateResultException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)
@@ -684,14 +738,17 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and join entities as specified
-     * @throws DuplicateResultException if the size of result is bigger than the size of input {@code ids}
+     * @throws IllegalArgumentException if {@code batchSize} is not positive,
+     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
+     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if a database access error occurs
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities,
-            final int batchSize) throws DuplicateResultException, UncheckedSQLException {
+            final int batchSize) throws UncheckedSQLException, DuplicateResultException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)

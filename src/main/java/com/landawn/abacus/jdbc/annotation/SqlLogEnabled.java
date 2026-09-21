@@ -25,12 +25,17 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
  * Toggles whether SQL statements are logged for a DAO method (or all matching methods on a DAO
- * type). When enabled, every prepared statement executed through the DAO proxy is written to the
- * SQL logger, truncated to {@link #maxSqlLogLength()} characters.
+ * type). When enabled, SQL text is logged at DEBUG level when a statement is prepared through the
+ * DAO proxy, truncated to {@link #maxSqlLogLength()} characters, provided global SQL logging and the
+ * logger's DEBUG level are enabled.
  *
  * <p>The DAO proxy reads this annotation at proxy-build time ({@code DaoImpl}). A method-level
  * {@code @SqlLogEnabled} wins over a type-level one. When neither is present, logging follows
- * the global default configured on {@link JdbcUtil}.</p>
+ * the current thread's setting configured on {@link JdbcUtil}.</p>
+ *
+ * <p>This annotation controls statement-preparation logging only. SQL performance logs and a
+ * custom {@link JdbcUtil#setSqlLogHandler SQL log handler} are configured separately, so
+ * {@code @SqlLogEnabled(false)} alone does not suppress those outputs.</p>
  *
  * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when the method
  * name starts with it (case-insensitive) or matches the full method name as a regular
@@ -74,7 +79,7 @@ public @interface SqlLogEnabled {
      * {@code false}, SQL logging is disabled for that scope. This element defaults to {@code true},
      * meaning a bare {@code @SqlLogEnabled} turns logging on for the scope it is placed on &mdash; it
      * does <em>not</em> imply SQL logging is globally enabled by default. When no {@code @SqlLogEnabled}
-     * is present at all, logging follows the global default configured on {@link JdbcUtil}. A method-level
+     * is present at all, logging follows the current thread's setting configured on {@link JdbcUtil}. A method-level
      * {@code @SqlLogEnabled} still takes precedence over a type-level one (see the type-level
      * documentation).</p>
      *

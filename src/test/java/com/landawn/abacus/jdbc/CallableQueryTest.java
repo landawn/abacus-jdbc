@@ -58,6 +58,20 @@ import com.landawn.abacus.TestBase;
 
 public class CallableQueryTest extends TestBase {
 
+
+    @Test
+    public void testQueryAndGetOutParametersRejectsLiveResultSetFromExtractor() throws SQLException {
+        final ResultSet rs = mock(ResultSet.class);
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+
+        assertThrows(UnsupportedOperationException.class, () -> callableQuery.queryAndGetOutParameters(resultSet -> resultSet));
+
+        verify(rs).close();
+        verify(callableStatement).close();
+    }
+
     private CallableStatement callableStatement;
     private CallableQuery callableQuery;
 

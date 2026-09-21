@@ -188,10 +188,10 @@ public @interface DaoConfig {
      * provided by {@code Dao}/{@code CrudDao}, when individual call sites do not override it
      * with {@link FetchColumnByEntityClass @FetchColumnByEntityClass}.
      *
-     * <p>When {@code true} (default), the framework restricts the projected columns to those
-     * that map to properties on the DAO's target entity class, producing a {@code Dataset} that
-     * mirrors the entity shape. When {@code false}, the underlying SELECT keeps every column
-     * referenced by the SQL (useful for joins with extra columns, calculated columns, or
+     * <p>When {@code true} (default), the framework retains result columns that
+     * map to properties on the DAO's target entity class, producing a {@code Dataset} that
+     * mirrors the entity shape. When {@code false}, the returned Dataset keeps every column
+     * produced by the SQL (useful for joins with extra columns, calculated columns, or
      * aggregations that have no corresponding entity property).</p>
      *
      * <p>This setting applies to every built-in <em>and</em> {@link Query @Query}-based method that returns a
@@ -211,8 +211,8 @@ public @interface DaoConfig {
      * }
      * }</pre>
      *
-     * @return {@code true} (default) to restrict built-in {@code Dataset} queries to entity-mapped columns;
-     *         {@code false} to retain every column referenced by the SELECT
+     * @return {@code true} (default) to restrict {@code Dataset} results to entity-mapped columns;
+     *         {@code false} to retain every column produced by the SELECT
      */
     boolean fetchColumnByEntityClassForDatasetQuery() default true;
 }

@@ -170,6 +170,9 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
     public interface JoinUserDao extends UncheckedCrudDao<JoinUser, Long, JoinUserDao>, UncheckedCrudJoinEntityHelper<JoinUser, Long, JoinUserDao> {
     }
 
+    public interface CheckedJoinUserDao extends CrudDao<JoinUser, Long, CheckedJoinUserDao>, CrudJoinEntityHelper<JoinUser, Long, CheckedJoinUserDao> {
+    }
+
     public interface JoinOrderDao extends UncheckedCrudDao<JoinOrder, Long, JoinOrderDao> {
     }
 
@@ -237,6 +240,28 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
 
     private long orderCountForUser(final long userId) {
         return orderDao.count(Filters.eq("userId", userId));
+    }
+
+    @Test
+    public void testEmptySourceSelectionPreservesAllDefaultProperties() throws SQLException {
+        final JoinUser seeded = seedUser("All properties", 12.5);
+        final CheckedJoinUserDao checkedDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds);
+        final List<JoinUser> loaded = List.of(userDao.getOrNull(seeded.getId(), List.of(), JoinOrder.class),
+                userDao.getOrNull(seeded.getId(), List.of(), List.of(JoinOrder.class)), userDao.getOrNull(seeded.getId(), List.of(), true),
+                checkedDao.getOrNull(seeded.getId(), List.of(), JoinOrder.class),
+                checkedDao.getOrNull(seeded.getId(), List.of(), List.of(JoinOrder.class)), checkedDao.getOrNull(seeded.getId(), List.of(), true),
+                userDao.list(List.of(), JoinOrder.class, Filters.eq("id", seeded.getId())).get(0));
+
+        for (final JoinUser user : loaded) {
+            assertEquals(seeded.getId(), user.getId());
+            assertEquals("All properties", user.getName());
+            assertEquals(1, user.getOrders().size());
+            assertEquals(12.5, user.getOrders().get(0).getAmount());
+        }
+
+        try (var stream = checkedDao.stream(List.of(), true, Filters.eq("id", seeded.getId()))) {
+            assertEquals("All properties", stream.first().get().getName());
+        }
     }
 
     // loadJoinEntities by prop-name and by class (both single-type join properties are populated).

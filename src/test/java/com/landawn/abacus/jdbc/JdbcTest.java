@@ -70,6 +70,165 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 
 public class JdbcTest extends TestBase {
 
+    @Test
+    public void testResultExtractorGroupingFinishesConcurrentSkipListMap() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, true, true, false);
+        when(mockResultSet.getString(1)).thenReturn("b", "a", "b");
+        when(mockResultSet.getInt(2)).thenReturn(3, 5, 7);
+        final Jdbc.ResultExtractor<java.util.concurrent.ConcurrentSkipListMap<String, Integer>> extractor = Jdbc.ResultExtractor.groupTo(
+                rs -> rs.getString(1), rs -> rs.getInt(2), Collectors.summingInt(Integer::intValue), java.util.concurrent.ConcurrentSkipListMap::new);
+
+        final Map<String, Integer> result = extractor.apply(mockResultSet);
+        assertEquals(Map.of("a", 5, "b", 10), result);
+        assertEquals(List.of("a", "b"), new ArrayList<>(result.keySet()));
+    }
+
+    @Test
+    public void testBiResultExtractorGroupingFinishesConcurrentSkipListMap() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, true, true, false);
+        when(mockResultSet.getString(1)).thenReturn("b", "a", "b");
+        when(mockResultSet.getInt(2)).thenReturn(3, 5, 7);
+        final Jdbc.BiResultExtractor<java.util.concurrent.ConcurrentSkipListMap<String, Integer>> extractor = Jdbc.BiResultExtractor.groupTo(
+                (rs, labels) -> rs.getString(1), (rs, labels) -> rs.getInt(2), Collectors.summingInt(Integer::intValue),
+                java.util.concurrent.ConcurrentSkipListMap::new);
+
+        final Map<String, Integer> result = extractor.apply(mockResultSet, List.of("category", "value"));
+        assertEquals(Map.of("a", 5, "b", 10), result);
+        assertEquals(List.of("a", "b"), new ArrayList<>(result.keySet()));
+    }
+
+    @Test
+    public void testBiRowMapperRetriesFailedColumnConfiguration() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn("Alice");
+        when(mockResultSet.getObject(2)).thenReturn(42);
+        when(mockResultSet.getString(1)).thenReturn("Alice");
+        when(mockResultSet.getInt(2)).thenReturn(42);
+        final List<String> labels = List.of("source_name", "source_age");
+
+        for (final Class<?> targetClass : List.of(Object[].class, List.class, Map.class, TestEntity.class)) {
+            for (final boolean failInFilter : new boolean[] { false, true }) {
+                final java.util.concurrent.atomic.AtomicBoolean fail = new java.util.concurrent.atomic.AtomicBoolean(true);
+                final IllegalStateException failure = new IllegalStateException("column configuration failed");
+                final Jdbc.BiRowMapper<?> mapper = Jdbc.BiRowMapper.to(targetClass, label -> {
+                    if (failInFilter && label.equals("source_age") && fail.getAndSet(false)) {
+                        throw failure;
+                    }
+                    return true;
+                }, label -> {
+                    if (!failInFilter && label.equals("source_age") && fail.getAndSet(false)) {
+                        throw failure;
+                    }
+                    return label.substring("source_".length());
+                });
+
+                assertSame(failure, assertThrows(IllegalStateException.class, () -> mapper.apply(mockResultSet, labels)));
+                final Object result = mapper.apply(mockResultSet, labels);
+                if (result instanceof final Object[] values) {
+                    assertEquals(List.of("Alice", 42), Arrays.asList(values));
+                } else if (result instanceof final List<?> values) {
+                    assertEquals(List.of("Alice", 42), values);
+                } else if (result instanceof final Map<?, ?> values) {
+                    assertEquals(Map.of("name", "Alice", "age", 42), values);
+                } else {
+                    final TestEntity entity = (TestEntity) result;
+                    assertEquals("Alice", entity.getName());
+                    assertEquals(42, entity.getAge());
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testBiRowMapperRepeatedlyRejectsUnmatchedColumns() throws SQLException {
+        final List<Jdbc.BiRowMapper<TestEntity>> mappers = List.of(Jdbc.BiRowMapper.to(TestEntity.class),
+                Jdbc.BiRowMapper.to(TestEntity.class, Map.of("unused", "name")), Jdbc.BiRowMapper.builder().to(TestEntity.class));
+        for (final Jdbc.BiRowMapper<TestEntity> mapper : mappers) {
+            final IllegalArgumentException first = assertThrows(IllegalArgumentException.class,
+                    () -> mapper.apply(mockResultSet, List.of("unmatched")));
+            final IllegalArgumentException second = assertThrows(IllegalArgumentException.class,
+                    () -> mapper.apply(mockResultSet, List.of("unmatched")));
+            assertEquals(first.getMessage(), second.getMessage());
+        }
+        verify(mockResultSet, never()).getObject(anyInt());
+    }
+
+    @Test
+    public void testBiRowMapperToMapRetriesFailedNameConversion() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn("Alice");
+        when(mockResultSet.getObject(2)).thenReturn(42);
+        for (final boolean useRowExtractor : new boolean[] { false, true }) {
+            final java.util.concurrent.atomic.AtomicBoolean fail = new java.util.concurrent.atomic.AtomicBoolean(true);
+            final IllegalStateException failure = new IllegalStateException("name conversion failed");
+            final java.util.function.Function<String, String> converter = label -> {
+                if (label.equals("age") && fail.getAndSet(false)) {
+                    throw failure;
+                }
+                return label.toUpperCase(Locale.ROOT);
+            };
+            final Jdbc.RowExtractor extractor = (rs, output) -> {
+                output[0] = rs.getObject(1);
+                output[1] = rs.getObject(2);
+            };
+            final Jdbc.BiRowMapper<Map<String, Object>> mapper = useRowExtractor
+                    ? Jdbc.BiRowMapper.toMap(extractor, converter, IntFunctions.ofMap())
+                    : Jdbc.BiRowMapper.toMap(converter);
+            assertSame(failure, assertThrows(IllegalStateException.class, () -> mapper.apply(mockResultSet, List.of("name", "age"))));
+            assertEquals(Map.of("NAME", "Alice", "AGE", 42), mapper.apply(mockResultSet, List.of("name", "age")));
+        }
+    }
+
+    @Test
+    public void testDaoCacheFactoriesPropagateInvalidCapacityAndEvictionDelay() {
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.DaoCache.create(-1, 0));
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.DaoCache.create(1, -1));
+        assertThrows(IllegalArgumentException.class, () -> new Jdbc.DefaultDaoCache(-1, 0));
+        assertThrows(IllegalArgumentException.class, () -> new Jdbc.DefaultDaoCache(1, -1));
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.DaoCache.createByMap(-1));
+        assertThrows(IllegalArgumentException.class, () -> new Jdbc.DaoCacheByMap(-1));
+    }
+
+    @Test
+    public void testDaoCacheLifetimeValidationOnlyAppliesToStoredPoolEntries() {
+        final Jdbc.DaoCache pooled = Jdbc.DaoCache.create(2, 0);
+        assertFalse(pooled.put("key", null, 0, -1, null, null, null));
+        assertThrows(IllegalArgumentException.class, () -> pooled.put("key", "value", 0, 1, null, null, null));
+        assertThrows(IllegalArgumentException.class, () -> pooled.put("key", "value", 1, 0, null, null, null));
+        assertNull(pooled.get("key", null, null, null));
+
+        final Jdbc.DaoCache mapped = Jdbc.DaoCache.createByMap();
+        assertTrue(mapped.put("key", "value", 0, -1, null, null, null));
+        assertEquals("value", mapped.get("key", null, null, null));
+    }
+
+    @Test
+    public void testHandlerFactoryPropagatesConstructorFailure() {
+        assertSame(FailingConstructorHandler.FAILURE,
+                assertThrows(IllegalStateException.class, () -> Jdbc.HandlerFactory.register(FailingConstructorHandler.class)));
+        assertSame(FailingConstructorHandler.FAILURE,
+                assertThrows(IllegalStateException.class, () -> Jdbc.HandlerFactory.getOrCreate(FailingConstructorHandler.class)));
+        assertNull(Jdbc.HandlerFactory.get(FailingConstructorHandler.class));
+    }
+
+    @Test
+    public void testMapBackedCachePropagatesUnsupportedMutationOnlyWhenNeeded() {
+        final Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap(Map.of("existing", "value"));
+        assertFalse(cache.put("key", null, null, null, null));
+        assertFalse(cache.put("key", null, -1, -1, null, null, null));
+        assertThrows(IllegalArgumentException.class, () -> cache.put(null, "value", null, null, null));
+        assertThrows(UnsupportedOperationException.class, () -> cache.put("key", "value", null, null, null));
+        assertThrows(UnsupportedOperationException.class, () -> cache.put("key", "value", 1, 1, null, null, null));
+        assertThrows(UnsupportedOperationException.class, cache::clear);
+        assertEquals("value", cache.get("existing", null, null, null));
+    }
+
+    public static final class FailingConstructorHandler implements Jdbc.Handler<Object> {
+        static final IllegalStateException FAILURE = new IllegalStateException("handler construction failed");
+
+        public FailingConstructorHandler() {
+            throw FAILURE;
+        }
+    }
+
     @Mock
     private ResultSet mockResultSet;
 

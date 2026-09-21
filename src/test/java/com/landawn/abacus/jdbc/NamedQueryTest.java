@@ -95,6 +95,7 @@ public class NamedQueryTest extends TestBase {
         namedQuery = new NamedQuery(mockPreparedStatement, mockParsedSql);
     }
 
+
     @Test
     public void testSetNullWithSqlType() throws SQLException {
         String paramName = "param1";

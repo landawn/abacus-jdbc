@@ -78,8 +78,8 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity containing the values to update
      * @param propNamesToUpdate the property names to update (must not be {@code null} or empty)
      * @return the number of rows updated
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToUpdate} is {@code null} or empty
+     * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
     int update(final T entity, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
@@ -155,6 +155,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities to update
      * @return the total number of rows updated
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     default int batchUpdate(final Collection<? extends T> entities) throws UncheckedSQLException {
@@ -177,6 +178,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @return the total number of rows updated
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws UncheckedSQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
@@ -199,8 +201,9 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for each entity (must not be {@code null} or empty)
      * @return the total number of rows updated
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws UncheckedSQLException {
@@ -224,8 +227,9 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param propNamesToUpdate the property names to update for each entity (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch
      * @return the total number of rows updated
-     * @throws UncheckedSQLException if a database access error occurs
      * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws UncheckedSQLException if a database access error occurs
+     * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws UncheckedSQLException;

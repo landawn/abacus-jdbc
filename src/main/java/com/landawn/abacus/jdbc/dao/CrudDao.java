@@ -104,6 +104,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param entity the entity to insert or update (must not be {@code null})
      * @return the saved entity (either newly inserted or updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      */
@@ -134,6 +135,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @return the saved entity: the inserted {@code entity} when no existing record was found,
      *         or the loaded database entity (with non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if a database access error occurs
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @see Filters
@@ -177,7 +179,10 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param entities the collection of entities to upsert
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
+     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key
      */
     default List<T> batchUpsert(final Collection<? extends T> entities) throws SQLException {
         return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -202,7 +207,9 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException {
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -236,8 +243,11 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty,
+     *                                  or, for nonempty input, the first entity is {@code null} or a match property does not exist
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws SQLException {
         return batchUpsert(entities, matchPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -274,8 +284,9 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                                  if {@code batchSize} is not positive,
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
      *                                  or if the first element of {@code entities} is {@code null}
-     * @throws IllegalStateException if more than one existing record matches one entity's unique key
+     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if a database access error occurs
+     * @throws IllegalStateException if more than one existing record matches one entity's unique key
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws SQLException {
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);

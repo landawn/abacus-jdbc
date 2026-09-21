@@ -124,16 +124,20 @@ public @interface Handler {
     /**
      * Specifies the handler implementation class.
      * The class must implement {@link Jdbc.Handler} with the appropriate DAO type parameter.
-     * It is instantiated through {@code Jdbc.HandlerFactory} at DAO initialization time and shared by
-     * every declaration referencing the same class, so it must be concrete and expose an accessible
-     * no-argument constructor; otherwise DAO initialization fails with {@code IllegalArgumentException}.
+     * It is resolved through {@code Jdbc.HandlerFactory} at DAO initialization time and shared by
+     * declarations referencing the same class. If no instance is already registered, the class
+     * must be concrete and have a usable no-argument constructor; invalid construction requirements
+     * fail with {@code IllegalArgumentException}, while constructor or reflective-access failures
+     * can propagate other runtime exceptions.
      *
      * <p>The handler lifecycle methods are called in this order:</p>
      * <ol>
      *   <li>{@code beforeInvoke()} - Before the actual method invocation</li>
      *   <li>Actual DAO method execution</li>
      *   <li>{@code afterInvoke()} - After the method completes (whether successfully or with an exception);
-     *       it can observe the result but cannot replace the returned reference</li>
+     *       it can observe the result but cannot replace the returned reference. It runs only if
+     *       this handler's {@code beforeInvoke()} completed normally, including when a later
+     *       handler's {@code beforeInvoke()} fails.</li>
      * </ol>
      *
      * <p>Example handler implementation:</p>

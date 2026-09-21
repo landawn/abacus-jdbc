@@ -29,11 +29,14 @@ import com.landawn.abacus.util.RegExUtil;
 /**
  * Declares how a DAO method should execute SQL.
  *
- * <p>Place this annotation on an abstract (or {@code default}) method of a DAO interface to bind that
- * method to a SQL statement. The SQL may be written inline through {@link #value()} or referenced by id
- * from an external SQL mapper through {@link #id()} (see {@link SqlSource}). Exactly one of the two must
- * be supplied: declaring both, or neither, causes DAO initialization to fail with an
- * {@code IllegalArgumentException}.</p>
+ * <p>Place this annotation on an abstract method of a DAO interface to bind that method to a SQL
+ * statement. A {@code default} method executes its own body; when its last parameter is a
+ * {@code String[]}, this annotation can supply SQL to that parameter for the body to execute.
+ * The SQL may be written inline through {@link #value()} or referenced by id
+ * from an external SQL mapper through {@link #id()} (see {@link SqlSource}). Ordinary abstract methods
+ * must supply exactly one of the two: declaring both, or neither, causes DAO initialization to fail with an
+ * {@code IllegalArgumentException}. A default method ending in a {@code String[]} parameter can collect
+ * entries from both sources, as described by {@link #value()}.</p>
  *
  * <p>Beyond the SQL itself, the annotation lets a method choose an {@link QueryOperation execution mode}
  * ({@link #op()}), flag a stored-procedure call ({@link #procedure()}), enable batching
@@ -64,8 +67,10 @@ import com.landawn.abacus.util.RegExUtil;
  * untrusted input in a fragment; validate against an application-controlled allowlist. Fetch size and
  * query timeout are JDBC driver hints and may be ignored or interpreted differently by a driver.</p>
  *
- * <p><b>&#9888; Warning:</b> Batch execution is not automatically all-or-nothing. Earlier chunks may
- * succeed before a later chunk fails unless the call participates in an appropriate transaction.</p>
+ * <p><b>Batch transactions:</b> an INSERT or UPDATE/DELETE batch that exceeds {@link #batchSize()}
+ * is split into chunks inside a transaction started or joined by the proxy. A batch that fits in
+ * one chunk does not start a transaction automatically; use {@link Transactional} when that case
+ * also needs rollback of partially executed statements.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -395,7 +400,7 @@ public @interface Query {
      * @Query(value = "UPDATE users SET status = :status WHERE id = :id",
      *        batch = true)
      * int batchUpdateStatus(List<User> users) throws SQLException;
-     * // Returns the total affected-row count summed across all batch rows
+     * // Returns the sum of positive row counts reported by the driver
      *
      * // Batch delete: for positional SQL each element of the Collection is one row's value
      * // (or an Object[]/List of values for multi-parameter SQL)
@@ -425,8 +430,11 @@ public @interface Query {
      * <ul>
      *   <li>Batch INSERT: {@code void}, or {@code List<ID>} to receive the generated keys</li>
      *   <li>Batch UPDATE/DELETE: {@code int}/{@code Integer}, {@code long}/{@code Long},
-     *       {@code boolean}/{@code Boolean} or {@code void} — the affected-row counts are summed
-     *       across all batch rows (a per-row {@code int[]} result is not supported)</li>
+     *       {@code boolean}/{@code Boolean} or {@code void} — positive affected-row counts are summed
+     *       across all batch rows (a per-row {@code int[]} result is not supported). JDBC sentinel
+     *       values such as {@link java.sql.Statement#SUCCESS_NO_INFO} do not contribute to the sum;
+     *       a boolean result reports whether that sum is positive, so it can be false even when
+     *       the driver reports successful execution without row counts.</li>
      * </ul>
      *
      * <p>Parameter requirements:</p>
@@ -450,9 +458,9 @@ public @interface Query {
      *
      * <p>Error handling:</p>
      * <ul>
-     *   <li>If a batch item fails, the driver may report partial execution; earlier statements or
-     *       completed chunks may already have succeeded unless the call is transactional</li>
-     *   <li>Consider wrapping batch operations in transactions for atomicity</li>
+     *   <li>If a batch item fails, the driver may report partial execution. The proxy starts or joins
+     *       a transaction for multi-chunk INSERT and UPDATE/DELETE batches, but not for a single chunk.</li>
+     *   <li>Use {@link Transactional} when rollback is also required for single-chunk batches</li>
      *   <li>Validate data before batching to minimize mid-batch failures</li>
      * </ul>
      *
@@ -478,8 +486,9 @@ public @interface Query {
      *
      * <p>Default behavior ({@code collectionAsSingleParameter = false}):</p>
      * <ul>
-     *   <li>A sole, unannotated collection/array used with positional {@code ?} SQL supplies the
-     *       individual positional values</li>
+     *   <li>A sole, unannotated {@code Collection} or reference array used with positional
+     *       {@code ?} SQL supplies the individual positional values; primitive arrays are passed
+     *       as one value unless expanded explicitly with {@link BindList}</li>
      *   <li>For batch operations, the outer collection supplies the rows to process</li>
      * </ul>
      *
@@ -656,7 +665,9 @@ public @interface Query {
      *
      * <p>Important considerations:</p>
      * <ul>
-     *   <li>The system-time parameters ({@code :now}, {@code :sysTime}, {@code :sysDate}) are each set once when the query is executed, ensuring consistency across the query</li>
+     *   <li>The system-time parameters ({@code :now}, {@code :sysTime}, {@code :sysDate}) derive from
+     *       one clock reading per execution. A batch captures a separate reading for each row,
+     *       so timestamps may differ between rows.</li>
      *   <li>The value is obtained from the application server's system time, not the database server</li>
      *   <li>For database server time, use SQL functions like {@code CURRENT_TIMESTAMP} or {@code NOW()} instead</li>
      *   <li>The timestamp format and precision depend on the database column type and JDBC driver</li>
@@ -680,8 +691,11 @@ public @interface Query {
 
     /**
      * Specifies the query timeout in seconds.
-     * Positive values are passed to {@link java.sql.Statement#setQueryTimeout(int)}. The driver
+     * Non-negative values are passed to {@link java.sql.Statement#setQueryTimeout(int)}; zero disables
+     * the statement timeout. The driver
      * determines the exact cancellation timing and the {@link java.sql.SQLException} it reports.
+     * A {@link com.landawn.abacus.query.SqlMapper#TIMEOUT} attribute on an externally mapped SQL
+     * entry takes precedence over this value.
      *
      * <p>Setting an appropriate timeout is important for:</p>
      * <ul>
@@ -745,6 +759,9 @@ public @interface Query {
      * from the database when more rows are needed. Setting an appropriate fetch size can significantly
      * improve performance for large result sets by reducing network round trips, but it also affects
      * memory consumption.</p>
+     *
+     * <p>A {@link com.landawn.abacus.query.SqlMapper#FETCH_SIZE} attribute on an externally mapped
+     * SQL entry takes precedence over this value.</p>
      *
      * <p>Fetch size impact:</p>
      * <ul>
@@ -862,7 +879,8 @@ public @interface Query {
      * <ul>
      *   <li><strong>Network efficiency:</strong> Larger batches mean fewer round trips</li>
      *   <li><strong>Memory usage:</strong> Larger batches consume more memory</li>
-     *   <li><strong>Transaction size:</strong> Larger batches create larger transactions</li>
+     *   <li><strong>Transaction scope:</strong> All chunks of a split batch share one transaction;
+     *       reducing this size does not commit each chunk independently</li>
      *   <li><strong>Error recovery:</strong> Smaller batches may be easier to retry on failure</li>
      * </ul>
      *
@@ -876,6 +894,11 @@ public @interface Query {
      *
      * <p>The default value is {@link JdbcUtil#DEFAULT_BATCH_SIZE}, which is typically optimized for
      * common use cases and provides a good balance between performance and resource usage.</p>
+     *
+     * <p>A {@link com.landawn.abacus.query.SqlMapper#BATCH_SIZE} attribute on an externally mapped SQL entry overrides this value, and
+     * an optional second {@code int} statement parameter overrides both at invocation time.
+     * A resolved value of zero uses {@link JdbcUtil#DEFAULT_BATCH_SIZE}; a negative value fails
+     * the invocation with {@code IllegalArgumentException}.</p>
      *
      * <p>Basic examples:</p>
      * <pre>{@code

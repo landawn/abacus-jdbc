@@ -68,8 +68,9 @@ public enum Propagation {
      * Create a new transaction, and suspend the current transaction if one exists.
      *
      * <p>This behavior always creates a new transaction. If a transaction is already
-     * active, it will be suspended until the new transaction completes. This ensures
-     * that the method executes in complete isolation from any outer transaction.</p>
+     * active, it will be suspended until the new transaction completes. The new transaction
+     * commits or rolls back independently; visibility and lock contention still depend on the
+     * database isolation level and any locks held by the suspended transaction.</p>
      *
      * <p>Use this for operations that should be committed or rolled back independently
      * of the calling transaction, such as audit logging or error reporting.</p>

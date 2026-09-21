@@ -813,10 +813,9 @@ final class ResultSetProxy implements ResultSet {
      *   <li>Materializes {@link Blob} values to {@code byte[]} and {@link Clob} values to {@code String}</li>
      * </ul>
      *
-     * <p>Unlike the index form, the label is always resolved to a column index via the underlying
-     * {@link ResultSet#findColumn(String)}, so there is no out-of-range pass-through path for the
-     * label form; like the index form, the getter strategy is cached only after the first non-null
-     * read for that label.</p>
+     * <p>When no getter has been cached for a label, the label is resolved to a column index via the
+     * underlying {@link ResultSet#findColumn(String)}. Like the index form, the getter strategy is
+     * cached only after the first non-null read for that label.</p>
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
@@ -2441,7 +2440,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param xmlObject the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; this method is called on a closed result set; the {@link SQLXML} object's {@code getCharacterStream} or {@code getBinaryStream} method was called or has been closed; an error occurs processing the XML value or the result set concurrency is {@code CONCUR_READ_ONLY}
+     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; this method is called on a closed result set;
+     *         a writer or output stream obtained from the {@link SQLXML} object has not been closed; an error occurs processing the XML value;
+     *         or the result set concurrency is {@code CONCUR_READ_ONLY}
      */
     @Override
     public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException {
@@ -2454,7 +2455,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param xmlObject the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; this method is called on a closed result set; the {@link SQLXML} object's {@code getCharacterStream} or {@code getBinaryStream} method was called or has been closed; an error occurs processing the XML value or the result set concurrency is {@code CONCUR_READ_ONLY}
+     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; this method is called on a closed result set;
+     *         a writer or output stream obtained from the {@link SQLXML} object has not been closed; an error occurs processing the XML value;
+     *         or the result set concurrency is {@code CONCUR_READ_ONLY}
      */
     @Override
     public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException {

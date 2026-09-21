@@ -37,6 +37,9 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *   <li>The whole DAO-method invocation met or exceeded {@link #daoMethodPerfLogThresholdMillis()} ms —
  *       the method name and total elapsed time are logged.</li>
  * </ul>
+ * <p>The corresponding global performance-logging switch on {@link JdbcUtil} and the logger's
+ * INFO level must also be enabled. A stream-returning method is timed only until it returns the
+ * stream; this does not include later traversal by its caller.</p>
  *
  * <p><b>Lookup precedence:</b> a method-level {@code @PerfLog} overrides a type-level one. When
  * neither is present, SQL execution follows the current global/thread-local performance-logging

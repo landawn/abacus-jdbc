@@ -32,6 +32,7 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
+import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
@@ -44,7 +45,9 @@ import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.ImmutableList;
+import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.u;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -117,6 +120,70 @@ public class DaoImplIntegrationTest extends TestBase {
     }
 
     public interface UserAccountDao extends CrudDao<UserAccount, Long, UserAccountDao> {
+    }
+
+    public interface UniquePrimitiveDao extends CrudDao<UserAccount, Long, UniquePrimitiveDao> {
+        @Query(value = "SELECT age FROM user_account", op = QueryOperation.queryForUnique)
+        u.OptionalBoolean booleanValue() throws SQLException;
+
+        @Query(value = "SELECT age FROM user_account", op = QueryOperation.findOnlyOne)
+        u.OptionalChar charValue() throws SQLException;
+
+        @Query("SELECT age FROM user_account")
+        u.OptionalByte queryForUniqueByte() throws SQLException;
+
+        @Query("SELECT age FROM user_account")
+        u.OptionalShort findOnlyOneShort() throws SQLException;
+
+        @Query(value = "SELECT age FROM user_account", op = QueryOperation.queryForUnique)
+        u.OptionalInt intValue() throws SQLException;
+
+        @Query(value = "SELECT age FROM user_account", op = QueryOperation.findOnlyOne)
+        u.OptionalLong longValue() throws SQLException;
+
+        @Query("SELECT age FROM user_account")
+        u.OptionalFloat queryForUniqueFloat() throws SQLException;
+
+        @Query("SELECT age FROM user_account")
+        u.OptionalDouble findOnlyOneDouble() throws SQLException;
+
+        @Query(value = "SELECT age FROM user_account", op = QueryOperation.queryForSingle)
+        u.OptionalInt queryForUniqueFirstRow() throws SQLException;
+    }
+
+    @Test
+    public void testUniquePrimitiveOptionalsPreserveEmptyNullAndDuplicateSemantics() throws SQLException {
+        final UniquePrimitiveDao uniqueDao = JdbcUtil.createDao(UniquePrimitiveDao.class, ds);
+        final List<Throwables.Supplier<?, SQLException>> queries = List.of(uniqueDao::booleanValue, uniqueDao::charValue, uniqueDao::queryForUniqueByte,
+                uniqueDao::findOnlyOneShort, uniqueDao::intValue, uniqueDao::longValue, uniqueDao::queryForUniqueFloat, uniqueDao::findOnlyOneDouble);
+        final List<Object> emptyValues = List.of(u.OptionalBoolean.empty(), u.OptionalChar.empty(), u.OptionalByte.empty(), u.OptionalShort.empty(),
+                u.OptionalInt.empty(), u.OptionalLong.empty(), u.OptionalFloat.empty(), u.OptionalDouble.empty());
+        final List<Object> nullValues = List.of(u.OptionalBoolean.of(false), u.OptionalChar.of((char) 0), u.OptionalByte.of((byte) 0),
+                u.OptionalShort.of((short) 0), u.OptionalInt.of(0), u.OptionalLong.of(0), u.OptionalFloat.of(0), u.OptionalDouble.of(0));
+        final List<Object> oneValues = List.of(u.OptionalBoolean.of(true), u.OptionalChar.of('1'), u.OptionalByte.of((byte) 1),
+                u.OptionalShort.of((short) 1), u.OptionalInt.of(1), u.OptionalLong.of(1), u.OptionalFloat.of(1), u.OptionalDouble.of(1));
+
+        for (int i = 0; i < queries.size(); i++) {
+            assertEquals(emptyValues.get(i), queries.get(i).get());
+        }
+
+        try (Connection conn = ds.getConnection(); Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate("INSERT INTO user_account (age) VALUES (NULL)");
+            for (int i = 0; i < queries.size(); i++) {
+                assertEquals(nullValues.get(i), queries.get(i).get());
+            }
+
+            stmt.executeUpdate("UPDATE user_account SET age = 1");
+            for (int i = 0; i < queries.size(); i++) {
+                assertEquals(oneValues.get(i), queries.get(i).get());
+            }
+
+            stmt.executeUpdate("INSERT INTO user_account (age) VALUES (1)");
+            for (final Throwables.Supplier<?, SQLException> query : queries) {
+                assertThrows(DuplicateResultException.class, query::get);
+            }
+            assertEquals(u.OptionalInt.of(1), uniqueDao.queryForUniqueFirstRow());
+        }
     }
 
     @Table("type_probe")
@@ -973,6 +1040,70 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(30, sorted.get(2).getAge());
     }
 
+    public interface NamedFragmentDao extends CrudDao<UserAccount, Long, NamedFragmentDao> {
+        @Query(value = "SELECT * FROM user_account WHERE {condition} ORDER BY id", fragmentsContainNamedParameters = true)
+        List<UserAccount> byAge(@com.landawn.abacus.jdbc.annotation.SqlFragment("condition") String condition,
+                @com.landawn.abacus.jdbc.annotation.Bind("minimumAge") int minimumAge) throws SQLException;
+
+        @Query(value = "SELECT * FROM user_account WHERE last_name = :ln AND {condition} ORDER BY id", fragmentsContainNamedParameters = true)
+        List<UserAccount> byAgeAndName(@com.landawn.abacus.jdbc.annotation.SqlFragment("condition") String condition,
+                @com.landawn.abacus.jdbc.annotation.Bind("minimumAge") int minimumAge, @com.landawn.abacus.jdbc.annotation.Bind("ln") String lastName)
+                throws SQLException;
+
+        @Query(value = "SELECT CAST(:now AS TIMESTAMP) AS first_time, {clock}", fragmentsContainNamedParameters = true, injectCurrentTimeParameters = true)
+        Dataset clock(@com.landawn.abacus.jdbc.annotation.SqlFragment("clock") String clock) throws SQLException;
+
+        @Query(value = "UPDATE fragment_clock SET now_time = :now, sys_time = {clock} WHERE id = :id", batch = true,
+                fragmentsContainNamedParameters = true, injectCurrentTimeParameters = true)
+        int updateClocks(@com.landawn.abacus.jdbc.annotation.SqlFragment("clock") String clock, List<Map<String, Object>> rows) throws SQLException;
+    }
+
+    @Test
+    public void testNamedParametersIntroducedBySqlFragments() throws SQLException {
+        final NamedFragmentDao fragmentDao = JdbcUtil.createDao(NamedFragmentDao.class, ds);
+        dao.insert(newUser("Young", "Fragment", 10));
+        final long matchingId = dao.insert(newUser("Older", "Fragment", 30));
+        dao.insert(newUser("Other", "Name", 40));
+
+        assertEquals(2, fragmentDao.byAge("age >= :minimumAge", 20).size());
+        assertEquals(matchingId, fragmentDao.byAgeAndName("age >= :minimumAge", 20, "Fragment").get(0).getId());
+        assertTrue(fragmentDao.byAge("age >= :minimumAge", 50).isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> fragmentDao.byAge("age >= :differentName", 20));
+    }
+
+    @Test
+    public void testSystemTimeParametersIntroducedBySqlFragments() throws SQLException {
+        final NamedFragmentDao fragmentDao = JdbcUtil.createDao(NamedFragmentDao.class, ds);
+        final Dataset result = fragmentDao.clock("CAST(:sysTime AS TIMESTAMP) AS second_time, CAST(:sysDate AS DATE) AS date_value");
+
+        assertEquals(1, result.size());
+        assertNotNull(result.get(0, 0));
+        assertEquals((Object) result.get(0, 0), (Object) result.get(0, 1));
+        assertNotNull(result.get(0, 2));
+    }
+
+    @Test
+    public void testBatchSystemTimeParametersIntroducedBySqlFragments() throws SQLException {
+        final NamedFragmentDao fragmentDao = JdbcUtil.createDao(NamedFragmentDao.class, ds);
+        try (Connection connection = ds.getConnection(); Statement statement = connection.createStatement()) {
+            statement.execute("CREATE TABLE fragment_clock (id INT PRIMARY KEY, now_time TIMESTAMP, sys_time TIMESTAMP)");
+            try {
+                statement.executeUpdate("INSERT INTO fragment_clock (id) VALUES (1), (2)");
+                assertEquals(2, fragmentDao.updateClocks(":sysTime", List.of(Map.of("id", 1), Map.of("id", 2))));
+                try (java.sql.ResultSet rows = statement.executeQuery("SELECT now_time, sys_time FROM fragment_clock ORDER BY id")) {
+                    for (int i = 0; i < 2; i++) {
+                        assertTrue(rows.next());
+                        assertNotNull(rows.getTimestamp(1));
+                        assertEquals(rows.getTimestamp(1), rows.getTimestamp(2));
+                    }
+                    assertFalse(rows.next());
+                }
+            } finally {
+                statement.execute("DROP TABLE fragment_clock");
+            }
+        }
+    }
+
     // =====================================================================================
     // Explicit @Query op() modes: exists / queryForSingle / findOnlyOne / findFirst / list.
     // Each drives a distinct result-converter branch in DaoImpl.
@@ -1236,6 +1367,19 @@ public class DaoImplIntegrationTest extends TestBase {
         @Query("SELECT id, first_name, last_name, age, active FROM user_account ORDER BY id")
         @com.landawn.abacus.jdbc.annotation.MergedById("id")
         List<UserAccount> listMerged() throws SQLException;
+
+        @Query("SELECT id, first_name, last_name, age, active FROM user_account UNION ALL SELECT id, first_name, last_name, age, active FROM user_account")
+        @com.landawn.abacus.jdbc.annotation.MergedById("id")
+        Optional<UserAccount> queryForUniqueMerged() throws SQLException;
+
+        @Query(value = "SELECT id, first_name, last_name, age, active FROM user_account UNION ALL SELECT id, first_name, last_name, age, active FROM user_account",
+                op = QueryOperation.findOnlyOne)
+        @com.landawn.abacus.jdbc.annotation.MergedById("id")
+        Optional<UserAccount> uniqueMerged() throws SQLException;
+
+        @Query(value = "SELECT id, first_name, last_name, age, active FROM user_account ORDER BY id", op = QueryOperation.findFirst)
+        @com.landawn.abacus.jdbc.annotation.MergedById("id")
+        Optional<UserAccount> queryForUniqueMergedFirst() throws SQLException;
     }
 
     // @MappedByKey returns a Map keyed by the named column value.
@@ -1271,6 +1415,24 @@ public class DaoImplIntegrationTest extends TestBase {
 
         final List<UserAccount> list = mDao.listMerged();
         assertEquals(2, list.size());
+    }
+
+    @Test
+    public void testMergedByIdUniqueQueriesCheckMergedEntityCount() throws SQLException {
+        final MappedUserDao mergedDao = JdbcUtil.createDao(MappedUserDao.class, ds);
+        assertTrue(mergedDao.queryForUniqueMerged().isEmpty());
+        assertTrue(mergedDao.uniqueMerged().isEmpty());
+
+        final long firstId = dao.insert(newUser("Unique", "Merged", 10));
+        // UNION ALL returns two rows for one ID; uniqueness applies after merging those rows.
+        assertEquals(firstId, mergedDao.queryForUniqueMerged().get().getId());
+        assertEquals(firstId, mergedDao.uniqueMerged().get().getId());
+
+        dao.insert(newUser("Another", "Merged", 20));
+        assertThrows(DuplicateResultException.class, mergedDao::queryForUniqueMerged);
+        assertThrows(DuplicateResultException.class, mergedDao::uniqueMerged);
+        // An explicit operation takes precedence over a uniqueness-style method name.
+        assertEquals(firstId, mergedDao.queryForUniqueMergedFirst().get().getId());
     }
 
 }

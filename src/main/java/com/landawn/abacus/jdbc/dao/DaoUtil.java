@@ -202,9 +202,9 @@ public final class DaoUtil {
      *
      * @param dao the DAO used to generate the identifier; must implement {@link CrudInsertOps}.
      * @return the generated identifier.
-     * @throws SQLException if a database access error occurs while generating the identifier.
-     * @throws UnsupportedOperationException if {@code dao} does not override {@link CrudInsertOps#generateId()}.
      * @throws ClassCastException if {@code dao} does not implement {@link CrudInsertOps}.
+     * @throws UnsupportedOperationException if {@code dao} does not override {@link CrudInsertOps#generateId()}.
+     * @throws SQLException if a database access error occurs while generating the identifier.
      */
     @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
     public static Object generateId(final DaoBase dao) throws SQLException {
@@ -334,6 +334,7 @@ public final class DaoUtil {
      * @param isEntityId whether the IDs are {@link EntityId} instances
      * @param isMap whether the IDs are {@link Map} instances
      * @return a condition matching any row whose id is in {@code ids}
+     * @throws IllegalArgumentException if the selected condition builder receives invalid ID properties or an empty ID collection
      */
     @SuppressWarnings("unchecked")
     static Condition idsToCondition(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap) {
@@ -596,6 +597,8 @@ public final class DaoUtil {
      * @param targetEntityClass the entity class to get join information for
      * @param targetTableName the database table name for the entity
      * @return a map of property names to their corresponding {@link JoinInfo} objects
+     * @throws IllegalArgumentException if an argument is {@code null} or a join annotation is invalid
+     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName) {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass, targetTableName);
@@ -610,13 +613,15 @@ public final class DaoUtil {
      * @param sourceSelectPropNames the source property names to select.
      * @param joinEntityClass the join entity class whose required source property names are included.
      * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
-     *         names added, or {@code null} if {@code sourceSelectPropNames} is {@code null}.
+     *         names added; null or empty selections are returned unchanged because they select all default properties.
+     * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid, or a requested join entity class is {@code null}
+     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     @SuppressWarnings("deprecation")
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
             final Class<?> joinEntityClass) {
-        if (sourceSelectPropNames == null) {
-            return null;
+        if (N.isEmpty(sourceSelectPropNames)) {
+            return sourceSelectPropNames;
         }
 
         final Map<String, JoinInfo> entityJoinInfo = getEntityJoinInfo(dao.targetDaoInterface(), dao.targetEntityClass(), dao.targetTableName());
@@ -645,11 +650,14 @@ public final class DaoUtil {
      * @param sourceSelectPropNames the source property names to select.
      * @param joinEntityClasses the join entity classes whose required source property names are included.
      * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
-     *         names added; returned unchanged if it is {@code null} or {@code joinEntityClasses} is empty.
+     *         names added; returned unchanged if the selection is null or empty (all default properties),
+     *         or {@code joinEntityClasses} is empty.
+     * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid, or a requested join entity class is {@code null}
+     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
             final Collection<Class<?>> joinEntityClasses) {
-        if (sourceSelectPropNames == null || N.isEmpty(joinEntityClasses)) {
+        if (N.isEmpty(sourceSelectPropNames) || N.isEmpty(joinEntityClasses)) {
             return sourceSelectPropNames;
         }
 
@@ -670,12 +678,14 @@ public final class DaoUtil {
      * @param dao the join-entity DAO whose join metadata is used.
      * @param sourceSelectPropNames the source property names to select.
      * @return {@code sourceSelectPropNames} (possibly unchanged) with all required source join property
-     *         names added, or {@code null} if {@code sourceSelectPropNames} is {@code null}.
+     *         names added; null or empty selections are returned unchanged because they select all default properties.
+     * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid
+     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     @SuppressWarnings("deprecation")
     static Collection<String> includeAllSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames) {
-        if (sourceSelectPropNames == null) {
-            return null;
+        if (N.isEmpty(sourceSelectPropNames)) {
+            return sourceSelectPropNames;
         }
 
         Collection<String> result = sourceSelectPropNames;
@@ -747,6 +757,8 @@ public final class DaoUtil {
      * @param targetTableName the database table name for the target entity
      * @param joinEntityClass the class of the join entity to find properties for
      * @return a list of property names that represent joins to the specified entity type
+     * @throws IllegalArgumentException if an argument is {@code null} or a join annotation is invalid
+     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     static List<String> getJoinEntityPropNamesByType(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName,
             final Class<?> joinEntityClass) {
@@ -798,11 +810,11 @@ public final class DaoUtil {
     };
 
     /**
-     * Completes all futures in the list and throws {@link UncheckedSQLException} if any fail.
+     * Completes all futures in the list and propagates the first failure as an unchecked exception.
      * <p>
-     * This method waits for all futures to complete and checks for failures. If any future fails,
-     * the exception is converted to an UncheckedSQLException and thrown. This is typically used
-     * for batch operations where all operations must complete successfully.
+     * This method waits for all futures to complete and checks for failures. SQL-related failures
+     * are translated to {@link UncheckedSQLException}; other failures retain their runtime exception
+     * semantics. Later failures are attached as suppressed exceptions to the first failure.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -815,11 +827,11 @@ public final class DaoUtil {
      *
      * // Wait for all operations to complete
      * DaoUtil.uncheckedComplete(futures);
-     * // Throws UncheckedSQLException if any operation failed
+     * // SQL-related failures are reported as UncheckedSQLException
      * }</pre>
      *
      * @param futures the list of futures to complete. Must not be {@code null}.
-     * @throws UncheckedSQLException if any future fails with a SQL-related exception.
+     * @throws UncheckedSQLException if the first failed future has a SQL-related exception
      */
     static void uncheckedComplete(final List<ContinuableFuture<Void>> futures) throws UncheckedSQLException {
         Exception firstException = null;
@@ -838,10 +850,11 @@ public final class DaoUtil {
     }
 
     /**
-     * Completes all futures in the list, sums their integer results, and throws {@link UncheckedSQLException} if any fail.
+     * Completes all futures in the list, sums their integer results, and propagates the first failure as an unchecked exception.
      * <p>
      * This method waits for all futures to complete, collecting their integer results and summing them.
-     * If any future fails, the exception is converted to an UncheckedSQLException and thrown.
+     * SQL-related failures are translated to {@link UncheckedSQLException}; other failures retain their
+     * runtime exception semantics. Later failures are attached as suppressed exceptions to the first failure.
      * This is typically used for batch update/insert/delete operations where the return value indicates
      * the number of affected rows.
      * </p>
@@ -857,12 +870,12 @@ public final class DaoUtil {
      * // Wait for all operations and get total affected rows
      * int totalAffectedRows = DaoUtil.uncheckedCompleteSum(futures);
      * // totalAffectedRows = sum of all affected rows
-     * // Throws UncheckedSQLException if any operation failed
+     * // SQL-related failures are reported as UncheckedSQLException
      * }</pre>
      *
      * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}.
      * @return the sum of all integer results from the futures
-     * @throws UncheckedSQLException if any future fails with a SQL-related exception.
+     * @throws UncheckedSQLException if the first failed future has a SQL-related exception
      * @throws ArithmeticException if the sum overflows an {@code int}.
      */
     static int uncheckedCompleteSum(final List<ContinuableFuture<Integer>> futures) throws UncheckedSQLException {
@@ -888,11 +901,12 @@ public final class DaoUtil {
     }
 
     /**
-     * Completes all futures in the list and throws {@link SQLException} if any fail.
+     * Completes all futures in the list and propagates the first failure.
      * <p>
-     * This method waits for all futures to complete and checks for failures. If any future fails,
-     * the exception is thrown as a checked SQLException. This is the checked exception variant
-     * of {@link #uncheckedComplete(List)}, typically used in methods that declare SQLException.
+     * This method waits for all futures to complete and checks for failures. SQL-related failures
+     * are propagated as a checked {@link SQLException}; other failures retain their runtime exception
+     * semantics. Later failures are attached as suppressed exceptions to the first failure.
+     * This is the checked exception variant of {@link #uncheckedComplete(List)}.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -905,11 +919,11 @@ public final class DaoUtil {
      *
      * // Wait for all operations to complete
      * DaoUtil.complete(futures);
-     * // Throws SQLException if any operation failed
+     * // SQL-related failures are reported as SQLException
      * }</pre>
      *
      * @param futures the list of futures to complete. Must not be {@code null}.
-     * @throws SQLException if any future fails with a SQL-related exception.
+     * @throws SQLException if the first failed future has a SQL-related exception
      */
     static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
         Exception firstException = null;
@@ -928,11 +942,12 @@ public final class DaoUtil {
     }
 
     /**
-     * Completes all futures in the list, sums their integer results, and throws {@link SQLException} if any fail.
+     * Completes all futures in the list, sums their integer results, and propagates the first failure.
      * <p>
      * This method waits for all futures to complete, collecting their integer results and summing them.
-     * If any future fails, the exception is thrown as a checked SQLException. This is the checked
-     * exception variant of {@link #uncheckedCompleteSum(List)}, typically used for batch operations
+     * SQL-related failures are propagated as a checked {@link SQLException}; other failures retain their
+     * runtime exception semantics. Later failures are attached as suppressed exceptions to the first failure.
+     * This is the checked exception variant of {@link #uncheckedCompleteSum(List)}, typically used for batch operations
      * where the return value indicates the total number of affected rows.
      * </p>
      *
@@ -947,12 +962,12 @@ public final class DaoUtil {
      * // Wait for all operations and get total affected rows
      * int totalAffectedRows = DaoUtil.completeSum(futures);
      * // totalAffectedRows = sum of all affected rows
-     * // Throws SQLException if any operation failed
+     * // SQL-related failures are reported as SQLException
      * }</pre>
      *
      * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}.
      * @return the sum of all integer results from the futures
-     * @throws SQLException if any future fails with a SQL-related exception.
+     * @throws SQLException if the first failed future has a SQL-related exception
      * @throws ArithmeticException if the sum overflows an {@code int}.
      */
     static int completeSum(final List<ContinuableFuture<Integer>> futures) throws SQLException {
@@ -1033,6 +1048,7 @@ public final class DaoUtil {
 
     /**
      * Executes a statement-building action and translates a checked SQL failure for the unchecked DAO hierarchy.
+     * @throws UncheckedSQLException if the action fails with a SQL-related exception; other runtime failures are propagated
      */
     static <R> R uncheckedSql(final Throwables.Supplier<R, SQLException> action) throws UncheckedSQLException {
         try {

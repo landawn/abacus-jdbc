@@ -16,6 +16,7 @@
 
 package com.landawn.abacus.jdbc;
 
+import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
@@ -133,10 +134,13 @@ public final class SpringApplicationContext {
      *
      * @param name the name of the bean to retrieve.
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
-     * @throws NoSuchBeanDefinitionException if no bean with the specified name is found.
+     * @throws IllegalStateException if the supplied context has not been refreshed or has already been closed.
+     * @throws IllegalArgumentException if the context is initialized and {@code name} is {@code null}.
+     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found.
+     * @throws BeansException if the initialized context cannot create or retrieve the bean.
      * @see ApplicationContext#getBean(String)
      */
-    public Object getBean(final String name) {
+    public Object getBean(final String name) throws BeansException {
         final ApplicationContext context = appContext;
 
         return context == null ? null : context.getBean(name);
@@ -154,11 +158,14 @@ public final class SpringApplicationContext {
      * @param <T> the bean type to be retrieved from the Spring context.
      * @param requiredType the class object representing the type of bean to retrieve.
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
-     * @throws NoSuchBeanDefinitionException if no bean of the given type exists.
-     * @throws NoUniqueBeanDefinitionException if more than one bean of the given type exists.
+     * @throws IllegalStateException if the supplied context has not been refreshed or has already been closed.
+     * @throws IllegalArgumentException if the context is initialized and {@code requiredType} is {@code null}.
+     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean of the given type exists.
+     * @throws org.springframework.beans.factory.NoUniqueBeanDefinitionException if multiple candidates exist and none can be selected unambiguously.
+     * @throws BeansException if the initialized context cannot create or retrieve the bean.
      * @see ApplicationContext#getBean(Class)
      */
-    public <T> T getBean(final Class<T> requiredType) {
+    public <T> T getBean(final Class<T> requiredType) throws BeansException {
         final ApplicationContext context = appContext;
 
         return context == null ? null : context.getBean(requiredType);
@@ -179,11 +186,14 @@ public final class SpringApplicationContext {
      * @param name the name of the bean to retrieve.
      * @param requiredType the class object representing the required type of the bean.
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
-     * @throws NoSuchBeanDefinitionException if no bean with the specified name is found.
-     * @throws BeanNotOfRequiredTypeException if the bean is not of the required type.
+     * @throws IllegalStateException if the supplied context has not been refreshed or has already been closed.
+     * @throws IllegalArgumentException if the context is initialized and {@code name} is {@code null}.
+     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found.
+     * @throws org.springframework.beans.factory.BeanNotOfRequiredTypeException if the bean is not of the required type.
+     * @throws BeansException if the initialized context cannot create or retrieve the bean.
      * @see ApplicationContext#getBean(String, Class)
      */
-    public <T> T getBean(final String name, final Class<T> requiredType) {
+    public <T> T getBean(final String name, final Class<T> requiredType) throws BeansException {
         final ApplicationContext context = appContext;
 
         return context == null ? null : context.getBean(name, requiredType);

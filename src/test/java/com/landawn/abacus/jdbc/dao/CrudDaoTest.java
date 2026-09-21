@@ -15,6 +15,10 @@ import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
 
@@ -32,6 +36,35 @@ import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
 public class CrudDaoTest extends TestBase {
+
+    @Test
+    public void testAsyncSubmissionFailureIsImmediateButActionFailureIsDeferred() {
+        final TestCrudDao dao = Mockito.mock(TestCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final RejectedExecutionException rejected = new RejectedExecutionException("executor stopped");
+        final Executor rejectingExecutor = task -> {
+            throw rejected;
+        };
+        final AtomicInteger executedActions = new AtomicInteger();
+        when(dao.executor()).thenReturn(rejectingExecutor);
+
+        assertSame(rejected, assertThrows(RejectedExecutionException.class,
+                () -> dao.callAsync(d -> executedActions.incrementAndGet(), rejectingExecutor)));
+        assertSame(rejected, assertThrows(RejectedExecutionException.class,
+                () -> dao.runAsync(d -> executedActions.incrementAndGet(), rejectingExecutor)));
+        assertSame(rejected, assertThrows(RejectedExecutionException.class, () -> dao.callAsync(d -> executedActions.incrementAndGet())));
+        assertSame(rejected, assertThrows(RejectedExecutionException.class, () -> dao.runAsync(d -> executedActions.incrementAndGet())));
+        assertEquals(0, executedActions.get());
+
+        final SQLException sqlFailure = new SQLException("action failed");
+        final var call = dao.callAsync(d -> {
+            throw sqlFailure;
+        }, Runnable::run);
+        final var run = dao.runAsync(d -> {
+            throw sqlFailure;
+        }, Runnable::run);
+        assertSame(sqlFailure, assertThrows(ExecutionException.class, call::get).getCause());
+        assertSame(sqlFailure, assertThrows(ExecutionException.class, run::get).getCause());
+    }
 
     interface TestCrudDao extends CrudDao<TestEntity, Long, TestCrudDao> {
     }

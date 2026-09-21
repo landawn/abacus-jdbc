@@ -52,6 +52,33 @@ public class JoinInfoTest extends TestBase {
     interface UserDao extends Dao<UserEntity, UserDao> {
     }
 
+    interface InheritedUserDao extends UserDao {
+    }
+
+    @DaoConfig(allowNullOrDefaultJoinKeys = false)
+    interface StrictInheritedUserDao extends InheritedUserDao {
+    }
+
+    @Test
+    public void testInheritedDaoConfigAllowsDefaultJoinKeys() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(InheritedUserDao.class, UserEntity.class, "user_entity", "orders");
+        final UserEntity user = new UserEntity();
+        final OrderEntity order = new OrderEntity();
+
+        joinInfo.setJoinPropEntities(List.of(user), List.of(order));
+
+        assertTrue(joinInfo.allowNullOrDefaultJoinKeys);
+        assertEquals(List.of(order), user.getOrders());
+    }
+
+    @Test
+    public void testDirectDaoConfigOverridesInheritedJoinKeySetting() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(StrictInheritedUserDao.class, UserEntity.class, "user_entity", "orders");
+
+        assertFalse(joinInfo.allowNullOrDefaultJoinKeys);
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.setJoinPropEntities(List.of(new UserEntity()), List.of(new OrderEntity())));
+    }
+
     public static final class UserEntity {
         private long userId;
 
@@ -436,6 +463,88 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testConstructor_ManyToManyJoin_WrongPairCount() {
         assertThrows(IllegalArgumentException.class, () -> new JoinInfo(InvalidManyToManyEntity.class, "invalid_m2m", "items", false));
+    }
+
+    @Test
+    public void testConstructorRejectsMalformedJoinSeparators() {
+        for (final String property : List.of("separatorOnly", "missingSource", "missingReference", "repeatedEquals", "emptyPair", "blank")) {
+            final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> new JoinInfo(MalformedJoinEntity.class, "malformed", property, false), property);
+            assertTrue(failure.getMessage().contains("@JoinedBy"), property);
+            assertTrue(failure.getMessage().contains(property), property);
+        }
+    }
+
+    public static final class MalformedJoinEntity {
+        private long userId;
+        @JoinedBy("=")
+        private List<OrderEntity> separatorOnly;
+        @JoinedBy("=userId")
+        private List<OrderEntity> missingSource;
+        @JoinedBy("userId=")
+        private List<OrderEntity> missingReference;
+        @JoinedBy("userId==userId")
+        private List<OrderEntity> repeatedEquals;
+        @JoinedBy("userId,,userId")
+        private List<OrderEntity> emptyPair;
+        @JoinedBy("   ")
+        private List<OrderEntity> blank;
+
+        public long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(final long userId) {
+            this.userId = userId;
+        }
+
+        public List<OrderEntity> getSeparatorOnly() {
+            return separatorOnly;
+        }
+
+        public void setSeparatorOnly(final List<OrderEntity> separatorOnly) {
+            this.separatorOnly = separatorOnly;
+        }
+
+        public List<OrderEntity> getMissingSource() {
+            return missingSource;
+        }
+
+        public void setMissingSource(final List<OrderEntity> missingSource) {
+            this.missingSource = missingSource;
+        }
+
+        public List<OrderEntity> getMissingReference() {
+            return missingReference;
+        }
+
+        public void setMissingReference(final List<OrderEntity> missingReference) {
+            this.missingReference = missingReference;
+        }
+
+        public List<OrderEntity> getRepeatedEquals() {
+            return repeatedEquals;
+        }
+
+        public void setRepeatedEquals(final List<OrderEntity> repeatedEquals) {
+            this.repeatedEquals = repeatedEquals;
+        }
+
+        public List<OrderEntity> getEmptyPair() {
+            return emptyPair;
+        }
+
+        public void setEmptyPair(final List<OrderEntity> emptyPair) {
+            this.emptyPair = emptyPair;
+        }
+
+        public List<OrderEntity> getBlank() {
+            return blank;
+        }
+
+        public void setBlank(final List<OrderEntity> blank) {
+            this.blank = blank;
+        }
     }
 
     // Entity with @Column + @JoinedBy (invalid combination)

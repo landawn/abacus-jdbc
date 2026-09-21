@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.landawn.abacus.annotation.Internal;
@@ -248,7 +249,7 @@ public final class JoinInfo {
      *   <li>Ensures the property is annotated with {@code @JoinedBy}</li>
      *   <li>Validates that the property is not annotated with {@code @Column} (join properties should not be persisted directly)</li>
      *   <li>Checks that the referenced type is a valid entity class</li>
-     *   <li>Validates join column pairs and their type compatibility</li>
+     *   <li>Validates nonempty join column pairs, rejects missing sides or repeated {@code =} separators, and checks type compatibility</li>
      *   <li>For many-to-many joins, verifies the intermediate entity class exists and is properly configured</li>
      * </ul>
      *
@@ -272,6 +273,7 @@ public final class JoinInfo {
      * @see JoinedBy
      * @see com.landawn.abacus.jdbc.annotation.DaoConfig
      * @see #isManyToManyJoin()
+     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      */
     JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowNullOrDefaultJoinKeys) {
         N.checkArgNotNull(entityClass, cs.entityClass);
@@ -314,12 +316,24 @@ public final class JoinInfo {
         final boolean cascadeDeleteDefinedInDB = true;
         final String joinByVal = Strings.join(joinedByAnno.value(), ", ");
 
-        if (Strings.isEmpty(joinByVal)) {
+        if (Strings.isBlank(joinByVal)) {
             throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name + "' in class: "
                     + ClassUtil.getCanonicalClassName(entityClass));
         }
 
-        final String[] joinColumnPairs = Strings.split(joinByVal, ',', true);
+        final String[] joinColumnPairs = Strings.splitPreserveAllTokens(joinByVal, ',', true);
+
+        // Preserve empty tokens for validation: omitting them would silently reinterpret "id="
+        // as the shorthand "id", or accept "id==userId" as a valid equality.
+        for (final String joinColumnPair : joinColumnPairs) {
+            final String[] columns = Strings.splitPreserveAllTokens(joinColumnPair, '=', true);
+
+            if (columns.length == 0 || columns.length > 2 || N.anyMatch(columns, Strings::isBlank)) {
+                throw new IllegalArgumentException("Invalid value: " + joinByVal + " for annotation @JoinedBy on property '" + joinPropInfo.name
+                        + "' in class: " + ClassUtil.getCanonicalClassName(entityClass)
+                        + ". Each join must be a property name or two nonempty property names separated by one '='");
+            }
+        }
 
         isManyToManyJoin = Stream.of(joinColumnPairs)
                 .flatMapArray(it -> Strings.split(it, '=', true))
@@ -1040,7 +1054,7 @@ public final class JoinInfo {
      * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities.
      * @throws UnsupportedOperationException if this is a many-to-many join; use {@link #setJoinPropEntities(Collection, Map)}
      *                                  with keys derived from the junction table instead.
-     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
+     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}.
      *
@@ -1092,7 +1106,7 @@ public final class JoinInfo {
      * @param entities the source entities to populate with joined entities.
      * @param groupedPropEntities a map of grouped joined entities keyed by the join key used to match source entities
      *                            (the source key for one-to-many; the junction-table-derived key for many-to-many).
-     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key;
+     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}.
      */
@@ -1219,8 +1233,10 @@ public final class JoinInfo {
      * }</pre>
      *
      * <p>Whether join operations are permitted when a join key value is {@code null} or its type default is
-     * derived from the {@code @DaoConfig(allowNullOrDefaultJoinKeys = ...)} setting on {@code daoClass}
-     * (defaults to {@code false} when the annotation is absent).</p>
+     * derived from the {@code @DaoConfig(allowNullOrDefaultJoinKeys = ...)} setting on {@code daoClass},
+     * or the first annotated parent interface when the DAO itself has no configuration. A directly declared
+     * configuration takes precedence, matching DAO proxy configuration resolution. The setting defaults
+     * to {@code false} when no applicable annotation is present.</p>
      *
      * @param daoClass the DAO class associated with the entity, must not be {@code null}.
      * @param entityClass the entity class to inspect for join properties, must not be {@code null}.
@@ -1231,6 +1247,7 @@ public final class JoinInfo {
      *
      * @see JoinedBy
      * @see DaoConfig
+     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      */
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) {
         N.checkArgNotNull(daoClass, cs.daoClass);
@@ -1243,7 +1260,12 @@ public final class JoinInfo {
         final Tuple2<Class<?>, String> key = Tuple.of(entityClass, tableName);
 
         return entityJoinInfoMap.computeIfAbsent(key, k -> {
-            final DaoConfig anno = daoClass.getAnnotation(DaoConfig.class);
+            final DaoConfig anno = Stream.of(ClassUtil.getAllInterfaces(daoClass))
+                    .prepend(daoClass)
+                    .map(it -> it.getAnnotation(DaoConfig.class))
+                    .filter(Objects::nonNull)
+                    .first()
+                    .orElseNull();
             final boolean allowNullOrDefaultJoinKeys = anno != null && anno.allowNullOrDefaultJoinKeys();
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
 
@@ -1304,6 +1326,7 @@ public final class JoinInfo {
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)
+     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      */
     public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) {
         N.checkArgNotNull(joinEntityPropName, cs.joinEntityPropName);
@@ -1373,6 +1396,7 @@ public final class JoinInfo {
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)
+     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
             final Class<?> joinPropEntityClass) {

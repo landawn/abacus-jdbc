@@ -72,6 +72,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -84,6 +85,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -96,6 +98,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -108,6 +111,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -121,6 +125,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -133,6 +138,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -145,6 +151,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -157,6 +164,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -169,6 +177,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -181,6 +190,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -193,6 +203,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -206,6 +217,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or {@code stmtCreator} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -219,6 +231,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
@@ -231,6 +244,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * {@inheritDoc}
      *
+     * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
      * @throws UncheckedSQLException if a database access error occurs
      */
     @Override
