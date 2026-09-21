@@ -17,25 +17,27 @@ package com.landawn.abacus.jdbc.dao;
 
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.List;
 import java.util.function.Consumer;
+import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.exception.DuplicateResultException;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
 import com.landawn.abacus.jdbc.PreparedQuery;
-import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
+import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -46,7 +48,6 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
-import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Read-only capability of {@link Dao}: queries, single-value lookups, and streaming/paging. The shared
@@ -85,8 +86,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the condition to check
      * @return {@code true} if at least one matching record exists
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#exists()
      */
     boolean exists(final Condition cond) throws SQLException;
@@ -104,8 +105,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the condition to check
      * @return {@code true} if no matching records exist
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see #exists(Condition)
      */
     @Beta
@@ -126,8 +127,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the condition for counting
      * @return the number of matching records, or {@code 0} if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     int count(final Condition cond) throws SQLException;
 
@@ -145,8 +146,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the first matching entity, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     Optional<T> findFirst(final Condition cond) throws SQLException;
 
@@ -167,8 +168,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the function to map the result row
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -183,8 +185,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the bi-function to map the result row
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -207,8 +210,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the first matching entity, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
@@ -222,8 +225,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -240,8 +244,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the bi-function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -262,8 +267,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the single matching entity, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches
      */
     Optional<T> findOnlyOne(final Condition cond) throws SQLException, DuplicateResultException;
@@ -277,8 +282,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record matches
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
@@ -295,8 +301,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the bi-function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record matches
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
@@ -313,8 +320,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the single matching entity, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches
      */
     Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws SQLException, DuplicateResultException;
@@ -329,8 +336,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record matches
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
@@ -348,8 +356,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the bi-function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record matches
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
@@ -376,8 +385,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code false}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code false}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBoolean()
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -401,8 +410,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code (char) 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code (char) 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForChar()
      */
     OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -423,8 +432,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForByte()
      */
     OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -445,8 +454,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForShort()
      */
     OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -468,8 +477,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForInt()
      */
     OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -490,8 +499,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForLong()
      */
     OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -512,8 +521,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0f}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0f}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForFloat()
      */
     OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -534,8 +543,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0d}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0d}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDouble()
      */
     OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -556,8 +565,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForString()
      */
     Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -577,8 +586,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDate()
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -598,8 +607,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTime()
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -619,8 +628,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTimestamp()
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -640,8 +649,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBytes()
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws SQLException;
@@ -669,8 +678,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForSingleValue(Class)
      */
     <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException;
@@ -697,8 +706,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
      *         matches the condition or the matched value is SQL {@code NULL}
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
@@ -725,8 +734,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the mapped value, or an empty {@code Optional} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @see #queryForSingleNonNull(String, Condition, Class)
@@ -758,8 +768,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when exactly one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
@@ -788,8 +798,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
      *         matches the condition or the matched value is SQL {@code NULL}
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
@@ -819,8 +829,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the unique mapped value, or an empty {@code Optional} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
@@ -844,8 +855,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a {@code Dataset} containing the query results; never {@code null} (an empty {@code Dataset} is
      *         returned when no record matches)
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     Dataset query(final Condition cond) throws SQLException;
 
@@ -858,8 +869,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a {@code Dataset} containing the query results; never {@code null} (an empty {@code Dataset} is
      *         returned when no record matches)
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     Dataset query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
@@ -887,8 +898,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                        {@code ResultSet} and must not save or hold a reference to it after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
@@ -904,8 +916,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                        {@code ResultSet} and must not save or hold a reference to it after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
@@ -921,8 +934,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                        after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
@@ -939,8 +953,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                        after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
@@ -961,8 +976,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a list of matching entities, or an empty list if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     List<T> list(final Condition cond) throws SQLException;
 
@@ -983,8 +998,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map each row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
@@ -997,8 +1013,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper bi-function to map each row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
@@ -1021,8 +1038,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map filtered rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
@@ -1036,8 +1054,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper bi-function to map filtered rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
@@ -1058,8 +1077,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a list of partially loaded entities, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     List<T> list(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
 
@@ -1073,8 +1092,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map each row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
 
@@ -1088,8 +1108,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper bi-function to map each row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
 
@@ -1104,8 +1125,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map filtered rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
@@ -1121,8 +1143,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper bi-function to map filtered rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
             final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
@@ -1141,11 +1164,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @return a list of property values, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @SuppressWarnings("deprecation")
     default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
+        N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
+        N.checkArgNotNull(cond, cs.cond);
+
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
 
@@ -1171,11 +1197,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map the property value
      * @return a list of mapped values, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws IllegalArgumentException, SQLException {
+        N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
         return list(N.asList(singleSelectPropName), cond, rowMapper);
@@ -1193,11 +1222,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a list of filtered and mapped values, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond}, {@code rowFilter}, or {@code rowMapper} is
      *                                  {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, SQLException {
+        N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -1208,7 +1240,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * Returns a lazy Stream of entities matching the condition.
      * The stream uses lazy evaluation — no database connection or query execution occurs until a terminal operation is called.
      * Any {@link SQLException} raised during stream consumption is wrapped as an
-     * {@link com.landawn.abacus.exception.UncheckedSQLException}. The stream must be closed
+     * {@link UncheckedSQLException}. Mapping selected columns to the entity type can also raise
+     * {@link IllegalArgumentException} during consumption. The stream must be closed
      * (e.g. via try-with-resources) to release the underlying JDBC resources.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1222,8 +1255,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * @param cond the search condition
      * @return lazy stream of matching entities
-     * @throws IllegalArgumentException if {@code cond} is {@code null},
-     *                                  or selected result columns cannot be mapped to the entity type during consumption
+     * @throws IllegalArgumentException if {@code cond} is {@code null}
      * @see Filters
      */
     @LazyEvaluation
@@ -1291,14 +1323,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * Returns a lazy Stream of entities with selected properties.
      * Only specified properties are loaded for each entity.
      * Any {@link SQLException} raised during stream consumption is wrapped as an
-     * {@link com.landawn.abacus.exception.UncheckedSQLException}. The stream must be closed
+     * {@link UncheckedSQLException}. The stream must be closed
      * (e.g. via try-with-resources) to release the underlying JDBC resources.
      *
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the search condition
      * @return lazy stream of partially loaded entities
-     * @throws IllegalArgumentException if {@code cond} is {@code null},
-     *                                  or selected result columns cannot be mapped to the entity type during consumption
+     * @throws IllegalArgumentException if {@code cond} is {@code null}
      */
     @LazyEvaluation
     Stream<T> stream(final Collection<String> selectPropNames, final Condition cond);
@@ -1389,6 +1420,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      */
     @LazyEvaluation
     default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond) {
+        N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
+        N.checkArgNotNull(cond, cs.cond);
+
         @SuppressWarnings("deprecation")
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
@@ -1411,6 +1445,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     @LazyEvaluation
     default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws IllegalArgumentException {
+        N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
         return stream(N.asList(singleSelectPropName), cond, rowMapper);
@@ -1433,6 +1469,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     @LazyEvaluation
     default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException {
+        N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -1463,7 +1501,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * <p>Database access and callbacks run during stream consumption. Any {@link SQLException}
      * from preparing or executing a page, setting parameters, or extracting results is wrapped in
-     * {@link com.landawn.abacus.exception.UncheckedSQLException} when the stream is consumed.</p>
+     * {@link UncheckedSQLException} when the stream is consumed.</p>
      *
      * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
      * @param pageSize the number of records per page
@@ -1487,7 +1525,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * <p>Database access and callbacks run during stream consumption. Any {@link SQLException}
      * from preparing or executing a page, setting parameters, or extracting results is wrapped in
-     * {@link com.landawn.abacus.exception.UncheckedSQLException} when the stream is consumed. An extractor that returns a
+     * {@link UncheckedSQLException} when the stream is consumed. An extractor that returns a
      * {@link java.sql.ResultSet} causes {@link UnsupportedOperationException} during consumption.</p>
      *
      * @param <R> the result type
@@ -1515,7 +1553,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * <p>Database access and callbacks run during stream consumption. Any {@link SQLException}
      * from preparing or executing a page, setting parameters, or extracting results is wrapped in
-     * {@link com.landawn.abacus.exception.UncheckedSQLException} when the stream is consumed. An extractor that returns a
+     * {@link UncheckedSQLException} when the stream is consumed. An extractor that returns a
      * {@link java.sql.ResultSet} causes {@link UnsupportedOperationException} during consumption.</p>
      *
      * @param <R> the result type
@@ -1541,7 +1579,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * <p>Database access and callbacks run during stream consumption. Any {@link SQLException}
      * from preparing or executing a page, setting parameters, or extracting results is wrapped in
-     * {@link com.landawn.abacus.exception.UncheckedSQLException} when the stream is consumed.</p>
+     * {@link UncheckedSQLException} when the stream is consumed.</p>
      *
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
@@ -1567,7 +1605,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * <p>Database access and callbacks run during stream consumption. Any {@link SQLException}
      * from preparing or executing a page, setting parameters, or extracting results is wrapped in
-     * {@link com.landawn.abacus.exception.UncheckedSQLException} when the stream is consumed. An extractor that returns a
+     * {@link UncheckedSQLException} when the stream is consumed. An extractor that returns a
      * {@link java.sql.ResultSet} causes {@link UnsupportedOperationException} during consumption.</p>
      *
      * @param <R> the result type
@@ -1596,7 +1634,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * <p>Database access and callbacks run during stream consumption. Any {@link SQLException}
      * from preparing or executing a page, setting parameters, or extracting results is wrapped in
-     * {@link com.landawn.abacus.exception.UncheckedSQLException} when the stream is consumed. An extractor that returns a
+     * {@link UncheckedSQLException} when the stream is consumed. An extractor that returns a
      * {@link java.sql.ResultSet} causes {@link UnsupportedOperationException} during consumption.</p>
      *
      * @param <R> the result type
@@ -1630,8 +1668,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer consumer to process each row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws SQLException;
 
@@ -1642,8 +1681,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer bi-consumer to process each row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
 
@@ -1655,8 +1695,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter predicate to filter rows
      * @param rowConsumer consumer for filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer) throws SQLException;
 
@@ -1668,8 +1709,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter bi-predicate to filter rows
      * @param rowConsumer bi-consumer for filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
 
@@ -1681,8 +1723,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer consumer to process each row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer) throws SQLException;
 
@@ -1694,8 +1737,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer bi-consumer to process each row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
 
@@ -1708,8 +1752,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter predicate to filter rows
      * @param rowConsumer consumer for filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
             throws SQLException;
@@ -1723,8 +1768,9 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter bi-predicate to filter rows
      * @param rowConsumer bi-consumer for filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
             throws SQLException;
@@ -1753,13 +1799,15 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer consumer that receives reusable row array
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer)
             throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
         forEach(selectPropNames, cond, Jdbc.RowConsumer.forDisposableObjArray(targetEntityClass(), rowConsumer));
@@ -1774,12 +1822,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer consumer that receives reusable row array
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      */
     @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
         forEach(cond, Jdbc.RowConsumer.forDisposableObjArray(targetEntityClass(), rowConsumer));

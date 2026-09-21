@@ -15,17 +15,18 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.sql.SQLException;
 import java.util.Collection;
-import java.util.List;
 import java.util.function.Consumer;
+import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.Jdbc.Columns.ColumnOne;
-import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.condition.Condition;
@@ -46,7 +47,7 @@ import com.landawn.abacus.util.u.OptionalShort;
 
 /**
  * Unchecked-exception read capability: the {@link ReadOps} operations re-declared to throw
- * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of {@link java.sql.SQLException}.
+ * {@link UncheckedSQLException} instead of {@link SQLException}.
  *
  * <p><b>&#9888; Warning:</b> The caller owns streams returned by this API and must close them. Fetch
  * size is a driver hint, not a portable guarantee of cursor streaming or bounded memory use.
@@ -76,7 +77,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @return {@code true} if at least one record is found, {@code false} otherwise
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#exists()
      */
     @Override
@@ -94,7 +96,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @return {@code true} if no records are found, {@code false} if at least one record exists
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see #exists(Condition)
      */
     @Beta
@@ -114,7 +117,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @return the number of matching records, or {@code 0} if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      */
     @Override
     int count(final Condition cond) throws UncheckedSQLException;
@@ -131,7 +135,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an Optional containing the first matching record, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      */
     @Override
     Optional<T> findFirst(final Condition cond) throws UncheckedSQLException;
@@ -152,7 +157,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row to the desired type
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -182,7 +188,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -205,7 +212,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an Optional containing the first matching record, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      */
     @Override
     Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
@@ -228,7 +236,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -254,7 +263,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
@@ -274,7 +284,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an Optional containing the single matching record, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @throws DuplicateResultException if more than one record is found
      */
     @Override
@@ -297,7 +308,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
@@ -322,7 +334,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
@@ -347,7 +360,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an Optional containing the single matching record, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @throws DuplicateResultException if more than one record is found
      */
     @Override
@@ -372,7 +386,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
@@ -400,7 +415,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the result set row with column labels
      * @return an Optional containing the mapped result, or empty if no match found
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
@@ -429,7 +445,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         value is returned as <i>present</i> holding the primitive default {@code false}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code false}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForBoolean()
      */
     @Override
@@ -452,7 +469,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         value is returned as <i>present</i> holding the primitive default {@code (char) 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code (char) 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForChar()
      */
     @Override
@@ -475,7 +493,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForByte()
      */
     @Override
@@ -498,7 +517,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForShort()
      */
     @Override
@@ -521,7 +541,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForInt()
      */
     @Override
@@ -544,7 +565,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForLong()
      */
     @Override
@@ -567,7 +589,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         value is returned as <i>present</i> holding the primitive default {@code 0f}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0f}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForFloat()
      */
     @Override
@@ -590,7 +613,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         value is returned as <i>present</i> holding the primitive default {@code 0d}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0d}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForDouble()
      */
     @Override
@@ -615,7 +639,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForString()
      */
     @Override
@@ -637,7 +662,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForDate()
      */
     @Override
@@ -659,7 +685,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForTime()
      */
     @Override
@@ -681,7 +708,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForTimestamp()
      */
     @Override
@@ -703,7 +731,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForBytes()
      */
     @Override
@@ -728,7 +757,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForSingleValue(Class)
      */
     @Override
@@ -754,7 +784,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
      *         matches the condition or the matched value is SQL {@code NULL}
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
@@ -782,7 +813,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an {@code Optional} containing the mapped value, or an empty {@code Optional} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @see #queryForSingleNonNull(String, Condition, Class)
@@ -811,7 +843,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         SQL {@code NULL}) when exactly one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @throws DuplicateResultException if more than one record is found
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
@@ -841,7 +874,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
      *         matches the condition or the matched value is SQL {@code NULL}
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      * @throws DuplicateResultException if more than one record is found
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
@@ -870,7 +904,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return an {@code Optional} containing the unique mapped value, or an empty {@code Optional} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record is found
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
@@ -895,7 +930,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return a {@code Dataset} containing the query results; never {@code null} (an empty {@code Dataset} is
      *         returned when no record matches)
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      */
     @Override
     Dataset query(final Condition cond) throws UncheckedSQLException;
@@ -916,7 +952,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return a {@code Dataset} containing the selected properties of matching records; never {@code null}
      *         (an empty {@code Dataset} is returned when no record matches)
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      */
     @Override
     Dataset query(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
@@ -944,7 +981,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                        {@code ResultSet} and must not save or hold a reference to it after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
@@ -975,7 +1013,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                        {@code ResultSet} and must not save or hold a reference to it after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
@@ -1010,7 +1049,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                        {@code ResultSet} after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
@@ -1044,7 +1084,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                        {@code ResultSet} after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
@@ -1063,7 +1104,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return a list of matching entities, or an empty list if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      */
     @Override
     List<T> list(final Condition cond) throws UncheckedSQLException;
@@ -1084,7 +1126,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map each result set row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
@@ -1105,7 +1148,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map each result set row with column labels
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
@@ -1129,7 +1173,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map filtered result set rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
@@ -1152,7 +1197,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map filtered rows with column labels
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
@@ -1173,7 +1219,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return a list of entities with selected properties, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      */
     @Override
     List<T> list(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
@@ -1196,7 +1243,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map each result set row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
@@ -1219,7 +1267,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map each row with column labels
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
@@ -1245,7 +1294,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map filtered rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
@@ -1271,7 +1321,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map filtered rows with column labels
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
@@ -1292,10 +1343,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @return a list of values for the specified property, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails
      */
     @Override
     default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException {
+        N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
+        N.checkArgNotNull(cond, cs.cond);
+
         @SuppressWarnings("deprecation")
         final PropInfo propInfo = ParserUtil.getBeanInfo(targetEntityClass()).getPropInfo(singleSelectPropName);
         final Jdbc.RowMapper<? extends R> rowMapper = propInfo == null ? ColumnOne.getObject() : ColumnOne.get((Type<R>) propInfo.dbType);
@@ -1321,11 +1376,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowMapper the function to map the single column value
      * @return a list of mapped values, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
             throws IllegalArgumentException, UncheckedSQLException {
+        N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
         return list(N.asList(singleSelectPropName), cond, rowMapper);
@@ -1352,11 +1410,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @return a list of filtered and mapped values, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond}, {@code rowFilter}, or {@code rowMapper} is
      *                                  {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
             final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException {
+        N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -1378,7 +1439,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowConsumer the consumer to process each result set row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws UncheckedSQLException;
@@ -1400,7 +1462,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowConsumer the bi-consumer to process each row with column labels
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws UncheckedSQLException;
@@ -1422,7 +1485,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowFilter the predicate to filter rows
      * @param rowConsumer the consumer to process filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer) throws UncheckedSQLException;
@@ -1443,7 +1507,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowFilter the bi-predicate to filter rows with column labels
      * @param rowConsumer the bi-consumer to process filtered rows with column labels
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer) throws UncheckedSQLException;
@@ -1464,7 +1529,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowConsumer the consumer to process each row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer) throws UncheckedSQLException;
@@ -1485,7 +1551,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowConsumer the bi-consumer to process each row with column labels
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws UncheckedSQLException;
@@ -1508,7 +1575,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowFilter the predicate to filter rows
      * @param rowConsumer the consumer to process filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
@@ -1532,7 +1600,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param rowFilter the bi-predicate to filter rows with column labels
      * @param rowConsumer the bi-consumer to process filtered rows with column labels
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
@@ -1558,13 +1627,15 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @SuppressWarnings("deprecation")
     @Beta
     @Override
     default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer)
             throws IllegalArgumentException, UncheckedSQLException {
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
         forEach(selectPropNames, cond, Jdbc.RowConsumer.forDisposableObjArray(targetEntityClass(), rowConsumer));
@@ -1589,12 +1660,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param cond the condition to match
      * @param rowConsumer the consumer that receives the reusable row data as a {@link DisposableObjArray}
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @SuppressWarnings("deprecation")
     @Beta
     @Override
     default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws IllegalArgumentException, UncheckedSQLException {
+        N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
         forEach(cond, Jdbc.RowConsumer.forDisposableObjArray(targetEntityClass(), rowConsumer));

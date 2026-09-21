@@ -206,7 +206,7 @@ public final class Jdbc {
          * Sets the parameters on the given prepared query statement.
          *
          * @param preparedQuery the prepared query statement (e.g., {@code PreparedStatement}) to set parameters on.
-         * @throws SQLException if a database access error occurs or if the statement is closed.
+         * @throws SQLException if binding a JDBC parameter fails, including an invalid index, incompatible value, or closed statement.
          */
         @Override
         void accept(QS preparedQuery) throws SQLException;
@@ -244,8 +244,7 @@ public final class Jdbc {
          *
          * @param preparedQuery the prepared query to set parameters on
          * @param param the parameter object containing values to set
-         * @throws SQLException if a database access error occurs or this method is
-         * called on a closed {@code PreparedStatement}
+         * @throws SQLException if binding a JDBC parameter fails, including an invalid index, incompatible value, or closed statement.
          */
         @Override
         void accept(QS preparedQuery, T param) throws SQLException;
@@ -254,6 +253,10 @@ public final class Jdbc {
          * Creates a stateful {@code BiParametersSetter} for setting parameters from an array.
          * It maps array elements to prepared statement parameters based on a list of field names,
          * inferring the SQL type from the corresponding property in the provided {@code entityClass}.
+         *
+         * <p>When invoked, the returned setter throws {@link IllegalArgumentException} if the parameter
+         * array is {@code null}, its length differs from the field count, or a field name does not
+         * resolve to a property of {@code entityClass}.</p>
          *
          * <p>
          * <b>Warning:</b> The returned setter is stateful because it caches type information
@@ -276,7 +279,7 @@ public final class Jdbc {
          * must match the order of values in the input array and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class. The returned setter additionally throws {@code IllegalArgumentException} at {@code accept} time if the parameter array is {@code null}, its length differs from the field count, or a field name does not resolve to a property of {@code entityClass}.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class.
          */
         @Beta
         @SequentialOnly
@@ -328,6 +331,10 @@ public final class Jdbc {
          * It maps list elements to prepared statement parameters based on a list of field names,
          * inferring the SQL type from the corresponding property in the provided {@code entityClass}.
          *
+         * <p>When invoked, the returned setter throws {@link IllegalArgumentException} if the parameter
+         * list is {@code null}, its size differs from the field count, or a field name does not
+         * resolve to a property of {@code entityClass}.</p>
+         *
          * <p>
          * <b>Warning:</b> The returned setter is stateful because it caches type information
          * upon first execution. It should not be cached, shared, or used in parallel streams.
@@ -349,7 +356,7 @@ public final class Jdbc {
          * must match the order of values in the input list and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class. The returned setter additionally throws {@code IllegalArgumentException} at {@code accept} time if the parameter list is {@code null}, its size differs from the field count, or a field name does not resolve to a property of {@code entityClass}.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class.
          */
         @Beta
         @SequentialOnly
@@ -433,8 +440,7 @@ public final class Jdbc {
          * @param parsedSql the parsed SQL containing information about the query and its parameters
          * @param preparedQuery the prepared query to set parameters on
          * @param param the parameter object containing values to set
-         * @throws SQLException if a database access error occurs or this method is
-         * called on a closed {@code PreparedStatement}
+         * @throws SQLException if binding a JDBC parameter fails, including an invalid index, incompatible value, or closed statement.
          */
         @Override
         void accept(ParsedSql parsedSql, QS preparedQuery, T param) throws SQLException;
@@ -491,7 +497,7 @@ public final class Jdbc {
          *
          * @param rs the {@code ResultSet} to extract data from.
          * @return the extracted result.
-         * @throws SQLException if a database access error occurs.
+         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
@@ -1293,7 +1299,7 @@ public final class Jdbc {
          * @param rs the {@code ResultSet} to extract data from
          * @param columnLabels the list of column labels from the result set's metadata
          * @return the extracted result
-         * @throws SQLException if a database access error occurs
+         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
          */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
@@ -1826,7 +1832,7 @@ public final class Jdbc {
          *
          * @param rs the {@code ResultSet} positioned at the row to be mapped
          * @return the mapped object of type {@code T}
-         * @throws SQLException if a database access error occurs during column value retrieval
+         * @throws SQLException if reading or converting a requested JDBC column value fails
          */
         @Override
         T apply(ResultSet rs) throws SQLException;
@@ -2435,6 +2441,8 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code columnIndex} is not positive, or {@code type} is {@code null}
              */
             public RowMapperBuilder getObject(final int columnIndex, final Class<?> type) {
+                N.checkArgPositive(columnIndex, cs.columnIndex);
+
                 return get(columnIndex, ColumnGetter.forType(type));
             }
 
@@ -2908,7 +2916,7 @@ public final class Jdbc {
          * @param rs the {@code ResultSet} positioned at the row to be mapped
          * @param columnLabels the list of column labels from the result set's metadata
          * @return the mapped object of type {@code T}
-         * @throws SQLException if a database access error occurs during column value retrieval
+         * @throws SQLException if reading or converting a requested JDBC column value fails
          */
         @Override
         T apply(ResultSet rs, List<String> columnLabels) throws SQLException;
@@ -4402,6 +4410,8 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code columnName} is {@code null}, or {@code type} is {@code null}
              */
             public BiRowMapperBuilder getObject(final String columnName, final Class<?> type) {
+                N.checkArgNotNull(columnName, cs.columnName);
+
                 return get(columnName, ColumnGetter.forType(type));
             }
 
@@ -4736,7 +4746,7 @@ public final class Jdbc {
          * Performs this operation on the given {@code ResultSet}.
          *
          * @param rs the {@code ResultSet} positioned at the current row to be consumed.
-         * @throws SQLException if a database access error occurs.
+         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
          */
         @Override
         void accept(ResultSet rs) throws SQLException;
@@ -4974,7 +4984,7 @@ public final class Jdbc {
          *
          * @param rs the {@code ResultSet} positioned at the current row to be consumed.
          * @param columnLabels the list of column labels from the result set metadata.
-         * @throws SQLException if a database access error occurs.
+         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
          */
         @Override
         void accept(ResultSet rs, List<String> columnLabels) throws SQLException;
@@ -5195,7 +5205,7 @@ public final class Jdbc {
          *
          * @param rs the {@code ResultSet} positioned at the current row. Must not be {@code null}.
          * @return {@code true} if the current row should be included in the result; {@code false} to skip it.
-         * @throws SQLException if a database access error occurs while reading from the {@code ResultSet}.
+         * @throws SQLException if reading a JDBC column needed to evaluate the row predicate fails.
          */
         @Override
         boolean test(final ResultSet rs) throws SQLException;
@@ -5309,7 +5319,7 @@ public final class Jdbc {
          *                     The list is 0-based (i.e., the label at index {@code i} corresponds to column index {@code i + 1} in the {@code ResultSet}).
          *                     Implementations should not modify this list.
          * @return {@code true} if the current row should be included in the result; {@code false} to skip it.
-         * @throws SQLException if a database access error occurs while reading from the {@code ResultSet}.
+         * @throws SQLException if reading a JDBC column needed to evaluate the row predicate fails.
          */
         @Override
         boolean test(ResultSet rs, List<String> columnLabels) throws SQLException;
@@ -5396,7 +5406,7 @@ public final class Jdbc {
          * @param outputRow the array to be populated with data from the current row; must not be {@code null}
          * @throws IllegalArgumentException if a built-in extractor receives a null or undersized output array,
          *         or a builder-configured column index exceeds the result set's column count
-         * @throws SQLException if a database access error occurs
+         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
          */
         @Override
         void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
@@ -5802,6 +5812,8 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code columnIndex} is not positive, or {@code type} is {@code null}.
              */
             public RowExtractorBuilder getObject(final int columnIndex, final Class<?> type) {
+                N.checkArgPositive(columnIndex, cs.columnIndex);
+
                 return get(columnIndex, ColumnGetter.forType(type));
             }
 
@@ -6043,7 +6055,7 @@ public final class Jdbc {
          * @param rs the {@code ResultSet} to extract from.
          * @param columnIndex the 1-based index of the column.
          * @return the extracted value of type {@code V}.
-         * @throws SQLException if a database access error occurs.
+         * @throws SQLException if reading JDBC rows, columns, or metadata during extraction fails.
          */
         V get(ResultSet rs, int columnIndex) throws SQLException;
 

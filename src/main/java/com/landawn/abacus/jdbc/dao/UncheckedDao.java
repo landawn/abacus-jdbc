@@ -40,7 +40,7 @@ import com.landawn.abacus.util.Throwables;
 
 /**
  * Interface for an unchecked Data Access Object (DAO) that extends the base {@link Dao} interface.
- * Its methods throw {@link UncheckedSQLException} instead of {@link java.sql.SQLException}, providing a more
+ * Its methods throw {@link UncheckedSQLException} instead of {@link SQLException}, providing a more
  * convenient API for developers who prefer unchecked exceptions.
  *
  * <p>Through its {@code Unchecked*Ops} super-interfaces it redeclares the save operations and the
@@ -73,7 +73,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -86,7 +86,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -99,7 +99,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -112,7 +112,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
+     *         throws {@link SQLException}
      */
     @Override
     @Beta
@@ -126,7 +127,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -139,7 +140,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -152,7 +153,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -165,7 +166,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -178,7 +179,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -191,7 +192,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -204,7 +205,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
+     *         throws {@link SQLException}
      */
     @Override
     @Beta
@@ -218,7 +220,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or {@code stmtCreator} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
+     *         throws {@link SQLException}
      */
     @Override
     @Beta
@@ -232,7 +235,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -245,7 +248,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
+     *         throws {@link SQLException}
      */
     @Override
     @Beta
@@ -272,12 +276,12 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @param matchPropNames the list of property names that uniquely identify the record
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches
      * @see #upsert(Object, Condition)
      */
     @Override
-    default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException {
+    default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException, DuplicateResultException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
@@ -307,11 +311,11 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @param cond the condition to verify if the record exists
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
      */
     @Override
-    default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
+    default T upsert(final T entity, final Condition cond) throws UncheckedSQLException, DuplicateResultException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 

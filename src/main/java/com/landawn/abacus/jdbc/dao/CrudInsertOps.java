@@ -20,9 +20,10 @@ import java.util.Collection;
 import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 
 /**
  * Insert capability of {@link CrudDao}: generated-ID extraction and generation, plus
@@ -72,7 +73,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *
      * @return the generated ID
      * @throws UnsupportedOperationException if client-side ID generation is not supported
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if an overriding implementation fails while accessing the database to generate an ID
      * @deprecated ID generation should typically be handled by the database. Override this method
      *             only when a client-side ID generation strategy is required.
      */
@@ -100,8 +101,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param entity the entity to insert (must not be {@code null})
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     ID insert(final T entity) throws SQLException;
 
@@ -121,8 +122,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToInsert} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     ID insert(final T entity, final Collection<String> propNamesToInsert) throws SQLException;
 
@@ -141,8 +142,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param entity the entity whose properties will be bound to the named parameters
      * @return the ID of the inserted entity (either database-generated or entity-provided)
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     ID insert(final String namedInsertSql, final T entity) throws SQLException;
 
@@ -162,8 +163,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *
      * @param entities the collection of entities to insert
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     default List<ID> batchInsert(final Collection<? extends T> entities) throws SQLException {
         return batchInsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -184,8 +185,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws SQLException;
 
@@ -204,8 +205,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws SQLException {
         return batchInsert(entities, propNamesToInsert, JdbcUtil.DEFAULT_BATCH_SIZE);
@@ -228,8 +229,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty, or if {@code batchSize} is not positive
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws SQLException;
 
@@ -249,8 +250,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     @Beta
     default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities) throws SQLException {
@@ -275,8 +276,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     @Beta
     List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws SQLException;

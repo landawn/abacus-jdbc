@@ -20,6 +20,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -246,9 +247,10 @@ public final class DBLock implements AutoCloseable {
      *        This table will be created if it does not exist. Must not be {@code null} or empty.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is
      *         {@code null}, empty, blank, or not a valid qualified identifier.
-     * @throws UncheckedSQLException if any database operation fails during initialization (e.g., table creation).
+     * @throws UncheckedSQLException if opening or configuring the connection, reading metadata, creating or querying the lock table,
+     *         deleting stale locks, or closing the initialization connection fails.
      * @throws IllegalStateException if the lock table cannot be verified after the creation attempt.
-     * @throws java.util.concurrent.RejectedExecutionException if the lock refresh task cannot be scheduled.
+     * @throws RejectedExecutionException if the lock refresh task cannot be scheduled.
      */
     DBLock(final DataSource ds, final String tableName) throws UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
@@ -726,7 +728,7 @@ public final class DBLock implements AutoCloseable {
      * @return {@code true} if the lock was successfully released; {@code false} otherwise (e.g., lock not found, code mismatch).
      * @throws IllegalStateException if this {@code DBLock} instance has been closed.
      * @throws IllegalArgumentException if {@code target} or {@code code} is {@code null} or empty.
-     * @throws UncheckedSQLException if a database access error occurs during the unlock operation.
+     * @throws UncheckedSQLException if opening or configuring the connection, binding the target and lock code, or executing the lock deletion fails.
      */
     public boolean unlock(final String target, final String code) throws UncheckedSQLException {
         assertNotClosed();

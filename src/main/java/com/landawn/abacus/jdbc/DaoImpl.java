@@ -2023,7 +2023,7 @@ final class DaoImpl {
      * @return the prepared and configured query; the caller is responsible for closing it
      * @throws IllegalArgumentException if the expanded SQL or a named parameter binding is invalid
      * @throws UnsupportedOperationException if an argument value uses an unsupported parameter-binding shape
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the query fails
      */
     @SuppressWarnings({ "rawtypes", "unused" })
@@ -2557,11 +2557,9 @@ final class DaoImpl {
     static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
             final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
+        N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(dsl, cs.dsl);
-
-        N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
-
         N.checkArgument(dsl.sqlDialect().sqlPolicy() == null || dsl.sqlDialect().sqlPolicy() == SqlPolicy.PARAMETERIZED_SQL,
                 "'dsl.sqlDialect.sqlPolicy' must be null or SqlPolicy.PARAMETERIZED_SQL. It can't be {}", dsl.sqlDialect().sqlPolicy());
 
@@ -4706,9 +4704,10 @@ final class DaoImpl {
                 } else if (DaoUtil.isCrudDaoOperationDeclaringClass(declaringClass)) {
                     if (methodName.equals("insert") && paramLen == 1) {
                         call = (proxy, args) -> {
-                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Object entity = args[0];
                             N.checkArgNotNull(entity, cs.entity);
+
+                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
 
                             ParsedSql namedInsertSql = null;
 
@@ -4732,11 +4731,12 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
-                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Object entity = args[0];
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
                             N.checkArgNotNull(entity, cs.entity);
                             N.checkArgNotEmpty(propNamesToInsert, cs.propNamesToInsert);
+
+                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
 
                             if ((callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) && isDefaultIdTester.test(idGetter.apply(entity))) {
                                 idSetter.accept(DaoUtil.generateId(proxy), entity);
@@ -4752,11 +4752,12 @@ final class DaoImpl {
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
-                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final String namedInsertSql = (String) args[0];
                             final Object entity = args[1];
                             N.checkArgNotEmpty(namedInsertSql, cs.namedInsertSql);
                             N.checkArgNotNull(entity, cs.entity);
+
+                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
 
                             if (callGenerateIdForInsertWithSql && isDefaultIdTester.test(idGetter.apply(entity))) {
                                 idSetter.accept(DaoUtil.generateId(proxy), entity);
@@ -4771,10 +4772,11 @@ final class DaoImpl {
                     } else if (methodName.equals("batchInsert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                             && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
-                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Collection<?> entities = (Collection<Object>) args[0];
                             final int batchSize = (Integer) args[1];
                             N.checkArgPositive(batchSize, cs.batchSize);
+
+                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
 
                             if (N.isEmpty(entities)) {
                                 return new ArrayList<>();
@@ -4886,14 +4888,14 @@ final class DaoImpl {
                     } else if (methodName.equals("batchInsert") && paramLen == 3 && Collection.class.isAssignableFrom(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
-                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final Collection<?> entities = (Collection<Object>) args[0];
 
                             final Collection<String> propNamesToInsert = (Collection<String>) args[1];
-                            N.checkArgNotEmpty(propNamesToInsert, cs.propNamesToInsert);
-
                             final int batchSize = (Integer) args[2];
+                            N.checkArgNotEmpty(propNamesToInsert, cs.propNamesToInsert);
                             N.checkArgPositive(batchSize, cs.batchSize);
+
+                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
 
                             if (N.isEmpty(entities)) {
                                 return new ArrayList<>();
@@ -4962,13 +4964,14 @@ final class DaoImpl {
                     } else if (methodName.equals("batchInsert") && paramLen == 3 && String.class.equals(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && int.class.equals(paramTypes[2])) {
                         call = (proxy, args) -> {
-                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             final String namedInsertSql = (String) args[0];
                             final Collection<?> entities = (Collection<Object>) args[1];
                             final int batchSize = (Integer) args[2];
 
                             N.checkArgNotEmpty(namedInsertSql, cs.namedInsertSql);
                             N.checkArgPositive(batchSize, cs.batchSize);
+
+                            final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
 
                             if (N.isEmpty(entities)) {
                                 return new ArrayList<>();
@@ -5282,7 +5285,7 @@ final class DaoImpl {
                                             final Object val = rowMapper.apply(rs);
 
                                             if (rs.next()) {
-                                                throw new com.landawn.abacus.exception.DuplicateResultException("More than one record found for query by id");
+                                                throw new DuplicateResultException("More than one record found for query by id");
                                             }
 
                                             return Optional.of(val);
@@ -6339,7 +6342,6 @@ final class DaoImpl {
                             }
 
                             call = (proxy, args) -> {
-                                final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                                 final Collection<Object> batchParameters = (Collection) args[stmtParamIndexes[0]];
                                 int batchSize = tmpBatchSize;
 
@@ -6352,6 +6354,8 @@ final class DaoImpl {
                                 }
 
                                 N.checkArgPositive(batchSize, cs.batchSize);
+
+                                final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
 
                                 List<Object> ids = null;
 
@@ -7313,7 +7317,7 @@ final class DaoImpl {
     /**
      * Executes a batch save using the supplied named SQL, reusing a statement across chunks.
      *
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing a batch fails
      */
     @SuppressWarnings("rawtypes")
@@ -7331,7 +7335,7 @@ final class DaoImpl {
     /**
      * Executes a batch insert and extracts the returned identifiers in input order.
      *
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
      */
     @SuppressWarnings("rawtypes")
@@ -7355,7 +7359,7 @@ final class DaoImpl {
     /**
      * Inserts one run of entities using the same ID-generation policy and assigns returned IDs.
      *
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
      */
     @SuppressWarnings("rawtypes")

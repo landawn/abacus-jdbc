@@ -15,9 +15,11 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import com.landawn.abacus.exception.UncheckedSQLException;
+
 /**
  * Unchecked-exception variant of {@link CrudJoinEntityHelper}: id-based reads with join loading
- * (throwing {@link com.landawn.abacus.exception.UncheckedSQLException}) plus the full unchecked
+ * (throwing {@link UncheckedSQLException}) plus the full unchecked
  * join capability (load + delete).
  *
  * <p>Composed of the read side ({@link UncheckedCrudJoinEntityReadOps}) and the base

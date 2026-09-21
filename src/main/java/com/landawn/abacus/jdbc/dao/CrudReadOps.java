@@ -24,10 +24,11 @@ import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
-import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.query.QueryUtil;
@@ -35,6 +36,7 @@ import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -45,7 +47,6 @@ import com.landawn.abacus.util.u.OptionalFloat;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.u.OptionalLong;
 import com.landawn.abacus.util.u.OptionalShort;
-import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Read capability of {@link CrudDao}: id-based reads ({@code get}/{@code getOrNull}/{@code batchGet}),
@@ -78,8 +79,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalBoolean} holding the selected value when a record matches the id (present, holding the primitive default {@code false} when the value is SQL {@code null}), or an empty {@code OptionalBoolean} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBoolean()
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws SQLException;
@@ -100,8 +101,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalChar} holding the selected value when a record matches the id (present, holding the primitive default {@code (char) 0} when the value is SQL {@code null}), or an empty {@code OptionalChar} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForChar()
      */
     OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws SQLException;
@@ -122,8 +123,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalByte} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalByte} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForByte()
      */
     OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws SQLException;
@@ -144,8 +145,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalShort} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalShort} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForShort()
      */
     OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws SQLException;
@@ -166,8 +167,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalInt} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalInt} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForInt()
      */
     OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws SQLException;
@@ -188,8 +189,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalLong} holding the selected value when a record matches the id (present, holding the primitive default {@code 0L} when the value is SQL {@code null}), or an empty {@code OptionalLong} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForLong()
      */
     OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws SQLException;
@@ -210,8 +211,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalFloat} holding the selected value when a record matches the id (present, holding the primitive default {@code 0f} when the value is SQL {@code null}), or an empty {@code OptionalFloat} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForFloat()
      */
     OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws SQLException;
@@ -232,8 +233,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalDouble} holding the selected value when a record matches the id (present, holding the primitive default {@code 0d} when the value is SQL {@code null}), or an empty {@code OptionalDouble} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDouble()
      */
     OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws SQLException;
@@ -252,8 +253,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the String value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForString()
      */
     Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws SQLException;
@@ -272,8 +273,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the Date value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDate()
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws SQLException;
@@ -292,8 +293,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the Time value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTime()
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws SQLException;
@@ -312,8 +313,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the Timestamp value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTimestamp()
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws SQLException;
@@ -333,8 +334,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the byte array value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBytes()
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws SQLException;
@@ -356,8 +357,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a {@code Nullable} holding the value (possibly {@code null} for a SQL {@code NULL}) when a record
      *         matches, or an empty {@code Nullable} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForSingleValue(Class)
      */
     <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
@@ -378,8 +379,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param targetValueType the class of the value type to convert to
      * @return an {@code Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
@@ -400,8 +401,9 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
      * @return an {@link Optional} containing the mapped value if a record matches the {@code id}, otherwise empty
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
      * @see #queryForSingleNonNull(String, Object, Class)
@@ -428,8 +430,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a {@code Nullable} holding the unique value (possibly {@code null} for a SQL {@code NULL}) when a
      *         record matches, or an empty {@code Nullable} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
@@ -454,8 +456,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param targetValueType the class of the value type to convert to
      * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
@@ -479,8 +481,9 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
      * @return an {@link Optional} containing the mapped unique value if a record matches the {@code id}, otherwise empty
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
+     *         callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
      *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
@@ -504,8 +507,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return an {@link Optional} containing the entity if found, otherwise empty
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     default Optional<T> get(final ID id) throws SQLException, DuplicateResultException {
@@ -530,8 +533,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return an {@link Optional} containing the entity if found, otherwise empty
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws SQLException, DuplicateResultException {
@@ -554,8 +557,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the entity if found, otherwise {@code null}
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     T getOrNull(final ID id) throws SQLException, DuplicateResultException;
@@ -579,8 +582,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the entity if found, otherwise {@code null}
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     T getOrNull(final ID id, final Collection<String> selectPropNames) throws SQLException, DuplicateResultException;
@@ -600,8 +603,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     default List<T> batchGet(final Collection<? extends ID> ids) throws SQLException, DuplicateResultException {
@@ -626,8 +629,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws SQLException, DuplicateResultException {
@@ -650,8 +653,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws SQLException, DuplicateResultException {
@@ -679,8 +682,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @SuppressWarnings("deprecation")
@@ -737,8 +740,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID to check for existence
      * @return {@code true} if an entity with the given ID exists, {@code false} otherwise
      * @throws IllegalArgumentException if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#exists()
      */
     boolean exists(final ID id) throws SQLException;
@@ -757,8 +760,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID to check for non-existence
      * @return {@code true} if no entity with the given ID exists, {@code false} otherwise
      * @throws IllegalArgumentException if {@code id} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#notExists()
      */
     @Beta
@@ -780,8 +783,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param ids the collection of IDs to count
      * @return the number of records in the database whose IDs are contained in {@code ids}
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws ArithmeticException if the total count across all ID batches exceeds the range of an {@code int}
      */
     @SuppressWarnings("deprecation")
@@ -833,12 +836,12 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or the entity's single ID value is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if the id of the entity matches more than one database record
      */
     @Beta
-    default boolean refresh(final T entity) throws SQLException {
+    default boolean refresh(final T entity) throws SQLException, DuplicateResultException {
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
@@ -866,12 +869,12 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty,
      *                                  or the entity's single ID value is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if the id of the entity matches more than one database record
      */
     @Beta
-    default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException {
+    default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException, DuplicateResultException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
 
@@ -909,12 +912,12 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
-    default int batchRefresh(final Collection<? extends T> entities) throws SQLException {
+    default int batchRefresh(final Collection<? extends T> entities) throws SQLException, DuplicateResultException {
         return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -936,12 +939,12 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
-    default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws SQLException {
+    default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws SQLException, DuplicateResultException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {
@@ -975,12 +978,13 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty,
      *                                  or the first element of a nonempty {@code entities} collection is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
-    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws SQLException {
+    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh)
+            throws SQLException, DuplicateResultException {
         return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -1005,12 +1009,13 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive, or if the first element of
      *                                  {@code entities} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
-    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize) throws SQLException {
+    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize)
+            throws SQLException, DuplicateResultException {
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
         N.checkArgPositive(batchSize, cs.batchSize);
 

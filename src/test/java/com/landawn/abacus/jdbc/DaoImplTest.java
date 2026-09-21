@@ -64,6 +64,14 @@ import com.landawn.abacus.util.u.Optional;
 @Tag("2025")
 public class DaoImplTest extends TestBase {
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Test
+    public void testCreateDaoValidatesInterfaceBeforeLaterArguments() {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> DaoImpl.createDao((Class) String.class, null, null, null, null, null, null));
+        assertTrue(failure.getMessage().contains("must be an interface"));
+    }
+
     static class TestEntity {
         private long id;
         private String name;
@@ -99,6 +107,30 @@ public class DaoImplTest extends TestBase {
     }
 
     interface IdOnlyCrudDao extends CrudDao<IdOnlyEntity, Long, IdOnlyCrudDao> {
+    }
+
+    interface ValidationBeforeIdExtractorDao extends CrudDao<IdOnlyEntity, Long, ValidationBeforeIdExtractorDao> {
+        @Override
+        default Jdbc.BiRowMapper<Long> idExtractor() {
+            throw new AssertionError("ID extractor lookup must follow argument validation");
+        }
+
+        @Query(value = "INSERT INTO id_only_entity (id) VALUES (:id)", batch = true)
+        List<Long> insertBatch(Collection<IdOnlyEntity> entities, int batchSize) throws SQLException;
+    }
+
+    @Test
+    public void testInsertValidatesArgumentsBeforeLookingUpCustomIdExtractor() throws SQLException {
+        final ValidationBeforeIdExtractorDao dao = DaoImpl.createDao(ValidationBeforeIdExtractorDao.class, null, mockDataSourceForDaoCreation(), PSC,
+                null, null, null);
+
+        assertThrows(IllegalArgumentException.class, () -> dao.insert((IdOnlyEntity) null));
+        assertThrows(IllegalArgumentException.class, () -> dao.insert(new IdOnlyEntity(), List.of()));
+        assertThrows(IllegalArgumentException.class, () -> dao.insert("", new IdOnlyEntity()));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchInsert(List.of(), 0));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchInsert(List.of(), List.of("id"), 0));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchInsert("INSERT INTO id_only_entity (id) VALUES (:id)", List.of(), 0));
+        assertThrows(IllegalArgumentException.class, () -> dao.insertBatch(List.of(), -1));
     }
 
     interface IdOnlyCrudDaoBase<TD extends IdOnlyCrudDaoBase<TD>> extends CrudDao<IdOnlyEntity, Long, TD> {

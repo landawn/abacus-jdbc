@@ -15,6 +15,8 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.sql.SQLException;
+
 import com.landawn.abacus.exception.UncheckedSQLException;
 
 /**
@@ -28,7 +30,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * {@link UnsupportedOperationException} at runtime.</p>
  *
  * <p>Load operations (e.g., {@code loadJoinEntities}, {@code loadAllJoinEntities}) throw
- * {@link UncheckedSQLException} instead of the checked {@link java.sql.SQLException}.</p>
+ * {@link UncheckedSQLException} instead of the checked {@link SQLException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

@@ -118,6 +118,57 @@ public class SqlTransactionTest extends TestBase {
         verify(connection).rollback();
     }
 
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testOwnerStateIsCheckedBeforeNullArguments() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final Runnable[] operations = { () -> transaction.commit(null), () -> transaction.rollback(null),
+                () -> transaction.incrementAndGetRef(null, false), () -> transaction.runOutsideTransaction(null),
+                () -> transaction.callOutsideTransaction(null) };
+
+        try {
+            for (final Runnable operation : operations) {
+                final AtomicReference<Throwable> failure = new AtomicReference<>();
+                final Thread thread = new Thread(() -> {
+                    try {
+                        operation.run();
+                    } catch (final Throwable e) {
+                        failure.set(e);
+                    }
+                });
+                thread.start();
+                thread.join();
+                assertTrue(failure.get() instanceof IllegalStateException);
+            }
+
+            assertEquals(SqlTransaction.Status.ACTIVE, transaction.status());
+            assertSame(transaction, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+            verify(connection, never()).commit();
+            verify(connection, never()).rollback();
+        } finally {
+            transaction.rollbackIfNotCommitted();
+        }
+    }
+
+    @Test
+    public void testCompletedTransactionStatePrecedesNestedIsolationValidation() throws SQLException {
+        final SqlTransaction transaction = new SqlTransaction(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, false);
+        transaction.incrementAndGetRef(IsolationLevel.DEFAULT, false);
+        transaction.commit();
+
+        assertThrows(IllegalStateException.class, () -> transaction.incrementAndGetRef(null, false));
+        assertEquals(SqlTransaction.Status.COMMITTED, transaction.status());
+    }
+
+    @Test
+    public void testConstructorValidatesArgumentsInSignatureOrder() {
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> new SqlTransaction(null, null, null, null, true))
+                .getMessage().contains("dataSource"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> new SqlTransaction(null, connection, IsolationLevel.NONE, null, false))
+                .getMessage().contains("isolationLevel"));
+        Mockito.verifyNoInteractions(connection);
+    }
+
     @Test
     public void testIsolationLevel() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);

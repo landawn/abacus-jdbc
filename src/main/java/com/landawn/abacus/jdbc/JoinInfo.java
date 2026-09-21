@@ -20,6 +20,7 @@ import static com.landawn.abacus.query.Dsl.PLC;
 import static com.landawn.abacus.query.Dsl.PSC;
 
 import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -876,6 +877,8 @@ public final class JoinInfo {
     /**
      * Retrieves the SQL plan for single-entity select operations.
      * This method returns SQL builders and parameter setters for loading one joined entity graph.
+     * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
+     * or {@link IllegalArgumentException} if a source entity has a disallowed null/default join key.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -912,6 +915,8 @@ public final class JoinInfo {
     /**
      * Retrieves the SQL plan for batch select operations.
      * This method returns SQL builders and parameter setters for loading joined entities in batches.
+     * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
+     * or {@link IllegalArgumentException} if a source entity has a disallowed null/default join key.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -952,6 +957,8 @@ public final class JoinInfo {
     /**
      * Retrieves the SQL plan for delete operations.
      * This method returns SQL statements for deleting joined entities.
+     * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
+     * or {@link IllegalArgumentException} if a source entity has a disallowed null/default join key.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -989,6 +996,8 @@ public final class JoinInfo {
     /**
      * Retrieves the SQL plan for batch delete operations.
      * This method is used for building SQL DELETE statements for multiple joined entities.
+     * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
+     * or {@link IllegalArgumentException} if a source entity has a disallowed null/default join key.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1054,6 +1063,7 @@ public final class JoinInfo {
      * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities.
      * @throws UnsupportedOperationException if this is a many-to-many join; use {@link #setJoinPropEntities(Collection, Map)}
      *                                  with keys derived from the junction table instead.
+     * @throws NullPointerException if {@code entities} is {@code null} for a supported one-to-many or many-to-one join
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}.
@@ -1106,6 +1116,7 @@ public final class JoinInfo {
      * @param entities the source entities to populate with joined entities.
      * @param groupedPropEntities a map of grouped joined entities keyed by the join key used to match source entities
      *                            (the source key for one-to-many; the junction-table-derived key for many-to-many).
+     * @throws NullPointerException if {@code entities} is {@code null}, or if it is nonempty and {@code groupedPropEntities} is {@code null}
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
      *                                  or if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}.
@@ -1329,6 +1340,9 @@ public final class JoinInfo {
      * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      */
     public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) {
+        N.checkArgNotNull(daoClass, cs.daoClass);
+        N.checkArgNotNull(entityClass, cs.entityClass);
+        N.checkArgNotNull(tableName, cs.tableName);
         N.checkArgNotNull(joinEntityPropName, cs.joinEntityPropName);
 
         final JoinInfo joinInfo = getEntityJoinInfo(daoClass, entityClass, tableName).get(joinEntityPropName);

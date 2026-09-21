@@ -402,14 +402,96 @@ public class NamedQueryTest extends TestBase {
         verify(mockPreparedStatement).close();
     }
 
-    // The BigInteger overload guards only the long conversion; a parameter-not-found IAE from the
-    // delegated setLong(name, long) closes the statement exactly once, with no redundant re-close.
+    // A missing named parameter closes the statement exactly once before conversion or binding.
     @Test
     public void testSetLongBigIntegerUnknownParamClosesOnce() throws SQLException {
         assertThrows(IllegalArgumentException.class, () -> namedQuery.setLong("nonExistent", BigInteger.ONE));
 
         verify(mockPreparedStatement, times(1)).close();
         verify(mockPreparedStatement, never()).setLong(anyInt(), anyLong());
+    }
+
+    @Test
+    public void testMissingNameIsCheckedBeforeBigIntegerOverflowInBothLookupStrategies() throws SQLException {
+        for (final String sql : List.of("SELECT :param1, :param2", "SELECT :param1, :param2, :param3, :param4, :param5")) {
+            final PreparedStatement stmt = mock(PreparedStatement.class);
+            final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse(sql));
+
+            final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> query.setLong("missing", BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)));
+
+            assertTrue(failure.getMessage().contains("Named parameter not found: missing"));
+            verify(stmt, times(1)).close();
+            verify(stmt, never()).setLong(anyInt(), anyLong());
+        }
+    }
+
+    @Test
+    public void testMissingNameIsCheckedBeforeSqlTypeInBothLookupStrategies() throws SQLException {
+        for (final String sql : List.of("SELECT :param1, :param2", "SELECT :param1, :param2, :param3, :param4, :param5")) {
+            for (final boolean withScale : List.of(false, true)) {
+                final PreparedStatement stmt = mock(PreparedStatement.class);
+                final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse(sql));
+
+                final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> {
+                    if (withScale) {
+                        query.setObject("missing", null, (SQLType) null, 0);
+                    } else {
+                        query.setObject("missing", null, (SQLType) null);
+                    }
+                });
+
+                assertTrue(failure.getMessage().contains("Named parameter not found: missing"));
+                verify(stmt, times(1)).close();
+            }
+        }
+    }
+
+    @Test
+    public void testMissingNameIsCheckedBeforeTypeHandlerInBothLookupStrategies() throws SQLException {
+        for (final String sql : List.of("SELECT :param1, :param2", "SELECT :param1, :param2, :param3, :param4, :param5")) {
+            final PreparedStatement stmt = mock(PreparedStatement.class);
+            final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse(sql));
+
+            final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> query.setObject("missing", null, (Type<Object>) null));
+
+            assertTrue(failure.getMessage().contains("Named parameter not found: missing"));
+            verify(stmt, times(1)).close();
+        }
+    }
+
+    @Test
+    public void testMissingNameIsCheckedBeforeCharSequenceConversionInBothLookupStrategies() throws SQLException {
+        final CharSequence value = mock(CharSequence.class);
+        when(value.toString()).thenThrow(new AssertionError("The value must not be converted before validating the name"));
+
+        for (final String sql : List.of("SELECT :param1, :param2", "SELECT :param1, :param2, :param3, :param4, :param5")) {
+            for (final boolean national : List.of(false, true)) {
+                final PreparedStatement stmt = mock(PreparedStatement.class);
+                final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse(sql));
+
+                final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> {
+                    if (national) {
+                        query.setNString("missing", value);
+                    } else {
+                        query.setString("missing", value);
+                    }
+                });
+
+                assertTrue(failure.getMessage().contains("Named parameter not found: missing"));
+                verify(stmt, times(1)).close();
+            }
+        }
+    }
+
+    @Test
+    public void testEntityTypeIsCheckedBeforeParameterNames() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setParameters("not an entity", (Collection<String>) null));
+
+        assertTrue(failure.getMessage().contains("Unsupported parameter type: java.lang.String"));
+        verify(mockPreparedStatement, times(1)).close();
     }
 
     @Test

@@ -71,6 +71,16 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 public class JdbcTest extends TestBase {
 
     @Test
+    public void testTypedColumnBuildersValidateColumnBeforeType() {
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowMapper.builder().getObject(0, null)).getMessage()
+                .contains("columnIndex"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowExtractor.builder().getObject(0, null)).getMessage()
+                .contains("columnIndex"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.BiRowMapper.builder().getObject(null, null)).getMessage()
+                .contains("columnName"));
+    }
+
+    @Test
     public void testResultExtractorGroupingFinishesConcurrentSkipListMap() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, true, true, false);
         when(mockResultSet.getString(1)).thenReturn("b", "a", "b");

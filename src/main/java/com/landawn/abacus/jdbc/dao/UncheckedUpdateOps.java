@@ -29,7 +29,7 @@ import com.landawn.abacus.util.N;
 
 /**
  * Unchecked-exception update capability: the {@link UpdateOps} operations re-declared to throw
- * {@link com.landawn.abacus.exception.UncheckedSQLException}.
+ * {@link UncheckedSQLException}.
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
@@ -53,7 +53,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
     default int update(final String propName, final Object propValue, final Condition cond) throws UncheckedSQLException {
@@ -81,7 +81,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
     int update(final Map<String, Object> updateProps, final Condition cond) throws UncheckedSQLException;
@@ -105,7 +105,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
     default int update(final T entity, final Condition cond) throws UncheckedSQLException {
@@ -139,7 +139,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
      *                                  or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UncheckedSQLException;

@@ -85,6 +85,13 @@ public class DaoFunctionalInterfaceNullValidationTest extends TestBase {
     public interface UncheckedFiNullUserDao extends UncheckedCrudDao<FiNullUser, Long, UncheckedFiNullUserDao> {
     }
 
+    public interface JoinNullUserDao extends CrudDao<FiNullUser, Long, JoinNullUserDao>, CrudJoinEntityHelper<FiNullUser, Long, JoinNullUserDao> {
+    }
+
+    public interface UncheckedJoinNullUserDao extends UncheckedCrudDao<FiNullUser, Long, UncheckedJoinNullUserDao>,
+            UncheckedCrudJoinEntityHelper<FiNullUser, Long, UncheckedJoinNullUserDao> {
+    }
+
     private DataSource ds;
     private FiNullUserDao checkedDao;
     private UncheckedFiNullUserDao uncheckedDao;
@@ -110,6 +117,98 @@ public class DaoFunctionalInterfaceNullValidationTest extends TestBase {
                 st.execute("DROP TABLE IF EXISTS fi_null_user");
             }
         }
+    }
+
+    @Test
+    public void testReadAndStatementDefaultsValidateArgumentsInSignatureOrder() throws Exception {
+        final Object checked = Mockito.mock(FiNullUserDao.class, Mockito.CALLS_REAL_METHODS);
+        final Object unchecked = Mockito.mock(UncheckedFiNullUserDao.class, Mockito.CALLS_REAL_METHODS);
+
+        for (final Class<?> type : List.of(ReadOps.class, UncheckedReadOps.class, Dao.class, UncheckedDao.class)) {
+            final Object target = type.getSimpleName().startsWith("Unchecked") ? unchecked : checked;
+
+            for (final Method method : type.getDeclaredMethods()) {
+                if (!method.isDefault() || method.isBridge()) {
+                    continue;
+                }
+
+                final Class<?>[] parameterTypes = method.getParameterTypes();
+                final boolean singleColumn = (method.getName().equals("list") || method.getName().equals("stream"))
+                        && parameterTypes[0] == String.class;
+                final boolean foreach = method.getName().equals("foreach");
+                final boolean statementCreator = method.getName().startsWith("prepare") && parameterTypes.length == 2
+                        && isFunctionalInterface(parameterTypes[1]);
+
+                if (!singleColumn && !foreach && !statementCreator) {
+                    continue;
+                }
+
+                final Object[] args = new Object[parameterTypes.length];
+                final int firstRequired = foreach && parameterTypes[0] == Collection.class ? 1 : 0;
+
+                for (int index = firstRequired; index < args.length; index++) {
+                    final String parameterName = singleColumn && index == 0 ? "singleSelectPropName"
+                            : parameterTypes[index] == Condition.class ? "cond"
+                                    : foreach ? "rowConsumer"
+                                            : statementCreator ? index == 0 ? method.getName().equals("prepareNamedQuery") ? "namedSql" : "sql"
+                                                    : "stmtCreator"
+                                                    : index == args.length - 1 ? "rowMapper" : "rowFilter";
+                    assertInvalidArgument(method, target, args, parameterName);
+                    args[index] = validArgument(parameterTypes[index], method.getName());
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testJoinDefaultsValidateBeforeReadingMetadata() throws Exception {
+        final Object checked = Mockito.mock(JoinNullUserDao.class, Mockito.CALLS_REAL_METHODS);
+        final Object unchecked = Mockito.mock(UncheckedJoinNullUserDao.class, Mockito.CALLS_REAL_METHODS);
+
+        for (final Class<?> type : List.of(JoinEntityReadOps.class, UncheckedJoinEntityReadOps.class, JoinEntityDeleteOps.class,
+                UncheckedJoinEntityDeleteOps.class, CrudJoinEntityReadOps.class, UncheckedCrudJoinEntityReadOps.class)) {
+            final Object target = type.getSimpleName().startsWith("Unchecked") ? unchecked : checked;
+
+            for (final Method method : type.getDeclaredMethods()) {
+                if (!method.isDefault() || method.isBridge()) {
+                    continue;
+                }
+
+                final Class<?>[] parameterTypes = method.getParameterTypes();
+                final Object[] args = new Object[parameterTypes.length];
+
+                for (int index = 0; index < args.length; index++) {
+                    if (parameterTypes[index].isPrimitive()) {
+                        args[index] = defaultValue(parameterTypes[index]);
+                    }
+                }
+
+                if (method.getName().equals("getOrNull")) {
+                    assertInvalidArgument(method, target, args, "id");
+                } else if (parameterTypes[parameterTypes.length - 1] == Condition.class) {
+                    for (int index = 0; index < args.length - 1; index++) {
+                        args[index] = validArgument(parameterTypes[index], method.getName());
+                    }
+                    assertInvalidArgument(method, target, args, "cond");
+                } else if (parameterTypes[0] == Object.class && parameterTypes.length == 2 && parameterTypes[1] == Executor.class
+                        && method.getName().startsWith("loadAll")) {
+                    assertInvalidArgument(method, target, args, "entity");
+                    args[0] = new FiNullUser();
+                    assertInvalidArgument(method, target, args, "executor");
+                } else if (parameterTypes.length > 1 && parameterTypes[0] == Object.class && parameterTypes[1] == Class.class
+                        && (parameterTypes.length == 3 || method.getName().startsWith("delete"))) {
+                    assertInvalidArgument(method, target, args, "entity");
+                    args[0] = new FiNullUser();
+                    assertInvalidArgument(method, target, args, "joinEntityClass");
+                }
+            }
+        }
+    }
+
+    private static void assertInvalidArgument(final Method method, final Object target, final Object[] args, final String parameterName) {
+        final InvocationTargetException failure = assertThrows(InvocationTargetException.class, () -> method.invoke(target, args), method.toGenericString());
+        assertTrue(failure.getCause() instanceof IllegalArgumentException, () -> method + ": " + failure.getCause());
+        assertTrue(failure.getCause().getMessage().contains(parameterName), () -> method + ": " + failure.getCause().getMessage());
     }
 
     @Test

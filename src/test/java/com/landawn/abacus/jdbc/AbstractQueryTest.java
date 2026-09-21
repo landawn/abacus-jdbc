@@ -76,6 +76,18 @@ public class AbstractQueryTest extends TestBase {
         }
     }
 
+    public static final class QueryEntity {
+        private String value;
+
+        public String getValue() {
+            return value;
+        }
+
+        public void setValue(final String value) {
+            this.value = value;
+        }
+    }
+
     static final class CoordinatedCloseQuery extends AbstractQuery<PreparedStatement, CoordinatedCloseQuery> {
         final CountDownLatch stateChecked = new CountDownLatch(1);
         final CountDownLatch continueRegistration = new CountDownLatch(1);
@@ -87,6 +99,9 @@ public class AbstractQueryTest extends TestBase {
         @Override
         void assertNotClosed() {
             super.assertNotClosed();
+            if (!Thread.holdsLock(this)) {
+                return;
+            }
             stateChecked.countDown();
 
             try {
@@ -1667,6 +1682,15 @@ public class AbstractQueryTest extends TestBase {
         }));
     }
 
+    @Test
+    public void testOnCloseChecksClosedStateBeforeNullHandler() throws SQLException {
+        query.close();
+
+        assertThrows(IllegalStateException.class, () -> query.onClose(null));
+
+        verify(preparedStatement, times(1)).close();
+    }
+
     @Tag("2025")
     @DisplayName("list(Class, int) with null targetType should throw IllegalArgumentException")
     @Test
@@ -1674,6 +1698,16 @@ public class AbstractQueryTest extends TestBase {
     public void testList_WithLimit_NullTargetType_ThrowsIllegalArgumentException() {
         final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.list((Class<?>) null, 10));
         assertTrue(iae.getMessage().contains("targetType"));
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testListRejectsNegativeLimitBeforeExecution() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> query.list(String.class, -1));
+
+        assertTrue(failure.getMessage().contains("maxResult"));
+        verify(preparedStatement, never()).executeQuery();
+        verify(preparedStatement).close();
     }
 
     // queryForUniqueValue(Type) - no rows returns Nullable.empty() (L4998)
@@ -1890,7 +1924,7 @@ public class AbstractQueryTest extends TestBase {
     @Test
     public void testQueryThenApplyClassRejectsNullFunctionBeforeQueryExecution() throws SQLException {
         final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.queryThenApply(String.class, (Throwables.Function<? super com.landawn.abacus.util.Dataset, Object, RuntimeException>) null));
+                () -> query.queryThenApply(QueryEntity.class, (Throwables.Function<? super com.landawn.abacus.util.Dataset, Object, RuntimeException>) null));
 
         assertTrue(iae.getMessage().contains("func"));
         verify(preparedStatement, never()).executeQuery();
@@ -1908,10 +1942,30 @@ public class AbstractQueryTest extends TestBase {
     @Test
     public void testQueryThenAcceptClassRejectsNullConsumerBeforeQueryExecution() throws SQLException {
         final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.queryThenAccept(String.class, (Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
+                () -> query.queryThenAccept(QueryEntity.class, (Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
 
         assertTrue(iae.getMessage().contains("consumer"));
         verify(preparedStatement, never()).executeQuery();
+    }
+
+    @Test
+    public void testQueryThenApplyChecksEntityTypeBeforeNullFunction() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> query.queryThenApply(String.class, (Throwables.Function<? super com.landawn.abacus.util.Dataset, Object, RuntimeException>) null));
+
+        assertTrue(failure.getMessage().contains("not a valid entity class"));
+        verify(preparedStatement, never()).executeQuery();
+        verify(preparedStatement, never()).close();
+    }
+
+    @Test
+    public void testQueryThenAcceptChecksEntityTypeBeforeNullConsumer() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> query.queryThenAccept(String.class, (Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
+
+        assertTrue(failure.getMessage().contains("not a valid entity class"));
+        verify(preparedStatement, never()).executeQuery();
+        verify(preparedStatement, never()).close();
     }
 
     @Test

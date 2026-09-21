@@ -651,4 +651,24 @@ public final class cs { // NOSONAR
      * Parameter name for the key column used in a generated UPDATE statement's WHERE clause.
      */
     public static final String keyColumnName = "keyColumnName";
+    /**
+     * Parameter name for the entity class used by a join operation.
+     */
+    public static final String joinEntityClass = "joinEntityClass";
+    /**
+     * Parameter name for the property selected by a single-column query.
+     */
+    public static final String singleSelectPropName = "singleSelectPropName";
+    /**
+     * Parameter name for the destination data source of a transfer.
+     */
+    public static final String targetDataSource = "targetDataSource";
+    /**
+     * Parameter name for the destination connection of a transfer.
+     */
+    public static final String targetConn = "targetConn";
+    /**
+     * Parameter name for the destination table of a transfer.
+     */
+    public static final String targetTableName = "targetTableName";
 }

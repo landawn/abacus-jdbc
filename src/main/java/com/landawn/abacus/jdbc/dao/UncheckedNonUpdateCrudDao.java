@@ -15,6 +15,8 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.sql.SQLException;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 
@@ -24,7 +26,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *
  * <p><b>Unchecked Exception Handling:</b></p>
  * <p>This is an "unchecked" DAO variant. Read and insert methods redeclared by this interface or its
- * unchecked parents throw {@link UncheckedSQLException} instead of checked {@link java.sql.SQLException}.
+ * unchecked parents throw {@link UncheckedSQLException} instead of checked {@link SQLException}.
  * Inherited methods that are not redeclared keep their checked-exception contract.</p>
  *
  * <p>This interface extends {@link UncheckedNonUpdateDao}, {@link NonUpdateCrudDao}, {@link UncheckedCrudReadOps}

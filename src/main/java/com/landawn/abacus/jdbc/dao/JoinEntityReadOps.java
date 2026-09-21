@@ -17,14 +17,15 @@ package com.landawn.abacus.jdbc.dao;
 
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.cs;
+import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.condition.Condition;
@@ -33,8 +34,8 @@ import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.stream.Stream;
+import com.landawn.abacus.util.u.Optional;
 
 /**
  * Read-side view of {@link JoinEntityHelper}: declares the join-entity <i>load</i> operations
@@ -79,10 +80,16 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond) throws SQLException {
+        if (N.notEmpty(sourceSelectPropNames)) {
+            N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
+        }
+
+        N.checkArgNotNull(cond, cs.cond);
+
         final Optional<T> result = DaoUtil.getReadOps(this).findFirst(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass), cond);
 
         if (result.isPresent()) {
@@ -112,11 +119,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws SQLException {
+        N.checkArgNotNull(cond, cs.cond);
+
         final Optional<T> result = DaoUtil.getReadOps(this).findFirst(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), cond);
 
         if (result.isPresent() && N.notEmpty(joinEntityClasses)) {
@@ -146,11 +155,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
             throws SQLException {
+        N.checkArgNotNull(cond, cs.cond);
+
         final Optional<T> result = DaoUtil.getReadOps(this)
                 .findFirst(includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames, cond);
 
@@ -181,12 +192,18 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified condition
      */
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond)
             throws SQLException, DuplicateResultException {
+        if (N.notEmpty(sourceSelectPropNames)) {
+            N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
+        }
+
+        N.checkArgNotNull(cond, cs.cond);
+
         final Optional<T> result = DaoUtil.getReadOps(this).findOnlyOne(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass), cond);
 
         if (result.isPresent()) {
@@ -217,12 +234,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified condition
      */
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws SQLException, DuplicateResultException {
+        N.checkArgNotNull(cond, cs.cond);
+
         final Optional<T> result = DaoUtil.getReadOps(this)
                 .findOnlyOne(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), cond);
 
@@ -254,12 +273,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified condition
      */
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
             throws SQLException, DuplicateResultException {
+        N.checkArgNotNull(cond, cs.cond);
+
         final Optional<T> result = DaoUtil.getReadOps(this)
                 .findOnlyOne(includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames, cond);
 
@@ -291,11 +312,17 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @Beta
     default List<T> list(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond) throws SQLException {
+        if (N.notEmpty(sourceSelectPropNames)) {
+            N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
+        }
+
+        N.checkArgNotNull(cond, cs.cond);
+
         final List<T> result = DaoUtil.getReadOps(this).list(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass), cond);
 
         if (N.notEmpty(result)) {
@@ -331,12 +358,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @Beta
     default List<T> list(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws SQLException {
+        N.checkArgNotNull(cond, cs.cond);
+
         final List<T> result = DaoUtil.getReadOps(this).list(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), cond);
 
         if (N.notEmpty(result) && N.notEmpty(joinEntityClasses)) {
@@ -376,11 +405,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @Beta
     default List<T> list(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond) throws SQLException {
+        N.checkArgNotNull(cond, cs.cond);
+
         final List<T> result = DaoUtil.getReadOps(this)
                 .list(includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames, cond);
 
@@ -424,6 +455,12 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     @Beta
     default Stream<T> stream(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond) {
+        if (N.notEmpty(sourceSelectPropNames)) {
+            N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
+        }
+
+        N.checkArgNotNull(cond, cs.cond);
+
         return DaoUtil.getReadOps(this)
                 .stream(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass), cond) //
                 .split(JdbcUtil.DEFAULT_BATCH_SIZE)
@@ -467,6 +504,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     @Beta
     default Stream<T> stream(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond) {
+        N.checkArgNotNull(cond, cs.cond);
+
         if (N.isEmpty(joinEntityClasses)) {
             return DaoUtil.getReadOps(this).stream(sourceSelectPropNames, cond);
         }
@@ -515,6 +554,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      */
     @Beta
     default Stream<T> stream(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond) {
+        N.checkArgNotNull(cond, cs.cond);
+
         if (includeAllJoinEntities) {
             return DaoUtil.getReadOps(this)
                     .stream(DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames), cond)
@@ -550,8 +591,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
         loadJoinEntities(entity, joinEntityClass, null);
@@ -576,10 +617,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames) throws SQLException {
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
+
         @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
         @SuppressWarnings("deprecation")
@@ -609,8 +653,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
         loadJoinEntities(entities, joinEntityClass, null);
@@ -637,8 +681,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
             throws SQLException {
@@ -675,8 +719,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntities(final T entity, final String joinEntityPropName) throws SQLException {
         loadJoinEntities(entity, joinEntityPropName, null);
@@ -718,8 +762,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames) throws SQLException;
 
@@ -740,8 +784,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
         loadJoinEntities(entities, joinEntityPropName, null);
@@ -789,8 +833,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> joinSelectPropNames) throws SQLException;
 
@@ -812,8 +856,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(joinEntityPropNames)) {
@@ -843,9 +887,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -880,9 +924,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @Beta
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
@@ -917,8 +961,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
@@ -947,9 +991,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -984,9 +1028,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @Beta
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
@@ -1018,8 +1062,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     default void loadAllJoinEntities(final T entity) throws SQLException {
@@ -1042,9 +1086,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1077,13 +1121,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
     default void loadAllJoinEntities(final T entity, final Executor executor) throws SQLException {
+        N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
         loadJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
@@ -1105,8 +1150,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                 If {@code null} or empty, this method returns immediately
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     default void loadAllJoinEntities(final Collection<T> entities) throws SQLException {
@@ -1132,9 +1177,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1168,9 +1213,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1202,8 +1247,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass) throws SQLException {
         loadJoinEntitiesIfAbsent(entity, joinEntityClass, null);
@@ -1229,10 +1274,13 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames) throws SQLException {
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
+
         @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
         @SuppressWarnings("deprecation")
@@ -1263,8 +1311,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
         loadJoinEntitiesIfAbsent(entities, joinEntityClass, null);
@@ -1291,8 +1339,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
             throws SQLException {
@@ -1328,8 +1376,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if the specified {@code joinEntityPropName} does not exist in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName) throws SQLException {
         loadJoinEntitiesIfAbsent(entity, joinEntityPropName, null);
@@ -1353,8 +1401,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if the specified {@code joinEntityPropName} does not exist in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames) throws SQLException {
         N.checkArgNotNull(entity, cs.entity);
@@ -1389,8 +1437,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or if the first element of {@code entities} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName) throws SQLException {
         loadJoinEntitiesIfAbsent(entities, joinEntityPropName, null);
@@ -1416,8 +1464,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or if the first element of {@code entities} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
             throws SQLException {
@@ -1460,8 +1508,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(joinEntityPropNames)) {
@@ -1491,9 +1539,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1528,9 +1576,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @Beta
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws SQLException {
@@ -1567,8 +1615,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
@@ -1597,9 +1645,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1635,9 +1683,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @Beta
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
@@ -1670,8 +1718,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     default void loadAllJoinEntitiesIfAbsent(final T entity) throws SQLException {
@@ -1694,9 +1742,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1729,13 +1777,14 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
     default void loadAllJoinEntitiesIfAbsent(final T entity, final Executor executor) throws SQLException {
+        N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
         loadJoinEntitiesIfAbsent(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
@@ -1755,8 +1804,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entities the collection of entities for which to load join entities
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     default void loadAllJoinEntitiesIfAbsent(final Collection<T> entities) throws SQLException {
@@ -1782,9 +1831,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta
@@ -1817,9 +1866,9 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if selecting or reading the requested joined rows fails
      */
     @SuppressWarnings("deprecation")
     @Beta

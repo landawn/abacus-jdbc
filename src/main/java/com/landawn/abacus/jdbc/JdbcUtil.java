@@ -123,6 +123,8 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.stream.Stream.StreamEx;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import lombok.Builder;
 import lombok.Value;
 import lombok.experimental.Accessors;
@@ -525,6 +527,7 @@ public final class JdbcUtil {
      * @return A {@link SqlDialect.ProductInfo} object containing the database product name and version.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the database metadata reports a
      *         null, empty, or blank product name.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection or reading its database metadata fails;
      *         connection acquisition follows {@link #getConnection(javax.sql.DataSource)}.
      * @see #getDBProductInfo(Connection)
@@ -558,7 +561,7 @@ public final class JdbcUtil {
      * @return A {@link SqlDialect.ProductInfo} object containing the database product name and version.
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if the database metadata reports a
      *         null, empty, or blank product name.
-     * @throws UncheckedSQLException if a database access error occurs while retrieving metadata.
+     * @throws UncheckedSQLException if reading the connection's database product name or version fails.
      * @see #getDBProductInfo(javax.sql.DataSource)
      * @see DatabaseMetaData
      */
@@ -607,7 +610,7 @@ public final class JdbcUtil {
      * @see #createHikariDataSource(String, String, String, int, int)
      * @see com.zaxxer.hikari.HikariDataSource
      */
-    public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password) {
+    public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password) throws IllegalArgumentException {
         N.checkArgNotEmpty(url, cs.url);
 
         try {
@@ -655,14 +658,14 @@ public final class JdbcUtil {
      * @param minIdle the minimum number of idle connections that HikariCP tries to maintain in the pool.
      * @param maxPoolSize the maximum number of connections that can be in the pool, including both idle and in-use connections.
      * @return a {@code javax.sql.DataSource} instance configured with HikariCP and custom pool settings.
-     * @throws IllegalArgumentException if {@code url} is {@code null} or empty.
+     * @throws IllegalArgumentException if {@code url} is {@code null} or empty, {@code minIdle} is negative, or {@code maxPoolSize} is not positive.
      * @throws RuntimeException if configuration or pool initialization fails.
      * @throws LinkageError if HikariCP or one of its required runtime classes is unavailable or incompatible.
      * @see #createHikariDataSource(String, String, String)
      * @see com.zaxxer.hikari.HikariConfig
      */
     public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password, final int minIdle,
-            final int maxPoolSize) {
+            final int maxPoolSize) throws IllegalArgumentException {
         N.checkArgNotEmpty(url, cs.url);
 
         try {
@@ -714,7 +717,7 @@ public final class JdbcUtil {
      * @see com.mchange.v2.c3p0.ComboPooledDataSource
      */
     @Beta
-    public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password) {
+    public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password) throws IllegalArgumentException {
         N.checkArgNotEmpty(url, cs.url);
 
         try {
@@ -767,7 +770,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password, final int minPoolSize,
-            final int maxPoolSize) {
+            final int maxPoolSize) throws IllegalArgumentException {
         N.checkArgNotEmpty(url, cs.url);
 
         try {
@@ -815,7 +818,7 @@ public final class JdbcUtil {
      * @return A new {@link Connection} object.
      * @throws IllegalArgumentException if {@code url} is empty or the driver class cannot be determined from the URL.
      * @throws RuntimeException if the JDBC driver class identified from the URL cannot be loaded (e.g. it is not on the classpath).
-     * @throws UncheckedSQLException if a database access error occurs while creating the connection.
+     * @throws UncheckedSQLException if the JDBC driver rejects the URL, credentials, or connection request.
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#getConnection(String, String, String)
      */
@@ -850,7 +853,7 @@ public final class JdbcUtil {
      * @return A new {@link Connection} object.
      * @throws IllegalArgumentException if {@code driverClass} or {@code url} is {@code null} or empty.
      * @throws RuntimeException if the specified driver class cannot be loaded (e.g., it is not on the classpath).
-     * @throws UncheckedSQLException if a database access error occurs while creating the connection.
+     * @throws UncheckedSQLException if the JDBC driver rejects the URL, credentials, or connection request.
      * @see #createConnection(Class, String, String, String)
      */
     public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
@@ -895,7 +898,7 @@ public final class JdbcUtil {
      * @return A new {@link Connection} object.
      * @throws IllegalArgumentException if {@code driverClass} is {@code null} or {@code url} is {@code null} or empty.
      * @throws RuntimeException if the specified {@code driverClass} cannot be instantiated (e.g., it has no accessible no-arg constructor).
-     * @throws UncheckedSQLException if a database access error occurs during connection creation.
+     * @throws UncheckedSQLException if the JDBC driver rejects the URL, credentials, or connection request.
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#registerDriver(Driver)
      */
@@ -935,7 +938,7 @@ public final class JdbcUtil {
      * @return the driver class corresponding to the URL
      * @throws IllegalArgumentException if {@code url} is empty or does not match any supported driver
      */
-    private static Class<? extends Driver> getDriverClassByUrl(final String url) {
+    private static Class<? extends Driver> getDriverClassByUrl(final String url) throws IllegalArgumentException {
         N.checkArgNotEmpty(url, cs.url);
 
         // Only the leading JDBC subprotocol identifies the driver. Connection properties can
@@ -999,9 +1002,8 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} from which to obtain a connection. Must not be {@code null}.
      * @return A {@link Connection} object.
      * @throws IllegalArgumentException if {@code ds} is {@code null}.
-     * @throws UncheckedSQLException if a database access error occurs. When Spring integration is enabled, the connection is obtained through
-     *         {@link org.springframework.jdbc.datasource.DataSourceUtils#getConnection(javax.sql.DataSource)}
-     *         and Spring's {@code CannotGetJdbcConnectionException} may propagate unwrapped instead.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
+     * @throws UncheckedSQLException if acquiring a connection directly from {@code ds} fails outside the Spring acquisition path.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see org.springframework.jdbc.datasource.DataSourceUtils#getConnection(javax.sql.DataSource)
      */
@@ -1107,7 +1109,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param rs The {@link ResultSet} to close. If {@code null}, the method does nothing.
-     * @throws UncheckedSQLException if a database access error occurs during closing.
+     * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
      * @see #closeQuietly(ResultSet)
      */
     public static void close(final ResultSet rs) throws UncheckedSQLException {
@@ -1139,7 +1141,7 @@ public final class JdbcUtil {
      *
      * @param rs The {@link ResultSet} to close. If {@code null}, no action is taken.
      * @param closeStatement If {@code true}, the {@link Statement} that created the {@code ResultSet} will also be closed.
-     * @throws UncheckedSQLException if a database access error occurs during closing.
+     * @throws UncheckedSQLException if locating a requested associated statement or connection, or closing any requested JDBC resource, fails with an SQL exception.
      * @see #close(ResultSet, boolean, boolean)
      * @see #closeQuietly(ResultSet, boolean)
      */
@@ -1173,7 +1175,7 @@ public final class JdbcUtil {
      * @param closeConnection If {@code true}, the {@link Connection} from the {@code Statement} is also closed.
      *        This requires {@code closeStatement} to be {@code true}.
      * @throws IllegalArgumentException if {@code closeConnection} is {@code true} but {@code closeStatement} is {@code false}.
-     * @throws UncheckedSQLException if a database access error occurs during closing.
+     * @throws UncheckedSQLException if locating a requested associated statement or connection, or closing any requested JDBC resource, fails with an SQL exception.
      * @see #closeQuietly(ResultSet, boolean, boolean)
      */
     public static void close(final ResultSet rs, final boolean closeStatement, final boolean closeConnection)
@@ -1248,7 +1250,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param stmt The {@link Statement} to close. If {@code null}, the method does nothing.
-     * @throws UncheckedSQLException if a database access error occurs during closing.
+     * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
      * @see #closeQuietly(Statement)
      */
     public static void close(final Statement stmt) throws UncheckedSQLException {
@@ -1278,7 +1280,7 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param conn The {@link Connection} to close. If {@code null}, the method does nothing.
-     * @throws UncheckedSQLException if a database access error occurs during closing.
+     * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see #closeQuietly(Connection)
      * @deprecated This method is deprecated because it directly closes the connection, which is often not the desired
@@ -1333,8 +1335,9 @@ public final class JdbcUtil {
      *
      * @param failure The failure to throw; must not be {@code null}.
      * @throws UncheckedSQLException if {@code failure} is a {@link SQLException}.
+     * @throws IllegalStateException if {@code failure} is null or is neither an SQL exception, a runtime exception, nor an error.
      */
-    private static void throwCloseFailure(final Throwable failure) throws UncheckedSQLException {
+    private static void throwCloseFailure(final Throwable failure) throws UncheckedSQLException, IllegalStateException {
         if (failure instanceof final SQLException sqlException) {
             throw new UncheckedSQLException(sqlException);
         } else if (failure instanceof final RuntimeException runtimeException) {
@@ -1375,7 +1378,7 @@ public final class JdbcUtil {
      *
      * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param stmt The {@link Statement} to close. Can be {@code null}.
-     * @throws UncheckedSQLException if a database access error occurs during closing.
+     * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
      * @see #closeQuietly(ResultSet, Statement)
      */
     public static void close(final ResultSet rs, final Statement stmt) throws UncheckedSQLException {
@@ -1426,7 +1429,7 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link Statement} to close. Can be {@code null}.
      * @param conn The {@link Connection} to close. Can be {@code null}.
-     * @throws UncheckedSQLException if a database access error occurs during closing.
+     * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
      * @see #closeQuietly(Statement, Connection)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
@@ -1481,7 +1484,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param stmt The {@link Statement} to close. Can be {@code null}.
      * @param conn The {@link Connection} to close. Can be {@code null}.
-     * @throws UncheckedSQLException if a database access error occurs during closing.
+     * @throws UncheckedSQLException if closing one of the supplied JDBC resources fails with an SQL exception.
      * @see #closeQuietly(ResultSet, Statement, Connection)
      */
     public static void close(final ResultSet rs, final Statement stmt, final Connection conn) throws UncheckedSQLException {
@@ -1818,7 +1821,7 @@ public final class JdbcUtil {
      * @return The number of rows actually skipped (may be less than {@code rowsToSkip} if the end of
      *         the {@code ResultSet} is reached).
      * @throws NullPointerException if {@code rs} is {@code null} and {@code rowsToSkip} is positive.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if reading the cursor position or advancing the result set fails.
      * @see #skip(ResultSet, long)
      */
     public static int skip(final ResultSet rs, final int rowsToSkip) throws SQLException {
@@ -1858,7 +1861,7 @@ public final class JdbcUtil {
      * @return The number of rows actually skipped, which may be less than {@code rowsToSkip} if the end of the
      *         {@code ResultSet} is reached.
      * @throws NullPointerException if {@code rs} is {@code null} and {@code rowsToSkip} is positive.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if reading the cursor position or advancing the result set fails.
      * @see ResultSet#absolute(int)
      */
     public static long skip(final ResultSet rs, long rowsToSkip) throws SQLException {
@@ -1963,7 +1966,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to query; must not be {@code null}.
      * @return The number of columns in the result set.
      * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if obtaining result-set metadata or reading its column count fails.
      * @see ResultSet#getMetaData()
      * @see ResultSetMetaData#getColumnCount()
      */
@@ -2002,10 +2005,10 @@ public final class JdbcUtil {
      * @param tableName The name of the table for which to retrieve column names.
      * @return A {@link List} of column names in the order they are defined in the table.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
-     * @throws SQLException if a database access error occurs or the table does not exist.
+     * @throws SQLException if reading column metadata and the fallback table query fail, including when the table does not exist.
      * @see #getColumnLabels(ResultSet)
      */
-    public static List<String> getColumnNames(final Connection conn, final String tableName) throws SQLException {
+    public static List<String> getColumnNames(final Connection conn, final String tableName) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
 
@@ -2116,7 +2119,7 @@ public final class JdbcUtil {
      * @param schemaCaseSensitive Whether the schema comparison is case-sensitive.
      * @param tableCaseSensitive Whether the table comparison is case-sensitive.
      * @return The column names in metadata order, or an empty list if no matching table is found.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if querying column metadata, reading its rows, or closing the metadata result set fails.
      */
     private static List<String> getColumnNamesFromMetadata(final DatabaseMetaData metadata, final String catalog, final String schemaPattern,
             final String tableNamePattern, final boolean catalogCaseSensitive, final boolean schemaCaseSensitive, final boolean tableCaseSensitive)
@@ -2212,7 +2215,7 @@ public final class JdbcUtil {
      * @param conn The connection to query with.
      * @param qualifiedTableName The (possibly qualified) table name to select from.
      * @return The column names in ordinal order.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if preparing or executing the metadata probe, reading column metadata, or closing its JDBC resources fails.
      */
     private static List<String> getColumnNamesBySelect(final Connection conn, final String qualifiedTableName) throws SQLException {
         final String query = "SELECT * FROM " + qualifiedTableName + " WHERE 1 > 2";
@@ -2257,7 +2260,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to read; must not be {@code null}.
      * @return A {@link List} of column labels (or column names when no label is set), in column-order.
      * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if obtaining metadata or reading column labels and names fails.
      * @see #getColumnLabel(ResultSetMetaData, int)
      * @see ResultSetMetaData#getColumnLabel(int)
      */
@@ -2298,7 +2301,7 @@ public final class JdbcUtil {
      * @param columnIndex The 1-based index of the column.
      * @return The column label if non-empty, otherwise the column name.
      * @throws NullPointerException if {@code rsmd} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if reading the label or fallback name fails, including an invalid column index.
      * @see ResultSetMetaData#getColumnLabel(int)
      * @see ResultSetMetaData#getColumnName(int)
      */
@@ -2330,7 +2333,7 @@ public final class JdbcUtil {
      * @param columnLabel The column label (or name) to look up; case-insensitive.
      * @return The 1-based index of the matching column, or {@code -1} if none matches.
      * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if obtaining metadata or reading column labels and names fails.
      * @see #getColumnIndex(ResultSetMetaData, String)
      */
     public static int getColumnIndex(final ResultSet rs, final String columnLabel) throws SQLException {
@@ -2357,7 +2360,7 @@ public final class JdbcUtil {
      * @param columnLabel The label (or name) of the column to find.
      * @return The 1-based index of the column, or -1 if not found.
      * @throws NullPointerException if {@code rsmd} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if obtaining metadata or reading column labels and names fails.
      * @see #getColumnIndex(ResultSet, String)
      */
     public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnLabel) throws SQLException {
@@ -2394,7 +2397,7 @@ public final class JdbcUtil {
          * @param columnIndex The 1-based index of the column.
          * @param columnValue The column value to convert.
          * @return The converted column value.
-         * @throws SQLException if a database access error occurs.
+         * @throws SQLException if reading the requested column value from the result set fails.
          */
         Object apply(ResultSet rs, int columnIndex, Object columnValue) throws SQLException;
     }
@@ -2411,7 +2414,7 @@ public final class JdbcUtil {
          * @param columnLabel The label of the column.
          * @param columnValue The column value to convert.
          * @return The converted column value.
-         * @throws SQLException if a database access error occurs.
+         * @throws SQLException if reading the requested column value from the result set fails.
          */
         Object apply(ResultSet rs, String columnLabel, Object columnValue) throws SQLException;
     }
@@ -2533,7 +2536,7 @@ public final class JdbcUtil {
      * @return The column value as a standard Java object. {@link Blob} is returned as {@code byte[]},
      *         {@link Clob} as {@code String}; converted LOBs are freed before this method returns.
      * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @see #getColumnValue(ResultSet, String)
      */
     public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws SQLException {
@@ -2549,7 +2552,7 @@ public final class JdbcUtil {
      * @param columnIndex The 1-based index of the column to retrieve.
      * @param checkDateType Whether to normalize database-specific date/time types to standard Java types.
      * @return The value of the specified column in the current row of the {@code ResultSet}.
-     * @throws SQLException if a database access error occurs while retrieving the column value.
+     * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      */
     static Object getColumnValue(final ResultSet rs, final int columnIndex, final boolean checkDateType) throws SQLException {
         // Copied from JdbcUtils#getResultSetValue(ResultSet, int) in SpringJdbc under Apache License, Version 2.0.
@@ -2601,7 +2604,7 @@ public final class JdbcUtil {
      * @param columnLabel The label of the column to retrieve.
      * @return The value of the specified column.
      * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @deprecated Use {@link #getColumnValue(ResultSet, int)} with a cached column index for better performance.
      * @see #getColumnValue(ResultSet, int)
      * @see #getColumnIndex(ResultSet, String)
@@ -2620,7 +2623,7 @@ public final class JdbcUtil {
      * @param columnLabel The label of the column to retrieve.
      * @param checkDateType Whether to normalize database-specific date/time types to standard Java types.
      * @return The value of the specified column in the current row of the {@code ResultSet}.
-     * @throws SQLException if a database access error occurs while retrieving the column value.
+     * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @deprecated Use {@link #getColumnValue(ResultSet, int, boolean)} with a cached column index for better performance.
      */
     @Deprecated
@@ -2752,7 +2755,7 @@ public final class JdbcUtil {
      * @param columnIndex The 1-based index of the column to retrieve.
      * @return A {@link List} containing all values from the specified column.
      * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if advancing the result set, resolving its columns, or reading a requested value fails.
      */
     @SuppressWarnings("unchecked")
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final int columnIndex) throws SQLException {
@@ -2791,7 +2794,7 @@ public final class JdbcUtil {
      * @return A {@link List} containing all values from the specified column.
      * @throws IllegalArgumentException if the column label does not exist in the result set.
      * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if advancing the result set, resolving its columns, or reading a requested value fails.
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws IllegalArgumentException, SQLException {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
@@ -2827,7 +2830,7 @@ public final class JdbcUtil {
      * @param targetClass The {@link Class} of the desired type {@code T}.
      * @return The column value, converted to the specified {@code targetClass}.
      * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @see #getColumnValue(ResultSet, String, Class)
      */
     public static <T> T getColumnValue(final ResultSet rs, final int columnIndex, final Class<? extends T> targetClass) throws SQLException {
@@ -2866,7 +2869,7 @@ public final class JdbcUtil {
      * @param targetClass The {@link Class} of the desired type {@code T}.
      * @return The column value, converted to the specified {@code targetClass}.
      * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @deprecated Use {@link #getColumnValue(ResultSet, int, Class)} with a cached column index for better performance.
      * @see #getColumnIndex(ResultSet, String)
      */
@@ -2896,7 +2899,7 @@ public final class JdbcUtil {
      * @see com.landawn.abacus.annotation.Column
      * @see com.landawn.abacus.util.NamingPolicy
      */
-    public static ImmutableMap<String, String> getColumnToPropNameMap(final Class<?> entityClass) {
+    public static ImmutableMap<String, String> getColumnToPropNameMap(final Class<?> entityClass) throws IllegalArgumentException {
         return QueryUtil.columnToPropNameMap(entityClass);
     }
 
@@ -3308,14 +3311,16 @@ public final class JdbcUtil {
      * @param sql The SQL query to prepare with optional {@code ?} parameter placeholders, must not be {@code null} or empty.
      * @return A new {@link PreparedQuery} instance ready for parameter setting and execution.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs during preparation.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see PreparedQuery
      * @see #prepareQuery(Connection, String)
      * @see #executeQuery(javax.sql.DataSource, String, Object...)
      */
-    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
+    public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -3368,13 +3373,14 @@ public final class JdbcUtil {
      * @param autoGeneratedKeys A boolean flag; if {@code true}, the driver will be instructed to make generated keys available.
      * @return A new {@link PreparedQuery} instance configured to handle auto-generated keys.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs or the driver does not support auto-generated keys.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see Statement#RETURN_GENERATED_KEYS
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final boolean autoGeneratedKeys)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -3429,13 +3435,14 @@ public final class JdbcUtil {
      * @param generatedKeyColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if any of the arguments are {@code null} or empty.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see Connection#prepareStatement(String, int[])
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] generatedKeyColumnIndexes)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
@@ -3490,13 +3497,14 @@ public final class JdbcUtil {
      * @param generatedKeyColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if any of the arguments are {@code null} or empty.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see Connection#prepareStatement(String, String[])
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] generatedKeyColumnNames)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
@@ -3546,12 +3554,14 @@ public final class JdbcUtil {
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link PreparedQuery} instance wrapping the custom-created statement.
      * @throws IllegalArgumentException if {@code ds} or {@code stmtCreator} is {@code null}, or if {@code sql} is {@code null} or empty.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
@@ -3599,7 +3609,7 @@ public final class JdbcUtil {
      * @param sql The SQL query to prepare.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #prepareQuery(javax.sql.DataSource, String)
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
@@ -3634,7 +3644,7 @@ public final class JdbcUtil {
      * @param autoGeneratedKeys If {@code true}, generated keys will be available for retrieval.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -3670,7 +3680,7 @@ public final class JdbcUtil {
      * @param generatedKeyColumnIndexes An array of 1-based column indexes of generated keys to return.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if any argument is {@code null} or empty.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -3707,7 +3717,7 @@ public final class JdbcUtil {
      * @param generatedKeyColumnNames An array of column names of generated keys to return.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if any argument is {@code null} or empty.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -3749,7 +3759,7 @@ public final class JdbcUtil {
      * @param stmtCreator A factory function to create the {@link PreparedStatement}.
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code stmtCreator} is {@code null}, or if {@code sql} is {@code null} or empty.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -3789,13 +3799,15 @@ public final class JdbcUtil {
      * @param sql The SQL query to prepare.
      * @return A {@link PreparedQuery} instance optimized for large result sets.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; see {@link #getConnection(javax.sql.DataSource)}
      *         for Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
      * @see #prepareQueryForLargeResult(Connection, String)
      */
     @Beta
-    public static PreparedQuery prepareQueryForLargeResult(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
+    public static PreparedQuery prepareQueryForLargeResult(final javax.sql.DataSource ds, final String sql)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareQuery(ds, sql).configureStatement(stmtSetterForBigQueryResult);
     }
 
@@ -3825,7 +3837,7 @@ public final class JdbcUtil {
      * @param sql The SQL query to prepare.
      * @return A {@link PreparedQuery} instance optimized for large result sets.
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
      * @see #prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
     @Beta
@@ -3858,13 +3870,15 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional
      *         (unnamed) parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see NamedQuery
      * @see #prepareNamedQuery(Connection, String)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql) throws IllegalArgumentException, SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
 
@@ -3919,14 +3933,15 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance configured to handle auto-generated keys.
      * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional
      *         (unnamed) parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final boolean autoGeneratedKeys)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
 
@@ -3981,14 +3996,15 @@ public final class JdbcUtil {
      * @param generatedKeyColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] generatedKeyColumnIndexes)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
@@ -4043,14 +4059,15 @@ public final class JdbcUtil {
      * @param generatedKeyColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] generatedKeyColumnNames)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
@@ -4102,14 +4119,16 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance wrapping the custom-created statement.
      * @throws IllegalArgumentException if {@code ds} or {@code stmtCreator} is {@code null} , if {@code namedSql} is {@code null} or empty, or if
      *         {@code namedSql} contains positional (unnamed) parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
@@ -4160,7 +4179,7 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional
      *         (unnamed) parameters.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -4198,7 +4217,7 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional
      *         (unnamed) parameters.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -4237,7 +4256,7 @@ public final class JdbcUtil {
      * @param generatedKeyColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -4278,7 +4297,7 @@ public final class JdbcUtil {
      * @param generatedKeyColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -4317,7 +4336,7 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code stmtCreator} is {@code null} , if {@code namedSql} is {@code null} or empty, or if
      *         {@code namedSql} contains positional (unnamed) parameters.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -4356,14 +4375,16 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, or if {@code namedSql} is invalid.
+     * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
+    public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         validateNamedSql(namedSql);
@@ -4413,15 +4434,16 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param autoGeneratedKeys A boolean flag; if {@code true}, the driver will be instructed to make generated keys available.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, or if {@code namedSql} is invalid.
+     * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final boolean autoGeneratedKeys)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         validateNamedSql(namedSql);
@@ -4474,15 +4496,16 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param generatedKeyColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} is invalid.
+     * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} contains positional parameters without names.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] generatedKeyColumnIndexes)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
@@ -4536,15 +4559,16 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param generatedKeyColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} is invalid.
+     * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} contains positional parameters without names.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] generatedKeyColumnNames)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
@@ -4595,15 +4619,17 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if {@code ds}, {@code namedSql}, or {@code stmtCreator} is {@code null}, or if {@code namedSql} is invalid.
+     * @throws IllegalArgumentException if {@code ds}, {@code namedSql}, or {@code stmtCreator} is {@code null}, or if {@code namedSql} contains positional parameters without names.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql,
-            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
+            final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
@@ -4652,8 +4678,8 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use. It will not be closed by this method.
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, or if {@code namedSql} is invalid.
-     * @throws SQLException if a database access error occurs.
+     * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -4688,8 +4714,8 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param autoGeneratedKeys A boolean flag; if {@code true}, the driver will be instructed to make generated keys available.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, or if {@code namedSql} is invalid.
-     * @throws SQLException if a database access error occurs.
+     * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -4725,8 +4751,8 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param generatedKeyColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} is invalid.
-     * @throws SQLException if a database access error occurs.
+     * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} contains positional parameters without names.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -4762,8 +4788,8 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param generatedKeyColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} is invalid.
-     * @throws SQLException if a database access error occurs.
+     * @throws IllegalArgumentException if any of the arguments are {@code null} or empty, or if {@code namedSql} contains positional parameters without names.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -4799,8 +4825,8 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link NamedQuery} instance.
-     * @throws IllegalArgumentException if {@code conn}, {@code namedSql}, or {@code stmtCreator} is {@code null}, or if {@code namedSql} is invalid.
-     * @throws SQLException if a database access error occurs.
+     * @throws IllegalArgumentException if {@code conn}, {@code namedSql}, or {@code stmtCreator} is {@code null}, or if {@code namedSql} contains positional parameters without names.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -4841,13 +4867,14 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance configured for large result sets.
      * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional
      *         (unnamed) parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; see {@link #getConnection(javax.sql.DataSource)}
      *         for Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final String namedSql)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareNamedQuery(ds, namedSql).configureStatement(stmtSetterForBigQueryResult);
     }
 
@@ -4878,14 +4905,15 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @return A new {@link NamedQuery} instance configured for large result sets.
-     * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, or if {@code namedSql} is invalid.
+     * @throws IllegalArgumentException if {@code ds} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; see {@link #getConnection(javax.sql.DataSource)}
      *         for Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final ParsedSql namedSql)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareNamedQuery(ds, namedSql).configureStatement(stmtSetterForBigQueryResult);
     }
 
@@ -4916,7 +4944,7 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance configured for large result sets.
      * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional
      *         (unnamed) parameters.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException {
@@ -4936,8 +4964,8 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use. It will not be closed by this method.
      * @param namedSql The parsed SQL object containing the named SQL query.
      * @return A new {@link NamedQuery} instance configured for large result sets.
-     * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, or if {@code namedSql} is invalid.
-     * @throws SQLException if a database access error occurs.
+     * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
+     * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
@@ -4971,13 +4999,15 @@ public final class JdbcUtil {
      * @param sql The SQL string for the stored procedure call.
      * @return A new {@link CallableQuery} instance.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
-    public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql) throws IllegalArgumentException, SQLException {
+    public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -5050,15 +5080,17 @@ public final class JdbcUtil {
      *                    Must not be {@code null}.
      * @return A new {@link CallableQuery} instance wrapping the custom-created statement.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      * @see #prepareCallableQuery(javax.sql.DataSource, String)
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql,
-            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
+            final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
@@ -5114,7 +5146,7 @@ public final class JdbcUtil {
      * @param sql The SQL string for the stored procedure call.
      * @return A new {@link CallableQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -5155,7 +5187,7 @@ public final class JdbcUtil {
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link CallableStatement}.
      * @return A new {@link CallableQuery} instance wrapping the custom-created statement.
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -5172,7 +5204,7 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use.
      * @param sql The SQL statement to prepare.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final String sql) throws SQLException {
         JdbcUtil.logSql(sql);
@@ -5187,7 +5219,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param autoGeneratedKeys A boolean flag; if {@code true}, the driver will be instructed to make generated keys available.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final String sql, final boolean autoGeneratedKeys) throws SQLException {
         JdbcUtil.logSql(sql);
@@ -5202,7 +5234,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param generatedKeyColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final String sql, final int[] generatedKeyColumnIndexes) throws SQLException {
         JdbcUtil.logSql(sql);
@@ -5217,7 +5249,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param generatedKeyColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final String sql, final String[] generatedKeyColumnNames) throws SQLException {
         JdbcUtil.logSql(sql);
@@ -5233,7 +5265,7 @@ public final class JdbcUtil {
      * @param resultSetType A result set type; one of {@code ResultSet.TYPE_FORWARD_ONLY}, {@code ResultSet.TYPE_SCROLL_INSENSITIVE}, or {@code ResultSet.TYPE_SCROLL_SENSITIVE}.
      * @param resultSetConcurrency A concurrency type; one of {@code ResultSet.CONCUR_READ_ONLY} or {@code ResultSet.CONCUR_UPDATABLE}.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final String sql, final int resultSetType, final int resultSetConcurrency)
             throws SQLException {
@@ -5251,7 +5283,7 @@ public final class JdbcUtil {
      * @param resultSetConcurrency A concurrency type; one of {@code ResultSet.CONCUR_READ_ONLY} or {@code ResultSet.CONCUR_UPDATABLE}.
      * @param resultSetHoldability A holdability type; one of {@code ResultSet.HOLD_CURSORS_OVER_COMMIT} or {@code ResultSet.CLOSE_CURSORS_AT_COMMIT}.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final String sql, final int resultSetType, final int resultSetConcurrency,
             final int resultSetHoldability) throws SQLException {
@@ -5267,7 +5299,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to prepare.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     static PreparedStatement prepareStatement(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
@@ -5282,7 +5314,7 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use.
      * @param parsedSql The parsed SQL to prepare.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql) throws SQLException {
         JdbcUtil.logSql(parsedSql.originalSql());
@@ -5297,7 +5329,7 @@ public final class JdbcUtil {
      * @param parsedSql The parsed SQL to prepare.
      * @param autoGeneratedKeys A boolean flag; if {@code true}, the driver will be instructed to make generated keys available.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final boolean autoGeneratedKeys) throws SQLException {
         JdbcUtil.logSql(parsedSql.originalSql());
@@ -5312,7 +5344,7 @@ public final class JdbcUtil {
      * @param parsedSql The parsed SQL to prepare.
      * @param generatedKeyColumnIndexes An array of column indexes that should be made available for retrieval.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final int[] generatedKeyColumnIndexes) throws SQLException {
         JdbcUtil.logSql(parsedSql.originalSql());
@@ -5327,7 +5359,7 @@ public final class JdbcUtil {
      * @param parsedSql The parsed SQL to prepare.
      * @param generatedKeyColumnNames An array of column names that should be made available for retrieval.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final String[] generatedKeyColumnNames) throws SQLException {
         JdbcUtil.logSql(parsedSql.originalSql());
@@ -5343,7 +5375,7 @@ public final class JdbcUtil {
      * @param resultSetType A result set type; one of {@code ResultSet.TYPE_FORWARD_ONLY}, {@code ResultSet.TYPE_SCROLL_INSENSITIVE}, or {@code ResultSet.TYPE_SCROLL_SENSITIVE}.
      * @param resultSetConcurrency A concurrency type; one of {@code ResultSet.CONCUR_READ_ONLY} or {@code ResultSet.CONCUR_UPDATABLE}.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final int resultSetType, final int resultSetConcurrency)
             throws SQLException {
@@ -5361,7 +5393,7 @@ public final class JdbcUtil {
      * @param resultSetConcurrency A concurrency type; one of {@code ResultSet.CONCUR_READ_ONLY} or {@code ResultSet.CONCUR_UPDATABLE}.
      * @param resultSetHoldability A holdability type; one of {@code ResultSet.HOLD_CURSORS_OVER_COMMIT} or {@code ResultSet.CLOSE_CURSORS_AT_COMMIT}.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql, final int resultSetType, final int resultSetConcurrency,
             final int resultSetHoldability) throws SQLException {
@@ -5377,7 +5409,7 @@ public final class JdbcUtil {
      * @param parsedSql The parsed SQL to prepare.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link PreparedStatement}.
      * @return A new {@link PreparedStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     static PreparedStatement prepareStatement(final Connection conn, final ParsedSql parsedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws SQLException {
@@ -5392,7 +5424,7 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use.
      * @param sql The SQL call statement to prepare.
      * @return A new {@link CallableStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static CallableStatement prepareCallable(final Connection conn, final String sql) throws SQLException {
         JdbcUtil.logSql(sql);
@@ -5407,7 +5439,7 @@ public final class JdbcUtil {
      * @param sql The SQL call statement to prepare.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link CallableStatement}.
      * @return A new {@link CallableStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     static CallableStatement prepareCallable(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
@@ -5422,7 +5454,7 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use.
      * @param parsedSql The parsed SQL to prepare.
      * @return A new {@link CallableStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
     static CallableStatement prepareCallable(final Connection conn, final ParsedSql parsedSql) throws SQLException {
         JdbcUtil.logSql(parsedSql.originalSql());
@@ -5437,7 +5469,7 @@ public final class JdbcUtil {
      * @param parsedSql The parsed SQL to prepare.
      * @param stmtCreator A function that takes a {@link Connection} and a SQL string and returns a new {@link CallableStatement}.
      * @return A new {@link CallableStatement}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      */
     static CallableStatement prepareCallable(final Connection conn, final ParsedSql parsedSql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws SQLException {
@@ -5456,9 +5488,9 @@ public final class JdbcUtil {
      * @return A PreparedStatement with parameters set, ready for execution.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs or the SQL is invalid.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
-    static PreparedStatement prepareStmt(final Connection conn, final String sql, final Object... parameters) throws SQLException {
+    static PreparedStatement prepareStmt(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -5488,9 +5520,9 @@ public final class JdbcUtil {
      * @return A CallableStatement with parameters set, ready for execution.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs or the SQL is invalid.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
-    static CallableStatement prepareCall(final Connection conn, final String sql, final Object... parameters) throws SQLException {
+    static CallableStatement prepareCall(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -5523,9 +5555,10 @@ public final class JdbcUtil {
      * @return A PreparedStatement with all batches added, ready for batch execution via executeBatch().
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs or the SQL is invalid.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
-    static PreparedStatement prepareBatchStmt(final Connection conn, final String sql, final List<?> parametersList) throws SQLException {
+    static PreparedStatement prepareBatchStmt(final Connection conn, final String sql, final List<?> parametersList)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -5556,9 +5589,10 @@ public final class JdbcUtil {
      * @return A CallableStatement with all batches added, ready for batch execution via executeBatch().
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs or the SQL is invalid.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      */
-    static CallableStatement prepareBatchCall(final Connection conn, final String sql, final List<?> parametersList) throws SQLException {
+    static CallableStatement prepareBatchCall(final Connection conn, final String sql, final List<?> parametersList)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -5586,7 +5620,7 @@ public final class JdbcUtil {
      * @return a ParsedSql object representing the parsed and validated named SQL
      * @throws IllegalArgumentException if the SQL is not a valid named SQL (contains positional parameters)
      */
-    private static ParsedSql parseNamedSql(final String namedSql) {
+    private static ParsedSql parseNamedSql(final String namedSql) throws IllegalArgumentException {
         N.checkArgNotEmpty(namedSql, cs.namedSql);
 
         final ParsedSql parsedSql = ParsedSql.parse(namedSql);
@@ -5602,7 +5636,7 @@ public final class JdbcUtil {
      * @param namedSql The parsed SQL to validate.
      * @throws IllegalArgumentException if the SQL contains positional or otherwise unnamed parameters.
      */
-    private static void validateNamedSql(final ParsedSql namedSql) {
+    private static void validateNamedSql(final ParsedSql namedSql) throws IllegalArgumentException {
         if (namedSql.namedParameters().size() != namedSql.parameterCount()) {
             throw new IllegalArgumentException("Named SQL contains positional or otherwise unnamed parameters");
         }
@@ -5689,15 +5723,16 @@ public final class JdbcUtil {
      * @return A {@link Dataset} object containing all query results loaded into memory with row and column access methods.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs, the SQL is invalid, or parameter types are incompatible.
+     * @throws SQLException if preparing or binding the query, executing it, or reading its rows or metadata fails.
      * @see PreparedStatement#executeQuery()
      * @see #prepareQuery(javax.sql.DataSource, String)
      * @see Dataset
      */
     public static Dataset executeQuery(final javax.sql.DataSource ds, final String sql, final Object... parameters)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -5748,7 +5783,7 @@ public final class JdbcUtil {
      * @return A {@link Dataset} containing all rows of the result set.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs while executing the query.
+     * @throws SQLException if preparing or binding the query, executing it, or reading its rows or metadata fails.
      * @see PreparedStatement#executeQuery()
      * @see #executeQuery(javax.sql.DataSource, String, Object...)
      */
@@ -5842,13 +5877,15 @@ public final class JdbcUtil {
      * @return The number of rows affected by the statement. Returns 0 for DDL statements or when no rows match the WHERE clause.
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs, the SQL is invalid, or parameter types are incompatible.
+     * @throws SQLException if preparing or binding the statement, or executing the requested SQL, fails.
      * @see PreparedStatement#executeUpdate()
      * @see #prepareQuery(javax.sql.DataSource, String)
      */
-    public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
+    public static int executeUpdate(final javax.sql.DataSource ds, final String sql, final Object... parameters)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -5897,7 +5934,7 @@ public final class JdbcUtil {
      * @return The number of rows affected by the update (0 for DDL or when no rows match).
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs while executing the update.
+     * @throws SQLException if preparing or binding the statement, or executing the requested SQL, fails.
      * @see PreparedStatement#executeUpdate()
      * @see #executeUpdate(javax.sql.DataSource, String, Object...)
      */
@@ -5939,15 +5976,16 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if a database access error occurs while executing the batch update.
+     * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
      * @see PreparedStatement#executeBatch()
      */
     public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, ArithmeticException {
         return executeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -5991,16 +6029,17 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty, or if {@code batchSize} is not positive,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if a database access error occurs while executing the batch update.
+     * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
      * @see PreparedStatement#executeBatch()
      * @see #executeBatchUpdate(javax.sql.DataSource, String, List)
      */
     public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, ArithmeticException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -6071,14 +6110,14 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs while executing the batch.
+     * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
      * @see PreparedStatement#executeBatch()
      * @see #executeBatchUpdate(Connection, String, List, int)
      */
     public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, SQLException, ArithmeticException {
         return executeBatchUpdate(conn, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -6117,13 +6156,13 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty, or if {@code batchSize} is not positive,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs while executing the batch update.
+     * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
      * @see PreparedStatement#executeBatch()
      */
     public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters, final int batchSize)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, SQLException, ArithmeticException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -6262,15 +6301,16 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if a database access error occurs while executing the batch.
+     * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Long#MAX_VALUE}.
      * @see PreparedStatement#executeLargeBatch()
      * @see #executeLargeBatchUpdate(javax.sql.DataSource, String, List, int)
      */
     public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, ArithmeticException {
         return executeLargeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -6302,14 +6342,15 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} or {@code sql} is {@code null} or empty, or if {@code batchSize} is not positive,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if a database access error occurs while executing the batch update.
+     * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Long#MAX_VALUE}.
      * @see PreparedStatement#executeLargeBatch()
      */
     public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, ArithmeticException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -6374,12 +6415,12 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs while executing the batch update.
+     * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Long#MAX_VALUE}.
      * @see PreparedStatement#executeLargeBatch()
      */
     public static long executeLargeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, SQLException, ArithmeticException {
         return executeLargeBatchUpdate(conn, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -6416,12 +6457,12 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty, or if {@code batchSize} is not positive,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs while executing the batch update.
+     * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Long#MAX_VALUE}.
      * @see PreparedStatement#executeLargeBatch()
      */
     public static long executeLargeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters, final int batchSize)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, SQLException, ArithmeticException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -6606,14 +6647,16 @@ public final class JdbcUtil {
      *         <b>not</b> a success indicator &mdash; a failed statement throws {@link SQLException} instead.
      * @throws IllegalArgumentException if {@code ds} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
-     * @throws SQLException if a database access error occurs while executing the statement.
+     * @throws SQLException if preparing or binding the statement, or executing the requested SQL, fails.
      * @see PreparedStatement#execute()
      * @see #executeQuery(javax.sql.DataSource, String, Object...)
      * @see #executeUpdate(javax.sql.DataSource, String, Object...)
      */
-    public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
+    public static boolean execute(final javax.sql.DataSource ds, final String sql, final Object... parameters)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
@@ -6708,7 +6751,7 @@ public final class JdbcUtil {
      *         <b>not</b> a success indicator &mdash; a failed statement throws {@link SQLException} instead.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code sql} is {@code null} or empty,
      *         or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
-     * @throws SQLException if a database access error occurs while executing the statement.
+     * @throws SQLException if preparing or binding the statement, or executing the requested SQL, fails.
      * @see PreparedStatement#execute()
      * @see #executeQuery(Connection, String, Object...)
      * @see #executeUpdate(Connection, String, Object...)
@@ -6734,7 +6777,7 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link PreparedStatement} to execute.
      * @return The {@link ResultSet} produced by the query.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static ResultSet executeQuery(final PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
@@ -6769,7 +6812,7 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link PreparedStatement} to execute.
      * @return The number of rows affected by the statement.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static int executeUpdate(final PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
@@ -6800,7 +6843,7 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link PreparedStatement} to execute.
      * @return The number of rows affected by the statement, as a long value.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static long executeLargeUpdate(final PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
@@ -6831,7 +6874,7 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link Statement} whose batch to execute.
      * @return An array of update counts, one per batch entry.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static int[] executeBatch(final Statement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
@@ -6870,7 +6913,7 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link Statement} whose batch to execute.
      * @return An array of update counts as long values, one per batch entry.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static long[] executeLargeBatch(final Statement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
@@ -6911,7 +6954,7 @@ public final class JdbcUtil {
      * @return The total number of updated rows.
      * @throws ArithmeticException if the total exceeds {@link Integer#MAX_VALUE}.
      */
-    private static int sumUpdatedRows(final int[] updateCounts) {
+    private static int sumUpdatedRows(final int[] updateCounts) throws ArithmeticException {
         int result = 0;
 
         for (final int updateCount : updateCounts) {
@@ -6928,7 +6971,7 @@ public final class JdbcUtil {
      * (advising {@code executeLargeBatchUpdate}) when the total would overflow an {@code int}.
      * @throws ArithmeticException if adding a positive increment exceeds {@link Integer#MAX_VALUE}.
      */
-    private static int addUpdatedRowsExact(final int current, final int increment) {
+    private static int addUpdatedRowsExact(final int current, final int increment) throws ArithmeticException {
         try {
             return Math.addExact(current, increment);
         } catch (final ArithmeticException e) {
@@ -6947,7 +6990,7 @@ public final class JdbcUtil {
      * @return The total number of updated rows.
      * @throws ArithmeticException if the total exceeds {@link Long#MAX_VALUE}.
      */
-    private static long sumUpdatedRows(final long[] updateCounts) {
+    private static long sumUpdatedRows(final long[] updateCounts) throws ArithmeticException {
         long result = 0;
 
         for (final long updateCount : updateCounts) {
@@ -6964,7 +7007,7 @@ public final class JdbcUtil {
      * when the total would overflow a {@code long}.
      * @throws ArithmeticException if adding a positive increment exceeds {@link Long#MAX_VALUE}.
      */
-    private static long addUpdatedRowsExact(final long current, final long increment) {
+    private static long addUpdatedRowsExact(final long current, final long increment) throws ArithmeticException {
         try {
             return Math.addExact(current, increment);
         } catch (final ArithmeticException e) {
@@ -6980,7 +7023,7 @@ public final class JdbcUtil {
      *
      * @param stmt The {@link PreparedStatement} to execute.
      * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update count or there is no result.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static boolean execute(final PreparedStatement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
@@ -7034,9 +7077,10 @@ public final class JdbcUtil {
      * @param stmt The {@link PreparedStatement} to set parameters on.
      * @param parameters The parameter values to set.
      * @throws IllegalArgumentException if the number of provided parameters is less than the SQL requires, or a named parameter has no matching value.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if a JDBC parameter binding fails, including an invalid index, incompatible value, or closed statement.
      */
-    static void setParameters(final ParsedSql parsedSql, final PreparedStatement stmt, final Object[] parameters) throws SQLException {
+    static void setParameters(final ParsedSql parsedSql, final PreparedStatement stmt, final Object[] parameters)
+            throws IllegalArgumentException, SQLException {
         final int parameterCount = parsedSql.parameterCount();
 
         if (parameterCount == 0) {
@@ -7112,7 +7156,7 @@ public final class JdbcUtil {
      * @param parameterCount The number of parameters to set.
      * @param parameters The parameter values to set.
      * @param parameterTypes The {@link Type}s used to bind the parameters; may be {@code null} or empty, in which case the type is inferred from each value.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if a JDBC parameter binding fails, including an invalid index, incompatible value, or closed statement.
      */
     @SuppressWarnings("rawtypes")
     static void setParameters(final PreparedStatement stmt, final int parameterCount, final Object[] parameters, final Type[] parameterTypes)
@@ -7202,11 +7246,11 @@ public final class JdbcUtil {
      * @return A {@link Dataset} containing the extracted data; column names are taken from the
      *         {@link ResultSetMetaData} labels (or column names if no label is set).
      * @throws IllegalArgumentException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      * @see #extractData(ResultSet, boolean)
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
-    public static Dataset extractData(final ResultSet rs) throws SQLException {
+    public static Dataset extractData(final ResultSet rs) throws IllegalArgumentException, SQLException {
         return extractData(rs, false);
     }
 
@@ -7225,9 +7269,9 @@ public final class JdbcUtil {
      * @param count The maximum number of rows to extract.
      * @return A {@link Dataset} containing the extracted data.
      * @throws IllegalArgumentException if {@code rs} is {@code null} or offset/count are negative.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      */
-    public static Dataset extractData(final ResultSet rs, final int offset, final int count) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final int offset, final int count) throws IllegalArgumentException, SQLException {
         return extractData(rs, offset, count, false);
     }
 
@@ -7258,13 +7302,11 @@ public final class JdbcUtil {
      *               Must not be {@code null}.
      * @return A {@link Dataset} containing the filtered data.
      * @throws IllegalArgumentException if {@code rs} or {@code filter} is {@code null}.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      * @see RowFilter
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
     public static Dataset extractData(final ResultSet rs, final RowFilter filter) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(filter, cs.filter);
-
         return extractData(rs, 0, Integer.MAX_VALUE, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, false);
     }
 
@@ -7291,13 +7333,11 @@ public final class JdbcUtil {
      *                     of the row data before it's added to the Dataset. Must not be {@code null}.
      * @return A {@link Dataset} containing the extracted and transformed data.
      * @throws IllegalArgumentException if {@code rs} or {@code rowExtractor} is {@code null}.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      * @see RowExtractor
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
     public static Dataset extractData(final ResultSet rs, final RowExtractor rowExtractor) throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(rowExtractor, cs.rowExtractor);
-
         return extractData(rs, 0, Integer.MAX_VALUE, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, false);
     }
 
@@ -7329,7 +7369,7 @@ public final class JdbcUtil {
      *                     Must not be {@code null}.
      * @return A {@link Dataset} containing the filtered and transformed data.
      * @throws IllegalArgumentException if {@code rs}, {@code filter}, or {@code rowExtractor} is {@code null}.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      * @see RowFilter
      * @see RowExtractor
      * @see #extractData(ResultSet, RowFilter)
@@ -7337,9 +7377,6 @@ public final class JdbcUtil {
      */
     public static Dataset extractData(final ResultSet rs, final RowFilter filter, final RowExtractor rowExtractor)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(filter, cs.filter);
-        N.checkArgNotNull(rowExtractor, cs.rowExtractor);
-
         return extractData(rs, 0, Integer.MAX_VALUE, filter, rowExtractor, false);
     }
 
@@ -7370,9 +7407,9 @@ public final class JdbcUtil {
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted data.
      * @throws IllegalArgumentException if {@code rs} is {@code null}.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      */
-    public static Dataset extractData(final ResultSet rs, final boolean closeResultSet) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final boolean closeResultSet) throws IllegalArgumentException, SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, closeResultSet);
     }
 
@@ -7397,9 +7434,10 @@ public final class JdbcUtil {
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted data.
      * @throws IllegalArgumentException if {@code rs} is {@code null} or offset/count are negative.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      */
-    public static Dataset extractData(final ResultSet rs, final int offset, final int count, final boolean closeResultSet) throws SQLException {
+    public static Dataset extractData(final ResultSet rs, final int offset, final int count, final boolean closeResultSet)
+            throws IllegalArgumentException, SQLException {
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
 
@@ -7428,13 +7466,11 @@ public final class JdbcUtil {
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted data.
      * @throws IllegalArgumentException if {@code rs} or {@code filter} is {@code null}, or if {@code offset} or {@code count} is negative.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(filter, cs.filter);
-
         return extractData(rs, offset, count, filter, INTERNAL_DUMMY_ROW_EXTRACTOR, closeResultSet);
     }
 
@@ -7462,13 +7498,11 @@ public final class JdbcUtil {
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted and transformed data.
      * @throws IllegalArgumentException if {@code rs} or {@code rowExtractor} is {@code null}, or if {@code offset} or {@code count} is negative.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
             throws IllegalArgumentException, SQLException {
-        N.checkArgNotNull(rowExtractor, cs.rowExtractor);
-
         return extractData(rs, offset, count, INTERNAL_DUMMY_ROW_FILTER, rowExtractor, closeResultSet);
     }
 
@@ -7506,7 +7540,7 @@ public final class JdbcUtil {
      * @return A {@link Dataset} containing the filtered and transformed data.
      * @throws IllegalArgumentException if {@code rs} , {@code filter} , or {@code rowExtractor} is {@code null} , or if {@code offset} or
      *         {@code count} is negative.
-     * @throws SQLException if a database access error occurs while extracting data.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      * @see RowFilter
      * @see RowExtractor
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
@@ -7543,7 +7577,7 @@ public final class JdbcUtil {
      * @param rowExtractor The {@link RowExtractor} to apply while extracting data.
      * @param checkDateType Whether to normalize database-specific date/time types to standard Java types.
      * @return A {@link Dataset} containing the extracted data.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
      */
     static Dataset extractResultSetToDataset(final ResultSet rs, final int offset, int count, final RowFilter filter, final RowExtractor rowExtractor,
             final boolean checkDateType) throws SQLException {
@@ -7620,10 +7654,11 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to extract from. It is closed before this method returns.
      * @param resultExtractor The extractor that produces the result from the {@link ResultSet}.
      * @return The extraction result.
+     * @throws SQLException if reading column metadata or the supplied result extractor throws an SQL exception.
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link ResultSet}, which would be closed before it could be used.
-     * @throws SQLException if a database access error occurs.
      */
-    static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor) throws SQLException {
+    static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor)
+            throws SQLException, UnsupportedOperationException {
         try {
             return checkNotResultSet(resultExtractor.apply(rs));
         } finally {
@@ -7639,10 +7674,11 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to extract from. It is closed before this method returns.
      * @param resultExtractor The extractor that produces the result from the {@link ResultSet} and its column labels.
      * @return The extraction result.
+     * @throws SQLException if reading column metadata or the supplied result extractor throws an SQL exception.
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link ResultSet}, which would be closed before it could be used.
-     * @throws SQLException if a database access error occurs.
      */
-    static <R> R extractAndCloseResultSet(final ResultSet rs, final BiResultExtractor<? extends R> resultExtractor) throws SQLException {
+    static <R> R extractAndCloseResultSet(final ResultSet rs, final BiResultExtractor<? extends R> resultExtractor)
+            throws SQLException, UnsupportedOperationException {
         try {
             return checkNotResultSet(resultExtractor.apply(rs, getColumnLabels(rs)));
         } finally {
@@ -7682,7 +7718,7 @@ public final class JdbcUtil {
      * @return A {@link Stream} of {@code Object[]}, each array containing the column values of one row.
      * @throws IllegalArgumentException if {@code rs} is {@code null}.
      */
-    public static Stream<Object[]> stream(final ResultSet rs) {
+    public static Stream<Object[]> stream(final ResultSet rs) throws IllegalArgumentException {
         return stream(rs, Object[].class);
     }
 
@@ -7707,7 +7743,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to create a stream from.
      * @param targetClass The class of the result type. Column names from the ResultSet will be mapped to properties of this class.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if the provided arguments are invalid.
+     * @throws IllegalArgumentException if {@code rs} or {@code targetClass} is {@code null}.
      */
     public static <T> Stream<T> stream(final ResultSet rs, final Class<? extends T> targetClass) throws IllegalArgumentException {
         N.checkArgNotNull(rs, cs.rs);
@@ -7899,7 +7935,8 @@ public final class JdbcUtil {
      * @return an iterator over the filtered, mapped rows that remembers exhaustion without advancing the JDBC cursor again
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}.
      */
-    static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper, final Runnable onClose) {
+    static <T> ObjIteratorEx<T> iterate(final ResultSet resultSet, final RowFilter rowFilter, final RowMapper<? extends T> rowMapper, final Runnable onClose)
+            throws IllegalArgumentException {
         N.checkArgNotNull(rowFilter, cs.rowFilter);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
 
@@ -8244,7 +8281,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to create a stream from.
      * @param columnIndex The index of the column to extract data from, starting from 1.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if the provided arguments are invalid.
+     * @throws IllegalArgumentException if {@code rs} is {@code null} or {@code columnIndex} is not positive.
      */
     public static <T> Stream<T> stream(final ResultSet rs, final int columnIndex) throws IllegalArgumentException {
         N.checkArgNotNull(rs, cs.rs);
@@ -8296,7 +8333,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to create a stream from.
      * @param columnLabel The label (or name) of the column to extract data from.
      * @return A {@link Stream} of the extracted results.
-     * @throws IllegalArgumentException if the provided arguments are invalid.
+     * @throws IllegalArgumentException if {@code rs} is {@code null}, or {@code columnLabel} is {@code null} or empty.
      */
     public static <T> Stream<T> stream(final ResultSet rs, final String columnLabel) throws IllegalArgumentException {
         N.checkArgNotNull(rs, cs.rs);
@@ -8566,7 +8603,7 @@ public final class JdbcUtil {
      *
      * @param iter The result-set iterator to test.
      * @return {@code true} if another result set is available.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if advancing the result-set iterator fails with an underlying JDBC exception.
      */
     static boolean hasNextResultSet(final ObjIteratorEx<ResultSet> iter) throws SQLException {
         try {
@@ -8582,7 +8619,7 @@ public final class JdbcUtil {
      *
      * @param iter The result-set iterator to advance.
      * @return The next {@link ResultSet}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if advancing the result-set iterator fails with an underlying JDBC exception.
      */
     static ResultSet nextResultSet(final ObjIteratorEx<ResultSet> iter) throws SQLException {
         try {
@@ -8625,9 +8662,7 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) {
-        N.checkArgNotNull(parametersSetter, cs.parametersSetter);
-
+            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) throws IllegalArgumentException {
         return queryByPage(ds, sql, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
@@ -8681,7 +8716,8 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor)
+            throws IllegalArgumentException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(pageSize, cs.pageSize);
@@ -8758,7 +8794,8 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final javax.sql.DataSource ds, final String sql, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor)
+            throws IllegalArgumentException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(pageSize, cs.pageSize);
@@ -8822,9 +8859,7 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static Stream<Dataset> queryByPage(final Connection conn, final String sql, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) {
-        N.checkArgNotNull(parametersSetter, cs.parametersSetter);
-
+            final Jdbc.BiParametersSetter<? super AbstractQuery, Dataset> parametersSetter) throws IllegalArgumentException {
         return queryByPage(conn, sql, pageSize, parametersSetter, Jdbc.ResultExtractor.TO_DATASET);
     }
 
@@ -8878,7 +8913,8 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String sql, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor) {
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.ResultExtractor<R> resultExtractor)
+            throws IllegalArgumentException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(pageSize, cs.pageSize);
@@ -8956,7 +8992,8 @@ public final class JdbcUtil {
      */
     @SuppressWarnings("rawtypes")
     public static <R> Stream<R> queryByPage(final Connection conn, final String sql, final int pageSize,
-            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor) {
+            final Jdbc.BiParametersSetter<? super AbstractQuery, R> parametersSetter, final Jdbc.BiResultExtractor<R> resultExtractor)
+            throws IllegalArgumentException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(pageSize, cs.pageSize);
@@ -9022,7 +9059,7 @@ public final class JdbcUtil {
      * @return The given {@code result}.
      * @throws UnsupportedOperationException if {@code result} is a {@link ResultSet}.
      */
-    static <R> R checkNotResultSet(final R result) {
+    static <R> R checkNotResultSet(final R result) throws UnsupportedOperationException {
         if (result instanceof ResultSet) {
             throw new UnsupportedOperationException("The result value of ResultExtractor/BiResultExtractor.apply cannot be ResultSet");
         }
@@ -9054,7 +9091,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if reading the connection's database product metadata fails; failures from
      *         {@link Statement#getConnection()} are caught and result in {@code true}.
      */
-    static boolean checkDateType(final Statement stmt) {
+    static boolean checkDateType(final Statement stmt) throws UncheckedSQLException {
         try {
             return Strings.containsIgnoreCase(JdbcUtil.getDBProductInfo(stmt.getConnection()).name(), "Oracle");
         } catch (final SQLException e) {
@@ -9073,7 +9110,7 @@ public final class JdbcUtil {
          * @param stmt The {@link CallableStatement} to read from.
          * @param outParameterIndex The 1-based index of the out parameter.
          * @return The out parameter value.
-         * @throws SQLException if a database access error occurs.
+         * @throws SQLException if reading the registered output parameter fails, including invalid addressing or a closed callable statement.
          */
         Object getOutParameter(final CallableStatement stmt, final int outParameterIndex) throws SQLException;
 
@@ -9083,7 +9120,7 @@ public final class JdbcUtil {
          * @param stmt The {@link CallableStatement} to read from.
          * @param outParameterName The name of the out parameter.
          * @return The out parameter value.
-         * @throws SQLException if a database access error occurs.
+         * @throws SQLException if reading the registered output parameter fails, including invalid addressing or a closed callable statement.
          */
         Object getOutParameter(final CallableStatement stmt, final String outParameterName) throws SQLException;
     }
@@ -9439,10 +9476,11 @@ public final class JdbcUtil {
      * @param tableName The table name (optionally qualified, e.g., {@code schema.table} or {@code catalog.schema.table}); must not be blank.
      * @return {@code true} if the table exists, {@code false} otherwise.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is blank or otherwise invalid.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error.
      * @see #tableExists(Connection, String)
      */
-    public static boolean tableExists(final javax.sql.DataSource ds, final String tableName) {
+    public static boolean tableExists(final javax.sql.DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
 
@@ -9486,7 +9524,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
      * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error.
      */
-    public static boolean tableExists(final Connection conn, final String tableName) {
+    public static boolean tableExists(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
 
@@ -9601,7 +9639,7 @@ public final class JdbcUtil {
      * @param schemaCaseSensitive Whether the schema comparison is case-sensitive.
      * @param tableCaseSensitive Whether the table comparison is case-sensitive.
      * @return {@code true} if a matching table is reported; otherwise {@code false}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if querying table metadata, reading its rows, or closing the metadata result set fails.
      */
     private static boolean tableExists(final DatabaseMetaData metadata, final String catalog, final String schemaPattern, final String tableNamePattern,
             final boolean catalogCaseSensitive, final boolean schemaCaseSensitive, final boolean tableCaseSensitive) throws SQLException {
@@ -9727,7 +9765,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code qualifiedName} is {@code null}, blank, has empty components,
      *         unclosed or misplaced delimiters, or more than three components.
      */
-    static String[] splitQualifiedSqlIdentifier(final String qualifiedName, final String argName) {
+    static String[] splitQualifiedSqlIdentifier(final String qualifiedName, final String argName) throws IllegalArgumentException {
         N.checkArgNotBlank(qualifiedName, argName);
 
         final String trimmed = qualifiedName.trim();
@@ -9827,7 +9865,8 @@ public final class JdbcUtil {
      * @param argName The argument name used in error messages.
      * @throws IllegalArgumentException if the part is empty after stripping delimiters.
      */
-    private static void addQualifiedIdentifierPart(final List<String> parts, final StringBuilder sb, final String qualifiedName, final String argName) {
+    private static void addQualifiedIdentifierPart(final List<String> parts, final StringBuilder sb, final String qualifiedName, final String argName)
+            throws IllegalArgumentException {
         final String part = SqlIdentifierUtil.stripIdentifierDelimiters(sb.toString());
 
         if (Strings.isEmpty(part)) {
@@ -9850,9 +9889,10 @@ public final class JdbcUtil {
      * @param argName The argument name used in error messages.
      * @return The delimited qualified identifier.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code qualifiedName} is blank or otherwise invalid.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if reading the database identifier quote string or identifier storage-case rules fails.
      */
-    static String toQualifiedSqlIdentifier(final Connection conn, final String qualifiedName, final String argName) throws SQLException {
+    static String toQualifiedSqlIdentifier(final Connection conn, final String qualifiedName, final String argName)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(qualifiedName, argName);
 
@@ -9921,7 +9961,7 @@ public final class JdbcUtil {
      *
      * @param metadata The database metadata to query.
      * @return The trimmed identifier quote string, or {@code null}.
-     * @throws SQLException if a database access error occurs.
+     * @throws SQLException if the driver cannot report its identifier quote string.
      */
     private static String normalizeIdentifierQuote(final DatabaseMetaData metadata) throws SQLException {
         final String quoteString = metadata.getIdentifierQuoteString();
@@ -9968,7 +10008,8 @@ public final class JdbcUtil {
      *         {@code null} or empty.
      * @throws UncheckedSQLException if the {@code CREATE} fails for a reason other than the table already existing.
      */
-    public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema) {
+    public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema)
+            throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
         N.checkArgNotEmpty(schema, cs.schema);
@@ -10019,7 +10060,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
      * @throws UncheckedSQLException if a database error other than "table not found" occurs during the drop.
      */
-    public static boolean dropTableIfExists(final Connection conn, final String tableName) {
+    public static boolean dropTableIfExists(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
 
@@ -10128,7 +10169,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if a database operation fails while initializing the lock table.
      * @see DBLock
      */
-    public static DBLock createDBLock(final javax.sql.DataSource ds, final String tableName) {
+    public static DBLock createDBLock(final javax.sql.DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
 
@@ -10758,7 +10799,7 @@ public final class JdbcUtil {
      * @return An {@link OutParamResult} containing the retrieved output parameter values keyed by
      *         parameter index (for index-based out params) or parameter name (for name-based out params).
      * @throws IllegalArgumentException if {@code stmt} is {@code null}.
-     * @throws SQLException if a database access error occurs while reading any output parameter, or if a
+     * @throws SQLException if reading a registered output parameter or freeing its returned LOB fails, or if a
      *         returned {@link Blob}/{@link Clob} exceeds {@link Integer#MAX_VALUE} bytes/characters.
      */
     public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws IllegalArgumentException, SQLException {
@@ -10823,7 +10864,7 @@ public final class JdbcUtil {
      * @return A list of named parameter names found in the SQL string (without the ':' prefix).
      * @throws IllegalArgumentException if {@code sql} is {@code null}, empty, or blank.
      */
-    public static List<String> getNamedParameters(final String sql) {
+    public static List<String> getNamedParameters(final String sql) throws IllegalArgumentException {
         return ParsedSql.parse(sql).namedParameters();
     }
 
@@ -10844,7 +10885,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code sql} is {@code null}, empty, or blank.
      * @see ParsedSql#parse(String)
      */
-    public static ParsedSql parseSql(final String sql) {
+    public static ParsedSql parseSql(final String sql) throws IllegalArgumentException {
         return ParsedSql.parse(sql);
     }
 
@@ -10865,7 +10906,7 @@ public final class JdbcUtil {
      * @return A collection of property names suitable for INSERT operations.
      * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
-    public static Collection<String> getInsertPropNames(final Class<?> entityClass) {
+    public static Collection<String> getInsertPropNames(final Class<?> entityClass) throws IllegalArgumentException {
         return getInsertPropNames(entityClass, null);
     }
 
@@ -10885,7 +10926,7 @@ public final class JdbcUtil {
      * @return A collection of property names suitable for INSERT operations.
      * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
-    public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+    public static Collection<String> getInsertPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) throws IllegalArgumentException {
         return QueryUtil.insertPropNames(entityClass, withJoinedByPropertiesExcluded(entityClass, excludedPropNames));
     }
 
@@ -10904,7 +10945,7 @@ public final class JdbcUtil {
      * @return A collection of property names suitable for SELECT operations.
      * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
-    public static Collection<String> getSelectPropNames(final Class<?> entityClass) {
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass) throws IllegalArgumentException {
         return getSelectPropNames(entityClass, null);
     }
 
@@ -10924,7 +10965,7 @@ public final class JdbcUtil {
      * @return A collection of property names suitable for SELECT operations.
      * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
-    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+    public static Collection<String> getSelectPropNames(final Class<?> entityClass, final Set<String> excludedPropNames) throws IllegalArgumentException {
         return getSelectPropNames(entityClass, false, excludedPropNames);
     }
 
@@ -10946,7 +10987,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
     public static Collection<String> getSelectPropNames(final Class<?> entityClass, final boolean includeSubEntityProperties,
-            final Set<String> excludedPropNames) {
+            final Set<String> excludedPropNames) throws IllegalArgumentException {
         return QueryUtil.selectPropNames(entityClass, includeSubEntityProperties, withJoinedByPropertiesExcluded(entityClass, excludedPropNames));
     }
 
@@ -10966,7 +11007,7 @@ public final class JdbcUtil {
      * @return A collection of property names suitable for UPDATE operations.
      * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
-    public static Collection<String> getUpdatePropNames(final Class<?> entityClass) {
+    public static Collection<String> getUpdatePropNames(final Class<?> entityClass) throws IllegalArgumentException {
         return getUpdatePropNames(entityClass, null);
     }
 
@@ -10986,7 +11027,7 @@ public final class JdbcUtil {
      * @return A collection of property names suitable for UPDATE operations.
      * @throws IllegalArgumentException if {@code entityClass} is {@code null}.
      */
-    public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) {
+    public static Collection<String> getUpdatePropNames(final Class<?> entityClass, final Set<String> excludedPropNames) throws IllegalArgumentException {
         return QueryUtil.updatePropNames(entityClass, withJoinedByPropertiesExcluded(entityClass, excludedPropNames));
     }
 
@@ -11028,7 +11069,7 @@ public final class JdbcUtil {
      *
      * @param blob The Blob object to be converted to a String.
      * @return The String representation of the Blob content, or {@code null} if {@code blob} is {@code null}.
-     * @throws SQLException if a database access error occurs while accessing the Blob.
+     * @throws SQLException if reading or freeing the Blob fails, or its length exceeds {@link Integer#MAX_VALUE}.
      */
     public static String blobToString(final Blob blob) throws SQLException {
         if (blob == null) {
@@ -11053,7 +11094,7 @@ public final class JdbcUtil {
      * @param charset The character encoding to use for the conversion. Must not be {@code null} when {@code blob} is not {@code null}.
      * @return The String representation of the Blob content, or {@code null} if {@code blob} is {@code null}.
      * @throws IllegalArgumentException if {@code charset} is {@code null} (when {@code blob} is not {@code null}).
-     * @throws SQLException if a database access error occurs while accessing the Blob.
+     * @throws SQLException if reading or freeing the Blob fails, or its length exceeds {@link Integer#MAX_VALUE}.
      */
     public static String blobToString(final Blob blob, final Charset charset) throws IllegalArgumentException, SQLException {
         if (blob == null) {
@@ -11081,8 +11122,8 @@ public final class JdbcUtil {
      * @param output The File object representing the output file. Must not be {@code null} when {@code blob} is not {@code null}.
      * @return The number of bytes written to the file, or {@code 0} if {@code blob} is {@code null}.
      * @throws IllegalArgumentException if {@code output} is {@code null} (when {@code blob} is not {@code null}).
-     * @throws SQLException if a database access error occurs while accessing the Blob.
-     * @throws IOException if an I/O error occurs while writing to the file.
+     * @throws SQLException if obtaining the Blob stream or freeing the Blob fails.
+     * @throws IOException if opening or writing the output file, reading the LOB data, or closing its stream or reader fails.
      */
     public static long writeBlobToFile(final Blob blob, final File output) throws IllegalArgumentException, SQLException, IOException {
         if (blob == null) {
@@ -11120,7 +11161,7 @@ public final class JdbcUtil {
      *
      * @param clob The Clob object to be converted to a String.
      * @return The String representation of the Clob content, or {@code null} if {@code clob} is {@code null}.
-     * @throws SQLException if a database access error occurs while accessing the Clob.
+     * @throws SQLException if reading or freeing the Clob fails, or its length exceeds {@link Integer#MAX_VALUE}.
      */
     public static String clobToString(final Clob clob) throws SQLException {
         if (clob == null) {
@@ -11146,8 +11187,8 @@ public final class JdbcUtil {
      * @param output The File object representing the output file. Must not be {@code null} when {@code clob} is not {@code null}.
      * @return The number of characters written to the file, or {@code 0} if {@code clob} is {@code null}.
      * @throws IllegalArgumentException if {@code output} is {@code null} (when {@code clob} is not {@code null}).
-     * @throws SQLException if a database access error occurs while accessing the Clob.
-     * @throws IOException if an I/O error occurs while writing to the file.
+     * @throws SQLException if obtaining the Clob reader or freeing the Clob fails.
+     * @throws IOException if opening or writing the output file, reading the LOB data, or closing its stream or reader fails.
      */
     public static long writeClobToFile(final Clob clob, final File output) throws IllegalArgumentException, SQLException, IOException {
         if (clob == null) {
@@ -11583,7 +11624,7 @@ public final class JdbcUtil {
      * @param sqlExtractor The SQL extractor function to set; must not be {@code null}.
      * @throws IllegalArgumentException if {@code sqlExtractor} is {@code null}
      */
-    public static void setSqlExtractor(final Throwables.Function<Statement, String, SQLException> sqlExtractor) {
+    public static void setSqlExtractor(final Throwables.Function<Statement, String, SQLException> sqlExtractor) throws IllegalArgumentException {
         N.checkArgNotNull(sqlExtractor, cs.sqlExtractor);
 
         JdbcUtil._sqlExtractor = sqlExtractor;
@@ -11626,7 +11667,7 @@ public final class JdbcUtil {
      * @param sqlLogHandler The handler that receives: SQL statement, start time (ms), end time (ms); must not be {@code null}.
      * @throws IllegalArgumentException if {@code sqlLogHandler} is {@code null}
      */
-    public static void setSqlLogHandler(final TriConsumer<String, Long, Long> sqlLogHandler) {
+    public static void setSqlLogHandler(final TriConsumer<String, Long, Long> sqlLogHandler) throws IllegalArgumentException {
         N.checkArgNotNull(sqlLogHandler, cs.sqlLogHandler);
 
         _sqlLogHandler = sqlLogHandler;
@@ -11726,7 +11767,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      * @throws E if the action throws an exception.
      */
-    public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws E {
+    public static <E extends Exception> void runWithSqlLogDisabled(final Throwables.Runnable<E> sqlAction) throws IllegalArgumentException, E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         final SqlLogConfig config = isSQLLogEnabled_TL.get();
@@ -11773,7 +11814,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      * @throws E if the callable throws an exception.
      */
-    public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<? extends R, E> sqlAction) throws E {
+    public static <R, E extends Exception> R callWithSqlLogDisabled(final Throwables.Callable<? extends R, E> sqlAction) throws IllegalArgumentException, E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         final SqlLogConfig config = isSQLLogEnabled_TL.get();
@@ -11826,8 +11867,10 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} to check.
      * @return {@code true} if a transaction is active on the current thread for {@code ds};
      *         {@code false} otherwise.
+     * @throws IllegalArgumentException if no library transaction exists and the enabled Spring transaction check receives a null {@code ds}.
+     * @throws CannotGetJdbcConnectionException if the enabled Spring transaction check cannot acquire a connection from {@code ds}.
      */
-    public static boolean isInTransaction(final javax.sql.DataSource ds) {
+    public static boolean isInTransaction(final javax.sql.DataSource ds) throws IllegalArgumentException {
         if (SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
             return true;
         }
@@ -11953,14 +11996,16 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}.
      * @return A {@link SqlTransaction} object representing the new transaction that must be committed or rolled back.
      * @throws IllegalArgumentException if {@code ds} is {@code null}.
-     * @throws UncheckedSQLException if a database access error occurs while beginning the transaction.
+     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot accept another scope.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
+     * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel)
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      * @see SqlTransaction#commit()
      * @see SqlTransaction#rollback()
      * @see SqlTransaction#rollbackIfNotCommitted()
      */
-    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds) throws UncheckedSQLException {
+    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
         return beginTransaction(ds, IsolationLevel.DEFAULT);
     }
 
@@ -11987,10 +12032,13 @@ public final class JdbcUtil {
      * @return A {@link SqlTransaction} object representing the new transaction.
      * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}, or if
      *         {@code isolationLevel} is {@link IsolationLevel#NONE}, which is not a usable transaction isolation level.
-     * @throws UncheckedSQLException if a database access error occurs while beginning the transaction.
+     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot accept another scope.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
+     * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      */
-    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel) throws UncheckedSQLException {
+    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
         return beginTransaction(ds, isolationLevel, false);
     }
 
@@ -12031,14 +12079,19 @@ public final class JdbcUtil {
      * @return A {@link SqlTransaction} object representing the transaction.
      * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}, or if
      *         {@code isolationLevel} is {@link IsolationLevel#NONE}, which is not a usable transaction isolation level.
-     * @throws UncheckedSQLException if a database access error occurs while beginning the transaction.
+     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot accept another scope.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
+     * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
      * @see JdbcUtil#getConnection(javax.sql.DataSource)
      * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
      */
+    @SuppressWarnings("deprecation")
     public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel, final boolean isForUpdateOnly)
-            throws UncheckedSQLException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
+        N.checkArgument(isolationLevel != IsolationLevel.NONE,
+                "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
 
         SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
@@ -12130,16 +12183,17 @@ public final class JdbcUtil {
      * @param cmd The callable to execute within the transaction, must not be {@code null}.
      * @return The result returned by {@code cmd}.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
+     * @throws IllegalStateException if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it.
      * @see #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
      * @see #beginTransaction(javax.sql.DataSource)
      */
     @Beta
     public static <R, E extends Throwable> R callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd)
-            throws IllegalArgumentException, E {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
@@ -12198,16 +12252,17 @@ public final class JdbcUtil {
      *            the connection must not be closed by the caller.
      * @return The result returned by {@code cmd}.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
+     * @throws IllegalStateException if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it.
      * @see #runInTransaction(javax.sql.DataSource, Throwables.Consumer)
      * @see #callInTransaction(javax.sql.DataSource, Throwables.Callable)
      */
     @Beta
     public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<Connection, T, E> cmd)
-            throws IllegalArgumentException, E {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
@@ -12271,16 +12326,17 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} for the transaction, must not be {@code null}.
      * @param cmd The runnable to execute within the transaction, must not be {@code null}.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
+     * @throws IllegalStateException if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it.
      * @see #callInTransaction(javax.sql.DataSource, Throwables.Callable)
      * @see #beginTransaction(javax.sql.DataSource)
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
-            throws IllegalArgumentException, E {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
@@ -12333,16 +12389,17 @@ public final class JdbcUtil {
      * @param cmd The consumer to execute with the transaction's {@link Connection}, must not be {@code null};
      *            the connection must not be closed by the caller.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
+     * @throws IllegalStateException if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it.
      * @see #callInTransaction(javax.sql.DataSource, Throwables.Function)
      * @see #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
      */
     @Beta
     public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<Connection, E> cmd)
-            throws IllegalArgumentException, E {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
@@ -12440,7 +12497,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static <R, E extends Throwable> R callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd)
-            throws IllegalArgumentException, E {
+            throws IllegalArgumentException, E, IllegalStateException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
@@ -12530,7 +12587,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd)
-            throws IllegalArgumentException, E {
+            throws IllegalArgumentException, E, IllegalStateException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
@@ -12612,7 +12669,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd)
-            throws IllegalArgumentException, E {
+            throws IllegalArgumentException, E, IllegalStateException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
@@ -12689,7 +12746,7 @@ public final class JdbcUtil {
      */
     @Beta
     public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd)
-            throws IllegalArgumentException, E {
+            throws IllegalArgumentException, E, IllegalStateException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
@@ -12766,7 +12823,7 @@ public final class JdbcUtil {
      * @see #callIgnoringSpringTransaction(Throwables.Callable)
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
      */
-    public static <E extends Exception> void runIgnoringSpringTransaction(final Throwables.Runnable<E> sqlAction) throws E {
+    public static <E extends Exception> void runIgnoringSpringTransaction(final Throwables.Runnable<E> sqlAction) throws IllegalArgumentException, E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         if (isSpringTransactionalNotUsed()) {
@@ -12821,7 +12878,8 @@ public final class JdbcUtil {
      * @see #runIgnoringSpringTransaction(Throwables.Runnable)
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      */
-    public static <R, E extends Exception> R callIgnoringSpringTransaction(final Throwables.Callable<? extends R, E> sqlAction) throws E {
+    public static <R, E extends Exception> R callIgnoringSpringTransaction(final Throwables.Callable<? extends R, E> sqlAction)
+            throws IllegalArgumentException, E {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         if (isSpringTransactionalNotUsed()) {
@@ -13237,6 +13295,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}, the DAO type or entity/ID mapping is invalid,
      *         or the SQL dialect, query metadata, or other DAO configuration is invalid.
      * @throws UnsupportedOperationException if DAO annotations, method signatures, SQL operations, return types, or cache settings are unsupported.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if obtaining database product metadata fails while initializing the DAO.
      * @see Dao
      * @see CrudDao
@@ -13244,7 +13303,12 @@ public final class JdbcUtil {
      * @see #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds) {
+    public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
+        N.checkArgNotNull(daoInterface, cs.daoInterface);
+        N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
+        N.checkArgNotNull(ds, cs.ds);
+
         return DaoImpl.createDao(daoInterface, null, ds, Dsl.PSC, null, null, JdbcUtil.asyncExecutor.getExecutor());
     }
 
@@ -13275,16 +13339,21 @@ public final class JdbcUtil {
      *                   {@link com.landawn.abacus.query.SqlDialect.SqlPolicy#PARAMETERIZED_SQL PARAMETERIZED_SQL}.
      * @return a dynamically generated DAO instance implementing the specified interface. Cache and reuse this
      *         instance; do not call {@code createDao} per request.
-     * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}, the DAO type or entity/ID mapping is invalid,
+     * @throws IllegalArgumentException if {@code daoInterface}, {@code ds}, or {@code sqlDialect} is {@code null}, the DAO type or entity/ID mapping is invalid,
      *         or the SQL dialect, query metadata, or other DAO configuration is invalid.
      * @throws UnsupportedOperationException if DAO annotations, method signatures, SQL operations, return types, or cache settings are unsupported.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if obtaining database product metadata fails while initializing the DAO.
      * @see #createDao(Class, javax.sql.DataSource)
      * @see #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
      * @see Dsl#forDialect(SqlDialect)
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlDialect sqlDialect) {
+    public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlDialect sqlDialect)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
+        N.checkArgNotNull(daoInterface, cs.daoInterface);
+        N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
+        N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(sqlDialect, cs.sqlDialect);
 
         return DaoImpl.createDao(daoInterface, null, ds, dslPool.computeIfAbsent(sqlDialect, Dsl::forDialect), null, null,
@@ -13338,13 +13407,19 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} or {@code ds} is {@code null}, the DAO type or entity/ID mapping is invalid,
      *         or the SQL dialect, query metadata, or other DAO configuration is invalid.
      * @throws UnsupportedOperationException if DAO annotations, method signatures, SQL operations, return types, or cache settings are unsupported.
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if obtaining database product metadata fails while initializing the DAO.
      * @see #createDao(Class, javax.sql.DataSource)
      * @see #createDao(Class, javax.sql.DataSource, SqlDialect)
      * @see DaoCreationOptions
      */
     @SuppressWarnings("rawtypes")
-    public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final DaoCreationOptions daoCreationOptions) {
+    public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final DaoCreationOptions daoCreationOptions)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
+        N.checkArgNotNull(daoInterface, cs.daoInterface);
+        N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
+        N.checkArgNotNull(ds, cs.ds);
+
         final DaoCreationOptions options = daoCreationOptions == null ? DaoCreationOptions.builder().build() : daoCreationOptions;
         final Dsl dsl = options.dsl() == null ? Dsl.PSC : options.dsl();
         final Executor executor = options.executor() == null ? JdbcUtil.asyncExecutor.getExecutor() : options.executor();
@@ -13542,7 +13617,7 @@ public final class JdbcUtil {
          * @throws IllegalStateException if called from a different thread or while a nested scope is still open.
          */
         @Override
-        public void close() {
+        public void close() throws IllegalStateException {
             if (Thread.currentThread() != ownerThread) {
                 throw new IllegalStateException("DaoCacheScope must be closed on the thread that opened it");
             }
@@ -13601,7 +13676,7 @@ public final class JdbcUtil {
      * @see #closeDaoCacheOnCurrentThread()
      */
     @Deprecated
-    public static Jdbc.DaoCache openDaoCacheOnCurrentThread() {
+    public static Jdbc.DaoCache openDaoCacheOnCurrentThread() throws IllegalStateException {
         checkNoActiveDaoCacheScopeForLegacyOperation();
 
         final Jdbc.DaoCache localThreadCache = Jdbc.DaoCache.createByMap();
@@ -13631,8 +13706,8 @@ public final class JdbcUtil {
      *
      * @param localThreadCache The cache to use for the current thread, must not be {@code null}.
      * @return The specified {@code localThreadCache}.
-     * @throws IllegalArgumentException if {@code localThreadCache} is {@code null}.
      * @throws IllegalStateException if a {@link DaoCacheScope} is active on the current thread.
+     * @throws IllegalArgumentException if {@code localThreadCache} is {@code null}.
      * @deprecated Use {@link #openDaoCacheScope(Jdbc.DaoCache)} with try-with-resources.
      * @see Jdbc.DaoCache#createByMap()
      * @see Jdbc.DaoCache#createByMap(Map)
@@ -13640,9 +13715,9 @@ public final class JdbcUtil {
      * @see #closeDaoCacheOnCurrentThread()
      */
     @Deprecated
-    public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) throws IllegalArgumentException {
-        N.checkArgNotNull(localThreadCache, cs.localThreadCache);
+    public static Jdbc.DaoCache openDaoCacheOnCurrentThread(final Jdbc.DaoCache localThreadCache) throws IllegalStateException, IllegalArgumentException {
         checkNoActiveDaoCacheScopeForLegacyOperation();
+        N.checkArgNotNull(localThreadCache, cs.localThreadCache);
 
         localThreadCache_TL.set(localThreadCache);
 
@@ -13662,7 +13737,7 @@ public final class JdbcUtil {
      * @see #openDaoCacheScope()
      */
     @Deprecated
-    public static void closeDaoCacheOnCurrentThread() {
+    public static void closeDaoCacheOnCurrentThread() throws IllegalStateException {
         checkNoActiveDaoCacheScopeForLegacyOperation();
         localThreadCache_TL.remove();
     }
@@ -13672,7 +13747,7 @@ public final class JdbcUtil {
      * legacy open/close cache methods would break the scope's restore-on-close bookkeeping.
      * @throws IllegalStateException if a {@link DaoCacheScope} is active on the current thread.
      */
-    private static void checkNoActiveDaoCacheScopeForLegacyOperation() {
+    private static void checkNoActiveDaoCacheScopeForLegacyOperation() throws IllegalStateException {
         if (daoCacheScope_TL.get() != null) {
             throw new IllegalStateException("Legacy DAO-cache lifecycle methods cannot be used while a DaoCacheScope is active");
         }

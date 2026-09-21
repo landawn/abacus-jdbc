@@ -21,7 +21,7 @@ import com.landawn.abacus.query.condition.Condition;
 
 /**
  * Unchecked-exception delete capability: the {@link DeleteOps} operations re-declared to throw
- * {@link com.landawn.abacus.exception.UncheckedSQLException}.
+ * {@link UncheckedSQLException}.
  * 
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
@@ -48,7 +48,7 @@ sealed interface UncheckedDeleteOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records for deletion
      * @return the number of records deleted, or {@code 0} if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      */
     @Override
     int delete(final Condition cond) throws UncheckedSQLException;

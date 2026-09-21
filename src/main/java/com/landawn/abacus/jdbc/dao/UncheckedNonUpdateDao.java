@@ -15,7 +15,10 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.sql.SQLException;
+
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.exception.UncheckedSQLException;
 
 /**
  * Interface for an unchecked Data Access Object (DAO) that disables update and delete operations while
@@ -26,7 +29,7 @@ import com.landawn.abacus.annotation.Beta;
  * <p><b>Unchecked Exception Handling:</b></p>
  * <p>This is an "unchecked" DAO variant. Read and insert methods redeclared by this interface or its
  * unchecked parents throw
- * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of checked {@link java.sql.SQLException},
+ * {@link UncheckedSQLException} instead of checked {@link SQLException},
  * providing a more convenient API for developers who prefer unchecked exceptions. Inherited methods that are
  * not redeclared keep their checked-exception contract.</p>
  *

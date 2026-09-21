@@ -37,7 +37,7 @@ import com.landawn.abacus.util.N;
  * handling. It is the unchecked counterpart of {@link CrudDao}: it extends
  * {@link UncheckedDao} (the unchecked base DAO) and {@link CrudDao}, and re-declares the id-based
  * operations so that they throw the unchecked {@link UncheckedSQLException} instead of the checked
- * {@link java.sql.SQLException}.
+ * {@link SQLException}.
  *
  * <p>Because every database operation declared here throws {@link UncheckedSQLException} (a
  * {@link RuntimeException}) rather than a checked exception, this interface is easier to use in
@@ -97,11 +97,11 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @param entity the entity to insert or update (must not be {@code null})
      * @return the saved entity (either newly inserted or updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      */
     @Override
-    default T upsert(final T entity) throws UncheckedSQLException {
+    default T upsert(final T entity) throws UncheckedSQLException, DuplicateResultException {
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
@@ -131,11 +131,11 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches
      */
     @Override
-    default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException {
+    default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException, DuplicateResultException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
@@ -171,12 +171,12 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return the saved entity: the inserted {@code entity} when no existing record was found,
      *         or the loaded database entity (with non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @see Filters
      */
     @Override
-    default T upsert(final T entity, final Condition cond) throws UncheckedSQLException {
+    default T upsert(final T entity, final Condition cond) throws UncheckedSQLException, DuplicateResultException {
         try {
             return CrudDao.super.upsert(entity, cond);
         } catch (final SQLException e) {
@@ -204,7 +204,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key
      */
     @Override
@@ -230,7 +230,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key
      */
     @Override
@@ -268,7 +268,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty,
      *                                  or, for nonempty input, the first entity is {@code null} or a match property does not exist
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key
      */
     @Override
@@ -311,7 +311,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *                                  if {@code batchSize} is not positive,
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
      *                                  or if the first element of {@code entities} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key
      */
     @Override

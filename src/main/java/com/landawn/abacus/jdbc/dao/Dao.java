@@ -26,17 +26,18 @@ import javax.sql.DataSource;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
+import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.CallableQuery;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
-import com.landawn.abacus.jdbc.cs;
-import com.landawn.abacus.jdbc.annotation.NonDBOperation;
+import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.QueryUtil;
-import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Throwables;
@@ -48,9 +49,9 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p>Synchronous statement execution propagates checked {@link SQLException}s to the caller.
  * Connection acquisition and transaction management can instead fail with
- * {@link com.landawn.abacus.exception.UncheckedSQLException}. For a variant whose database methods translate
+ * {@link UncheckedSQLException}. For a variant whose database methods translate
  * checked SQL failures to the unchecked
- * {@link com.landawn.abacus.exception.UncheckedSQLException}, see {@link UncheckedDao}. For variants
+ * {@link UncheckedSQLException}, see {@link UncheckedDao}. For variants
  * that forbid mutating operations, see {@link ReadOnlyDao} and {@link NonUpdateDao}.</p>
  *
  * <h2>Key Features:</h2>
@@ -135,8 +136,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -152,8 +153,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnIndexes array of column indexes to return as generated keys
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -178,8 +179,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnNames array of column names to return as generated keys
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -195,13 +196,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param stmtCreator function to create the PreparedStatement with custom options
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws IllegalArgumentException, SQLException {
+        N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
         return JdbcUtil.prepareQuery(dataSource(), sql, stmtCreator);
@@ -215,8 +217,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -232,8 +234,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnIndexes array of column indexes to return
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -249,8 +251,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnNames array of column names to return
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -265,8 +267,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -281,8 +283,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnIndexes array of column indexes to return
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -297,8 +299,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnNames array of column names to return
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnNames} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -314,13 +316,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param stmtCreator function to create the PreparedStatement
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws IllegalArgumentException, SQLException {
+        N.checkArgNotEmpty(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, stmtCreator);
@@ -333,13 +336,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param stmtCreator function to create the PreparedStatement
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code stmtCreator} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
             throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, stmtCreator);
@@ -362,8 +366,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the stored procedure call string
      * @return a CallableQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
@@ -379,13 +383,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param stmtCreator function to create the CallableStatement
      * @return a CallableQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
     @NonDBOperation
     default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
             throws IllegalArgumentException, SQLException {
+        N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
         return JdbcUtil.prepareCallableQuery(dataSource(), sql, stmtCreator);
@@ -406,12 +411,12 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param matchPropNames property names that uniquely identify the record
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches
      * @see #upsert(Object, Condition)
      */
-    default T upsert(final T entity, final Collection<String> matchPropNames) throws SQLException {
+    default T upsert(final T entity, final Collection<String> matchPropNames) throws SQLException, DuplicateResultException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
@@ -443,11 +448,11 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param cond condition to check for existence
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
      */
-    default T upsert(final T entity, final Condition cond) throws SQLException {
+    default T upsert(final T entity, final Condition cond) throws SQLException, DuplicateResultException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 

@@ -17,15 +17,17 @@ package com.landawn.abacus.jdbc.dao;
 
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.List;
 
 import javax.sql.DataSource;
 
 import com.landawn.abacus.annotation.Beta;
+import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
-import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
@@ -71,11 +73,14 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws SQLException {
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
+
         @SuppressWarnings("deprecation")
         final Class<?> targetEntityClass = targetEntityClass();
         @SuppressWarnings("deprecation")
@@ -136,8 +141,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class,
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws SQLException {
@@ -221,8 +226,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     int deleteJoinEntities(final T entity, final String joinEntityPropName) throws SQLException;
@@ -270,8 +275,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  properly annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws SQLException;
@@ -294,8 +299,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws SQLException {
@@ -356,9 +361,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
      *             transaction; prefer {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -398,9 +403,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -438,8 +443,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws SQLException {
@@ -498,9 +503,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
      *             transaction; prefer {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -539,9 +544,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -579,8 +584,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @SuppressWarnings("deprecation")
@@ -605,11 +610,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Deprecated
@@ -645,9 +650,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -678,8 +683,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @SuppressWarnings("deprecation")
@@ -707,11 +712,11 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Deprecated
@@ -746,9 +751,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
-     * @throws SQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}

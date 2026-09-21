@@ -17,6 +17,9 @@
 package com.landawn.abacus.jdbc;
 
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.BeanNotOfRequiredTypeException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
@@ -136,7 +139,7 @@ public final class SpringApplicationContext {
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
      * @throws IllegalStateException if the supplied context has not been refreshed or has already been closed.
      * @throws IllegalArgumentException if the context is initialized and {@code name} is {@code null}.
-     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found.
+     * @throws NoSuchBeanDefinitionException if no bean with the specified name is found.
      * @throws BeansException if the initialized context cannot create or retrieve the bean.
      * @see ApplicationContext#getBean(String)
      */
@@ -160,8 +163,8 @@ public final class SpringApplicationContext {
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
      * @throws IllegalStateException if the supplied context has not been refreshed or has already been closed.
      * @throws IllegalArgumentException if the context is initialized and {@code requiredType} is {@code null}.
-     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean of the given type exists.
-     * @throws org.springframework.beans.factory.NoUniqueBeanDefinitionException if multiple candidates exist and none can be selected unambiguously.
+     * @throws NoSuchBeanDefinitionException if no bean of the given type exists.
+     * @throws NoUniqueBeanDefinitionException if multiple candidates exist and none can be selected unambiguously.
      * @throws BeansException if the initialized context cannot create or retrieve the bean.
      * @see ApplicationContext#getBean(Class)
      */
@@ -188,8 +191,8 @@ public final class SpringApplicationContext {
      * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
      * @throws IllegalStateException if the supplied context has not been refreshed or has already been closed.
      * @throws IllegalArgumentException if the context is initialized and {@code name} is {@code null}.
-     * @throws org.springframework.beans.factory.NoSuchBeanDefinitionException if no bean with the specified name is found.
-     * @throws org.springframework.beans.factory.BeanNotOfRequiredTypeException if the bean is not of the required type.
+     * @throws NoSuchBeanDefinitionException if no bean with the specified name is found.
+     * @throws BeanNotOfRequiredTypeException if the bean is not of the required type.
      * @throws BeansException if the initialized context cannot create or retrieve the bean.
      * @see ApplicationContext#getBean(String, Class)
      */

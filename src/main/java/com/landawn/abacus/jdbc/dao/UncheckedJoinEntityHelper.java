@@ -15,13 +15,17 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import com.landawn.abacus.exception.UncheckedSQLException;
+
+import java.sql.SQLException;
+
 /**
  * Helper mix-in for loading and deleting join entities with unchecked exceptions.
  *
  * <p>Full unchecked join-entity capability, composed of the read side
  * ({@link UncheckedJoinEntityReadOps}) and the delete side
  * ({@link UncheckedJoinEntityDeleteOps}). All operations throw
- * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of {@link java.sql.SQLException}.
+ * {@link UncheckedSQLException} instead of {@link SQLException}.
  * See those interfaces for the individual operations; read-only unchecked DAOs mix in only
  * {@link UncheckedJoinEntityReadOps} (via {@link UncheckedReadOnlyJoinEntityHelper}).</p>
  *

@@ -466,6 +466,15 @@ public class JoinInfoTest extends TestBase {
     }
 
     @Test
+    public void testPropertyLookupValidatesArgumentsInSignatureOrder() {
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JoinInfo.getPropJoinInfo(null, null, null, null)).getMessage().contains("daoClass"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JoinInfo.getPropJoinInfo(UserDao.class, null, null, null)).getMessage()
+                .contains("entityClass"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, null, null)).getMessage()
+                .contains("tableName"));
+    }
+
+    @Test
     public void testConstructorRejectsMalformedJoinSeparators() {
         for (final String property : List.of("separatorOnly", "missingSource", "missingReference", "repeatedEquals", "emptyPair", "blank")) {
             final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,

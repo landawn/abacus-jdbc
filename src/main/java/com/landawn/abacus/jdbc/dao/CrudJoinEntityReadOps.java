@@ -21,8 +21,9 @@ import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
-import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.cs;
+import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.u.Optional;
 
@@ -113,8 +114,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
@@ -149,8 +150,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
@@ -180,8 +181,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
@@ -214,8 +215,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
@@ -247,8 +248,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
@@ -278,12 +279,14 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final Class<?> joinEntityClass) throws SQLException, DuplicateResultException {
+        N.checkArgNotNull(id, cs.id);
+
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
 
         if (result != null) {
@@ -315,12 +318,14 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws SQLException, DuplicateResultException {
+        N.checkArgNotNull(id, cs.id);
+
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
 
         if (result != null && includeAllJoinEntities) {
@@ -353,13 +358,15 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
             throws SQLException, DuplicateResultException {
+        N.checkArgNotNull(id, cs.id);
+
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
 
         if (result != null) {
@@ -395,13 +402,15 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
             throws SQLException, DuplicateResultException {
+        N.checkArgNotNull(id, cs.id);
+
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
 
         if (result != null && N.notEmpty(joinEntityClasses)) {
@@ -439,13 +448,15 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record is found by the specified {@code id}
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
             throws SQLException, DuplicateResultException {
+        N.checkArgNotNull(id, cs.id);
+
         final T result = DaoUtil.getCrudReadOps(this)
                 .getOrNull(id, includeAllJoinEntities ? DaoUtil.includeAllSourceJoinPropNames(this, sourceSelectPropNames) : sourceSelectPropNames);
 
@@ -479,8 +490,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
@@ -508,8 +519,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if nonempty {@code ids} contain composite ID representations for a single-ID entity,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
@@ -540,8 +551,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
@@ -573,8 +584,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
@@ -606,8 +617,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if nonempty {@code ids} contain composite ID representations for a single-ID entity,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
@@ -642,8 +653,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
@@ -692,8 +703,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta
@@ -748,8 +759,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Beta

@@ -95,6 +95,7 @@ public final class DaoUtil {
      * @return {@code true} if {@code daoInterface} extends {@link NonUpdateDao} or {@link ReadOnlyDao}
      *         (and therefore cannot perform update/delete operations that would invalidate cached rows);
      *         otherwise {@code false}.
+     * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
     public static boolean isCacheable(final Class<?> daoInterface) {
         return NonUpdateDao.class.isAssignableFrom(daoInterface) || ReadOnlyDao.class.isAssignableFrom(daoInterface);
@@ -105,6 +106,7 @@ public final class DaoUtil {
      *
      * @param daoInterface the DAO interface to inspect.
      * @return {@code true} if {@code daoInterface} extends {@link CrudReadOps}; otherwise {@code false}.
+     * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
     public static boolean isCrudReadOps(final Class<?> daoInterface) {
         return CrudReadOps.class.isAssignableFrom(daoInterface);
@@ -127,6 +129,7 @@ public final class DaoUtil {
      *
      * @param daoInterface the DAO interface to inspect.
      * @return {@code true} if {@code daoInterface} extends {@link CrudJoinEntityReadOps}; otherwise {@code false}.
+     * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
     public static boolean isCrudJoinEntityReadOps(final Class<?> daoInterface) {
         return CrudJoinEntityReadOps.class.isAssignableFrom(daoInterface);
@@ -137,6 +140,7 @@ public final class DaoUtil {
      *
      * @param daoInterface the DAO interface to inspect.
      * @return {@code true} if {@code daoInterface} extends {@link JoinEntityReadOps}; otherwise {@code false}.
+     * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
     public static boolean isJoinEntityReadOps(final Class<?> daoInterface) {
         return JoinEntityReadOps.class.isAssignableFrom(daoInterface);
@@ -147,6 +151,7 @@ public final class DaoUtil {
      *
      * @param daoInterface the DAO interface to inspect.
      * @return {@code true} if {@code daoInterface} extends {@link UncheckedReadOps}; otherwise {@code false}.
+     * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
     public static boolean isUncheckedReadOps(final Class<?> daoInterface) {
         return UncheckedReadOps.class.isAssignableFrom(daoInterface);
@@ -157,6 +162,7 @@ public final class DaoUtil {
      *
      * @param declaringClass the declaring class of a DAO method.
      * @return {@code true} if methods declared by {@code declaringClass} are base DAO operations; otherwise {@code false}.
+     * @throws NullPointerException if {@code declaringClass} is {@code null}
      */
     public static boolean isDaoOperationDeclaringClass(final Class<?> declaringClass) {
         return declaringClass.equals(Dao.class) || declaringClass.equals(UncheckedDao.class) || declaringClass.equals(ReadOps.class)
@@ -171,6 +177,7 @@ public final class DaoUtil {
      *
      * @param declaringClass the declaring class of a DAO method.
      * @return {@code true} if methods declared by {@code declaringClass} are CRUD DAO operations; otherwise {@code false}.
+     * @throws NullPointerException if {@code declaringClass} is {@code null}
      */
     public static boolean isCrudDaoOperationDeclaringClass(final Class<?> declaringClass) {
         return declaringClass.equals(CrudDao.class) || declaringClass.equals(UncheckedCrudDao.class) || declaringClass.equals(CrudReadOps.class)
@@ -184,6 +191,7 @@ public final class DaoUtil {
      *
      * @param declaringClass the declaring class of a DAO method.
      * @return {@code true} if methods declared by {@code declaringClass} are join-entity helper operations; otherwise {@code false}.
+     * @throws NullPointerException if {@code declaringClass} is {@code null}
      */
     public static boolean isJoinEntityHelperDeclaringClass(final Class<?> declaringClass) {
         return declaringClass.equals(JoinEntityReadOps.class) || declaringClass.equals(JoinEntityDeleteOps.class)
@@ -202,9 +210,10 @@ public final class DaoUtil {
      *
      * @param dao the DAO used to generate the identifier; must implement {@link CrudInsertOps}.
      * @return the generated identifier.
+     * @throws NullPointerException if {@code dao} is {@code null}
      * @throws ClassCastException if {@code dao} does not implement {@link CrudInsertOps}.
      * @throws UnsupportedOperationException if {@code dao} does not override {@link CrudInsertOps#generateId()}.
-     * @throws SQLException if a database access error occurs while generating the identifier.
+     * @throws SQLException if the DAO's overriding ID generator fails while accessing the database.
      */
     @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
     public static Object generateId(final DaoBase dao) throws SQLException {
@@ -417,6 +426,7 @@ public final class DaoUtil {
      * @return a new {@link HashSet} of the ID properties when {@code propNamesToRefresh} is {@code null};
      *         the original collection if it already contains all ID properties; otherwise a new
      *         {@link HashSet} containing both the requested properties and all ID properties
+     * @throws NullPointerException if {@code idPropNameList} is {@code null}
      */
     static Collection<String> getRefreshSelectPropNames(final Collection<String> propNamesToRefresh, final List<String> idPropNameList) {
         if (propNamesToRefresh == null) {
@@ -457,6 +467,7 @@ public final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the CrudJoinEntityReadOps instance to cast
      * @return the DAO instance cast to CrudReadOps
+     * @throws NullPointerException if {@code dao} is {@code null}
      * @throws UnsupportedOperationException if the DAO does not implement CrudReadOps interface.
      */
     static <T, ID, TD extends DaoBase<T, TD>> CrudReadOps<T, ID, TD> getCrudReadOps(final CrudJoinEntityReadOps<T, ID, TD> dao) {
@@ -491,6 +502,7 @@ public final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the join-entity helper instance to cast
      * @return the DAO instance cast to ReadOps
+     * @throws NullPointerException if {@code dao} is {@code null}
      * @throws UnsupportedOperationException if the DAO does not implement ReadOps interface.
      */
     static <T, TD extends DaoBase<T, TD>> ReadOps<T, TD> getReadOps(final JoinEntityBase<T, TD> dao) {
@@ -525,6 +537,7 @@ public final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the UncheckedJoinEntityReadOps instance to cast
      * @return the DAO instance cast to UncheckedReadOps
+     * @throws NullPointerException if {@code dao} is {@code null}
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedReadOps interface.
      */
     static <T, TD extends UncheckedDaoBase<T, TD>> UncheckedReadOps<T, TD> getReadOps(final UncheckedJoinEntityReadOps<T, TD> dao) {
@@ -560,6 +573,7 @@ public final class DaoUtil {
      * @param <TD> the DAO type
      * @param dao the UncheckedCrudJoinEntityReadOps instance to cast
      * @return the DAO instance cast to UncheckedCrudReadOps
+     * @throws NullPointerException if {@code dao} is {@code null}
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudReadOps interface.
      */
     static <T, ID, TD extends UncheckedDaoBase<T, TD>> UncheckedCrudReadOps<T, ID, TD> getCrudReadOps(final UncheckedCrudJoinEntityReadOps<T, ID, TD> dao) {
@@ -831,6 +845,7 @@ public final class DaoUtil {
      * }</pre>
      *
      * @param futures the list of futures to complete. Must not be {@code null}.
+     * @throws NullPointerException if {@code futures} is {@code null} or contains a {@code null} future
      * @throws UncheckedSQLException if the first failed future has a SQL-related exception
      */
     static void uncheckedComplete(final List<ContinuableFuture<Void>> futures) throws UncheckedSQLException {
@@ -875,6 +890,7 @@ public final class DaoUtil {
      *
      * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}.
      * @return the sum of all integer results from the futures
+     * @throws NullPointerException if {@code futures} is {@code null}, contains a {@code null} future, or a successful future returns {@code null}
      * @throws UncheckedSQLException if the first failed future has a SQL-related exception
      * @throws ArithmeticException if the sum overflows an {@code int}.
      */
@@ -923,6 +939,7 @@ public final class DaoUtil {
      * }</pre>
      *
      * @param futures the list of futures to complete. Must not be {@code null}.
+     * @throws NullPointerException if {@code futures} is {@code null} or contains a {@code null} future
      * @throws SQLException if the first failed future has a SQL-related exception
      */
     static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
@@ -967,6 +984,7 @@ public final class DaoUtil {
      *
      * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}.
      * @return the sum of all integer results from the futures
+     * @throws NullPointerException if {@code futures} is {@code null}, contains a {@code null} future, or a successful future returns {@code null}
      * @throws SQLException if the first failed future has a SQL-related exception
      * @throws ArithmeticException if the sum overflows an {@code int}.
      */
@@ -1048,6 +1066,7 @@ public final class DaoUtil {
 
     /**
      * Executes a statement-building action and translates a checked SQL failure for the unchecked DAO hierarchy.
+     * @throws NullPointerException if {@code action} is {@code null}
      * @throws UncheckedSQLException if the action fails with a SQL-related exception; other runtime failures are propagated
      */
     static <R> R uncheckedSql(final Throwables.Supplier<R, SQLException> action) throws UncheckedSQLException {

@@ -15,6 +15,10 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import com.landawn.abacus.exception.UncheckedSQLException;
+
+import java.sql.SQLException;
+
 /**
  * A specialized interface that combines read-only operations with join entity support for CRUD DAOs with unchecked exceptions.
  * This interface provides functionality to read entities along with their related entities through joins,
@@ -26,8 +30,8 @@ package com.landawn.abacus.jdbc.dao;
  * operations while avoiding checked exception handling.</p>
  *
  * <p>Read/load operations inherited from {@link UncheckedCrudJoinEntityReadOps} and
- * {@link UncheckedReadOnlyJoinEntityHelper} throw {@link com.landawn.abacus.exception.UncheckedSQLException}
- * instead of the checked {@link java.sql.SQLException}. The {@code deleteJoinEntities}/{@code deleteAllJoinEntities}
+ * {@link UncheckedReadOnlyJoinEntityHelper} throw {@link UncheckedSQLException}
+ * instead of the checked {@link SQLException}. The {@code deleteJoinEntities}/{@code deleteAllJoinEntities}
  * operations are <b>absent from the type</b> — calling them is a compile error rather than a runtime
  * {@link UnsupportedOperationException}.</p>
  *

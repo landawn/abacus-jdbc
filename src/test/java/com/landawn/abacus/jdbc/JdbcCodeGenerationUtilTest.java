@@ -47,6 +47,43 @@ import com.landawn.abacus.util.function.QuadFunction;
 
 public class JdbcCodeGenerationUtilTest extends TestBase {
 
+    @Test
+    public void testInvalidTableIsRejectedBeforeConnectionMetadata() {
+        final Connection unusedConnection = Mockito.mock(Connection.class);
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedConnection, " "));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateSelectSql(unusedConnection, " "));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateInsertSql(unusedConnection, " "));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(unusedConnection, " "));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, " "));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, " "));
+        Mockito.verifyNoInteractions(unusedConnection);
+    }
+
+    @Test
+    public void testInvalidKeyColumnsAreRejectedBeforeDatabaseAccess() {
+        final DataSource unusedSource = Mockito.mock(DataSource.class);
+        final Connection unusedConnection = Mockito.mock(Connection.class);
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedSource, "users", " "));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedSource, "users", " "));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, "users", " "));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, "users", " "));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedSource, "users", null, Arrays.asList("id", null), null));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedSource, "users", null, List.of("id", " "), null));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, "users", null, List.of("id", " "), null));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, "users", null, Arrays.asList("id", null), null));
+        Mockito.verifyNoInteractions(unusedSource, unusedConnection);
+    }
+
+    @Test
+    public void testInsertConversionValidatesDataSourceBeforeSql() {
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(null, null))
+                .getMessage().contains("ds"));
+    }
+
     private Connection connection;
     private PreparedStatement preparedStatement;
     private ResultSet resultSet;

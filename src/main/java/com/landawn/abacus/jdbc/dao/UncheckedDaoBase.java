@@ -47,7 +47,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -60,7 +60,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -73,7 +73,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -86,7 +86,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -99,7 +99,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -112,7 +112,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -127,7 +127,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -142,7 +142,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -155,7 +155,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -168,7 +168,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -181,7 +181,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -196,7 +196,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -209,7 +209,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
@@ -222,7 +222,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta

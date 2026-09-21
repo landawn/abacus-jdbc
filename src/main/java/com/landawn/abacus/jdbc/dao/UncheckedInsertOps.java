@@ -23,7 +23,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
  * Unchecked-exception insert capability: the {@link InsertOps} operations re-declared to throw
- * {@link com.landawn.abacus.exception.UncheckedSQLException}.
+ * {@link UncheckedSQLException}.
  *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the self-referencing DAO type
@@ -48,7 +48,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param entity the entity to insert
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
     void save(final T entity) throws UncheckedSQLException;
@@ -66,7 +66,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entity the entity to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
     void save(final T entity, final Collection<String> propNamesToSave) throws UncheckedSQLException;
@@ -85,7 +85,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param namedInsertSql the named INSERT SQL statement
      * @param entity the entity providing the parameter values
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null}
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
     void save(final String namedInsertSql, final T entity) throws UncheckedSQLException;
@@ -104,7 +104,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      * @see #batchSave(Collection, int)
      */
     @Override
@@ -126,7 +126,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
     void batchSave(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
@@ -144,7 +144,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entities the collection of entities to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
     default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave) throws UncheckedSQLException {
@@ -166,7 +166,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
     void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize) throws UncheckedSQLException;
@@ -185,7 +185,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param namedInsertSql the named INSERT SQL statement
      * @param entities the entities providing parameter values
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Beta
     @Override
@@ -209,7 +209,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Beta
     @Override

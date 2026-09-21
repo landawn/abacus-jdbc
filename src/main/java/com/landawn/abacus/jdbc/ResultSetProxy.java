@@ -177,7 +177,7 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param iface a Class defining an interface
      * @return {@code true} if this implements the interface or directly or indirectly wraps an object that does
-     * @throws SQLException if an error occurs while determining whether this is a wrapper for an object with the given interface
+     * @throws SQLException if the wrapped result set fails to determine whether it wraps the requested interface
      */
     @Override
     public boolean isWrapperFor(Class<?> iface) throws SQLException {

@@ -15,17 +15,19 @@
  */
 package com.landawn.abacus.jdbc.dao;
 
+import java.sql.SQLException;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.List;
 
 import javax.sql.DataSource;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
-import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.Stream;
@@ -33,8 +35,8 @@ import com.landawn.abacus.util.stream.Stream;
 /**
  * Delete-side view of {@link UncheckedJoinEntityHelper}: the join-entity <i>delete</i> operations
  * ({@code deleteJoinEntities}/{@code deleteAllJoinEntities} families) that throw
- * {@link com.landawn.abacus.exception.UncheckedSQLException} instead of the checked
- * {@link java.sql.SQLException}.
+ * {@link UncheckedSQLException} instead of the checked
+ * {@link SQLException}.
  *
  * <p>Unlike its checked counterpart {@link JoinEntityDeleteOps} (which is read-independent), this
  * interface also extends {@link UncheckedJoinEntityReadOps} for hierarchy plumbing, so it already
@@ -73,12 +75,15 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @SuppressWarnings("deprecation")
     @Override
     default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
+
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
                 joinEntityClass);
@@ -135,7 +140,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or if no join property of the specified type is found in the entity class,
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @SuppressWarnings("deprecation")
@@ -192,7 +197,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * clause matching the foreign key value(s) from the parent entity.</p>
      *
      * <p>Unlike the checked version in {@link JoinEntityDeleteOps}, this method throws {@link UncheckedSQLException}
-     * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
+     * instead of {@link SQLException}, making it suitable for use in functional programming contexts
      * and lambda expressions without requiring explicit exception handling.</p>
      *
      * <p>Important notes:</p>
@@ -225,7 +230,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
@@ -241,7 +246,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * automatically batched to prevent SQL statement size limits from being exceeded.</p>
      *
      * <p>Unlike the checked version in {@link JoinEntityDeleteOps}, this method throws {@link UncheckedSQLException}
-     * instead of {@link java.sql.SQLException}, making it suitable for use in functional programming contexts
+     * instead of {@link SQLException}, making it suitable for use in functional programming contexts
      * such as Stream operations and lambda expressions without requiring explicit exception handling.</p>
      *
      * <p>Performance characteristics:</p>
@@ -282,7 +287,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  properly annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
@@ -309,7 +314,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
@@ -380,8 +385,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -426,8 +431,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
      *             transaction; prefer {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -463,7 +468,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
@@ -525,8 +530,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @deprecated when {@code inParallel} is {@code true} the deletions are not performed within a single
      *             transaction; prefer {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -571,8 +576,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Collection, Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -612,7 +617,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @SuppressWarnings("deprecation")
@@ -638,10 +643,10 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Beta
@@ -678,8 +683,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *                                  or {@code entity} is {@code null} when a join is processed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -709,7 +714,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @SuppressWarnings("deprecation")
@@ -738,10 +743,10 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Beta
@@ -777,8 +782,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws java.util.concurrent.RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws UncheckedSQLException if a database access error occurs
+     * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Collection)} for transactional behavior
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}

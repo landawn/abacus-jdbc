@@ -16,6 +16,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -79,6 +80,55 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.stream.Stream;
 
 public class JdbcUtilTest extends TestBase {
+
+    @Test
+    public void testExtractionOverloadsValidateParametersInSignatureOrder() {
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(null, (Jdbc.RowFilter) null)).getMessage().contains("rs"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(null, (Jdbc.RowExtractor) null)).getMessage().contains("rs"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(null, null, null)).getMessage().contains("rs"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(mockResultSet, -1, -1, (Jdbc.RowFilter) null, false))
+                .getMessage().contains("offset"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(mockResultSet, 0, -1, (Jdbc.RowExtractor) null, false))
+                .getMessage().contains("count"));
+        verifyNoInteractions(mockResultSet);
+    }
+
+    @Test
+    public void testPageFactoriesValidateParametersInSignatureOrder() {
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage((DataSource) null, null, 0, null)).getMessage()
+                .contains("ds"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage((Connection) null, null, 0, null)).getMessage()
+                .contains("conn"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage(mockDataSource, null, 0, null)).getMessage()
+                .contains("sql"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage(mockConnection, "SELECT 1", 0, null)).getMessage()
+                .contains("pageSize"));
+        verifyNoInteractions(mockDataSource, mockConnection);
+    }
+
+    @Test
+    public void testLegacyCacheOpeningChecksScopeBeforeCacheArgument() {
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
+            assertThrows(IllegalStateException.class, () -> JdbcUtil.openDaoCacheOnCurrentThread(null));
+            assertSame(scope.cache(), JdbcUtil.localThreadCache_TL.get());
+        }
+    }
+
+    @Test
+    public void testDaoFactoriesValidateInterfaceAndSourceBeforeOptions() {
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.createDao(null, null, (com.landawn.abacus.query.SqlDialect) null)).getMessage().contains("daoInterface"));
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.createDao(com.landawn.abacus.jdbc.dao.DaoBase.class, null, (com.landawn.abacus.query.SqlDialect) null)).getMessage()
+                .contains("ds"));
+        verifyNoInteractions(mockDataSource);
+    }
+
+    @Test
+    public void testBeginTransactionRejectsUnsupportedIsolationBeforeAcquiringConnection() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.NONE));
+        verifyNoInteractions(mockDataSource);
+    }
 
     // TODO: The remaining JdbcUtil overload matrix includes close/skip helpers and large-result query adapters whose
     // behavior is mostly exercised through shared internals. Add focused fixture-based tests for any uncovered branches.

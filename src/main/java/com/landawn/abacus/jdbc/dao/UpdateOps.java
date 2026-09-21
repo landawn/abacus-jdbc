@@ -21,8 +21,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.JoinedBy;
-import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.cs;
+import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.N;
 
@@ -50,8 +51,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     default int update(final String propName, final Object propValue, final Condition cond) throws SQLException {
         N.checkArgNotEmpty(propName, cs.propName);
@@ -79,8 +80,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final Map<String, Object> updateProps, final Condition cond) throws SQLException;
 
@@ -103,8 +104,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     default int update(final T entity, final Condition cond) throws SQLException {
         @SuppressWarnings("deprecation")
@@ -135,8 +136,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
      *                                  or if {@code cond} is {@code null}
-     * @throws com.landawn.abacus.exception.UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if a database access error occurs
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws SQLException;
 

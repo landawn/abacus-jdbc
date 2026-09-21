@@ -169,6 +169,7 @@ final class SqlIdentifierUtil {
      * @param qualifiedName the raw, caller-supplied qualified identifier
      * @param partCount the number of parts {@code splitQualifiedSqlIdentifier} produced for it
      * @return one flag per part, in order
+     * @throws NegativeArraySizeException if {@code partCount} is negative
      */
     static boolean[] explicitlyDelimitedIdentifierParts(final String qualifiedName, final int partCount) {
         final boolean[] result = new boolean[partCount];
@@ -221,8 +222,8 @@ final class SqlIdentifierUtil {
      *         qualified identifier
      */
     static String renderTableName(final String tableName, final ProductInfo dbProductInfo) {
-        final String quote = quoteString(dbProductInfo);
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
+        final String quote = quoteString(dbProductInfo);
         final boolean[] explicitlyDelimitedParts = explicitlyDelimitedIdentifierParts(tableName, parts.length);
 
         if (parts.length == 1) {
