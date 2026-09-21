@@ -3,13 +3,16 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 import java.nio.file.Files;
@@ -2020,9 +2023,13 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertEquals(-1, result.indexOf("import java.util.List;", first + 1), () -> "duplicate java.util.List import:\n" + result);
     }
 
-    // Exercise catch blocks at lines 821–823 (IOException → UncheckedIOException when srcDir is set)
+    // srcDir set, but the destination .java path is occupied by a directory. IOUtil (since abacus-common
+    // 8.0.1) classifies a failed open whose target is a directory as a wrong-kind argument and reports
+    // IllegalArgumentException instead of letting the platform's FileNotFoundException through, so this
+    // case no longer reaches the IOException → UncheckedIOException wrap — that wrap is covered by
+    // testGenerateEntityClass_SrcDirWriteFails_ThrowsUncheckedIOException.
     @Test
-    public void testGenerateEntityClass_WithSrcDir_WrapsIOException() throws Exception {
+    public void testGenerateEntityClass_SrcDirTargetIsDirectory_ThrowsIllegalArgumentException() throws Exception {
         final Path tempDir = Files.createTempDirectory("jdbcCodeGenTest");
         try {
             final Path targetDir = tempDir.resolve("OrderHistory.java");
@@ -2034,8 +2041,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                     .className("OrderHistory")
                     .build();
 
-            assertThrows(UncheckedIOException.class,
+            final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
                     () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+            assertTrue(ex.getMessage().contains("is a directory"), ex.getMessage());
         } finally {
             deleteRecursively(tempDir.toFile());
         }
@@ -2105,6 +2113,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 }
             }
         }
+        // A read-only file (see testGenerateEntityClass_SrcDirWriteFails_ThrowsUncheckedIOException)
+        // cannot be deleted on Windows until the flag is cleared.
+        file.setWritable(true);
         file.delete();
     }
 
@@ -2424,16 +2435,22 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         Mockito.verify(databaseMetaData).getPrimaryKeys(null, null, "a.b.c.d");
     }
 
-    // srcDir set but the on-disk write fails (target path pre-created as a directory) ->
-    // IOException is wrapped as UncheckedIOException (L876-878).
+    // srcDir set but the on-disk write fails (destination .java pre-created read-only) -> the
+    // IOException is wrapped as UncheckedIOException (L1019-1021).
     @Test
     public void testGenerateEntityClass_SrcDirWriteFails_ThrowsUncheckedIOException() throws Exception {
         setupFullGenerateEntityClassMock();
         final Path tempDir = Files.createTempDirectory("jdbcCodeGenIoFail");
         try {
-            // Pre-create the destination .java path as a DIRECTORY so writing the generated file fails.
-            final Path blockingDir = tempDir.resolve("pkg").resolve("OrderHistory.java");
-            Files.createDirectories(blockingDir);
+            // Pre-create the destination .java file read-only so opening it for writing fails. Unlike a
+            // directory sitting at that path (which IOUtil reports as IllegalArgumentException), this
+            // keeps the failure a genuine IOException.
+            final Path pkgDir = Files.createDirectories(tempDir.resolve("pkg"));
+            final File blocked = pkgDir.resolve("OrderHistory.java").toFile();
+            assertTrue(blocked.createNewFile());
+            assertTrue(blocked.setReadOnly());
+            // A privileged user (root) is not bound by the read-only flag; there is nothing to assert then.
+            assumeTrue(!blocked.canWrite(), "the filesystem does not enforce the read-only flag for this user");
 
             final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                     .srcDir(tempDir.toString())
@@ -2443,7 +2460,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
             final UncheckedIOException ex = assertThrows(UncheckedIOException.class,
                     () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
-            assertNotNull(ex);
+            assertInstanceOf(IOException.class, ex.getCause());
         } finally {
             deleteRecursively(tempDir.toFile());
         }

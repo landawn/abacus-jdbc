@@ -6575,44 +6575,6 @@ public final class Jdbc {
             this.scale = scale;
         }
 
-        // Nested records compiled with Lombok omit mandated accessors and Object methods.
-        public int parameterIndex() {
-            return parameterIndex;
-        }
-
-        public String parameterName() {
-            return parameterName;
-        }
-
-        public int sqlType() {
-            return sqlType;
-        }
-
-        public String typeName() {
-            return typeName;
-        }
-
-        public int scale() {
-            return scale;
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            return obj instanceof OutParam other && parameterIndex == other.parameterIndex && sqlType == other.sqlType && scale == other.scale
-                    && Objects.equals(parameterName, other.parameterName) && Objects.equals(typeName, other.typeName);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(parameterIndex, parameterName, sqlType, typeName, scale);
-        }
-
-        @Override
-        public String toString() {
-            return "OutParam[parameterIndex=" + parameterIndex + ", parameterName=" + parameterName + ", sqlType=" + sqlType + ", typeName=" + typeName
-                    + ", scale=" + scale + "]";
-        }
-
         /**
          * Creates a validated index-based output-parameter descriptor with no type name and a scale of zero.
          *
@@ -7649,26 +7611,6 @@ public final class Jdbc {
          */
         DaoCacheByMap {
             N.checkArgNotNull(cache, "cache");
-        }
-
-        // Nested records compiled with Lombok omit mandated accessors and Object methods.
-        public Map<String, Object> cache() {
-            return cache;
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            return obj instanceof DaoCacheByMap other && Objects.equals(cache, other.cache);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hashCode(cache);
-        }
-
-        @Override
-        public String toString() {
-            return "DaoCacheByMap[cache=" + cache + "]";
         }
 
         @Override

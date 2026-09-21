@@ -32,10 +32,10 @@
 	</scm>
 
 	<properties>
-		<java.version>17</java.version>
-		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>17</maven.compiler.target>
-		<maven.compiler.release>17</maven.compiler.release>
+		<java.version>21</java.version>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
+		<maven.compiler.release>21</maven.compiler.release>
 		<junit.jupiter.version>6.1.1</junit.jupiter.version>
 		<junit.platform.version>6.1.1</junit.platform.version>
 		<mockito.version>5.23.0</mockito.version>
@@ -54,14 +54,21 @@
 		<dependency>
 			<groupId>com.landawn.abacus</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>8.0.0</version>
+			<version>8.0.1</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>com.landawn.abacus</groupId>
 			<artifactId>abacus-query</artifactId>
-			<version>4.9.2</version>
+			<version>4.9.3</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.esotericsoftware</groupId>
+			<artifactId>kryo</artifactId>
+			<version>5.6.2</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -125,6 +132,7 @@
 			<groupId>com.mchange</groupId>
 			<artifactId>c3p0</artifactId>
 			<version>0.14.1</version>
+			<scope>provided</scope>
 		</dependency>
 
 		<dependency>

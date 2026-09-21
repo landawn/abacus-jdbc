@@ -1144,7 +1144,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     static String getTransactionId(final javax.sql.DataSource ds, final CreatedBy creator) {
         N.checkArgNotNull(creator, "creator");
 
-        return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().getId(), "_", creator.ordinal());
+        return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().threadId(), "_", creator.ordinal());
     }
 
     /**
