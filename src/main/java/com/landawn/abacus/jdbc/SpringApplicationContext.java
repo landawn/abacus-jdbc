@@ -143,7 +143,7 @@ public final class SpringApplicationContext {
      * @throws BeansException if the initialized context cannot create or retrieve the bean.
      * @see ApplicationContext#getBean(String)
      */
-    public Object getBean(final String name) throws BeansException {
+    public Object getBean(final String name) throws IllegalStateException, IllegalArgumentException, NoSuchBeanDefinitionException, BeansException {
         final ApplicationContext context = appContext;
 
         return context == null ? null : context.getBean(name);
@@ -168,7 +168,8 @@ public final class SpringApplicationContext {
      * @throws BeansException if the initialized context cannot create or retrieve the bean.
      * @see ApplicationContext#getBean(Class)
      */
-    public <T> T getBean(final Class<T> requiredType) throws BeansException {
+    public <T> T getBean(final Class<T> requiredType)
+            throws IllegalStateException, IllegalArgumentException, NoSuchBeanDefinitionException, NoUniqueBeanDefinitionException, BeansException {
         final ApplicationContext context = appContext;
 
         return context == null ? null : context.getBean(requiredType);
@@ -196,7 +197,8 @@ public final class SpringApplicationContext {
      * @throws BeansException if the initialized context cannot create or retrieve the bean.
      * @see ApplicationContext#getBean(String, Class)
      */
-    public <T> T getBean(final String name, final Class<T> requiredType) throws BeansException {
+    public <T> T getBean(final String name, final Class<T> requiredType)
+            throws IllegalStateException, IllegalArgumentException, NoSuchBeanDefinitionException, BeanNotOfRequiredTypeException, BeansException {
         final ApplicationContext context = appContext;
 
         return context == null ? null : context.getBean(name, requiredType);

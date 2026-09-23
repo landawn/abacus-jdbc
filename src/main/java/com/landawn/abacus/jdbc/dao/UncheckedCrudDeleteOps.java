@@ -54,7 +54,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      */
     @Override
-    int delete(final T entity) throws UncheckedSQLException;
+    int delete(final T entity) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Deletes an entity by its ID.
@@ -74,7 +74,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      */
     @Override
-    int deleteById(final ID id) throws UncheckedSQLException;
+    int deleteById(final ID id) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Performs batch delete of multiple entities using the default batch size
@@ -97,7 +97,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    default int batchDelete(final Collection<? extends T> entities) throws UncheckedSQLException {
+    default int batchDelete(final Collection<? extends T> entities) throws IllegalStateException, UncheckedSQLException, ArithmeticException {
         return batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -124,7 +124,8 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    int batchDelete(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+    int batchDelete(final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
 
     /**
      * Deletes multiple entities by their IDs using the default batch size
@@ -146,7 +147,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    default int batchDeleteByIds(final Collection<? extends ID> ids) throws UncheckedSQLException {
+    default int batchDeleteByIds(final Collection<? extends ID> ids) throws IllegalStateException, UncheckedSQLException, ArithmeticException {
         return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -173,6 +174,7 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize) throws UncheckedSQLException;
+    int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
 
 }

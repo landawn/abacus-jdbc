@@ -58,7 +58,6 @@ import com.landawn.abacus.TestBase;
 
 public class CallableQueryTest extends TestBase {
 
-
     @Test
     public void testQueryAndGetOutParametersRejectsLiveResultSetFromExtractor() throws SQLException {
         final ResultSet rs = mock(ResultSet.class);

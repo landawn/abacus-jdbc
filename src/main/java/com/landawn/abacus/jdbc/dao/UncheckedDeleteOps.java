@@ -51,6 +51,6 @@ sealed interface UncheckedDeleteOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      */
     @Override
-    int delete(final Condition cond) throws UncheckedSQLException;
+    int delete(final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
 }

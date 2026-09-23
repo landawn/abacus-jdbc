@@ -248,9 +248,8 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         final CheckedJoinUserDao checkedDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds);
         final List<JoinUser> loaded = List.of(userDao.getOrNull(seeded.getId(), List.of(), JoinOrder.class),
                 userDao.getOrNull(seeded.getId(), List.of(), List.of(JoinOrder.class)), userDao.getOrNull(seeded.getId(), List.of(), true),
-                checkedDao.getOrNull(seeded.getId(), List.of(), JoinOrder.class),
-                checkedDao.getOrNull(seeded.getId(), List.of(), List.of(JoinOrder.class)), checkedDao.getOrNull(seeded.getId(), List.of(), true),
-                userDao.list(List.of(), JoinOrder.class, Filters.eq("id", seeded.getId())).get(0));
+                checkedDao.getOrNull(seeded.getId(), List.of(), JoinOrder.class), checkedDao.getOrNull(seeded.getId(), List.of(), List.of(JoinOrder.class)),
+                checkedDao.getOrNull(seeded.getId(), List.of(), true), userDao.list(List.of(), JoinOrder.class, Filters.eq("id", seeded.getId())).get(0));
 
         for (final JoinUser user : loaded) {
             assertEquals(seeded.getId(), user.getId());

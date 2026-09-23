@@ -1175,8 +1175,8 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
 
         assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.deleteJoinEntities(oneEntity, (Class<?>) null)).getMessage()
                 .contains("joinEntityClass"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntities(oneEntity, (Class<?>) null)).getMessage()
-                .contains("joinEntityClass"));
+        assertTrue(
+                assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntities(oneEntity, (Class<?>) null)).getMessage().contains("joinEntityClass"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(oneEntity, (Class<?>) null)).getMessage()
                 .contains("joinEntityClass"));
 

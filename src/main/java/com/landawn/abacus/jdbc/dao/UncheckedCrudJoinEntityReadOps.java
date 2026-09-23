@@ -102,10 +102,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
-    default Optional<T> get(final ID id, final Class<?> joinEntityClass) throws UncheckedSQLException, DuplicateResultException {
+    default Optional<T> get(final ID id, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, joinEntityClass));
     }
 
@@ -131,10 +133,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
-    default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException, DuplicateResultException {
+    default Optional<T> get(final ID id, final boolean includeAllJoinEntities)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, includeAllJoinEntities));
     }
 
@@ -165,11 +169,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClass));
     }
 
@@ -201,11 +206,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClasses));
     }
 
@@ -237,11 +243,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, includeAllJoinEntities));
     }
 
@@ -269,10 +276,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
-    default T getOrNull(final ID id, final Class<?> joinEntityClass) throws UncheckedSQLException, DuplicateResultException {
+    default T getOrNull(final ID id, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
@@ -309,10 +318,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
-    default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws UncheckedSQLException, DuplicateResultException {
+    default T getOrNull(final ID id, final boolean includeAllJoinEntities)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
@@ -351,11 +362,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
@@ -395,11 +407,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
@@ -441,11 +454,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this)
@@ -483,10 +497,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntityClass) throws UncheckedSQLException, DuplicateResultException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, null, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -515,10 +531,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws UncheckedSQLException, DuplicateResultException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, null, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -550,11 +568,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, sourceSelectPropNames, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -586,11 +605,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, sourceSelectPropNames, joinEntityClasses, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -622,11 +642,12 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, sourceSelectPropNames, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -661,11 +682,13 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass,
-            final int batchSize) throws UncheckedSQLException, DuplicateResultException {
+            final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)
@@ -714,11 +737,13 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses,
-            final int batchSize) throws UncheckedSQLException, DuplicateResultException {
+            final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)
@@ -773,11 +798,13 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities,
-            final int batchSize) throws UncheckedSQLException, DuplicateResultException {
+            final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)

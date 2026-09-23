@@ -51,7 +51,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
-    void save(final T entity) throws UncheckedSQLException;
+    void save(final T entity) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Saves (inserts) the specified entity with only the specified properties.
@@ -69,7 +69,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
-    void save(final T entity, final Collection<String> propNamesToSave) throws UncheckedSQLException;
+    void save(final T entity, final Collection<String> propNamesToSave) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Saves (inserts) the entity using a custom named INSERT SQL statement.
@@ -89,7 +89,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
-    void save(final String namedInsertSql, final T entity) throws UncheckedSQLException;
+    void save(final String namedInsertSql, final T entity) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Batch saves (inserts) multiple entities using the default batch size.
@@ -112,7 +112,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @see #batchSave(Collection, int)
      */
     @Override
-    default void batchSave(final Collection<? extends T> entities) throws UncheckedSQLException {
+    default void batchSave(final Collection<? extends T> entities) throws IllegalStateException, UncheckedSQLException {
         batchSave(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -136,7 +136,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *         binding, or executing an INSERT statement fails
      */
     @Override
-    void batchSave(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+    void batchSave(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException;
 
     /**
      * Batch saves entities with only the specified properties using default batch size.
@@ -157,7 +157,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *         binding, or executing an INSERT statement fails
      */
     @Override
-    default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave) throws UncheckedSQLException {
+    default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
         batchSave(entities, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -182,7 +183,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *         binding, or executing an INSERT statement fails
      */
     @Override
-    void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize) throws UncheckedSQLException;
+    void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException;
 
     /**
      * Batch saves entities using a custom named INSERT SQL with default batch size.
@@ -206,7 +208,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      */
     @Beta
     @Override
-    default void batchSave(final String namedInsertSql, final Collection<? extends T> entities) throws UncheckedSQLException {
+    default void batchSave(final String namedInsertSql, final Collection<? extends T> entities)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
         batchSave(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -234,6 +237,7 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      */
     @Beta
     @Override
-    void batchSave(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+    void batchSave(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException;
 
 }

@@ -52,7 +52,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql) throws UncheckedSQLException {
+    default PreparedQuery prepareQuery(final String sql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareQuery(sql));
     }
 
@@ -65,7 +65,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final Condition cond) throws UncheckedSQLException {
+    default PreparedQuery prepareQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
         return prepareQuery(null, cond);
     }
 
@@ -78,7 +78,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
+    PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * {@inheritDoc}
@@ -91,7 +91,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final String sql) throws UncheckedSQLException {
+    default PreparedQuery prepareQueryForLargeResult(final String sql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareQueryForLargeResult(sql));
     }
 
@@ -104,7 +104,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final Condition cond) throws UncheckedSQLException {
+    default PreparedQuery prepareQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
         return prepareQueryForLargeResult(null, cond);
     }
 
@@ -117,7 +117,8 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException {
+    default PreparedQuery prepareQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> prepareQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult));
     }
 
@@ -133,7 +134,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedSql) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final String namedSql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareNamedQuery(namedSql));
     }
 
@@ -149,7 +150,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareNamedQuery(namedSql));
     }
 
@@ -162,7 +163,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final Condition cond) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
         return prepareNamedQuery(null, cond);
     }
 
@@ -175,7 +176,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
+    NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * {@inheritDoc}
@@ -189,7 +190,8 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final String namedSql) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final String namedSql)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareNamedQueryForLargeResult(namedSql));
     }
 
@@ -205,7 +207,8 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedSql) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedSql)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareNamedQueryForLargeResult(namedSql));
     }
 
@@ -218,7 +221,7 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final Condition cond) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
         return prepareNamedQueryForLargeResult(null, cond);
     }
 
@@ -231,7 +234,8 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> prepareNamedQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult));
     }
 }

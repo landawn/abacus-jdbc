@@ -55,7 +55,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
-    void save(final T entity) throws SQLException;
+    void save(final T entity) throws IllegalArgumentException, SQLException;
 
     /**
      * Saves (inserts) the specified entity with only the specified properties.
@@ -74,7 +74,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
-    void save(final T entity, final Collection<String> propNamesToSave) throws SQLException;
+    void save(final T entity, final Collection<String> propNamesToSave) throws IllegalArgumentException, SQLException;
 
     /**
      * Saves (inserts) the entity using a custom named INSERT SQL statement.
@@ -93,7 +93,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
-    void save(final String namedInsertSql, final T entity) throws SQLException;
+    void save(final String namedInsertSql, final T entity) throws IllegalArgumentException, SQLException;
 
     /**
      * Batch saves (inserts) multiple entities using the default batch size.
@@ -112,7 +112,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      * @see #batchSave(Collection, int)
      */
-    default void batchSave(final Collection<? extends T> entities) throws SQLException {
+    default void batchSave(final Collection<? extends T> entities) throws IllegalStateException, SQLException {
         batchSave(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -135,7 +135,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
-    void batchSave(final Collection<? extends T> entities, final int batchSize) throws SQLException;
+    void batchSave(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, IllegalStateException, SQLException;
 
     /**
      * Batch saves entities with only the specified properties using default batch size.
@@ -149,7 +149,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
-    default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave) throws SQLException {
+    default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave)
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         batchSave(entities, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -167,7 +168,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
-    void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize) throws SQLException;
+    void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, SQLException;
 
     /**
      * Batch saves entities using a custom named INSERT SQL with default batch size.
@@ -183,7 +185,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     @Beta
-    default void batchSave(final String namedInsertSql, final Collection<? extends T> entities) throws SQLException {
+    default void batchSave(final String namedInsertSql, final Collection<? extends T> entities)
+            throws IllegalArgumentException, IllegalStateException, SQLException {
         batchSave(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -203,6 +206,7 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     @Beta
-    void batchSave(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws SQLException;
+    void batchSave(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, SQLException;
 
 }

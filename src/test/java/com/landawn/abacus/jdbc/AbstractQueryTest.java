@@ -132,7 +132,6 @@ public class AbstractQueryTest extends TestBase {
         assertTrue(thrown.getMessage().contains("stmt"));
     }
 
-
     @Test
     public void testQueryForBigIntegerPropagatesInvalidIntegerText() throws SQLException {
         final ResultSet rs = Mockito.mock(ResultSet.class);
@@ -2018,8 +2017,7 @@ public class AbstractQueryTest extends TestBase {
             final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
             final TestQuery ownedQuery = new TestQuery(statement);
 
-            try (Stream<String> results = withColumnLabels
-                    ? ownedQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")
+            try (Stream<String> results = withColumnLabels ? ownedQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")
                     : ownedQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
                 assertNotNull(results);
             }

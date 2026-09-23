@@ -276,7 +276,8 @@ public final class JoinInfo {
      * @see com.landawn.abacus.jdbc.annotation.DaoConfig
      * @see #isManyToManyJoin()
      */
-    JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowNullOrDefaultJoinKeys) {
+    JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowNullOrDefaultJoinKeys)
+            throws IllegalArgumentException, IllegalStateException {
         N.checkArgNotNull(entityClass, cs.entityClass);
         N.checkArgNotNull(tableName, cs.tableName);
         N.checkArgNotNull(joinEntityPropName, cs.joinEntityPropName);
@@ -902,7 +903,8 @@ public final class JoinInfo {
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
-    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> selectSqlPlan(final Dsl dsl) {
+    public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> selectSqlPlan(final Dsl dsl)
+            throws IllegalArgumentException {
         final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSqlBuilderAndParamSetterPool.get(dsl);
 
         if (tp == null) {
@@ -944,7 +946,7 @@ public final class JoinInfo {
      * @see Dsl#PLC
      */
     public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> batchSelectSqlPlan( //NOSONAR
-            final Dsl dsl) {
+            final Dsl dsl) throws IllegalArgumentException {
         final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchSelectSqlBuilderAndParamSetterPool
                 .get(dsl);
 
@@ -984,7 +986,7 @@ public final class JoinInfo {
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
-    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteSqlPlan(final Dsl dsl) {
+    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteSqlPlan(final Dsl dsl) throws IllegalArgumentException {
         final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(dsl);
 
         if (tp == null) {
@@ -1026,7 +1028,7 @@ public final class JoinInfo {
      * @see Dsl#PLC
      */
     public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> batchDeleteSqlPlan( //NOSONAR
-            final Dsl dsl) {
+            final Dsl dsl) throws IllegalArgumentException {
         final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSqlBuilderAndParamSetterPool
                 .get(dsl);
 
@@ -1068,17 +1070,18 @@ public final class JoinInfo {
      * @throws UnsupportedOperationException if this is a many-to-many join &mdash; use {@link #setJoinPropEntities(Collection, Map)}
      *                                  with keys derived from the junction table instead &mdash; or if the {@code @JoinedBy} join
      *                                  property is read-only, so the matched join entities cannot be stored back onto the source entity.
-     * @throws NullPointerException if {@code entities} is {@code null} for a supported one-to-many or many-to-one join,
-     *                                  or if {@code entities} or {@code joinPropEntities} contains a {@code null} element
-     *                                  (its join key cannot be read). A {@code null} {@code joinPropEntities} is treated as empty.
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
      *                                  if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}, or if the declared collection or map type
      *                                  of the join property has no supported construction path.
+     * @throws NullPointerException if {@code entities} is {@code null} for a supported one-to-many or many-to-one join,
+     *                                  or if {@code entities} or {@code joinPropEntities} contains a {@code null} element
+     *                                  (its join key cannot be read). A {@code null} {@code joinPropEntities} is treated as empty.
      *
      * @see #setJoinPropEntities(Collection, Map)
      */
-    public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities) {
+    public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities)
+            throws UnsupportedOperationException, IllegalArgumentException, NullPointerException {
         if (isManyToManyJoin) {
             // For many-to-many, srcEntityKeyExtractor reads the source-side join key (e.g.,
             // employee.employeeId) while referencedEntityKeyExtractor reads the referenced-side
@@ -1140,7 +1143,8 @@ public final class JoinInfo {
      * @throws UnsupportedOperationException if the {@code @JoinedBy} join property is read-only, so the matched join
      *                                  entities cannot be stored back onto the source entity.
      */
-    public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities) {
+    public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities)
+            throws NullPointerException, IllegalArgumentException, UnsupportedOperationException {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
         final boolean isMapProp = joinPropInfo.type.isMap();
 
@@ -1209,11 +1213,11 @@ public final class JoinInfo {
      * @param propInfo one of {@link #srcPropInfos}.
      * @param entity the source entity to read the join-key value from.
      * @return the property value, possibly {@code null} or a type default when such values are allowed.
-     * @throws NullPointerException if {@code entity} is {@code null}, since the join-key property cannot be read from it.
      * @throws IllegalArgumentException if the value is {@code null} or its type default and
      *                                  {@link #allowNullOrDefaultJoinKeys} is {@code false}.
+     * @throws NullPointerException if {@code entity} is {@code null}, since the join-key property cannot be read from it.
      */
-    private Object getJoinPropValue(final PropInfo propInfo, final Object entity) {
+    private Object getJoinPropValue(final PropInfo propInfo, final Object entity) throws IllegalArgumentException, NullPointerException {
         final Object value = propInfo.getPropValue(entity);
 
         if (!allowNullOrDefaultJoinKeys && JdbcUtil.isNullOrDefault(value)) {
@@ -1280,7 +1284,8 @@ public final class JoinInfo {
      * @see JoinedBy
      * @see DaoConfig
      */
-    public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) {
+    public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName)
+            throws IllegalArgumentException, IllegalStateException {
         N.checkArgNotNull(daoClass, cs.daoClass);
         N.checkArgNotNull(entityClass, cs.entityClass);
         N.checkArgNotNull(tableName, cs.tableName);
@@ -1359,7 +1364,8 @@ public final class JoinInfo {
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)
      */
-    public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) {
+    public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName)
+            throws IllegalArgumentException, IllegalStateException {
         N.checkArgNotNull(daoClass, cs.daoClass);
         N.checkArgNotNull(entityClass, cs.entityClass);
         N.checkArgNotNull(tableName, cs.tableName);
@@ -1433,7 +1439,7 @@ public final class JoinInfo {
      * @see #getEntityJoinInfo(Class, Class, String)
      */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
-            final Class<?> joinPropEntityClass) {
+            final Class<?> joinPropEntityClass) throws IllegalArgumentException, IllegalStateException {
         N.checkArgNotNull(daoClass, cs.daoClass);
         N.checkArgNotNull(entityClass, cs.entityClass);
         N.checkArgNotNull(tableName, cs.tableName);

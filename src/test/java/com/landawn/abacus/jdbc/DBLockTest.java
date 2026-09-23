@@ -608,7 +608,8 @@ public class DBLockTest extends TestBase {
         final org.h2.jdbcx.JdbcDataSource ds = new org.h2.jdbcx.JdbcDataSource();
         ds.setURL("jdbc:h2:mem:independent_lock_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
 
-        try (Connection observer = ds.getConnection(); DBLock lock = new DBLock(ds, "\"independent_locks\"")) {
+        try (Connection observer = ds.getConnection();
+             DBLock lock = new DBLock(ds, "\"independent_locks\"")) {
             JdbcUtil.executeUpdate(observer, "CREATE TABLE business_data(id INT)");
             final String code;
 
@@ -649,7 +650,8 @@ public class DBLockTest extends TestBase {
             return conn;
         });
 
-        try (Connection observer = database.getConnection(); DBLock lock = new DBLock(ds, "\"manual_locks\"")) {
+        try (Connection observer = database.getConnection();
+             DBLock lock = new DBLock(ds, "\"manual_locks\"")) {
             ((ScheduledFuture<?>) getField(lock, "scheduledFuture")).cancel(false);
             final String code = lock.tryLock("resource", 60_000, 0);
             assertNotNull(code);
@@ -658,8 +660,10 @@ public class DBLockTest extends TestBase {
             JdbcUtil.executeUpdate(observer, "UPDATE \"manual_locks\" SET expiry_time = TIMESTAMP '2000-01-01 00:00:00'");
             try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
                 lock.refreshLocks();
-                assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"manual_locks\" WHERE expiry_time > CURRENT_TIMESTAMP")
-                        .queryForInt().orElse(-1));
+                assertEquals(1,
+                        JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"manual_locks\" WHERE expiry_time > CURRENT_TIMESTAMP")
+                                .queryForInt()
+                                .orElse(-1));
             }
 
             assertTrue(lock.unlock("resource", code));

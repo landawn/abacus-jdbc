@@ -82,7 +82,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#exists()
      */
     @Override
-    boolean exists(final Condition cond) throws UncheckedSQLException;
+    boolean exists(final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Checks if no records exist that match the specified condition.
@@ -102,7 +102,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Beta
     @Override
-    default boolean notExists(final Condition cond) throws UncheckedSQLException {
+    default boolean notExists(final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
         return !exists(cond);
     }
 
@@ -121,7 +121,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails
      */
     @Override
-    int count(final Condition cond) throws UncheckedSQLException;
+    int count(final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Finds and returns the first record that matches the specified condition.
@@ -139,7 +139,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails
      */
     @Override
-    Optional<T> findFirst(final Condition cond) throws UncheckedSQLException;
+    Optional<T> findFirst(final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Finds the first record matching the condition and maps it using the provided row mapper.
@@ -163,7 +163,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     @Override
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException;
 
     /**
      * Finds the first record matching the condition and maps it using the provided bi-row mapper.
@@ -194,7 +195,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     @Override
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException;
 
     /**
      * Finds the first record matching the condition, selecting only the specified properties.
@@ -216,7 +218,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails
      */
     @Override
-    Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
+    Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Finds the first record matching the condition with selected properties and maps it using the row mapper.
@@ -243,7 +245,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException;
 
     /**
      * Finds the first record matching the condition with selected properties and maps it using the bi-row mapper.
@@ -270,7 +272,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException;
 
     /**
      * Finds exactly one record matching the condition. Throws {@code DuplicateResultException} if more than one record is found.
@@ -289,7 +291,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws DuplicateResultException if more than one record matches the condition
      */
     @Override
-    Optional<T> findOnlyOne(final Condition cond) throws UncheckedSQLException, DuplicateResultException;
+    Optional<T> findOnlyOne(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException;
 
     /**
      * Finds exactly one record matching the condition and maps it using the row mapper.
@@ -315,7 +317,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException, DuplicateResultException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Finds exactly one record matching the condition and maps it using the bi-row mapper.
@@ -341,7 +344,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     @Override
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException, DuplicateResultException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Finds exactly one record matching the condition, selecting only the specified properties.
@@ -365,7 +369,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws DuplicateResultException if more than one record matches the condition
      */
     @Override
-    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException, DuplicateResultException;
+    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException;
 
     /**
      * Finds exactly one record with selected properties and maps it using the row mapper.
@@ -394,7 +399,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws UncheckedSQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Finds exactly one record with selected properties and maps it using the bi-row mapper.
@@ -423,7 +428,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws UncheckedSQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Returns an {@code OptionalBoolean} holding the value of a single boolean column for the first
@@ -450,7 +455,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForBoolean()
      */
     @Override
-    OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalChar} holding the value of a single char column for the first record
@@ -474,7 +479,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForChar()
      */
     @Override
-    OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalByte} holding the value of a single byte column for the first record
@@ -498,7 +503,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForByte()
      */
     @Override
-    OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalShort} holding the value of a single short column for the first record
@@ -522,7 +527,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForShort()
      */
     @Override
-    OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalInt} holding the value of a single int column for the first record
@@ -546,7 +551,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForInt()
      */
     @Override
-    OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalLong} holding the value of a single long column for the first record
@@ -570,7 +575,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForLong()
      */
     @Override
-    OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalFloat} holding the value of a single float column for the first record
@@ -594,7 +599,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForFloat()
      */
     @Override
-    OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalDouble} holding the value of a single double column for the first record
@@ -618,7 +623,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForDouble()
      */
     @Override
-    OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<String>} holding the value of a single String column for the first
@@ -644,7 +649,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForString()
      */
     @Override
-    Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<java.sql.Date>} holding the value of a single date column for the first
@@ -667,7 +672,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForDate()
      */
     @Override
-    Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<java.sql.Time>} holding the value of a single time column for the first
@@ -690,7 +695,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForTime()
      */
     @Override
-    Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<java.sql.Timestamp>} holding the value of a single timestamp column for
@@ -713,7 +718,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForTimestamp()
      */
     @Override
-    Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<byte[]>} holding the value of a single binary column for the first
@@ -736,7 +742,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @see AbstractQuery#queryForBytes()
      */
     @Override
-    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException;
+    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<V>} holding the value of a single column for the first record matching
@@ -763,14 +769,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} holding the non-null value of a single column for the first record
      * matching the condition, converted to the specified target type. Only the first matching record is
      * read; any remaining matching records are ignored. Unlike {@link #queryForSingleValue(String, Condition, Class)},
-     * this method collapses both "no record matched" and "the matched value is SQL {@code NULL}" into an
-     * empty {@code Optional}.
+     * a matched value that converts to {@code null} (including SQL {@code NULL} for a type that preserves null)
+     * throws {@link NullPointerException}. An empty {@code Optional} means no record matched.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -781,16 +787,18 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param targetValueType the class of the target value type
-     * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
-     *         matches the condition or the matched value is SQL {@code NULL}
+     * @return an {@code Optional} containing the converted non-null value when a record matches, or an empty
+     *         {@code Optional} if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
+     * @throws NullPointerException if a record is found but the value converted to {@code targetValueType}
+     *                              is {@code null}
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException;
 
     /**
      * Returns an {@code Optional} holding the non-null value of a single column for the first record
@@ -816,13 +824,13 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
-     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @see #queryForSingleNonNull(String, Condition, Class)
      */
     @Beta
     @Override
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException;
 
     /**
      * Returns a {@code Nullable<V>} holding the value of a single column for the unique record matching
@@ -850,13 +858,14 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws UncheckedSQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException;
 
     /**
      * Returns an {@code Optional} holding the unique non-null value of a single column for the record
      * matching the condition, converted to the specified target type. Throws {@code DuplicateResultException}
-     * if more than one record matches. Both "no record matched" and "the matched value is SQL {@code NULL}"
-     * collapse into an empty {@code Optional}.
+     * if more than one record matches. A matched value that converts to {@code null} (including SQL {@code NULL}
+     * for a type that preserves null) throws {@link NullPointerException}. An empty {@code Optional} means no
+     * record matched.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -871,17 +880,19 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @param singleSelectPropName the single property name to select
      * @param cond the condition to match
      * @param targetValueType the class of the target value type
-     * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
-     *         matches the condition or the matched value is SQL {@code NULL}
+     * @return an {@code Optional} containing the converted non-null value when a record matches, or an empty
+     *         {@code Optional} if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the condition
+     * @throws NullPointerException if a record is found but the value converted to {@code targetValueType}
+     *                              is {@code null}
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws UncheckedSQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Returns an {@code Optional} holding the unique non-null value of a single column for the record
@@ -908,13 +919,13 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
-     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @see #queryForUniqueNonNull(String, Condition, Class)
      */
     @Beta
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws UncheckedSQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Executes a query and returns the results as a Dataset containing all matching records.
@@ -934,7 +945,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails
      */
     @Override
-    Dataset query(final Condition cond) throws UncheckedSQLException;
+    Dataset query(final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Executes a query selecting only specified properties and returns the results as a Dataset.
@@ -956,7 +967,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails
      */
     @Override
-    Dataset query(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
+    Dataset query(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Executes a query and processes the result set using the provided result extractor.
@@ -986,7 +997,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
-    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws UncheckedSQLException;
+    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException;
 
     /**
      * Executes a query with selected properties and processes the result set using the result extractor.
@@ -1019,7 +1031,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException;
 
     /**
      * Executes a query and processes the result set using the bi-result extractor that receives column labels.
@@ -1054,7 +1066,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     @Override
-    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws UncheckedSQLException;
+    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException;
 
     /**
      * Executes a query with selected properties and processes using the bi-result extractor.
@@ -1090,7 +1103,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException;
 
     /**
      * Returns a list of all entities matching the specified condition.
@@ -1108,7 +1121,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails
      */
     @Override
-    List<T> list(final Condition cond) throws UncheckedSQLException;
+    List<T> list(final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a list of results mapped by the provided row mapper for records matching the condition.
@@ -1130,7 +1143,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a list of results mapped by the bi-row mapper for records matching the condition.
@@ -1152,7 +1165,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a filtered list of results mapped by the row mapper for records matching the condition.
@@ -1177,7 +1190,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a filtered list using bi-row filter and bi-row mapper for records matching the condition.
@@ -1201,7 +1215,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a list of entities with only selected properties for records matching the condition.
@@ -1223,7 +1238,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails
      */
     @Override
-    List<T> list(final Collection<String> selectPropNames, final Condition cond) throws UncheckedSQLException;
+    List<T> list(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a list of mapped results with selected properties for records matching the condition.
@@ -1247,7 +1262,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a list of mapped results using bi-row mapper with selected properties.
@@ -1272,7 +1288,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a filtered and mapped list with selected properties for records matching the condition.
@@ -1299,7 +1315,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a filtered and mapped list using bi-filters and bi-mappers with selected properties.
@@ -1326,7 +1342,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
-            final Jdbc.BiRowMapper<? extends R> rowMapper) throws UncheckedSQLException;
+            final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Returns a list of values for a single property from records matching the condition.
@@ -1347,7 +1363,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails
      */
     @Override
-    default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws UncheckedSQLException {
+    default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -1443,7 +1459,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws UncheckedSQLException;
+    void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Iterates through records using a bi-row consumer that receives column labels.
@@ -1466,7 +1482,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws UncheckedSQLException;
+    void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Iterates through filtered records matching the condition.
@@ -1489,7 +1505,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer) throws UncheckedSQLException;
+    void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Iterates through filtered records using bi-row filter and bi-row consumer.
@@ -1511,7 +1528,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer) throws UncheckedSQLException;
+    void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Iterates through records with selected properties matching the condition.
@@ -1533,7 +1551,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer) throws UncheckedSQLException;
+    void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer)
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Iterates through records with selected properties using a bi-row consumer.
@@ -1555,7 +1574,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Override
-    void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws UncheckedSQLException;
+    void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer)
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Iterates through filtered records with selected properties.
@@ -1580,7 +1600,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Iterates through filtered records with selected properties using bi-row filter and consumer.
@@ -1605,7 +1625,7 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      */
     @Override
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
-            throws UncheckedSQLException;
+            throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Processes each record with selected properties using a consumer that receives a {@link DisposableObjArray}.

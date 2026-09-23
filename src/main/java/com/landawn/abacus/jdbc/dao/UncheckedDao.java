@@ -78,7 +78,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql, final boolean generateKeys) throws UncheckedSQLException {
+    default PreparedQuery prepareQuery(final String sql, final boolean generateKeys) throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareQuery(sql, generateKeys));
     }
 
@@ -91,7 +91,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql, final int[] generatedKeyColumnIndexes) throws UncheckedSQLException {
+    default PreparedQuery prepareQuery(final String sql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareQuery(sql, generatedKeyColumnIndexes));
     }
 
@@ -104,7 +104,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql, final String[] generatedKeyColumnNames) throws UncheckedSQLException {
+    default PreparedQuery prepareQuery(final String sql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareQuery(sql, generatedKeyColumnNames));
     }
 
@@ -119,7 +119,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws UncheckedSQLException {
+            throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareQuery(sql, stmtCreator));
     }
 
@@ -133,7 +133,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedSql, final boolean generateKeys) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final String namedSql, final boolean generateKeys) throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generateKeys));
     }
 
@@ -147,7 +147,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedSql, final int[] generatedKeyColumnIndexes) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final String namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generatedKeyColumnIndexes));
     }
 
@@ -161,7 +161,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedSql, final String[] generatedKeyColumnNames) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final String namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generatedKeyColumnNames));
     }
 
@@ -175,7 +175,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generateKeys));
     }
 
@@ -189,7 +189,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes)
+            throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generatedKeyColumnIndexes));
     }
 
@@ -203,7 +204,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames)
+            throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, generatedKeyColumnNames));
     }
 
@@ -219,7 +221,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws UncheckedSQLException {
+            throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, stmtCreator));
     }
 
@@ -235,7 +237,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws UncheckedSQLException {
+            throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareNamedQuery(namedSql, stmtCreator));
     }
 
@@ -248,7 +250,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Override
     @Beta
     @NonDBOperation
-    default CallableQuery prepareCallableQuery(final String sql) throws UncheckedSQLException {
+    default CallableQuery prepareCallableQuery(final String sql) throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareCallableQuery(sql));
     }
 
@@ -263,7 +265,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @NonDBOperation
     default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
-            throws UncheckedSQLException {
+            throws IllegalArgumentException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> Dao.super.prepareCallableQuery(sql, stmtCreator));
     }
 
@@ -284,13 +286,17 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @param matchPropNames the list of property names that uniquely identify the record
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
-     *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class
+     *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
+     *                                  or an existing row is updated and {@code entity} has a property the loaded
+     *                                  entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
+     * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
      * @see #upsert(Object, Condition)
      */
     @Override
-    default T upsert(final T entity, final Collection<String> matchPropNames) throws UncheckedSQLException, DuplicateResultException {
+    default T upsert(final T entity, final Collection<String> matchPropNames)
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
@@ -319,12 +325,15 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @param entity the entity to insert or update
      * @param cond the condition to verify if the record exists
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
-     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
+     *                                  and {@code entity} has a property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
+     * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
      */
     @Override
-    default T upsert(final T entity, final Condition cond) throws UncheckedSQLException, DuplicateResultException {
+    default T upsert(final T entity, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 

@@ -100,8 +100,7 @@ public class JdbcUtilIntegrationTest extends TestBase {
                 stmt.execute("CREATE TABLE app_schema.\"MixedCase\" (id INT)");
                 final String expectedColumn = lowerCase ? "id" : "ID";
                 final String schema = lowerCase ? "APP_SCHEMA" : "app_schema";
-                final String catalog = lowerCase ? conn.getCatalog().toUpperCase(java.util.Locale.ROOT)
-                        : conn.getCatalog().toLowerCase(java.util.Locale.ROOT);
+                final String catalog = lowerCase ? conn.getCatalog().toUpperCase(java.util.Locale.ROOT) : conn.getCatalog().toLowerCase(java.util.Locale.ROOT);
 
                 assertTrue(JdbcUtil.tableExists(conn, schema + ".\"MixedCase\""));
                 assertEquals(List.of(expectedColumn), JdbcUtil.getColumnNames(conn, schema + ".\"MixedCase\""));

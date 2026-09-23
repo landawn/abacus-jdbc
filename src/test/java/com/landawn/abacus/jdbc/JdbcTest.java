@@ -72,12 +72,9 @@ public class JdbcTest extends TestBase {
 
     @Test
     public void testTypedColumnBuildersValidateColumnBeforeType() {
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowMapper.builder().getObject(0, null)).getMessage()
-                .contains("columnIndex"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowExtractor.builder().getObject(0, null)).getMessage()
-                .contains("columnIndex"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.BiRowMapper.builder().getObject(null, null)).getMessage()
-                .contains("columnName"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowMapper.builder().getObject(0, null)).getMessage().contains("columnIndex"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowExtractor.builder().getObject(0, null)).getMessage().contains("columnIndex"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.BiRowMapper.builder().getObject(null, null)).getMessage().contains("columnName"));
     }
 
     @Test
@@ -85,8 +82,8 @@ public class JdbcTest extends TestBase {
         when(mockResultSet.next()).thenReturn(true, true, true, false);
         when(mockResultSet.getString(1)).thenReturn("b", "a", "b");
         when(mockResultSet.getInt(2)).thenReturn(3, 5, 7);
-        final Jdbc.ResultExtractor<java.util.concurrent.ConcurrentSkipListMap<String, Integer>> extractor = Jdbc.ResultExtractor.groupTo(
-                rs -> rs.getString(1), rs -> rs.getInt(2), Collectors.summingInt(Integer::intValue), java.util.concurrent.ConcurrentSkipListMap::new);
+        final Jdbc.ResultExtractor<java.util.concurrent.ConcurrentSkipListMap<String, Integer>> extractor = Jdbc.ResultExtractor.groupTo(rs -> rs.getString(1),
+                rs -> rs.getInt(2), Collectors.summingInt(Integer::intValue), java.util.concurrent.ConcurrentSkipListMap::new);
 
         final Map<String, Integer> result = extractor.apply(mockResultSet);
         assertEquals(Map.of("a", 5, "b", 10), result);
@@ -153,10 +150,8 @@ public class JdbcTest extends TestBase {
         final List<Jdbc.BiRowMapper<TestEntity>> mappers = List.of(Jdbc.BiRowMapper.to(TestEntity.class),
                 Jdbc.BiRowMapper.to(TestEntity.class, Map.of("unused", "name")), Jdbc.BiRowMapper.builder().to(TestEntity.class));
         for (final Jdbc.BiRowMapper<TestEntity> mapper : mappers) {
-            final IllegalArgumentException first = assertThrows(IllegalArgumentException.class,
-                    () -> mapper.apply(mockResultSet, List.of("unmatched")));
-            final IllegalArgumentException second = assertThrows(IllegalArgumentException.class,
-                    () -> mapper.apply(mockResultSet, List.of("unmatched")));
+            final IllegalArgumentException first = assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, List.of("unmatched")));
+            final IllegalArgumentException second = assertThrows(IllegalArgumentException.class, () -> mapper.apply(mockResultSet, List.of("unmatched")));
             assertEquals(first.getMessage(), second.getMessage());
         }
         verify(mockResultSet, never()).getObject(anyInt());
@@ -179,8 +174,7 @@ public class JdbcTest extends TestBase {
                 output[0] = rs.getObject(1);
                 output[1] = rs.getObject(2);
             };
-            final Jdbc.BiRowMapper<Map<String, Object>> mapper = useRowExtractor
-                    ? Jdbc.BiRowMapper.toMap(extractor, converter, IntFunctions.ofMap())
+            final Jdbc.BiRowMapper<Map<String, Object>> mapper = useRowExtractor ? Jdbc.BiRowMapper.toMap(extractor, converter, IntFunctions.ofMap())
                     : Jdbc.BiRowMapper.toMap(converter);
             assertSame(failure, assertThrows(IllegalStateException.class, () -> mapper.apply(mockResultSet, List.of("name", "age"))));
             assertEquals(Map.of("NAME", "Alice", "AGE", 42), mapper.apply(mockResultSet, List.of("name", "age")));

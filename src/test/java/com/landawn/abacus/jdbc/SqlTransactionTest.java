@@ -122,9 +122,8 @@ public class SqlTransactionTest extends TestBase {
     @Test
     public void testOwnerStateIsCheckedBeforeNullArguments() throws Exception {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
-        final Runnable[] operations = { () -> transaction.commit(null), () -> transaction.rollback(null),
-                () -> transaction.incrementAndGetRef(null, false), () -> transaction.runOutsideTransaction(null),
-                () -> transaction.callOutsideTransaction(null) };
+        final Runnable[] operations = { () -> transaction.commit(null), () -> transaction.rollback(null), () -> transaction.incrementAndGetRef(null, false),
+                () -> transaction.runOutsideTransaction(null), () -> transaction.callOutsideTransaction(null) };
 
         try {
             for (final Runnable operation : operations) {
@@ -163,10 +162,9 @@ public class SqlTransactionTest extends TestBase {
     @Test
     public void testConstructorValidatesArgumentsInSignatureOrder() {
         // The message must name the declared parameter (ds), the same way JdbcUtil.beginTransaction(ds, ...) does.
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> new SqlTransaction(null, null, null, null, true))
-                .getMessage().contains("'ds'"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> new SqlTransaction(null, connection, IsolationLevel.NONE, null, false))
-                .getMessage().contains("isolationLevel"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> new SqlTransaction(null, null, null, null, true)).getMessage().contains("'ds'"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> new SqlTransaction(null, connection, IsolationLevel.NONE, null, false)).getMessage()
+                .contains("isolationLevel"));
         Mockito.verifyNoInteractions(connection);
     }
 
@@ -1418,11 +1416,11 @@ public class SqlTransactionTest extends TestBase {
     public void testFailedRollbackDoesNotImplicitlyCommitPendingWork() throws Exception {
         final String url = "jdbc:h2:mem:failed_rollback_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1";
 
-        try (Connection actual = java.sql.DriverManager.getConnection(url); Connection observer = java.sql.DriverManager.getConnection(url)) {
+        try (Connection actual = java.sql.DriverManager.getConnection(url);
+             Connection observer = java.sql.DriverManager.getConnection(url)) {
             JdbcUtil.executeUpdate(actual, "CREATE TABLE pending_work(id INT)");
             final Connection failingConnection = Mockito.mock(Connection.class, org.mockito.AdditionalAnswers.delegatesTo(actual));
-            final SqlTransaction transaction = new SqlTransaction(null, failingConnection, IsolationLevel.DEFAULT,
-                    SqlTransaction.CreatedBy.JDBC_UTIL, false);
+            final SqlTransaction transaction = new SqlTransaction(null, failingConnection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, false);
             transaction.incrementAndGetRef(IsolationLevel.DEFAULT, false);
             JdbcUtil.executeUpdate(actual, "INSERT INTO pending_work VALUES (1)");
             final SQLException rollbackFailure = new SQLException("rollback unavailable");

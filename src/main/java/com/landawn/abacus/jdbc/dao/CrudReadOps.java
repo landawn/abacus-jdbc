@@ -83,7 +83,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBoolean()
      */
-    OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws SQLException;
+    OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a char value from a single property of the entity with the specified ID.
@@ -105,7 +105,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForChar()
      */
-    OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws SQLException;
+    OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a byte value from a single property of the entity with the specified ID.
@@ -127,7 +127,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForByte()
      */
-    OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws SQLException;
+    OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a short value from a single property of the entity with the specified ID.
@@ -149,7 +149,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForShort()
      */
-    OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws SQLException;
+    OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for an integer value from a single property of the entity with the specified ID.
@@ -171,7 +171,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForInt()
      */
-    OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws SQLException;
+    OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a long value from a single property of the entity with the specified ID.
@@ -193,7 +193,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForLong()
      */
-    OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws SQLException;
+    OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a float value from a single property of the entity with the specified ID.
@@ -215,7 +215,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForFloat()
      */
-    OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws SQLException;
+    OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a double value from a single property of the entity with the specified ID.
@@ -237,7 +237,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDouble()
      */
-    OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws SQLException;
+    OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a String value from a single property of the entity with the specified ID.
@@ -257,7 +257,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForString()
      */
-    Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws SQLException;
+    Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a Date value from a single property of the entity with the specified ID.
@@ -277,7 +277,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDate()
      */
-    Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws SQLException;
+    Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a Time value from a single property of the entity with the specified ID.
@@ -297,7 +297,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTime()
      */
-    Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws SQLException;
+    Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a Timestamp value from a single property of the entity with the specified ID.
@@ -317,7 +317,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTimestamp()
      */
-    Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws SQLException;
+    Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a byte array value from a single property of the entity with the specified ID.
@@ -338,7 +339,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBytes()
      */
-    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws SQLException;
+    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
@@ -361,11 +362,13 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForSingleValue(Class)
      */
-    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
+    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries for a single non-null value of the specified type from a property of the entity.
-     * Returns an empty {@code Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
+     * An empty {@code Optional} means no record matches the {@code id}. A matched value that converts to
+     * {@code null} (including SQL {@code null} for a type that preserves null) throws {@link NullPointerException}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -377,13 +380,17 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @return an {@code Optional} containing the converted non-null value when a record matches the {@code id}, or an
+     *         empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
+     * @throws NullPointerException if a record is found but the value converted to {@code targetValueType}
+     *                              is {@code null}
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
-    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType) throws SQLException;
+    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Queries for a single non-null value using a custom row mapper.
@@ -405,11 +412,12 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
-     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @see #queryForSingleNonNull(String, Object, Class)
      */
     @Beta
-    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper) throws SQLException;
+    <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Queries for a unique single result of the specified type.
@@ -436,12 +444,13 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
     <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
-            throws SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException;
 
     /**
      * Queries for a unique non-null result of the specified type.
      * Throws {@link DuplicateResultException} if more than one record matches the given {@code id}.
-     * Returns an empty {@code Optional} if no record matches the {@code id} or the matched value is SQL {@code null}.
+     * An empty {@code Optional} means no record matches the {@code id}. A matched value that converts to
+     * {@code null} (including SQL {@code null} for a type that preserves null) throws {@link NullPointerException}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -454,15 +463,18 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the value type to convert to
-     * @return an {@code Optional} containing the unique non-null value if a record matches the {@code id} and the value is not SQL {@code null}, otherwise empty
+     * @return an {@code Optional} containing the converted non-null value when exactly one record matches the {@code id},
+     *         or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws NullPointerException if a record is found but the value converted to {@code targetValueType}
+     *                              is {@code null}
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
-            throws SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Queries for a unique non-null result using a custom row mapper.
@@ -486,12 +498,12 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
-     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @see #queryForUniqueNonNull(String, Object, Class)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Retrieves an entity by its ID.
@@ -511,7 +523,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
-    default Optional<T> get(final ID id) throws SQLException, DuplicateResultException {
+    default Optional<T> get(final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException {
         return Optional.ofNullable(getOrNull(id));
     }
 
@@ -537,7 +549,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
-    default Optional<T> get(final ID id, final Collection<String> selectPropNames) throws SQLException, DuplicateResultException {
+    default Optional<T> get(final ID id, final Collection<String> selectPropNames)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException {
         return Optional.ofNullable(getOrNull(id, selectPropNames));
     }
 
@@ -561,7 +574,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
-    T getOrNull(final ID id) throws SQLException, DuplicateResultException;
+    T getOrNull(final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException;
 
     /**
      * Retrieves an entity by its ID with only the selected properties populated, returning {@code null} if not found.
@@ -586,7 +599,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
-    T getOrNull(final ID id, final Collection<String> selectPropNames) throws SQLException, DuplicateResultException;
+    T getOrNull(final ID id, final Collection<String> selectPropNames)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException;
 
     /**
      * Retrieves multiple entities by their IDs using the default batch size
@@ -609,7 +623,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
-    default List<T> batchGet(final Collection<? extends ID> ids) throws SQLException, DuplicateResultException {
+    default List<T> batchGet(final Collection<? extends ID> ids)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException {
         return batchGet(ids, null);
     }
 
@@ -637,7 +652,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
-    default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize) throws SQLException, DuplicateResultException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException {
         return batchGet(ids, null, batchSize);
     }
 
@@ -663,7 +679,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
-    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames) throws SQLException, DuplicateResultException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException {
         return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -696,7 +713,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      */
     @SuppressWarnings("deprecation")
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(ids)) {
@@ -752,7 +769,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#exists()
      */
-    boolean exists(final ID id) throws SQLException;
+    boolean exists(final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Checks if an entity with the specified ID does not exist in the database.
@@ -773,7 +790,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @see AbstractQuery#notExists()
      */
     @Beta
-    default boolean notExists(final ID id) throws SQLException {
+    default boolean notExists(final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return !exists(id);
     }
 
@@ -799,7 +816,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default int count(final Collection<? extends ID> ids) throws SQLException {
+    default int count(final Collection<? extends ID> ids) throws IllegalArgumentException, UncheckedSQLException, SQLException, ArithmeticException {
         if (N.isEmpty(ids)) {
             return 0;
         }
@@ -854,7 +871,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
-    default boolean refresh(final T entity) throws SQLException, DuplicateResultException {
+    default boolean refresh(final T entity)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
@@ -890,7 +908,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
-    default boolean refresh(final T entity, final Collection<String> propNamesToRefresh) throws SQLException, DuplicateResultException {
+    default boolean refresh(final T entity, final Collection<String> propNamesToRefresh)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
 
@@ -928,17 +947,18 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
      *                                       place because its class is treated as an immutable bean (a record, a builder-based
      *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
-    default int batchRefresh(final Collection<? extends T> entities) throws SQLException, DuplicateResultException {
+    default int batchRefresh(final Collection<? extends T> entities) throws IllegalArgumentException, NullPointerException, UncheckedSQLException, SQLException,
+            DuplicateResultException, UnsupportedOperationException {
         return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -960,17 +980,22 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
      *                                       place because its class is treated as an immutable bean (a record, a builder-based
      *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
-    default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws SQLException, DuplicateResultException {
+    default int batchRefresh(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, NullPointerException,
+            UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+        if (N.notEmpty(entities)) {
+            N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
+        }
+
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {
@@ -978,7 +1003,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         }
 
         final T first = N.firstOrNullIfEmpty(entities);
-        N.checkArgNotNull(first, "The first element in the specified collection 'entities' cannot be null");
 
         final Class<?> cls = first.getClass();
         final Collection<String> propNamesToRefresh = JdbcUtil.getSelectPropNames(cls);
@@ -1004,18 +1028,18 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty,
      *                                  or the first element of a nonempty {@code entities} collection is {@code null}
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
      *                                       place because its class is treated as an immutable bean (a record, a builder-based
      *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
-    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh)
-            throws SQLException, DuplicateResultException {
+    default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh) throws IllegalArgumentException,
+            NullPointerException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -1040,19 +1064,24 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive, or if the first element of
      *                                  {@code entities} is {@code null}
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
      *                                       place because its class is treated as an immutable bean (a record, a builder-based
      *                                       class, one with no writable property, or one with no accessible no-arg constructor)
      */
     @Beta
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, SQLException, DuplicateResultException,
+            UnsupportedOperationException {
         N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
+        if (N.notEmpty(entities)) {
+            N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
+        }
+
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {
@@ -1060,7 +1089,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         }
 
         final T first = N.firstOrNullIfEmpty(entities);
-        N.checkArgNotNull(first, "The first element in the specified collection 'entities' cannot be null");
 
         final Class<?> cls = first.getClass();
         final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.

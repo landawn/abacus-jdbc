@@ -252,7 +252,8 @@ public final class DBLock implements AutoCloseable {
      * @throws IllegalStateException if the lock table cannot be verified after the creation attempt.
      * @throws RejectedExecutionException if the lock refresh task cannot be scheduled.
      */
-    DBLock(final DataSource ds, final String tableName) throws UncheckedSQLException {
+    DBLock(final DataSource ds, final String tableName)
+            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, RejectedExecutionException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
 
@@ -396,7 +397,7 @@ public final class DBLock implements AutoCloseable {
      * @see #DEFAULT_LOCK_LIVE_TIME
      * @see #DEFAULT_TIMEOUT
      */
-    public String tryLock(final String target) {
+    public String tryLock(final String target) throws IllegalStateException, IllegalArgumentException {
         return tryLock(target, DEFAULT_LOCK_LIVE_TIME, DEFAULT_TIMEOUT);
     }
 
@@ -442,7 +443,7 @@ public final class DBLock implements AutoCloseable {
      * @see #tryLock(String, long, long)
      * @see #DEFAULT_LOCK_LIVE_TIME
      */
-    public String tryLock(final String target, final long timeout) {
+    public String tryLock(final String target, final long timeout) throws IllegalStateException, IllegalArgumentException {
         return tryLock(target, DEFAULT_LOCK_LIVE_TIME, timeout);
     }
 
@@ -494,7 +495,7 @@ public final class DBLock implements AutoCloseable {
      *         {@code liveTime} is not positive, or {@code timeout} is negative.
      * @see #tryLock(String, long, long, long)
      */
-    public String tryLock(final String target, final long liveTime, final long timeout) {
+    public String tryLock(final String target, final long liveTime, final long timeout) throws IllegalStateException, IllegalArgumentException {
         return tryLock(target, liveTime, timeout, 0);
     }
 
@@ -557,7 +558,8 @@ public final class DBLock implements AutoCloseable {
      * @throws IllegalArgumentException if {@code target} is {@code null} or empty,
      *         {@code liveTime} is not positive, or {@code timeout} or {@code retryInterval} is negative.
      */
-    public String tryLock(final String target, final long liveTime, final long timeout, final long retryInterval) throws IllegalStateException {
+    public String tryLock(final String target, final long liveTime, final long timeout, final long retryInterval)
+            throws IllegalStateException, IllegalArgumentException {
         assertNotClosed();
         N.checkArgNotEmpty(target, cs.target);
         N.checkArgPositive(liveTime, cs.liveTime);
@@ -741,7 +743,7 @@ public final class DBLock implements AutoCloseable {
      * @throws IllegalArgumentException if {@code target} or {@code code} is {@code null} or empty.
      * @throws UncheckedSQLException if opening or configuring the connection, binding the target and lock code, or executing the lock deletion fails.
      */
-    public boolean unlock(final String target, final String code) throws UncheckedSQLException {
+    public boolean unlock(final String target, final String code) throws IllegalStateException, IllegalArgumentException, UncheckedSQLException {
         assertNotClosed();
         N.checkArgNotEmpty(target, cs.target);
         N.checkArgNotEmpty(code, cs.code);
@@ -855,7 +857,7 @@ public final class DBLock implements AutoCloseable {
      *
      * @throws IllegalStateException if {@link #close()} has already been called.
      */
-    private void assertNotClosed() {
+    private void assertNotClosed() throws IllegalStateException {
         if (isClosed) {
             throw new IllegalStateException("This DBLock has been closed");
         }

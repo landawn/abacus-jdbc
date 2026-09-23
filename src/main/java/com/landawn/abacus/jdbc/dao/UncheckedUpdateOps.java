@@ -56,7 +56,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    default int update(final String propName, final Object propValue, final Condition cond) throws UncheckedSQLException {
+    default int update(final String propName, final Object propValue, final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotEmpty(propName, cs.propName);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -84,7 +84,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final Map<String, Object> updateProps, final Condition cond) throws UncheckedSQLException;
+    int update(final Map<String, Object> updateProps, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Updates all records matching the condition using all updatable properties from the entity.
@@ -108,7 +108,7 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    default int update(final T entity, final Condition cond) throws UncheckedSQLException {
+    default int update(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
         @SuppressWarnings("deprecation")
         final Collection<String> propNamesToUpdate = JdbcUtil.getUpdatePropNames(targetEntityClass());
 
@@ -142,6 +142,6 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws UncheckedSQLException;
+    int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
 }

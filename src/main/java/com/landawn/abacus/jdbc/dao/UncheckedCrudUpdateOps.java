@@ -57,7 +57,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final T entity) throws UncheckedSQLException;
+    int update(final T entity) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Updates only the specified properties of the entity in the database.
@@ -82,7 +82,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final T entity, final Collection<String> propNamesToUpdate) throws UncheckedSQLException;
+    int update(final T entity, final Collection<String> propNamesToUpdate) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Updates a single property of the entity identified by ID.
@@ -105,7 +105,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    default int update(final String propName, final Object propValue, final ID id) throws UncheckedSQLException {
+    default int update(final String propName, final Object propValue, final ID id) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotEmpty(propName, cs.propName);
         N.checkArgNotNull(id, cs.id);
 
@@ -135,7 +135,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final Map<String, Object> updateProps, final ID id) throws UncheckedSQLException;
+    int update(final Map<String, Object> updateProps, final ID id) throws IllegalArgumentException, UncheckedSQLException;
 
     /**
      * Batch updates multiple entities using the default batch size
@@ -161,7 +161,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    default int batchUpdate(final Collection<? extends T> entities) throws UncheckedSQLException {
+    default int batchUpdate(final Collection<? extends T> entities) throws IllegalStateException, UncheckedSQLException, ArithmeticException {
         return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -187,7 +187,8 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+    int batchUpdate(final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
 
     /**
      * Batch updates only the specified properties of multiple entities using the default batch size
@@ -215,7 +216,8 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws UncheckedSQLException {
+    default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         return batchUpdate(entities, propNamesToUpdate, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -244,6 +246,7 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws UncheckedSQLException;
+    int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
 
 }

@@ -26,6 +26,7 @@ import java.sql.SQLException;
 import java.sql.SQLType;
 import java.sql.Timestamp;
 import java.sql.Types;
+import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -142,7 +143,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         {@code namedSql} does not report exactly one parameter name per placeholder; in the latter two
      *         cases {@code stmt} is closed before the exception is thrown
      */
-    NamedQuery(final PreparedStatement stmt, final ParsedSql namedSql) {
+    NamedQuery(final PreparedStatement stmt, final ParsedSql namedSql) throws IllegalArgumentException {
         super(stmt);
         checkArgNotNull(namedSql, cs.namedSql);
         this.namedSql = namedSql;
@@ -204,7 +205,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterName the exact parameter name to locate
      * @throws IllegalArgumentException if {@code parameterName} is absent from the SQL, including when it is {@code null}
      */
-    private void checkParameterName(final String parameterName) {
+    private void checkParameterName(final String parameterName) throws IllegalArgumentException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             for (final String name : parameterNames) {
                 if (name.equals(parameterName)) {
@@ -873,10 +874,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws ArithmeticException if the BigInteger value will not fit in a {@code long}; when this is thrown the underlying statement is also closed
      * @throws SQLException if a database access error occurs
+     * @throws ArithmeticException if the BigInteger value will not fit in a {@code long}; when this is thrown the
+     *         underlying statement is also closed
      */
-    public NamedQuery setLong(final String parameterName, final BigInteger value) throws IllegalArgumentException, SQLException {
+    public NamedQuery setLong(final String parameterName, final BigInteger value) throws IllegalArgumentException, SQLException, ArithmeticException {
         checkParameterName(parameterName);
 
         if (value == null) {
@@ -1830,9 +1832,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the value is outside the range supported by {@link Timestamp}
+     * @throws DateTimeException if {@code value} is outside the range that can be converted to an {@link Instant}
      * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTimestamp(final String parameterName, final ZonedDateTime value) throws IllegalArgumentException, SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final ZonedDateTime value) throws IllegalArgumentException, DateTimeException, SQLException {
         checkParameterName(parameterName);
 
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value.toInstant()));
@@ -1861,9 +1864,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the value is outside the range supported by {@link Timestamp}
+     * @throws DateTimeException if {@code value} is outside the range that can be converted to an {@link Instant}
      * @throws SQLException if a database access error occurs
      */
-    public NamedQuery setTimestamp(final String parameterName, final OffsetDateTime value) throws IllegalArgumentException, SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final OffsetDateTime value) throws IllegalArgumentException, DateTimeException, SQLException {
         checkParameterName(parameterName);
 
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value.toInstant()));
@@ -3940,7 +3944,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws NullPointerException if {@code entityId} is {@code null} and this query contains at least one parameter
      * @throws SQLException if a database access error occurs
      */
-    void setParameters(final EntityId entityId) throws SQLException {
+    void setParameters(final EntityId entityId) throws NullPointerException, SQLException {
         try {
             for (int i = 0; i < parameterCount; i++) {
                 final String paramName = parameterNames.get(i);
@@ -4096,6 +4100,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      */
     public NamedQuery setParameters(final Object entity, final Collection<String> parameterNamesToSet) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, cs.entity);
+        checkArgNotNull(parameterNamesToSet, cs.parameterNamesToSet);
 
         final Class<?> cls = entity.getClass();
         if (!Beans.isBeanClass(cls)) {
@@ -4105,8 +4110,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             closeSuppressingFailure(iae);
             throw iae;
         }
-
-        checkArgNotNull(parameterNamesToSet, cs.parameterNamesToSet);
 
         if (paramNameIndexMap == null) {
             initParamNameIndexMap();
@@ -4255,14 +4258,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
      *         lacks a property matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
-     * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId}, and a later non-null row is not of the same kind
      * @throws SQLException if a database access error occurs
+     * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId},
+     *         and a later non-null row is not of the same kind
      * @see #setParameters(Object)
      * @see #addBatch()
      */
     @Beta
     @Override
-    public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException {
+    public NamedQuery addBatchParameters(final Collection<?> batchParameters) throws IllegalArgumentException, SQLException, ClassCastException {
         checkArgNotNull(batchParameters, cs.batchParameters);
 
         if (N.isEmpty(batchParameters)) {
@@ -4325,8 +4329,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
      *         lacks a property matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
-     * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId}, and a later non-null row is not of the same kind
      * @throws SQLException if a database access error occurs
+     * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId},
+     *         and a later non-null row is not of the same kind
      * @see #setParameters(Object)
      * @see #addBatchParameters(Collection)
      * @see #addBatch()
@@ -4334,7 +4339,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     @Beta
     @Override
     @SuppressWarnings("rawtypes")
-    public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException {
+    public NamedQuery addBatchParameters(final Iterator<?> batchParameters) throws IllegalArgumentException, SQLException, ClassCastException {
         checkArgNotNull(batchParameters, cs.batchParameters);
 
         try {
@@ -4511,7 +4516,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if {@code parameterCount} is not exactly {@code 1}
      * @throws SQLException if a database access error occurs while clearing or setting the parameter
      */
-    private void addNullBatchParameter() throws SQLException {
+    private void addNullBatchParameter() throws IllegalArgumentException, SQLException {
         if (parameterCount != 1) {
             throw new IllegalArgumentException(
                     "A null batch parameter is only supported when the SQL has exactly one parameter placeholder. SQL: " + namedSql.originalSql());

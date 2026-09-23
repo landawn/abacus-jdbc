@@ -71,8 +71,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedSource, "users", null, Arrays.asList("id", null), null));
         assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedSource, "users", null, List.of("id", " "), null));
-        assertThrows(IllegalArgumentException.class,
-                () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, "users", null, List.of("id", " "), null));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, "users", null, List.of("id", " "), null));
         assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, "users", null, Arrays.asList("id", null), null));
         Mockito.verifyNoInteractions(unusedSource, unusedConnection);
@@ -80,8 +79,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
     @Test
     public void testInsertConversionValidatesDataSourceBeforeSql() {
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(null, null))
-                .getMessage().contains("ds"));
+        assertTrue(
+                assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(null, null)).getMessage().contains("ds"));
     }
 
     @Test
@@ -967,8 +966,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
             for (boolean named : new boolean[] { false, true }) {
                 stmt.execute("DELETE FROM update_guard");
                 stmt.execute("INSERT INTO update_guard VALUES (1, 'OPEN'), (2, 'PENDING'), (3, 'CLOSED')");
-                final String sql = named
-                        ? JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "update_guard", null, List.of("id"), condition)
+                final String sql = named ? JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "update_guard", null, List.of("id"), condition)
                         : JdbcCodeGenerationUtil.generateUpdateSql(conn, "update_guard", null, List.of("id"), condition);
 
                 final int affected = named ? JdbcUtil.executeUpdate(conn, sql, java.util.Map.of("status", "DONE", "id", 1))

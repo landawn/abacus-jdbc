@@ -124,8 +124,7 @@ public class ReadOnlyDaoTest extends TestBase {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareQuery((String) null)).getMessage().contains("'sql'"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareQueryForLargeResult((String) null)).getMessage().contains("'sql'"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((String) null)).getMessage().contains("'namedSql'"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQueryForLargeResult((String) null)).getMessage()
-                .contains("'namedSql'"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQueryForLargeResult((String) null)).getMessage().contains("'namedSql'"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.prepareNamedQuery((ParsedSql) null)).getMessage().contains("'namedSql'"));
     }
 

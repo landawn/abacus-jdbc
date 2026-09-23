@@ -21,7 +21,6 @@ import java.util.List;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
-import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.util.N;
@@ -114,12 +113,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default Optional<T> get(final ID id, final Class<?> joinEntityClass) throws SQLException, DuplicateResultException {
+    default Optional<T> get(final ID id, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, joinEntityClass));
     }
 
@@ -150,12 +150,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws SQLException, DuplicateResultException {
+    default Optional<T> get(final ID id, final boolean includeAllJoinEntities)
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, includeAllJoinEntities));
     }
 
@@ -181,13 +182,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClass));
     }
 
@@ -215,13 +216,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClasses));
     }
 
@@ -248,13 +249,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, includeAllJoinEntities));
     }
 
@@ -279,12 +280,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default T getOrNull(final ID id, final Class<?> joinEntityClass) throws SQLException, DuplicateResultException {
+    default T getOrNull(final ID id, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
@@ -318,12 +320,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws SQLException, DuplicateResultException {
+    default T getOrNull(final ID id, final boolean includeAllJoinEntities)
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
@@ -358,13 +361,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
@@ -402,13 +405,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
@@ -448,13 +451,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this)
@@ -490,12 +493,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntityClass) throws SQLException, DuplicateResultException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, null, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -519,12 +523,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if nonempty {@code ids} contain composite ID representations for a single-ID entity,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws SQLException, DuplicateResultException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities)
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, null, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -551,13 +556,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, sourceSelectPropNames, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -584,13 +589,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, sourceSelectPropNames, joinEntityClasses, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -617,13 +622,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if nonempty {@code ids} contain composite ID representations for a single-ID entity,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws SQLException, DuplicateResultException {
+            throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, sourceSelectPropNames, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -653,13 +658,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass,
-            final int batchSize) throws SQLException, DuplicateResultException {
+            final int batchSize) throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)
@@ -703,13 +708,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *                                  or a requested join entity class is {@code null} when its metadata is needed
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses,
-            final int batchSize) throws SQLException, DuplicateResultException {
+            final int batchSize) throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)
@@ -759,13 +764,13 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
+     * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities,
-            final int batchSize) throws SQLException, DuplicateResultException {
+            final int batchSize) throws IllegalArgumentException, IllegalStateException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)

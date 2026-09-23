@@ -63,9 +63,10 @@ final class SqlIdentifierUtil {
      * @param identifier the decoded (undelimited) identifier text
      * @param quote the quote string to wrap with
      * @return the delimited identifier
+     * @throws IllegalArgumentException if {@code quote} is empty.
      * @throws NullPointerException if {@code identifier} or {@code quote} is {@code null}.
      */
-    static String quoteIdentifier(final String identifier, final String quote) {
+    static String quoteIdentifier(final String identifier, final String quote) throws IllegalArgumentException, NullPointerException {
         // Escape any embedded quote character by doubling it, then wrap, so identifiers containing
         // the active quote char produce valid SQL instead of unbalanced/injectable output.
         return Strings.wrap(identifier.replace(quote, quote + quote), quote);
@@ -171,7 +172,7 @@ final class SqlIdentifierUtil {
      * @return one flag per part, in order
      * @throws NegativeArraySizeException if {@code partCount} is negative
      */
-    static boolean[] explicitlyDelimitedIdentifierParts(final String qualifiedName, final int partCount) {
+    static boolean[] explicitlyDelimitedIdentifierParts(final String qualifiedName, final int partCount) throws NegativeArraySizeException {
         final boolean[] result = new boolean[partCount];
         final String trimmed = Strings.stripToEmpty(qualifiedName);
         int partIndex = 0;
@@ -221,7 +222,7 @@ final class SqlIdentifierUtil {
      * @throws IllegalArgumentException if {@code tableName} is {@code null}, blank or is not a valid
      *         qualified identifier
      */
-    static String renderTableName(final String tableName, final ProductInfo dbProductInfo) {
+    static String renderTableName(final String tableName, final ProductInfo dbProductInfo) throws IllegalArgumentException {
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         final String quote = quoteString(dbProductInfo);
         final boolean[] explicitlyDelimitedParts = explicitlyDelimitedIdentifierParts(tableName, parts.length);
@@ -252,7 +253,7 @@ final class SqlIdentifierUtil {
      * @return the rendered column name
      * @throws IllegalArgumentException if {@code columnName} is {@code null} or blank or is not a single identifier
      */
-    static String renderColumnName(final String columnName, final ProductInfo dbProductInfo) {
+    static String renderColumnName(final String columnName, final ProductInfo dbProductInfo) throws IllegalArgumentException {
         N.checkArgNotBlank(columnName, cs.columnName);
 
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(columnName, cs.columnName);
@@ -277,7 +278,7 @@ final class SqlIdentifierUtil {
      * @return the rendered column name
      * @throws IllegalArgumentException if {@code columnName} is {@code null} or blank
      */
-    static String checkColumnName(final String columnName, final ProductInfo dbProductInfo, final boolean explicitlyDelimited) {
+    static String checkColumnName(final String columnName, final ProductInfo dbProductInfo, final boolean explicitlyDelimited) throws IllegalArgumentException {
         N.checkArgNotBlank(columnName, cs.columnName);
 
         return !explicitlyDelimited && isSimpleSqlIdentifier(columnName) ? columnName : quoteIdentifier(columnName, quoteString(dbProductInfo));

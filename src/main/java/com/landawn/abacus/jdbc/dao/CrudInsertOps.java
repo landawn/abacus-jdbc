@@ -106,7 +106,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
-    ID insert(final T entity) throws SQLException;
+    ID insert(final T entity) throws IllegalArgumentException, UnsupportedOperationException, SQLException;
 
     /**
      * Inserts the specified entity with only the specified properties.
@@ -129,7 +129,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
-    ID insert(final T entity, final Collection<String> propNamesToInsert) throws SQLException;
+    ID insert(final T entity, final Collection<String> propNamesToInsert) throws IllegalArgumentException, UnsupportedOperationException, SQLException;
 
     /**
      * Inserts an entity using a custom named SQL insert statement.
@@ -152,7 +152,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
-    ID insert(final String namedInsertSql, final T entity) throws SQLException;
+    ID insert(final String namedInsertSql, final T entity) throws IllegalArgumentException, UnsupportedOperationException, SQLException;
 
     /**
      * Performs batch insert of multiple entities using the default batch size
@@ -177,7 +177,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
-    default List<ID> batchInsert(final Collection<? extends T> entities) throws SQLException {
+    default List<ID> batchInsert(final Collection<? extends T> entities) throws UnsupportedOperationException, IllegalStateException, SQLException {
         return batchInsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -203,7 +203,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
-    List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws SQLException;
+    List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, SQLException;
 
     /**
      * Performs batch insert with only the specified properties for all entities.
@@ -227,7 +228,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
-    default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws SQLException {
+    default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, SQLException {
         return batchInsert(entities, propNamesToInsert, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -255,7 +257,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
-    List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws SQLException;
+    List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, SQLException;
 
     /**
      * Performs batch insert using a custom named SQL statement with the default batch size
@@ -282,7 +285,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     @Beta
-    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities) throws SQLException {
+    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, SQLException {
         return batchInsert(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -313,6 +317,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     @Beta
-    List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws SQLException;
+    List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, SQLException;
 
 }

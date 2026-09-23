@@ -144,7 +144,7 @@ public enum FetchDirection {
      * @return the corresponding {@code FetchDirection} enum constant.
      * @throws IllegalArgumentException if {@code intValue} does not match any known JDBC fetch direction constant.
      */
-    public static FetchDirection valueOf(final int intValue) {
+    public static FetchDirection valueOf(final int intValue) throws IllegalArgumentException {
         switch (intValue) {
             case ResultSet.FETCH_FORWARD:
                 return FORWARD;

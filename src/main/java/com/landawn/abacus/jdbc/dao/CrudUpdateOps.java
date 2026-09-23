@@ -54,7 +54,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    int update(final T entity) throws SQLException;
+    int update(final T entity) throws IllegalArgumentException, SQLException;
 
     /**
      * Updates only the specified properties of an existing entity.
@@ -77,7 +77,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    int update(final T entity, final Collection<String> propNamesToUpdate) throws SQLException;
+    int update(final T entity, final Collection<String> propNamesToUpdate) throws IllegalArgumentException, SQLException;
 
     /**
      * Updates a single property of the entity identified by ID.
@@ -97,7 +97,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    default int update(final String propName, final Object propValue, final ID id) throws SQLException {
+    default int update(final String propName, final Object propValue, final ID id) throws IllegalArgumentException, SQLException {
         N.checkArgNotEmpty(propName, cs.propName);
         N.checkArgNotNull(id, cs.id);
 
@@ -126,7 +126,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    int update(final Map<String, Object> updateProps, final ID id) throws SQLException;
+    int update(final Map<String, Object> updateProps, final ID id) throws IllegalArgumentException, SQLException;
 
     /**
      * Performs batch update of multiple entities using the default batch size
@@ -148,7 +148,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
-    default int batchUpdate(final Collection<? extends T> entities) throws SQLException {
+    default int batchUpdate(final Collection<? extends T> entities) throws IllegalStateException, SQLException, ArithmeticException {
         return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -175,7 +175,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
-    int batchUpdate(final Collection<? extends T> entities, final int batchSize) throws SQLException;
+    int batchUpdate(final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, SQLException, ArithmeticException;
 
     /**
      * Performs batch update of multiple entities updating only the specified properties.
@@ -201,7 +202,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
-    default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate) throws SQLException {
+    default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate)
+            throws IllegalArgumentException, IllegalStateException, SQLException, ArithmeticException {
         return batchUpdate(entities, propNamesToUpdate, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -232,6 +234,7 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
-    int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize) throws SQLException;
+    int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, SQLException, ArithmeticException;
 
 }

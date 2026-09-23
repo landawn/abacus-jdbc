@@ -83,7 +83,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      */
     @SuppressWarnings("deprecation")
     @Override
-    default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass) throws UncheckedSQLException {
+    default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
@@ -150,12 +151,13 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      */
     @SuppressWarnings("deprecation")
     @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass) throws UncheckedSQLException {
+    default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
+        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
+
         if (N.isEmpty(entities)) {
             return 0;
         }
-
-        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
         final Class<?> targetEntityClass = targetEntityClass();
         final List<String> joinEntityPropNames = DaoUtil.getJoinEntityPropNamesByType(targetDaoInterface(), targetEntityClass, targetTableName(),
@@ -242,7 +244,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
-    int deleteJoinEntities(final T entity, final String joinEntityPropName) throws UncheckedSQLException;
+    int deleteJoinEntities(final T entity, final String joinEntityPropName)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
 
     /**
      * Deletes join entities for a collection of entities by property name.
@@ -301,7 +304,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
-    int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName) throws UncheckedSQLException;
+    int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
 
     /**
      * Deletes join entities for multiple property names of a single entity.
@@ -330,7 +334,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         if (N.isEmpty(joinEntityPropNames)) {
             return 0;
         }
@@ -409,7 +414,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws UncheckedSQLException {
+    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws IllegalArgumentException,
+            IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(joinEntityPropNames)) {
@@ -458,7 +464,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws UncheckedSQLException {
+    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws IllegalArgumentException,
+            IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         if (inParallel) {
             return deleteJoinEntities(entity, joinEntityPropNames, executor());
         } else {
@@ -492,7 +499,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
-    default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames) throws UncheckedSQLException {
+    default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return 0;
         }
@@ -563,7 +571,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws UncheckedSQLException {
+            throws IllegalArgumentException, IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException,
+            ArithmeticException {
         if (inParallel) {
             return deleteJoinEntities(entities, joinEntityPropNames, executor());
         } else {
@@ -612,7 +621,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws UncheckedSQLException {
+            throws IllegalArgumentException, IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException,
+            ArithmeticException {
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
@@ -650,7 +660,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      */
     @SuppressWarnings("deprecation")
     @Override
-    default int deleteAllJoinEntities(final T entity) throws UncheckedSQLException {
+    default int deleteAllJoinEntities(final T entity) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         return deleteJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
     }
 
@@ -683,7 +693,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws UncheckedSQLException {
+    default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws IllegalArgumentException, IllegalStateException,
+            RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         if (inParallel) {
             return deleteAllJoinEntities(entity, executor());
         } else {
@@ -726,7 +737,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final T entity, final Executor executor) throws UncheckedSQLException {
+    default int deleteAllJoinEntities(final T entity, final Executor executor) throws IllegalArgumentException, IllegalStateException,
+            RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(executor, cs.executor);
 
         return deleteJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
@@ -755,7 +767,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      */
     @SuppressWarnings("deprecation")
     @Override
-    default int deleteAllJoinEntities(final Collection<T> entities) throws UncheckedSQLException {
+    default int deleteAllJoinEntities(final Collection<T> entities)
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         if (N.isEmpty(entities)) {
             return 0;
         }
@@ -791,7 +804,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws UncheckedSQLException {
+    default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws IllegalArgumentException, IllegalStateException,
+            RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         if (inParallel) {
             return deleteAllJoinEntities(entities, executor());
         } else {
@@ -833,7 +847,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @Deprecated
     @Override
-    default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws UncheckedSQLException {
+    default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws IllegalArgumentException, IllegalStateException,
+            RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(entities)) {

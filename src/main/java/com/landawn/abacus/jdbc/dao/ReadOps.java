@@ -90,7 +90,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#exists()
      */
-    boolean exists(final Condition cond) throws SQLException;
+    boolean exists(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Convenience method equivalent to the negation of {@link #exists(Condition)}.
@@ -110,7 +110,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @see #exists(Condition)
      */
     @Beta
-    default boolean notExists(final Condition cond) throws SQLException {
+    default boolean notExists(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return !exists(cond);
     }
 
@@ -130,7 +130,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    int count(final Condition cond) throws SQLException;
+    int count(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Finds the first record that matches the specified condition.
@@ -149,7 +149,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    Optional<T> findFirst(final Condition cond) throws SQLException;
+    Optional<T> findFirst(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Finds the first record matching the condition and maps it using the provided mapper.
@@ -174,7 +174,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, SQLException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Finds the first record matching the condition and maps it using a bi-function mapper.
@@ -191,7 +192,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the first matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
-    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException, SQLException;
+    <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Finds the first record matching the condition, selecting only the specified properties.
@@ -213,7 +215,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
+    Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Finds the first record with the specified properties and maps the result.
@@ -232,7 +234,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, SQLException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Finds the first record with the specified properties using a bi-function mapper.
@@ -251,7 +253,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, SQLException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Finds exactly one record matching the condition, throwing an exception if multiple are found.
@@ -271,7 +273,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      */
-    Optional<T> findOnlyOne(final Condition cond) throws SQLException, DuplicateResultException;
+    Optional<T> findOnlyOne(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException;
 
     /**
      * Finds exactly one record and maps it, throwing an exception if multiple are found.
@@ -290,7 +292,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Finds exactly one record using a bi-function mapper, throwing an exception if multiple are found.
@@ -309,7 +311,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Finds exactly one record with the specified properties, throwing an exception if multiple are found.
@@ -324,7 +326,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      */
-    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond) throws SQLException, DuplicateResultException;
+    Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException;
 
     /**
      * Finds exactly one record with the specified properties and maps it.
@@ -344,7 +347,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Finds exactly one record with the specified properties using a bi-function mapper.
@@ -364,7 +367,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Queries the value of a single boolean column for the first record matching the condition.
@@ -389,7 +392,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBoolean()
      */
-    OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond) throws SQLException;
+    OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single char column for the first record matching the condition.
@@ -414,7 +418,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForChar()
      */
-    OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws SQLException;
+    OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single byte column for the first record matching the condition.
@@ -436,7 +440,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForByte()
      */
-    OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws SQLException;
+    OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single short column for the first record matching the condition.
@@ -458,7 +462,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForShort()
      */
-    OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws SQLException;
+    OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single int column for the first record matching the condition.
@@ -481,7 +485,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForInt()
      */
-    OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws SQLException;
+    OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single long column for the first record matching the condition.
@@ -503,7 +507,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForLong()
      */
-    OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws SQLException;
+    OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single float column for the first record matching the condition.
@@ -525,7 +529,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForFloat()
      */
-    OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws SQLException;
+    OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single double column for the first record matching the condition.
@@ -547,7 +551,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDouble()
      */
-    OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws SQLException;
+    OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single String column for the first record matching the condition.
@@ -569,7 +573,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForString()
      */
-    Nullable<String> queryForString(final String singleSelectPropName, final Condition cond) throws SQLException;
+    Nullable<String> queryForString(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single {@code java.sql.Date} column for the first record matching the condition.
@@ -590,7 +595,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDate()
      */
-    Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond) throws SQLException;
+    Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single {@code java.sql.Time} column for the first record matching the condition.
@@ -611,7 +617,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTime()
      */
-    Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond) throws SQLException;
+    Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single {@code java.sql.Timestamp} column for the first record matching the condition.
@@ -632,7 +639,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTimestamp()
      */
-    Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond) throws SQLException;
+    Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single byte-array column for the first record matching the condition.
@@ -653,7 +661,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBytes()
      */
-    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond) throws SQLException;
+    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries a single value of the specified type from one column for the first record matching the condition.
@@ -682,13 +691,15 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForSingleValue(Class)
      */
-    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType) throws SQLException;
+    <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Queries a single non-null value of the specified type from one column for the first record matching the condition.
      * Only the first matching record is read; any remaining matching records are ignored.
-     * Unlike {@link #queryForSingleValue(String, Condition, Class)}, this method collapses both
-     * "no record matched" and "the matched value is SQL {@code NULL}" into an empty {@code Optional}.
+     * Unlike {@link #queryForSingleValue(String, Condition, Class)}, a matched value that converts to
+     * {@code null} (including SQL {@code NULL} for a type that preserves null) throws {@link NullPointerException}.
+     * An empty {@code Optional} means no record matched.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -703,15 +714,17 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
      * @param targetValueType the class of the target value type to convert the column value to
-     * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
-     *         matches the condition or the matched value is SQL {@code NULL}
+     * @return an {@code Optional} containing the converted non-null value when a record matches, or an empty
+     *         {@code Optional} if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
+     * @throws NullPointerException if a record is found but the value converted to {@code targetValueType}
+     *                              is {@code null}
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws SQLException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Queries a single non-null value from one column for the first record matching the condition, mapping it with a custom row mapper.
@@ -738,12 +751,12 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
-     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @see #queryForSingleNonNull(String, Condition, Class)
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws SQLException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Queries a unique single value of the specified type from one column, throwing if more than one record matches.
@@ -774,12 +787,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
     <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException;
 
     /**
      * Queries a unique non-null single value of the specified type from one column, throwing if more than one record matches.
-     * Combines the uniqueness constraint with a non-null requirement: both "no record matched" and
-     * "the matched value is SQL {@code NULL}" collapse into an empty {@code Optional}.
+     * Combines the uniqueness constraint with a non-null requirement. A matched value that converts to
+     * {@code null} (including SQL {@code NULL} for a type that preserves null) throws {@link NullPointerException}.
+     * An empty {@code Optional} means no record matched.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -795,16 +809,18 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param singleSelectPropName the name of the single property/column to select
      * @param cond the search condition
      * @param targetValueType the class of the target value type to convert the column value to
-     * @return an {@code Optional} containing the converted value, or an empty {@code Optional} if no record
-     *         matches the condition or the matched value is SQL {@code NULL}
+     * @return an {@code Optional} containing the converted non-null value when a record matches, or an empty
+     *         {@code Optional} if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
+     * @throws NullPointerException if a record is found but the value converted to {@code targetValueType}
+     *                              is {@code null}
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Queries a unique non-null value from one column using a custom row mapper, throwing if more than one record matches.
@@ -834,12 +850,12 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record matches the condition
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
-     *                              (unlike the {@code Class}-based variant, a {@code null} value is not collapsed to an empty {@code Optional})
+     *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      * @see #queryForUniqueNonNull(String, Condition, Class)
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws SQLException, DuplicateResultException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Executes a query and returns the results as a Dataset.
@@ -858,7 +874,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    Dataset query(final Condition cond) throws SQLException;
+    Dataset query(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Executes a query for specific columns and returns results as a Dataset.
@@ -872,7 +888,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    Dataset query(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
+    Dataset query(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Executes a query and processes results with a custom result extractor.
@@ -903,7 +919,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
-    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
+    <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException;
 
     /**
      * Executes a query for specific columns with a custom result extractor.
@@ -921,7 +938,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor) throws SQLException;
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException;
 
     /**
      * Executes a query with a bi-function result extractor.
@@ -939,7 +957,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
-    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
+    <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException;
 
     /**
      * Executes a query for specific columns with a bi-function result extractor.
@@ -958,7 +977,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
-    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws SQLException;
+    <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException;
 
     /**
      * Returns a list of all entities matching the specified condition.
@@ -979,7 +999,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    List<T> list(final Condition cond) throws SQLException;
+    List<T> list(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of results mapped by the provided row mapper.
@@ -1002,7 +1022,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of results mapped by a bi-function row mapper.
@@ -1017,7 +1037,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a filtered list of results mapped by the row mapper.
@@ -1042,7 +1062,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a filtered list using bi-function filter and mapper.
@@ -1058,7 +1079,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of entities with only the specified properties populated.
@@ -1080,7 +1102,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    List<T> list(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
+    List<T> list(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of selected properties mapped by the row mapper.
@@ -1096,7 +1118,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of selected properties mapped by a bi-function mapper.
@@ -1112,7 +1135,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
+    <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a filtered list of selected properties mapped by the row mapper.
@@ -1130,7 +1154,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends R> rowMapper) throws SQLException;
+            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a filtered list with bi-function filter and mapper for selected properties.
@@ -1148,7 +1172,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
-            final Jdbc.BiRowMapper<? extends R> rowMapper) throws SQLException;
+            final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of values from a single property/column.
@@ -1168,7 +1192,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @SuppressWarnings("deprecation")
-    default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws SQLException {
+    default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -1202,7 +1226,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
         N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
@@ -1227,7 +1251,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, SQLException {
+            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
         N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
@@ -1259,7 +1283,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @see Filters
      */
     @LazyEvaluation
-    Stream<T> stream(final Condition cond);
+    Stream<T> stream(final Condition cond) throws IllegalArgumentException;
 
     /**
      * Returns a lazy Stream with custom row mapping.
@@ -1273,7 +1297,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      */
     @LazyEvaluation
-    <R> Stream<R> stream(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException;
 
     /**
      * Returns a lazy Stream with bi-function row mapping.
@@ -1287,7 +1311,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      */
     @LazyEvaluation
-    <R> Stream<R> stream(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException;
 
     /**
      * Returns a filtered lazy Stream with row mapping.
@@ -1302,7 +1326,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
      */
     @LazyEvaluation
-    <R> Stream<R> stream(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException;
 
     /**
      * Returns a filtered lazy Stream with bi-function filter and mapper.
@@ -1317,7 +1341,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
      */
     @LazyEvaluation
-    <R> Stream<R> stream(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException;
 
     /**
      * Returns a lazy Stream of entities with selected properties.
@@ -1333,7 +1357,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws IllegalArgumentException if {@code cond} is {@code null}
      */
     @LazyEvaluation
-    Stream<T> stream(final Collection<String> selectPropNames, final Condition cond);
+    Stream<T> stream(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException;
 
     /**
      * Returns a lazy Stream of selected properties with row mapping.
@@ -1348,7 +1372,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      */
     @LazyEvaluation
-    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException;
 
     /**
      * Returns a lazy Stream with bi-function mapping for selected properties.
@@ -1363,7 +1388,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
      */
     @LazyEvaluation
-    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper);
+    <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException;
 
     /**
      * Returns a filtered lazy Stream of selected properties with mapping.
@@ -1380,7 +1406,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends R> rowMapper);
+            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException;
 
     /**
      * Returns a filtered lazy Stream with maximum flexibility.
@@ -1397,7 +1423,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      */
     @LazyEvaluation
     <R> Stream<R> stream(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
-            final Jdbc.BiRowMapper<? extends R> rowMapper);
+            final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException;
 
     /**
      * Returns a lazy Stream of values from a single property.
@@ -1420,7 +1446,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
      */
     @LazyEvaluation
-    default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond) {
+    default <R> Stream<R> stream(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException {
         N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -1514,7 +1540,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      */
     @Beta
     @LazyEvaluation
-    Stream<Dataset> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, Dataset> paramSetter);
+    Stream<Dataset> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, Dataset> paramSetter)
+            throws IllegalArgumentException;
 
     /**
      * Returns a paginated Stream with custom result extraction.
@@ -1542,7 +1569,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     @Beta
     @LazyEvaluation
     <R> Stream<R> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter,
-            final Jdbc.ResultExtractor<? extends R> resultExtractor);
+            final Jdbc.ResultExtractor<? extends R> resultExtractor) throws IllegalArgumentException;
 
     /**
      * Returns a paginated Stream with bi-function result extraction.
@@ -1570,7 +1597,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     @Beta
     @LazyEvaluation
     <R> Stream<R> paginate(final Condition cond, final int pageSize, final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter,
-            final Jdbc.BiResultExtractor<? extends R> resultExtractor);
+            final Jdbc.BiResultExtractor<? extends R> resultExtractor) throws IllegalArgumentException;
 
     /**
      * Returns a paginated Stream with selected properties as Dataset pages.
@@ -1594,7 +1621,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     @Beta
     @LazyEvaluation
     Stream<Dataset> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
-            final Jdbc.BiParametersSetter<? super PreparedQuery, Dataset> paramSetter);
+            final Jdbc.BiParametersSetter<? super PreparedQuery, Dataset> paramSetter) throws IllegalArgumentException;
 
     /**
      * Returns a paginated Stream of selected properties with custom extraction.
@@ -1623,7 +1650,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     @Beta
     @LazyEvaluation
     <R> Stream<R> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
-            final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.ResultExtractor<? extends R> resultExtractor);
+            final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.ResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException;
 
     /**
      * Returns a paginated Stream with bi-function extraction for selected properties.
@@ -1652,7 +1680,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     @Beta
     @LazyEvaluation
     <R> Stream<R> paginate(final Collection<String> selectPropNames, final Condition cond, final int pageSize,
-            final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.BiResultExtractor<? extends R> resultExtractor);
+            final Jdbc.BiParametersSetter<? super PreparedQuery, R> paramSetter, final Jdbc.BiResultExtractor<? extends R> resultExtractor)
+            throws IllegalArgumentException;
 
     /**
      * Iterates over query results, applying the row consumer to each row.
@@ -1673,7 +1702,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws SQLException;
+    void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over results with a bi-consumer receiving ResultSet and column labels.
@@ -1686,7 +1715,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
+    void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over filtered results, processing only rows that pass the filter.
@@ -1700,7 +1729,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer) throws SQLException;
+    void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over filtered results with bi-function filter and consumer.
@@ -1714,7 +1744,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
+    void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over selected properties, applying the consumer to each row.
@@ -1728,7 +1759,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer) throws SQLException;
+    void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over selected properties with a bi-consumer.
@@ -1742,7 +1774,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws SQLException;
+    void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over filtered results of selected properties.
@@ -1758,7 +1791,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
-            throws SQLException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over filtered results of selected properties with a bi-function filter and consumer.
@@ -1774,7 +1807,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
-            throws SQLException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over results using a disposable object array consumer.
@@ -1809,7 +1842,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
@@ -1833,7 +1866,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      */
     @SuppressWarnings("deprecation")
     @Beta
-    default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer) throws IllegalArgumentException, SQLException {
+    default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 

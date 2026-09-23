@@ -141,7 +141,7 @@ public interface Transaction {
      * @throws UncheckedSQLException if an SQL error occurs during commit, rollback of a rollback-only transaction,
      *         or restoration of a nested scope's isolation level
      */
-    void commit() throws UncheckedSQLException;
+    void commit() throws IllegalStateException, UncheckedSQLException;
 
     /**
      * Rolls back the current transaction, undoing all changes made within
@@ -170,7 +170,7 @@ public interface Transaction {
      *         that has already completed — the call is logged and ignored.
      * @throws UncheckedSQLException if an SQL error occurs during rollback or restoration of a nested scope's isolation level
      */
-    void rollback() throws UncheckedSQLException;
+    void rollback() throws IllegalStateException, UncheckedSQLException;
 
     /**
      * Rolls back the transaction if it has not been committed successfully.
@@ -205,7 +205,7 @@ public interface Transaction {
      *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}) when the rollback is actually performed
      * @throws UncheckedSQLException if an SQL error occurs during rollback or restoration of a nested scope's isolation level
      */
-    void rollbackIfNotCommitted() throws UncheckedSQLException;
+    void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException;
 
     /**
      * Enumeration representing the various states a transaction can be in during its lifecycle.

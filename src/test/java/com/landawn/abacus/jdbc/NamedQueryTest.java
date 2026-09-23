@@ -95,7 +95,6 @@ public class NamedQueryTest extends TestBase {
         namedQuery = new NamedQuery(mockPreparedStatement, mockParsedSql);
     }
 
-
     @Test
     public void testSetNullWithSqlType() throws SQLException {
         String paramName = "param1";
@@ -453,8 +452,7 @@ public class NamedQueryTest extends TestBase {
             final PreparedStatement stmt = mock(PreparedStatement.class);
             final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse(sql));
 
-            final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                    () -> query.setObject("missing", null, (Type<Object>) null));
+            final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> query.setObject("missing", null, (Type<Object>) null));
 
             assertTrue(failure.getMessage().contains("Named parameter not found: missing"));
             verify(stmt, times(1)).close();

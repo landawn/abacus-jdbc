@@ -88,8 +88,8 @@ public class DaoFunctionalInterfaceNullValidationTest extends TestBase {
     public interface JoinNullUserDao extends CrudDao<FiNullUser, Long, JoinNullUserDao>, CrudJoinEntityHelper<FiNullUser, Long, JoinNullUserDao> {
     }
 
-    public interface UncheckedJoinNullUserDao extends UncheckedCrudDao<FiNullUser, Long, UncheckedJoinNullUserDao>,
-            UncheckedCrudJoinEntityHelper<FiNullUser, Long, UncheckedJoinNullUserDao> {
+    public interface UncheckedJoinNullUserDao
+            extends UncheckedCrudDao<FiNullUser, Long, UncheckedJoinNullUserDao>, UncheckedCrudJoinEntityHelper<FiNullUser, Long, UncheckedJoinNullUserDao> {
     }
 
     private DataSource ds;
@@ -133,8 +133,7 @@ public class DaoFunctionalInterfaceNullValidationTest extends TestBase {
                 }
 
                 final Class<?>[] parameterTypes = method.getParameterTypes();
-                final boolean singleColumn = (method.getName().equals("list") || method.getName().equals("stream"))
-                        && parameterTypes[0] == String.class;
+                final boolean singleColumn = (method.getName().equals("list") || method.getName().equals("stream")) && parameterTypes[0] == String.class;
                 final boolean foreach = method.getName().equals("foreach");
                 final boolean statementCreator = method.getName().startsWith("prepare") && parameterTypes.length == 2
                         && isFunctionalInterface(parameterTypes[1]);
@@ -150,8 +149,7 @@ public class DaoFunctionalInterfaceNullValidationTest extends TestBase {
                     final String parameterName = singleColumn && index == 0 ? "singleSelectPropName"
                             : parameterTypes[index] == Condition.class ? "cond"
                                     : foreach ? "rowConsumer"
-                                            : statementCreator ? index == 0 ? method.getName().equals("prepareNamedQuery") ? "namedSql" : "sql"
-                                                    : "stmtCreator"
+                                            : statementCreator ? index == 0 ? method.getName().equals("prepareNamedQuery") ? "namedSql" : "sql" : "stmtCreator"
                                                     : index == args.length - 1 ? "rowMapper" : "rowFilter";
                     assertInvalidArgument(method, target, args, parameterName);
                     args[index] = validArgument(parameterTypes[index], method.getName());

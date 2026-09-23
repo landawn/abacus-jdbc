@@ -121,8 +121,8 @@ public class DaoImplTest extends TestBase {
 
     @Test
     public void testInsertValidatesArgumentsBeforeLookingUpCustomIdExtractor() throws SQLException {
-        final ValidationBeforeIdExtractorDao dao = DaoImpl.createDao(ValidationBeforeIdExtractorDao.class, null, mockDataSourceForDaoCreation(), PSC,
-                null, null, null);
+        final ValidationBeforeIdExtractorDao dao = DaoImpl.createDao(ValidationBeforeIdExtractorDao.class, null, mockDataSourceForDaoCreation(), PSC, null,
+                null, null);
 
         assertThrows(IllegalArgumentException.class, () -> dao.insert((IdOnlyEntity) null));
         assertThrows(IllegalArgumentException.class, () -> dao.insert(new IdOnlyEntity(), List.of()));

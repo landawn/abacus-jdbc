@@ -47,10 +47,8 @@ public class CrudDaoTest extends TestBase {
         final AtomicInteger executedActions = new AtomicInteger();
         when(dao.executor()).thenReturn(rejectingExecutor);
 
-        assertSame(rejected, assertThrows(RejectedExecutionException.class,
-                () -> dao.callAsync(d -> executedActions.incrementAndGet(), rejectingExecutor)));
-        assertSame(rejected, assertThrows(RejectedExecutionException.class,
-                () -> dao.runAsync(d -> executedActions.incrementAndGet(), rejectingExecutor)));
+        assertSame(rejected, assertThrows(RejectedExecutionException.class, () -> dao.callAsync(d -> executedActions.incrementAndGet(), rejectingExecutor)));
+        assertSame(rejected, assertThrows(RejectedExecutionException.class, () -> dao.runAsync(d -> executedActions.incrementAndGet(), rejectingExecutor)));
         assertSame(rejected, assertThrows(RejectedExecutionException.class, () -> dao.callAsync(d -> executedActions.incrementAndGet())));
         assertSame(rejected, assertThrows(RejectedExecutionException.class, () -> dao.runAsync(d -> executedActions.incrementAndGet())));
         assertEquals(0, executedActions.get());

@@ -154,6 +154,8 @@ import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.Stream;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 /**
  * Internal implementation class providing the core runtime logic for dynamic proxy-based DAO (Data Access Object) interfaces.
  *
@@ -495,7 +497,7 @@ final class DaoImpl {
      * @return a {@link MethodHandle} that can be used to invoke the default method on a proxy instance
      * @throws UnsupportedOperationException if all strategies fail to produce a usable handle
      */
-    private static MethodHandle createMethodHandle(final Method method) {
+    private static MethodHandle createMethodHandle(final Method method) throws UnsupportedOperationException {
         final Class<?> declaringClass = method.getDeclaringClass();
 
         try {
@@ -607,7 +609,8 @@ final class DaoImpl {
      *         type is neither a proper {@link Collection} subtype nor one of the supported exemptions
      *         ({@code Map} via {@link MappedByKey}, {@code Tuple2} for procedures with out parameters)
      */
-    private static boolean isListQuery(final Method method, final Class<?> returnType, final QueryOperation queryOperation, final String fullClassMethodName) {
+    private static boolean isListQuery(final Method method, final Class<?> returnType, final QueryOperation queryOperation, final String fullClassMethodName)
+            throws UnsupportedOperationException {
         final String methodName = method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
         final int paramLen = paramTypes.length;
@@ -694,7 +697,8 @@ final class DaoImpl {
      * @throws UnsupportedOperationException if {@link QueryOperation#exists} is declared but the return type is not
      *         {@code boolean} or {@code Boolean}
      */
-    private static boolean isExistsQuery(final Method method, final QueryOperation queryOperation, final String fullClassMethodName) {
+    private static boolean isExistsQuery(final Method method, final QueryOperation queryOperation, final String fullClassMethodName)
+            throws UnsupportedOperationException {
         final String methodName = method.getName();
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
@@ -916,15 +920,15 @@ final class DaoImpl {
      * @param isProcedure {@code true} if the SQL is a stored procedure call
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @return a function executing a prepared query and returning the mapped result
-     * @throws IllegalArgumentException if {@code mappedByKey} does not identify a property of the result entity class
      * @throws UnsupportedOperationException if the return type is not supported by the declared
      *         {@link QueryOperation}, or a required generic element type cannot be resolved
+     * @throws IllegalArgumentException if {@code mappedByKey} does not identify a property of the result entity class
      */
     @SuppressWarnings("rawtypes")
     private static <R> Throwables.BiFunction<AbstractQuery, Object[], R, SQLException> createQueryFunctionByMethod(final Class<?> entityClass,
             final Method method, final String mappedByKey, final List<String> mergedByIds, final Map<String, String> prefixFieldMap,
             final boolean fetchColumnByEntityClass, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final QueryOperation queryOperation,
-            final boolean isProcedure, final String fullClassMethodName) {
+            final boolean isProcedure, final String fullClassMethodName) throws UnsupportedOperationException, IllegalArgumentException {
         final Class<?>[] paramTypes = method.getParameterTypes();
         final Class<?> returnType = method.getReturnType();
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
@@ -1495,7 +1499,8 @@ final class DaoImpl {
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @throws UnsupportedOperationException if {@code firstReturnEleType} is {@code null}
      */
-    private static void checkReturnEleTypeResolved(final Class<?> firstReturnEleType, final Class<?> returnType, final String fullClassMethodName) {
+    private static void checkReturnEleTypeResolved(final Class<?> firstReturnEleType, final Class<?> returnType, final String fullClassMethodName)
+            throws UnsupportedOperationException {
         if (firstReturnEleType == null) {
             throw new UnsupportedOperationException("The element type of the return type: " + returnType + " in method: " + fullClassMethodName
                     + " can't be resolved. Raw or wildcard generic return types are not supported");
@@ -1650,7 +1655,7 @@ final class DaoImpl {
     @SuppressWarnings("rawtypes")
     private static Jdbc.BiParametersSetter<AbstractQuery, Object[]> createParametersSetter(final QueryInfo queryInfo, final String fullClassMethodName,
             final Method method, final Class<?>[] paramTypes, final int paramLen, final int fragmentParamLen, final int[] stmtParamIndexes,
-            final boolean[] bindListParamFlags, final int stmtParamLen) {
+            final boolean[] bindListParamFlags, final int stmtParamLen) throws UnsupportedOperationException {
 
         Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter = null;
 
@@ -1927,7 +1932,8 @@ final class DaoImpl {
      * @throws UnsupportedOperationException if a binding name is empty, duplicated, missing from the SQL, or has no
      *         matching named parameter in the SQL
      */
-    private static void validateNamedParameterBindings(final QueryInfo queryInfo, final Collection<String> boundParamNames, final String fullClassMethodName) {
+    private static void validateNamedParameterBindings(final QueryInfo queryInfo, final Collection<String> boundParamNames, final String fullClassMethodName)
+            throws UnsupportedOperationException {
         final Set<String> boundParamNameSet = new HashSet<>();
         final List<String> duplicateParamNames = new ArrayList<>();
 
@@ -1976,9 +1982,11 @@ final class DaoImpl {
      * @param parameterName the named parameter to set
      * @param value the timestamp value to bind
      * @throws SQLException if setting the parameter fails
+     * @throws IllegalArgumentException if {@code preparedQuery} is a {@link NamedQuery} and {@code parameterName}
+     *         is not a named parameter of that query
      */
     private static void setSysTimestampParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName,
-            final java.sql.Timestamp value) throws SQLException {
+            final java.sql.Timestamp value) throws SQLException, IllegalArgumentException {
         if (preparedQuery instanceof CallableQuery) {
             ((CallableQuery) preparedQuery).setTimestamp(parameterName, value);
         } else {
@@ -1994,9 +2002,11 @@ final class DaoImpl {
      * @param parameterName the named parameter to set
      * @param value the date value to bind
      * @throws SQLException if setting the parameter fails
+     * @throws IllegalArgumentException if {@code preparedQuery} is a {@link NamedQuery} and {@code parameterName}
+     *         is not a named parameter of that query
      */
     private static void setSysDateParam(@SuppressWarnings("rawtypes") final AbstractQuery preparedQuery, final String parameterName, final java.sql.Date value)
-            throws SQLException {
+            throws SQLException, IllegalArgumentException {
         if (preparedQuery instanceof CallableQuery) {
             ((CallableQuery) preparedQuery).setDate(parameterName, value);
         } else {
@@ -2027,18 +2037,24 @@ final class DaoImpl {
      * @param isSingleReturnTypeMethod {@code true} if the method returns a single value
      * @param isListQueryMethod {@code true} if the method is a list query
      * @return the prepared and configured query; the caller is responsible for closing it
+     * @throws ParsingException if a {@code @SqlFragmentList} argument cannot be serialized to JSON
+     * @throws UncheckedIOException if serializing a {@code @SqlFragmentList} argument to JSON fails while reading
+     *         a value
      * @throws IllegalArgumentException if the SQL left after fragment substitution cannot be parsed, if a bound name
      *         has no matching named parameter in the expanded SQL, or if an argument value has a type that cannot be
      *         bound to a named parameter
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the query fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
+     *         connection from the DAO data source
      */
     @SuppressWarnings({ "rawtypes", "unused" })
     private static AbstractQuery prepareQuery(final DaoBase proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno, final Class<?> returnType,
             final Object[] args, final int[] fragmentParamIndexes, final Tuple2<Annotation, String>[] fragmentAnnos,
             final BiFunction<Annotation, Object, String>[] fragmentMappers, final boolean returnGeneratedKeys, final String[] generatedKeyColumnNames,
             final List<OutParameter> outParameterList, final Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter,
-            final boolean isExistsQueryMethod, final boolean isSingleReturnTypeMethod, final boolean isListQueryMethod) throws SQLException {
+            final boolean isExistsQueryMethod, final boolean isSingleReturnTypeMethod, final boolean isListQueryMethod)
+            throws ParsingException, UncheckedIOException, IllegalArgumentException, SQLException, UncheckedSQLException, CannotGetJdbcConnectionException {
         final QueryOperation queryOperation = queryInfo.queryOperation;
         String query = queryInfo.sql;
         ParsedSql parsedSql = queryInfo.parsedSql;
@@ -2176,8 +2192,10 @@ final class DaoImpl {
      * @param count the maximum row count; non-positive means no framework-added limit
      * @param skipLimitWithoutOrderBy {@code true} to skip adding a limit when there is no {@code ORDER BY}
      * @return the condition with the limit applied as described
+     * @throws IllegalArgumentException if {@code count} is positive and {@code cond} is rejected by
+     *         {@link Criteria.Builder#add(Condition)}
      */
-    private static Condition handleLimit(final Condition cond, final int count, final boolean skipLimitWithoutOrderBy) {
+    private static Condition handleLimit(final Condition cond, final int count, final boolean skipLimitWithoutOrderBy) throws IllegalArgumentException {
         // A non-positive count means "no framework-added limit": return the condition unchanged. Any existing Limit
         // (standalone or inside a Criteria) is preserved as-is and rendered per dialect later by the SQL builder.
         // skipLimitWithoutOrderBy marks a best-effort limit on a dialect (SQL Server) that renders LIMIT as
@@ -2251,7 +2269,7 @@ final class DaoImpl {
      * @return the total number of affected rows
      * @throws ArithmeticException if the total overflows a {@code long}
      */
-    private static long sumUpdateCounts(final long[] updateCounts) {
+    private static long sumUpdateCounts(final long[] updateCounts) throws ArithmeticException {
         long total = 0;
 
         for (final long updateCount : updateCounts) {
@@ -2336,7 +2354,7 @@ final class DaoImpl {
      * @return the same condition
      * @throws IllegalArgumentException if {@code cond} is {@code null} or has no {@code ORDER BY}
      */
-    private static <T extends Condition> T checkCondForPaginate(final T cond) {
+    private static <T extends Condition> T checkCondForPaginate(final T cond) throws IllegalArgumentException {
         N.checkArgNotNull(cond, "Condition for \"paginate\" cannot be null");
 
         if ((cond instanceof Criteria && ((Criteria) cond).orderBy() != null) || Strings.containsIgnoreCase(cond.toString(), " ORDER BY ")) {
@@ -2356,9 +2374,12 @@ final class DaoImpl {
      * @param paramIndex the index of the parameter to inspect
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @return the fragment annotation and its placeholder name
+     * @throws UnsupportedOperationException if the fragment annotation value is empty and the parameter name cannot
+     *         be resolved
      * @throws IllegalArgumentException if the parameter carries none of the supported fragment annotations
      */
-    private static Tuple2<Annotation, String> resolveFragmentAnnoAndPlaceholder(final Method method, final int paramIndex, final String fullClassMethodName) {
+    private static Tuple2<Annotation, String> resolveFragmentAnnoAndPlaceholder(final Method method, final int paramIndex, final String fullClassMethodName)
+            throws UnsupportedOperationException, IllegalArgumentException {
         final Annotation[] annotations = method.getParameterAnnotations()[paramIndex];
 
         for (final Annotation annotation : annotations) {
@@ -2393,7 +2414,7 @@ final class DaoImpl {
      *         available, or a still-empty placeholder)
      */
     private static String normalizeSqlFragmentPlaceholder(final String configuredName, final Method method, final int paramIndex,
-            final String fullClassMethodName, final Class<? extends Annotation> annotationType) {
+            final String fullClassMethodName, final Class<? extends Annotation> annotationType) throws UnsupportedOperationException {
         String placeholderName = configuredName;
 
         if (Strings.isEmpty(placeholderName)) {
@@ -2561,17 +2582,23 @@ final class DaoImpl {
      *         nor {@link SqlPolicy#PARAMETERIZED_SQL}, if duplicate SQL keys are defined, if an XML SQL mapper file
      *         referenced by {@code @SqlSource} cannot be found or holds an invalid SQL definition, or if the
      *         DAO interface has invalid annotation configurations or generic type arguments
-     * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
-     *         incompatible return type for the declared {@link QueryOperation}, or a feature not yet enabled (e.g., cache on a
-     *         non-cacheable interface that supports update/delete operations, or a {@code RowMapper}/{@code ResultExtractor} parameter on a custom {@code @Query} method)
+     * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
+     *         connection from {@code ds}
+     * @throws UncheckedIOException if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read
      * @throws ParsingException if an XML SQL mapper file referenced by {@code @SqlSource} is not well-formed XML or
      *         does not have {@code <sqlMapper>} as its root element
-     * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
-     * @throws UncheckedIOException if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read
+     * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
+     *         incompatible return type for the declared {@link QueryOperation}, or a feature not yet enabled
+     *         (e.g., cache on a non-cacheable interface that supports update/delete operations, or a
+     *         {@code RowMapper}/{@code ResultExtractor} parameter on a custom {@code @Query} method)
+     * @throws IllegalStateException if generated join SQL for a {@code @JoinedBy} property lacks a clause required to
+     *         build the join query plans
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
-            final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) {
+            final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) throws IllegalArgumentException, UncheckedSQLException,
+            CannotGetJdbcConnectionException, UncheckedIOException, ParsingException, UnsupportedOperationException, IllegalStateException {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
         N.checkArgNotNull(ds, cs.ds);
@@ -5641,7 +5668,8 @@ final class DaoImpl {
                                             private List<String> selectCls = null;
 
                                             @Override
-                                            public Pair<Object, Object> apply(final ResultSet rs, final List<String> cls) throws SQLException {
+                                            public Pair<Object, Object> apply(final ResultSet rs, final List<String> cls)
+                                                    throws SQLException, IllegalArgumentException, UnsupportedOperationException {
                                                 if (columnCount == 0) {
                                                     columnCount = cls.size();
                                                     selectCls = cls.subList(0, cls.size() - 1);
@@ -7342,12 +7370,17 @@ final class DaoImpl {
      * @param namedInsertSql the named INSERT statement to execute
      * @param entities the entities to insert, in the order they should be written
      * @param batchSize the number of statements per batch execution; must be positive
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or contains positional parameters,
+     *         if the data source is {@code null}, if a batch row is {@code null} or has no property matching a named
+     *         parameter, or if {@code batchSize} is not positive when the entities are split into chunks
      * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
+     *         connection from the data source
      * @throws SQLException if preparing, binding, or executing a batch fails
      */
     @SuppressWarnings("rawtypes")
     private static void executeBatchSave(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize)
-            throws SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, CannotGetJdbcConnectionException, SQLException {
         if (entities.size() <= batchSize) {
             proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
         } else {
@@ -7369,13 +7402,20 @@ final class DaoImpl {
      * @param keyExtractor the mapper reading one generated id from the generated-keys result set
      * @param isDefaultIdTester tests whether an extracted id is the type's default (unset) value
      * @return the generated ids, in the order the entities were batched
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or contains positional parameters,
+     *         if the data source is {@code null}, if {@code generatedKeyColumnNames} is {@code null} or empty,
+     *         if {@code keyExtractor} or {@code isDefaultIdTester} is {@code null}, if a batch row is {@code null}
+     *         or has no property matching a named parameter, or if {@code batchSize} is not positive when the
+     *         entities are split into chunks
      * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
+     *         connection from the data source
      * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
      */
     @SuppressWarnings("rawtypes")
     private static List<Object> executeBatchInsert(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
             final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester)
-            throws SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, CannotGetJdbcConnectionException, SQLException {
         if (entities.size() <= batchSize) {
             return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                     .addBatchParameters(entities)
@@ -7403,13 +7443,22 @@ final class DaoImpl {
      * @param isDefaultIdTester tests whether an extracted id is the type's default (unset) value
      * @param idSetter the setter assigning one generated id to one entity
      * @param daoLogger the logger used to warn about an id/entity count mismatch
+     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or contains positional parameters,
+     *         if the data source is {@code null}, if {@code generatedKeyColumnNames} is {@code null} or empty,
+     *         if {@code keyExtractor} or {@code isDefaultIdTester} is {@code null}, if a batch row is {@code null}
+     *         or has no property matching a named parameter, or if {@code batchSize} is not positive when the
+     *         entities are split into chunks
      * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
+     *         connection from the data source
      * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
+     * @throws UnsupportedOperationException if an entity id property is read-only, so a generated id cannot be stored
      */
     @SuppressWarnings("rawtypes")
     private static void executeBatchInsertRun(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
             final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester,
-            final BiConsumer<Object, Object> idSetter, final Logger daoLogger) throws SQLException {
+            final BiConsumer<Object, Object> idSetter, final Logger daoLogger)
+            throws IllegalArgumentException, UncheckedSQLException, CannotGetJdbcConnectionException, SQLException, UnsupportedOperationException {
         List<Object> ids = executeBatchInsert(proxy, namedInsertSql, entities, batchSize, generatedKeyColumnNames, keyExtractor, isDefaultIdTester);
 
         if (JdbcUtil.isAllNullIds(ids)) {
@@ -7428,9 +7477,10 @@ final class DaoImpl {
      * @param ids the generated ids returned by the batch insert
      * @param idSetter the setter assigning one id to one entity
      * @param daoLogger the logger used to warn about an id/entity count mismatch
+     * @throws UnsupportedOperationException if an entity id property is read-only, so a generated id cannot be stored
      */
-    private static void setReturnedIds(final Collection<?> entities, final List<Object> ids, final BiConsumer<Object, Object> idSetter,
-            final Logger daoLogger) {
+    private static void setReturnedIds(final Collection<?> entities, final List<Object> ids, final BiConsumer<Object, Object> idSetter, final Logger daoLogger)
+            throws UnsupportedOperationException {
         if (N.notEmpty(ids) && ids.size() == entities.size()) {
             int idx = 0;
 
@@ -7452,12 +7502,13 @@ final class DaoImpl {
      * @param groupedPropEntities the loaded joined entities, grouped by join key
      * @throws NullPointerException if {@code entities} contains a {@code null} element, whose join key cannot be read
      * @throws IllegalArgumentException if a join key is null/default when disallowed by the DAO configuration,
-     *                                  or a map-valued join has multiple matching rows
+     *                                  or a map-valued join has multiple matching rows, or the join property's
+     *                                  collection or map type cannot be constructed
      * @throws UnsupportedOperationException if the {@code @JoinedBy} join property is read-only, so the matched join
      *                                  entities cannot be stored back onto the source entity
      */
     private static void replaceLoadedJoinPropEntities(final JoinInfo joinInfo, final Collection<?> entities,
-            final Map<Object, List<Object>> groupedPropEntities) {
+            final Map<Object, List<Object>> groupedPropEntities) throws NullPointerException, IllegalArgumentException, UnsupportedOperationException {
         final Map<Object, List<Object>> completeGroups = new HashMap<>(groupedPropEntities);
 
         for (final Object entity : entities) {
@@ -7573,12 +7624,14 @@ final class DaoImpl {
          * @param isInsert {@code true} if this is an INSERT statement
          * @param isProcedure {@code true} if this SQL represents a stored procedure call
          * @param fragmentsContainNamedParameters {@code true} if the SQL text injected via {@code @SqlFragment}/{@code @SqlFragmentList} parameters contains named parameters
-         * @throws IllegalArgumentException if {@code sql} is blank, or if {@code fragmentsContainNamedParameters} is
-         *         {@code true} but the SQL uses positional (?) parameters without named parameters
+         * @throws IllegalArgumentException if {@code sql} is blank, if {@code parsedSql} is {@code null} and parsing
+         *         {@code sql} rejects mixed or malformed parameter syntax, or if
+         *         {@code fragmentsContainNamedParameters} is {@code true} but the resolved SQL has positional
+         *         parameters and no named parameters
          */
         QueryInfo(final String sql, final ParsedSql parsedSql, final int queryTimeout, final int fetchSize, final boolean isBatch, final int batchSize,
                 final QueryOperation queryOperation, final boolean isSingleParameter, final boolean autoSetSysTimeParam, final boolean isSelect,
-                final boolean isInsert, final boolean isProcedure, final boolean fragmentsContainNamedParameters) {
+                final boolean isInsert, final boolean isProcedure, final boolean fragmentsContainNamedParameters) throws IllegalArgumentException {
             this.sql = N.checkArgNotBlank(sql != null && sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql, cs.sql);
             this.parsedSql = parsedSql == null ? ParsedSql.parse(this.sql) : parsedSql;
             this.queryTimeout = queryTimeout;

@@ -305,9 +305,8 @@ public class DataTransferUtilTest extends TestBase {
                 () -> datasetBuilder.to((DataSource) null, "INSERT INTO test VALUES (?)"));
         assertTrue(failure.getMessage().contains("targetDataSource"), failure.getMessage());
 
-        final DataTransferUtil.RowImportBuilder<String> rowBuilder = DataTransferUtil.importFrom(List.of("row").iterator())
-                .parameterSetter((query, row) -> {
-                });
+        final DataTransferUtil.RowImportBuilder<String> rowBuilder = DataTransferUtil.importFrom(List.of("row").iterator()).parameterSetter((query, row) -> {
+        });
         failure = assertThrows(IllegalArgumentException.class, () -> rowBuilder.to((DataSource) null, "INSERT INTO test VALUES (?)"));
         assertTrue(failure.getMessage().contains("targetDataSource"), failure.getMessage());
     }

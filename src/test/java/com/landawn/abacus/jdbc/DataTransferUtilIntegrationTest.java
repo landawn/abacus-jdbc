@@ -96,7 +96,8 @@ public class DataTransferUtilIntegrationTest extends TestBase {
 
     @Test
     public void testCopy_AllColumnsPreservesLiteralMetadataNames() throws SQLException {
-        try (Connection conn = ds.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement()) {
             final String columns = "(\"a.b\" INT, \"\"\"quoted\"\"\" INT, \" padded \" INT)";
             stmt.execute("CREATE TABLE copy_literal_src " + columns);
             stmt.execute("CREATE TABLE copy_literal_tgt " + columns);

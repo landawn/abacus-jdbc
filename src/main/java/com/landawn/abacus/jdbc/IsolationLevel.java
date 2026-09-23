@@ -232,7 +232,7 @@ public enum IsolationLevel {
      *         {@link Connection#TRANSACTION_READ_COMMITTED}, {@link Connection#TRANSACTION_REPEATABLE_READ},
      *         {@link Connection#TRANSACTION_SERIALIZABLE}).
      */
-    public static IsolationLevel valueOf(final int intValue) {
+    public static IsolationLevel valueOf(final int intValue) throws IllegalArgumentException {
         switch (intValue) {
             case -1:
                 return DEFAULT;

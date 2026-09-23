@@ -156,7 +156,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param stmt the callable statement to wrap; must not be {@code null}
      * @throws IllegalArgumentException if {@code stmt} is {@code null}
      */
-    CallableQuery(final CallableStatement stmt) {
+    CallableQuery(final CallableStatement stmt) throws IllegalArgumentException {
         super(stmt);
         cstmt = stmt;
     }
@@ -449,11 +449,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
+     * @throws SQLException if a database access error occurs
      * @throws ArithmeticException if the BigInteger value is outside the range of a long.
      *         When this is thrown the underlying statement is also closed.
-     * @throws SQLException if a database access error occurs
      */
-    public CallableQuery setLong(final String parameterName, final BigInteger value) throws SQLException {
+    public CallableQuery setLong(final String parameterName, final BigInteger value) throws SQLException, ArithmeticException {
         if (value == null) {
             cstmt.setNull(parameterName, Types.BIGINT);
         } else {
@@ -978,7 +978,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}
      * @throws SQLException if a database access error occurs
      */
-    public CallableQuery setTimestamp(final String parameterName, final ZonedDateTime value) throws SQLException {
+    public CallableQuery setTimestamp(final String parameterName, final ZonedDateTime value) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value.toInstant()));
 
         return this;
@@ -1000,7 +1000,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}
      * @throws SQLException if a database access error occurs
      */
-    public CallableQuery setTimestamp(final String parameterName, final OffsetDateTime value) throws SQLException {
+    public CallableQuery setTimestamp(final String parameterName, final OffsetDateTime value) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value.toInstant()));
 
         return this;
@@ -1022,7 +1022,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}
      * @throws SQLException if a database access error occurs
      */
-    public CallableQuery setTimestamp(final String parameterName, final Instant value) throws SQLException {
+    public CallableQuery setTimestamp(final String parameterName, final Instant value) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value));
 
         return this;
@@ -2562,7 +2562,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return the vendor type number of {@code sqlType}
      * @throws IllegalArgumentException if {@code sqlType} is {@code null} or its vendor type number is {@code null}
      */
-    int getVendorTypeNumber(final SQLType sqlType) {
+    int getVendorTypeNumber(final SQLType sqlType) throws IllegalArgumentException {
         checkArgNotNull(sqlType, cs.sqlType);
 
         final Integer vendorTypeNumber = sqlType.getVendorTypeNumber();

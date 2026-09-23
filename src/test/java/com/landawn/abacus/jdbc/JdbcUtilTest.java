@@ -86,21 +86,18 @@ public class JdbcUtilTest extends TestBase {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(null, (Jdbc.RowFilter) null)).getMessage().contains("rs"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(null, (Jdbc.RowExtractor) null)).getMessage().contains("rs"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(null, null, null)).getMessage().contains("rs"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(mockResultSet, -1, -1, (Jdbc.RowFilter) null, false))
-                .getMessage().contains("offset"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(mockResultSet, 0, -1, (Jdbc.RowExtractor) null, false))
-                .getMessage().contains("count"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(mockResultSet, -1, -1, (Jdbc.RowFilter) null, false)).getMessage()
+                .contains("offset"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(mockResultSet, 0, -1, (Jdbc.RowExtractor) null, false)).getMessage()
+                .contains("count"));
         verifyNoInteractions(mockResultSet);
     }
 
     @Test
     public void testPageFactoriesValidateParametersInSignatureOrder() {
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage((DataSource) null, null, 0, null)).getMessage()
-                .contains("ds"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage((Connection) null, null, 0, null)).getMessage()
-                .contains("conn"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage(mockDataSource, null, 0, null)).getMessage()
-                .contains("sql"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage((DataSource) null, null, 0, null)).getMessage().contains("ds"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage((Connection) null, null, 0, null)).getMessage().contains("conn"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage(mockDataSource, null, 0, null)).getMessage().contains("sql"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.queryByPage(mockConnection, "SELECT 1", 0, null)).getMessage()
                 .contains("pageSize"));
         verifyNoInteractions(mockDataSource, mockConnection);
@@ -116,11 +113,11 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testDaoFactoriesValidateInterfaceAndSourceBeforeOptions() {
-        assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> JdbcUtil.createDao(null, null, (com.landawn.abacus.query.SqlDialect) null)).getMessage().contains("daoInterface"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createDao(null, null, (com.landawn.abacus.query.SqlDialect) null)).getMessage()
+                .contains("daoInterface"));
         assertTrue(assertThrows(IllegalArgumentException.class,
                 () -> JdbcUtil.createDao(com.landawn.abacus.jdbc.dao.DaoBase.class, null, (com.landawn.abacus.query.SqlDialect) null)).getMessage()
-                .contains("ds"));
+                        .contains("ds"));
         verifyNoInteractions(mockDataSource);
     }
 

@@ -81,7 +81,7 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         keys fails
      */
     @Override
-    ID insert(final T entity) throws UncheckedSQLException;
+    ID insert(final T entity) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException;
 
     /**
      * Inserts the specified entity with only the specified properties.
@@ -107,7 +107,7 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         keys fails
      */
     @Override
-    ID insert(final T entity, final Collection<String> propNamesToInsert) throws UncheckedSQLException;
+    ID insert(final T entity, final Collection<String> propNamesToInsert) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException;
 
     /**
      * Inserts an entity using a custom named SQL insert statement.
@@ -132,7 +132,7 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         keys fails
      */
     @Override
-    ID insert(final String namedInsertSql, final T entity) throws UncheckedSQLException;
+    ID insert(final String namedInsertSql, final T entity) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException;
 
     /**
      * Performs batch insert of multiple entities using the default batch size
@@ -160,7 +160,7 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
-    default List<ID> batchInsert(final Collection<? extends T> entities) throws UncheckedSQLException {
+    default List<ID> batchInsert(final Collection<? extends T> entities) throws UnsupportedOperationException, IllegalStateException, UncheckedSQLException {
         return batchInsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -187,7 +187,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
-    List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+    List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
     /**
      * Performs batch insert with only the specified properties for all entities.
@@ -212,7 +213,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
-    default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert) throws UncheckedSQLException {
+    default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException {
         return batchInsert(entities, propNamesToInsert, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -234,7 +236,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
-    List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize) throws UncheckedSQLException;
+    List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
     /**
      * Performs batch insert using a custom named SQL statement with the default batch size
@@ -262,7 +265,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      */
     @Beta
     @Override
-    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities) throws UncheckedSQLException {
+    default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException {
         return batchInsert(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -286,6 +290,7 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      */
     @Beta
     @Override
-    List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize) throws UncheckedSQLException;
+    List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
 }

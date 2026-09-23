@@ -250,7 +250,8 @@ public final class DataTransferUtil {
      *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
-    public static int importData(final Dataset dataset, final javax.sql.DataSource targetDataSource, final String insertSql) throws SQLException {
+    public static int importData(final Dataset dataset, final javax.sql.DataSource targetDataSource, final String insertSql)
+            throws NullPointerException, IllegalArgumentException, UncheckedSQLException, SQLException {
         Objects.requireNonNull(dataset, cs.dataset);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
 
@@ -288,7 +289,7 @@ public final class DataTransferUtil {
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      * @see #importData(Dataset, Collection, Connection, String)
      */
-    public static int importData(final Dataset dataset, final Connection conn, final String insertSql) throws SQLException {
+    public static int importData(final Dataset dataset, final Connection conn, final String insertSql) throws NullPointerException, SQLException {
         return importData(dataset, dataset.columnNames(), conn, insertSql);
     }
 
@@ -320,7 +321,7 @@ public final class DataTransferUtil {
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql)
-            throws SQLException {
+            throws IllegalArgumentException, NullPointerException, SQLException {
         return importData(dataset, columnNames, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
     }
 
@@ -357,7 +358,7 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql,
-            final int batchSize, final long batchIntervalInMillis) throws SQLException {
+            final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, NullPointerException, SQLException {
         return importData(dataset, columnNames, row -> true, conn, insertSql, batchSize, batchIntervalInMillis);
     }
 
@@ -397,7 +398,7 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter, final Connection conn,
-            final String insertSql, final int batchSize, final long batchIntervalInMillis) throws SQLException {
+            final String insertSql, final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, NullPointerException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(columnNames, cs.columnNames);
         N.checkArgNotNull(filter, cs.filter);
@@ -443,7 +444,7 @@ public final class DataTransferUtil {
      */
     @SuppressWarnings("rawtypes")
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final Map<String, ? extends Type> columnTypeMap)
-            throws SQLException {
+            throws IllegalArgumentException, NullPointerException, SQLException {
         return importData(dataset, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
@@ -486,7 +487,7 @@ public final class DataTransferUtil {
     @SuppressWarnings("rawtypes")
     @Deprecated
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Map<String, ? extends Type> columnTypeMap) throws SQLException {
+            final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, NullPointerException, SQLException {
         return importData(dataset, row -> true, conn, insertSql, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
@@ -531,7 +532,8 @@ public final class DataTransferUtil {
     @SuppressWarnings("rawtypes")
     @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
-            final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap) throws SQLException {
+            final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
+            throws IllegalArgumentException, NullPointerException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(filter, cs.filter);
         Objects.requireNonNull(conn, cs.conn);
@@ -571,7 +573,8 @@ public final class DataTransferUtil {
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)
+            throws IllegalArgumentException, NullPointerException, SQLException {
         return importData(dataset, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
@@ -606,7 +609,8 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)
+            throws IllegalArgumentException, NullPointerException, SQLException {
         return importData(dataset, row -> true, conn, insertSql, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
@@ -646,7 +650,8 @@ public final class DataTransferUtil {
     @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)
+            throws IllegalArgumentException, NullPointerException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(filter, cs.filter);
         Objects.requireNonNull(conn, cs.conn);
@@ -678,7 +683,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code stmt} is {@code null}
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
-    public static int importData(final Dataset dataset, final PreparedStatement stmt) throws SQLException {
+    public static int importData(final Dataset dataset, final PreparedStatement stmt) throws NullPointerException, IllegalArgumentException, SQLException {
         return importData(dataset, dataset.columnNames(), stmt);
     }
 
@@ -709,7 +714,8 @@ public final class DataTransferUtil {
      *         dataset column
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
-    public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt) throws SQLException {
+    public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt)
+            throws IllegalArgumentException, SQLException {
         return importData(dataset, columnNames, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
     }
 
@@ -745,7 +751,7 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis) throws SQLException {
+            final long batchIntervalInMillis) throws IllegalArgumentException, SQLException {
         return importData(dataset, columnNames, row -> true, stmt, batchSize, batchIntervalInMillis);
     }
 
@@ -785,7 +791,7 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter,
-            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException {
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(columnNames, cs.columnNames);
         N.checkArgNotNull(filter, cs.filter);
@@ -812,7 +818,7 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if a key is not a dataset column or its mapped type is null
      */
     @SuppressWarnings("rawtypes")
-    private static void checkImportColumnTypes(final Dataset dataset, final Map<String, ? extends Type> columnTypeMap) {
+    private static void checkImportColumnTypes(final Dataset dataset, final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException {
         if (N.notEmpty(columnTypeMap)) {
             final List<String> columnNameList = dataset.columnNames();
 
@@ -839,7 +845,7 @@ public final class DataTransferUtil {
      * @return the dataset index for each requested column
      * @throws IllegalArgumentException if a requested name is not a dataset column
      */
-    private static int[] resolveImportColumnIndices(final Dataset dataset, final Collection<String> columnNames) {
+    private static int[] resolveImportColumnIndices(final Dataset dataset, final Collection<String> columnNames) throws IllegalArgumentException {
         final List<String> allColumnNames = dataset.columnNames();
         final List<String> selectedColumnNameList = new ArrayList<>(columnNames);
         final int[] selectedColumnIndices = new int[selectedColumnNameList.size()];
@@ -882,7 +888,8 @@ public final class DataTransferUtil {
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
     @SuppressWarnings("rawtypes")
-    public static int importData(final Dataset dataset, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap) throws SQLException {
+    public static int importData(final Dataset dataset, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
+            throws IllegalArgumentException, SQLException {
         return importData(dataset, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
@@ -917,7 +924,7 @@ public final class DataTransferUtil {
     @SuppressWarnings("rawtypes")
     @Deprecated
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Map<String, ? extends Type> columnTypeMap) throws SQLException {
+            final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, SQLException {
         return importData(dataset, row -> true, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
@@ -1032,7 +1039,7 @@ public final class DataTransferUtil {
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
     public static int importData(final Dataset dataset, final PreparedStatement stmt,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws IllegalArgumentException, SQLException {
         return importData(dataset, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
@@ -1066,7 +1073,7 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws IllegalArgumentException, SQLException {
         return importData(dataset, row -> true, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
@@ -1196,7 +1203,8 @@ public final class DataTransferUtil {
      * @see LineIterator#of(Reader)
      */
     public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(iter, cs.iter);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -1259,7 +1267,8 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter)
+            throws IllegalArgumentException, NullPointerException, SQLException {
         N.checkArgNotNull(iter, cs.iter);
         Objects.requireNonNull(conn, cs.conn);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1342,7 +1351,7 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static <T> long importData(final Iterator<? extends T> iter, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws IllegalArgumentException, SQLException {
         return importData(iter, row -> true, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
@@ -1364,7 +1373,8 @@ public final class DataTransferUtil {
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
     private static <T> long importData(final Iterator<? extends T> iter, final Predicate<? super T> filter, final PreparedStatement stmt, final int batchSize,
-            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws SQLException {
+            final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter)
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(iter, cs.iter);
         N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1445,7 +1455,8 @@ public final class DataTransferUtil {
      * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or an I/O error occurs while reading it
      */
     public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException {
         N.checkArgNotNull(file, cs.file);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -1508,7 +1519,8 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
+            throws IllegalArgumentException, NullPointerException, SQLException, UncheckedIOException {
         N.checkArgNotNull(file, cs.file);
         Objects.requireNonNull(conn, cs.conn);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
@@ -1561,7 +1573,8 @@ public final class DataTransferUtil {
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
     public static long importCsv(final File file, final PreparedStatement stmt,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
+            throws IllegalArgumentException, UncheckedIOException, SQLException {
         return importCsv(file, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
@@ -1610,7 +1623,8 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static long importCsv(final File file, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
+            throws IllegalArgumentException, UncheckedIOException, SQLException {
         return importCsv(file, row -> true, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
@@ -1657,7 +1671,7 @@ public final class DataTransferUtil {
     @Deprecated
     public static long importCsv(final File file, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
-            throws SQLException {
+            throws IllegalArgumentException, UncheckedIOException, SQLException {
         N.checkArgNotNull(file, cs.file);
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(stmt, cs.stmt);
@@ -1710,7 +1724,8 @@ public final class DataTransferUtil {
      * @throws UncheckedIOException if an I/O error occurs while reading from the reader
      */
     public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException {
         N.checkArgNotNull(reader, cs.reader);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -1758,7 +1773,8 @@ public final class DataTransferUtil {
      * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
      */
     public static long importCsv(final Reader reader, final PreparedStatement stmt,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
+            throws IllegalArgumentException, UncheckedIOException, SQLException {
         return importCsv(reader, stmt, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
@@ -1803,7 +1819,8 @@ public final class DataTransferUtil {
      */
     @Deprecated
     public static long importCsv(final Reader reader, final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
+            throws IllegalArgumentException, UncheckedIOException, SQLException {
         return importCsv(reader, row -> true, stmt, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
@@ -1871,7 +1888,7 @@ public final class DataTransferUtil {
     @Deprecated
     public static long importCsv(final Reader reader, final Predicate<? super String[]> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalArgumentException, UncheckedIOException, SQLException {
         N.checkArgNotNull(reader, cs.reader);
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(stmt, cs.stmt);
@@ -1950,7 +1967,7 @@ public final class DataTransferUtil {
      * @param output the array receiving the parsed column values; sized to the header's column count
      * @throws IllegalArgumentException if the line contains more fields than the header has columns
      */
-    private static void parseCsvRow(final BiConsumer<String, String[]> lineParser, final String line, final String[] output) {
+    private static void parseCsvRow(final BiConsumer<String, String[]> lineParser, final String line, final String[] output) throws IllegalArgumentException {
         try {
             lineParser.accept(line, output);
         } catch (final IndexOutOfBoundsException e) {

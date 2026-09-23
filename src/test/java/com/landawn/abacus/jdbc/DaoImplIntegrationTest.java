@@ -160,14 +160,15 @@ public class DaoImplIntegrationTest extends TestBase {
                 u.OptionalInt.empty(), u.OptionalLong.empty(), u.OptionalFloat.empty(), u.OptionalDouble.empty());
         final List<Object> nullValues = List.of(u.OptionalBoolean.of(false), u.OptionalChar.of((char) 0), u.OptionalByte.of((byte) 0),
                 u.OptionalShort.of((short) 0), u.OptionalInt.of(0), u.OptionalLong.of(0), u.OptionalFloat.of(0), u.OptionalDouble.of(0));
-        final List<Object> oneValues = List.of(u.OptionalBoolean.of(true), u.OptionalChar.of('1'), u.OptionalByte.of((byte) 1),
-                u.OptionalShort.of((short) 1), u.OptionalInt.of(1), u.OptionalLong.of(1), u.OptionalFloat.of(1), u.OptionalDouble.of(1));
+        final List<Object> oneValues = List.of(u.OptionalBoolean.of(true), u.OptionalChar.of('1'), u.OptionalByte.of((byte) 1), u.OptionalShort.of((short) 1),
+                u.OptionalInt.of(1), u.OptionalLong.of(1), u.OptionalFloat.of(1), u.OptionalDouble.of(1));
 
         for (int i = 0; i < queries.size(); i++) {
             assertEquals(emptyValues.get(i), queries.get(i).get());
         }
 
-        try (Connection conn = ds.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("INSERT INTO user_account (age) VALUES (NULL)");
             for (int i = 0; i < queries.size(); i++) {
                 assertEquals(nullValues.get(i), queries.get(i).get());
@@ -1053,8 +1054,7 @@ public class DaoImplIntegrationTest extends TestBase {
         @Query(value = "SELECT CAST(:now AS TIMESTAMP) AS first_time, {clock}", fragmentsContainNamedParameters = true, injectCurrentTimeParameters = true)
         Dataset clock(@com.landawn.abacus.jdbc.annotation.SqlFragment("clock") String clock) throws SQLException;
 
-        @Query(value = "UPDATE fragment_clock SET now_time = :now, sys_time = {clock} WHERE id = :id", batch = true,
-                fragmentsContainNamedParameters = true, injectCurrentTimeParameters = true)
+        @Query(value = "UPDATE fragment_clock SET now_time = :now, sys_time = {clock} WHERE id = :id", batch = true, fragmentsContainNamedParameters = true, injectCurrentTimeParameters = true)
         int updateClocks(@com.landawn.abacus.jdbc.annotation.SqlFragment("clock") String clock, List<Map<String, Object>> rows) throws SQLException;
     }
 
@@ -1085,7 +1085,8 @@ public class DaoImplIntegrationTest extends TestBase {
     @Test
     public void testBatchSystemTimeParametersIntroducedBySqlFragments() throws SQLException {
         final NamedFragmentDao fragmentDao = JdbcUtil.createDao(NamedFragmentDao.class, ds);
-        try (Connection connection = ds.getConnection(); Statement statement = connection.createStatement()) {
+        try (Connection connection = ds.getConnection();
+             Statement statement = connection.createStatement()) {
             statement.execute("CREATE TABLE fragment_clock (id INT PRIMARY KEY, now_time TIMESTAMP, sys_time TIMESTAMP)");
             try {
                 statement.executeUpdate("INSERT INTO fragment_clock (id) VALUES (1), (2)");
@@ -1372,8 +1373,7 @@ public class DaoImplIntegrationTest extends TestBase {
         @com.landawn.abacus.jdbc.annotation.MergedById("id")
         Optional<UserAccount> queryForUniqueMerged() throws SQLException;
 
-        @Query(value = "SELECT id, first_name, last_name, age, active FROM user_account UNION ALL SELECT id, first_name, last_name, age, active FROM user_account",
-                op = QueryOperation.findOnlyOne)
+        @Query(value = "SELECT id, first_name, last_name, age, active FROM user_account UNION ALL SELECT id, first_name, last_name, age, active FROM user_account", op = QueryOperation.findOnlyOne)
         @com.landawn.abacus.jdbc.annotation.MergedById("id")
         Optional<UserAccount> uniqueMerged() throws SQLException;
 
