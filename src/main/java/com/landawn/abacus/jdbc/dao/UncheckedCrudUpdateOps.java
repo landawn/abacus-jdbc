@@ -52,7 +52,8 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entity the entity containing the values to update
-     * @return the number of rows updated (typically 1 if successful, 0 if not found)
+     * @return the number of rows updated (typically 1 if successful, 0 if not found); also 0, without executing any
+     *         statement, if the entity class has no updatable non-ID property
      * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
@@ -178,7 +179,8 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities to update
      * @param batchSize the number of entities to process in each batch
-     * @return the total number of rows updated
+     * @return the total number of rows updated; 0, without executing any statement, if {@code entities} is {@code null}
+     *         or empty or the entity class has no updatable non-ID property
      * @throws IllegalArgumentException if {@code batchSize} is not positive
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope

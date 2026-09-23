@@ -179,7 +179,7 @@ public final class DBLock implements AutoCloseable {
 
     /**
      * Handle of the periodic lock-refresh task scheduled by the constructor;
-     * cancelled and awaited in {@link #close()}.
+     * cancelled (interrupting an in-flight run) in {@link #close()}.
      */
     private final ScheduledFuture<?> scheduledFuture;
 
@@ -791,8 +791,9 @@ public final class DBLock implements AutoCloseable {
      *
      * <p>Nothing is thrown out of this method: a failure to stop the refresh task or to delete a lock row
      * is logged and swallowed, and calling it on an already closed instance does not raise
-     * {@link IllegalStateException}. If the calling thread is interrupted while waiting for the refresh
-     * task to terminate, the interrupt status is restored and the remaining cleanup still runs.</p>
+     * {@link IllegalStateException}. Cancelling the refresh task does not wait for a refresh run that is
+     * already in flight; such a run is interrupted and may overlap the lock release that follows, which is harmless
+     * because a refresh only updates rows that still exist.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

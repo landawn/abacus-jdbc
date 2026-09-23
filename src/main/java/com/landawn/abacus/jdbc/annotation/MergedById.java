@@ -123,9 +123,10 @@ public @interface MergedById {
      * DAO initialization with {@code IllegalArgumentException}; so does any resolved name that is not a
      * readable property of the target entity class.</p>
      *
-     * <p>When {@code @MergedById} and {@link MappedByKey} are combined and both name a key
-     * explicitly, the two must be the same single property; otherwise DAO initialization fails
-     * with {@code IllegalArgumentException}.</p>
+     * <p>When {@code @MergedById} and {@link MappedByKey} are combined, an explicit {@code @MergedById}
+     * value must name exactly the single property that {@code @MappedByKey} resolves to (its explicit
+     * value, or the entity's first id property when that value is empty); otherwise DAO initialization
+     * fails with {@code IllegalArgumentException}.</p>
      *
      * <p>Examples:</p>
      * <pre>{@code

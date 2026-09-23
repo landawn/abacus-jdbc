@@ -89,16 +89,20 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
     /**
      * Updates all records matching the condition using all updatable properties from the entity.
      * This updates every property of the entity that is considered updatable
-     * (i.e., excluding {@code @ReadOnly}, {@code @NonUpdatable}, {@code @Id},
+     * (i.e., excluding {@code @ReadOnly}/{@code @ReadOnlyId}, {@code @NonUpdatable},
      * {@link JoinedBy @JoinedBy}, etc.),
      * regardless of whether the value is {@code null}.
      *
+     * <p><b>Note:</b> a plain (writable) {@code @Id} property is <i>not</i> excluded: its current value in
+     * {@code entity} is written to every matched row, so an unset ID can overwrite the key with {@code null}
+     * or a default value. Use {@link #update(Object, Collection, Condition)} to restrict the updated properties.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User template = new User();
-     * template.setStatus("MIGRATED");
-     * template.setMigratedDate(new java.util.Date());
-     * int updated = userDao.update(template, Filters.eq("legacySystem", true));
+     * User user = userDao.findOnlyOne(Filters.eq("email", email)).orElseThrow();
+     * user.setStatus("MIGRATED");
+     * user.setMigratedDate(new java.util.Date());
+     * int updated = userDao.update(user, Filters.eq("email", email));
      * }</pre>
      *
      * @param entity the entity containing values to update

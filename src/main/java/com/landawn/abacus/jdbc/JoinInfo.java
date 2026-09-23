@@ -101,8 +101,8 @@ import com.landawn.abacus.util.stream.Stream;
  * // junction-table column for matching.
  * JoinInfo joinInfo = JoinInfo.getPropJoinInfo(EmployeeDao.class, Employee.class,
  *                                               "employees", "projects");
- * List<Employee> employees = employeeDao.list();
- * List<Project> projects = projectDao.list();
+ * List<Employee> employees = employeeDao.list(Filters.alwaysTrue());
+ * List<Project> projects = projectDao.list(Filters.alwaysTrue());
  * joinInfo.setJoinPropEntities(employees, projects);
  * }</pre>
  *
@@ -523,21 +523,13 @@ public final class JoinInfo {
 
                 final Collection<String> defaultSelectPropNames = JdbcUtil.getSelectPropNames(referencedEntityClass);
 
-                // Same column name in referenced entity and middle entity → must alias the referenced
-                // table in batch SQL to avoid ambiguous-column errors. Pre-fix used a chunked-by-7
-                // scan that only examined token-0 of each chunk, missing the column-of-interest when
-                // it appeared later in a chunk (which happens when AS aliases shift token positions).
-                // Flat scan over all tokens catches the column at any position; false positives are
-                // implausible because the middle FK column name wouldn't appear as an unrelated SQL
-                // keyword or literal in the referenced entity's SELECT clause.
-                final String middleSelectColumnName = lastIdentifier(middleSelectPropNameRaw);
-                final boolean hasSameColumnName = SqlParser.tokenize(leftSelectSql.substring(0, fromIndex))
-                        .stream()
-                        .anyMatch(middleSelectColumnName::equalsIgnoreCase);
-
-                final String leftSelectSqlForBatch = hasSameColumnName //
-                        ? entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass, leftTableQualifier).build().query()
-                        : entry.getValue()._1.apply(defaultSelectPropNames).from(referencedEntityClass).build().query();
+                // Always qualify the referenced entity's columns with its table name/alias: the batch SQL
+                // INNER JOINs the middle table, so ANY column name the two tables share (the middle FK
+                // column, but equally a surrogate "id" or an audit column) would otherwise be ambiguous.
+                final String leftSelectSqlForBatch = entry.getValue()._1.apply(defaultSelectPropNames)
+                        .from(referencedEntityClass, leftTableQualifier)
+                        .build()
+                        .query();
 
                 final int fromIndexInBatch = leftSelectSqlForBatch.lastIndexOf(" FROM ");
                 N.checkState(fromIndexInBatch >= 0, "SQL query does not contain ' FROM ' clause: %s", leftSelectSqlForBatch);
@@ -562,9 +554,7 @@ public final class JoinInfo {
 
                         final StringBuilder sb = Objectory.createStringBuilder();
 
-                        final String tmpSql = hasSameColumnName //
-                                ? entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass, leftTableQualifier).build().query()
-                                : entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass).build().query();
+                        final String tmpSql = entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass, leftTableQualifier).build().query();
 
                         sb.append(tmpSql, 0, tmpSql.length() - fromLength).append(", ").append(middleCondPropName).append(batchSelectFromToJoinOn);
 
@@ -1337,7 +1327,7 @@ public final class JoinInfo {
      * );
      *
      * // Use the join info to load related entities for a single employee
-     * Employee employee = employeeDao.findById(123);
+     * Employee employee = employeeDao.getOrNull(123L);
      * Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>
      *     builder = joinInfo.selectSqlPlan(PSC);
      * String sql = builder._1.apply(null);   // Use default columns
@@ -1346,8 +1336,8 @@ public final class JoinInfo {
      *                                   .list(Project.class);
      *
      * // Or use batch loading for multiple employees
-     * List<Employee> employees = employeeDao.list();
-     * List<Project> allProjects = projectDao.list();
+     * List<Employee> employees = employeeDao.list(Filters.alwaysTrue());
+     * List<Project> allProjects = projectDao.list(Filters.alwaysTrue());
      * joinInfo.setJoinPropEntities(employees, allProjects);
      * }</pre>
      *

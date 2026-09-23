@@ -1711,6 +1711,38 @@ public class DataTransferUtilTest extends TestBase {
         verify(mockPreparedStatement, never()).addBatch();
     }
 
+    // BUG FIX: importCsv read one physical line per row, so a quoted field containing a line break (which exportCsv
+    // writes for such a value) was split and failed with ParsingException. With the default parsers it must be read
+    // as one logical record, keeping LF and CRLF exactly, like CsvUtil's own loaders.
+    @Test
+    public void testImportCsv_QuotedFieldWithLineBreakIsOneRecord() throws SQLException {
+        final List<String[]> rows = new ArrayList<>();
+
+        final long result = DataTransferUtil.importCsv(new StringReader("id,note\r\n1,\"line1\nline2\"\r\n2,\"a\r\nb\"\n3,plain"), row -> true,
+                mockPreparedStatement, 10, 0, (query, row) -> rows.add(row.clone()));
+
+        assertEquals(3, result);
+        assertEquals(3, rows.size());
+        assertEquals(List.of("1", "line1\nline2"), Arrays.asList(rows.get(0)));
+        assertEquals(List.of("2", "a\r\nb"), Arrays.asList(rows.get(1)));
+        assertEquals(List.of("3", "plain"), Arrays.asList(rows.get(2)));
+        verify(mockPreparedStatement, times(3)).addBatch();
+    }
+
+    // BUG FIX: a UTF-8 byte-order mark before a quoted first header field hid its opening quote, so the header
+    // "a,b",c was split into three columns and every row array was one slot too wide. The mark is stripped from the
+    // header like CsvUtil's own loaders do.
+    @Test
+    public void testImportCsv_ByteOrderMarkDoesNotHideQuotedHeaderField() throws SQLException {
+        final List<String[]> rows = new ArrayList<>();
+
+        final long result = DataTransferUtil.importCsv(new StringReader("\uFEFF\"a,b\",c\n1,2"), row -> true, mockPreparedStatement, 10, 0,
+                (query, row) -> rows.add(row.clone()));
+
+        assertEquals(1, result);
+        assertEquals(List.of("1", "2"), Arrays.asList(rows.get(0)));
+    }
+
     @Test
     public void testCopyFromConnection_NegativeFetchSizeIsRejected() {
         final Connection targetConnection = mock(Connection.class);

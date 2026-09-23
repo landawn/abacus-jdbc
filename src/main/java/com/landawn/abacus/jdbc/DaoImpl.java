@@ -745,8 +745,8 @@ final class DaoImpl {
     /**
      * Returns {@code true} if the method should be dispatched with find-first semantics (at most the first row is
      * read): either explicitly via {@link QueryOperation#findFirst}, or, for {@link QueryOperation#DEFAULT}, whenever
-     * the method name does not claim stricter at-most-one-row semantics ({@code findOnlyOne}/{@code selectOnlyOne}/
-     * {@code queryForSingle}/{@code queryForUnique}).
+     * the method name does not start with {@code findOnlyOne}/{@code selectOnlyOne} (at-most-one-row semantics) or
+     * {@code queryForSingle}/{@code queryForUnique} (single-value semantics).
      *
      * @param method the DAO method to inspect
      * @param queryOperation the operation type declared for the method
@@ -780,7 +780,7 @@ final class DaoImpl {
     }
 
     /**
-     * Returns {@code true} if the method must enforce unique-result semantics (exactly at most one row, failing on
+     * Returns {@code true} if the method must enforce unique-result semantics (at most one row, failing on
      * duplicates): either explicitly via {@link QueryOperation#queryForUnique}, or, for
      * {@link QueryOperation#DEFAULT}, when the method name starts with {@code queryForUnique}.
      *
@@ -1649,7 +1649,10 @@ final class DaoImpl {
      * @param stmtParamLen the number of statement-bound parameters
      * @return the parameters setter, or {@link Jdbc.BiParametersSetter#DO_NOTHING} when there is nothing to bind
      * @throws UnsupportedOperationException if a {@code ParametersSetter}/{@code BiParametersSetter}/
-     *         {@code TriParametersSetter} method parameter is used (not enabled at present), or if named-parameter
+     *         {@code TriParametersSetter} method parameter is used (not enabled at present), if a procedure parameter
+     *         cannot be bound (an empty {@code @Bind} name, {@code @Bind} on only some parameters, or a single
+     *         entity/{@code EntityId} parameter), if a single unnamed named-query parameter is not a bean, record,
+     *         {@code Map} or {@code EntityId}, if a named-query parameter lacks {@code @Bind}, or if named-parameter
      *         bindings are invalid
      */
     @SuppressWarnings("rawtypes")
@@ -2060,6 +2063,13 @@ final class DaoImpl {
         ParsedSql parsedSql = queryInfo.parsedSql;
 
         if (N.notEmpty(fragmentAnnos)) {
+            // SQL referenced by id (SqlMapper/@SqlScript) is held in QueryInfo in its parameterized form ("?"
+            // markers). A named query must expand its fragments on the original text, or the re-parse below
+            // would lose its named parameters.
+            if (queryInfo.isNamedQuery && !queryInfo.isProcedure) {
+                query = parsedSql.originalSql();
+            }
+
             for (int i = 0, len = fragmentAnnos.length; i < len; i++) {
                 query = Strings.replaceAll(query, fragmentAnnos[i]._2, fragmentMappers[i].apply(fragmentAnnos[i]._1, args[fragmentParamIndexes[i]]));
             }
@@ -2808,6 +2818,27 @@ final class DaoImpl {
                 ? parameterizedDsl.select(defaultSelectPropNames).from(tableName, entityClass).append(cond).build()
                 : parameterizedDsl.select(entityClass).from(tableName).append(cond).build();
 
+        // count(Condition) counts the records the condition matches. Its LIMIT/OFFSET and ORDER BY would otherwise apply to
+        // the single aggregate row: an OFFSET skips that row (so the count became 0), and ORDER BY next to an aggregate is
+        // rejected by strict databases. Both are dropped unless GROUP BY is present (one row per group, so they are meaningful).
+        final Function<Condition, Condition> countCondFunc = cond -> {
+            if (cond instanceof Limit || cond instanceof com.landawn.abacus.query.condition.OrderBy) {
+                return Criteria.builder().build();
+            } else if (cond instanceof final Criteria criteria && criteria.groupBy() == null && (criteria.limit() != null || criteria.orderBy() != null)) {
+                final Criteria.Builder builder = Criteria.builder().selectModifier(criteria.selectModifier());
+
+                for (final Condition clause : criteria.conditions()) {
+                    if (!(clause instanceof Limit || clause instanceof com.landawn.abacus.query.condition.OrderBy)) {
+                        builder.add(clause);
+                    }
+                }
+
+                return builder.build();
+            }
+
+            return cond;
+        };
+
         final BiFunction<String, Condition, SqlBuilder.SP> singleQuerySqlBuilderFunc = (selectPropName,
                 cond) -> parameterizedDsl.select(selectPropName).from(tableName, entityClass).append(cond).build();
 
@@ -2890,8 +2921,12 @@ final class DaoImpl {
                 : (isOneId ? Array.of(propColumnNameMap.get(oneIdPropName))
                         : Stream.of(idPropNameList).map(propColumnNameMap::get).toArray(IntFunctions.ofStringArray()));
 
+        // A non-CRUD DAO declares no ID type, so a composite ID is represented as an EntityId: building it as an
+        // instance of the (missing) ID class would fail in save/batchSave with a NullPointerException.
+        final boolean isCompositeIdAsEntityId = isEntityId || (idClass == null && !isNoId && !isOneId);
+
         final Tuple3<Jdbc.BiRowMapper<Object>, Function<Object, Object>, BiConsumer<Object, Object>> tp3 = JdbcUtil.getIdGeneratorGetterSetter(daoInterface,
-                entityClass, namingPolicy, idClass);
+                entityClass, namingPolicy, isCompositeIdAsEntityId && idClass == null ? EntityId.class : idClass);
 
         final Holder<Jdbc.BiRowMapper<Object>> idExtractorHolder = new Holder<>();
         final Jdbc.BiRowMapper<Object> idExtractor = tp3._1;
@@ -2900,12 +2935,13 @@ final class DaoImpl {
 
         final Predicate<Object> isDefaultIdTester = isNoId ? id -> true
                 : (isOneId ? JdbcUtil::isDefaultIdPropValue
-                        : (isEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue())) : id -> {
-                            if (idBeanInfo == null) {
-                                throw new IllegalStateException("ID class " + idClass + " is not a bean class and cannot be used for composite ID");
-                            }
-                            return Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idBeanInfo.getPropValue(id, idName)));
-                        }));
+                        : (isCompositeIdAsEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()))
+                                : id -> {
+                                    if (idBeanInfo == null) {
+                                        throw new IllegalStateException("ID class " + idClass + " is not a bean class and cannot be used for composite ID");
+                                    }
+                                    return Stream.of(idPropNameList).allMatch(idName -> JdbcUtil.isDefaultIdPropValue(idBeanInfo.getPropValue(id, idName)));
+                                }));
 
         final Jdbc.BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id, idPropInfo.dbType)
                 : (isEntityId ? (pq, id) -> {
@@ -3414,8 +3450,7 @@ final class DaoImpl {
                             final Condition cond = (Condition) args[0];
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final Condition limitedCond = handleLimit(cond, -1, false);
-                            final SP sp = singleQuerySqlBuilderFunc.apply(SK.COUNT_ALL, limitedCond);
+                            final SP sp = singleQuerySqlBuilderFunc.apply(SK.COUNT_ALL, countCondFunc.apply(cond));
                             return proxy.prepareQuery(sp.query()).setFetchSize(1).settParameters(sp.parameters(), collParamsSetter).queryForInt().orElseZero();
                         };
                     } else if (methodName.equals("findFirst") && paramLen == 1 && paramTypes[0].equals(Condition.class)) {
@@ -4910,7 +4945,7 @@ final class DaoImpl {
                                 }
                             }
 
-                            if (JdbcUtil.isAllNullIds(ids)) {
+                            if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
                                 ids = new ArrayList<>();
                             }
 
@@ -4986,7 +5021,7 @@ final class DaoImpl {
                                 }
                             }
 
-                            if (JdbcUtil.isAllNullIds(ids)) {
+                            if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
                                 ids = new ArrayList<>();
                             }
 
@@ -5061,7 +5096,7 @@ final class DaoImpl {
                                 }
                             }
 
-                            if (JdbcUtil.isAllNullIds(ids)) {
+                            if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
                                 ids = new ArrayList<>();
                             }
 
@@ -5677,7 +5712,10 @@ final class DaoImpl {
                                                     biRowMapper = Jdbc.BiRowMapper.to(propJoinInfo.referencedEntityClass);
                                                 }
 
-                                                return Pair.of(JdbcUtil.getColumnValue(rs, columnCount), biRowMapper.apply(rs, selectCls));
+                                                // Read the trailing intermediate-table key through the source join property's type:
+                                                // the groups are matched against srcEntityKeyExtractor's typed values, which a raw
+                                                // JDBC value (e.g. Integer/BigDecimal for a long property) would never equal.
+                                                return Pair.of(propJoinInfo.srcPropInfos[0].dbType.get(rs, columnCount), biRowMapper.apply(rs, selectCls));
                                             }
                                         };
 
@@ -6461,7 +6499,7 @@ final class DaoImpl {
                                 final Object firstElement = N.firstOrNullIfEmpty(batchParameters);
                                 final boolean isEntity = firstElement != null && Beans.isBeanClass(firstElement.getClass());
 
-                                if (JdbcUtil.isAllNullIds(ids)) {
+                                if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
                                     ids = new ArrayList<>();
                                 }
 
@@ -6982,6 +7020,20 @@ final class DaoImpl {
                         return !isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r) && isImmutableTester.test(cls);
                     };
 
+                    // A JSON round trip through the runtime class alone erases generic type arguments (a cached
+                    // List<User> came back as a List of Maps), so resolve the declared element/key/value types.
+                    com.landawn.abacus.type.Type<?> tmpDeclaredReturnType = null;
+
+                    if (serialization == CacheSerialization.JSON && method.getGenericReturnType() instanceof ParameterizedType) {
+                        try {
+                            tmpDeclaredReturnType = com.landawn.abacus.type.Type.of(method.getGenericReturnType());
+                        } catch (final RuntimeException e) {
+                            // Unresolvable type arguments (e.g. type variables): fall back to the runtime class below.
+                        }
+                    }
+
+                    final com.landawn.abacus.type.Type<?> declaredReturnType = tmpDeclaredReturnType;
+
                     final Function<Object, Object> cloneFunc = switch (serialization) {
                         case NONE -> Fn.identity();
                         case KRYO -> r -> {
@@ -6996,7 +7048,30 @@ final class DaoImpl {
 
                             return kryoParser.deepCopy(r);
                         };
-                        case JSON -> r -> serializationNotRequired.test(r) ? r : jsonParser.deserialize(jsonParser.serialize(r), r.getClass());
+                        case JSON -> r -> {
+                            if (serializationNotRequired.test(r)) {
+                                return r;
+                            }
+
+                            final String json = jsonParser.serialize(r);
+
+                            if (declaredReturnType != null) {
+                                if (r instanceof Collection && declaredReturnType.isCollection()) {
+                                    return jsonParser.deserialize(json,
+                                            com.landawn.abacus.parser.JsonDeserConfig.create().setElementType(declaredReturnType.elementType()), r.getClass());
+                                } else if (r instanceof Map && declaredReturnType.isMap()) {
+                                    return jsonParser.deserialize(json,
+                                            com.landawn.abacus.parser.JsonDeserConfig.create()
+                                                    .setMapKeyType(declaredReturnType.parameterTypes().get(0))
+                                                    .setMapValueType(declaredReturnType.parameterTypes().get(1)),
+                                            r.getClass());
+                                } else if (declaredReturnType.javaType().isAssignableFrom(r.getClass())) {
+                                    return jsonParser.deserialize(json, declaredReturnType);
+                                }
+                            }
+
+                            return jsonParser.deserialize(json, r.getClass());
+                        };
                     };
 
                     final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> temp = call;
@@ -7462,7 +7537,7 @@ final class DaoImpl {
             throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UnsupportedOperationException {
         List<Object> ids = executeBatchInsert(proxy, namedInsertSql, entities, batchSize, generatedKeyColumnNames, keyExtractor, isDefaultIdTester);
 
-        if (JdbcUtil.isAllNullIds(ids)) {
+        if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
             ids = new ArrayList<>();
         }
 
@@ -7575,7 +7650,11 @@ final class DaoImpl {
      * proxy initialization and reused for every invocation of the associated DAO method.</p>
      */
     static final class QueryInfo {
-        /** The SQL text with any single trailing semicolon stripped; never blank. */
+        /**
+         * The SQL text with any single trailing semicolon stripped; never blank. For SQL resolved by id from a
+         * {@link SqlMapper} it is the parameterized form ({@code ?} markers), while {@link #parsedSql} keeps the
+         * original named-parameter text.
+         */
         final String sql;
         /** The parsed form of {@link #sql}. */
         final ParsedSql parsedSql;

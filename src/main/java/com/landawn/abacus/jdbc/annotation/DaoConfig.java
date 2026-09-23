@@ -48,7 +48,14 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *     //     com.landawn.abacus.util.u.Optional<User> user = userDao.findFirst(Filters.eq("email", email)); // LIMIT 1 added automatically
  *     // User-supplied SQL in @Query methods is left untouched.
  *
- *     // ID generation will be called if user.id is null or 0
+ *     // Client-side ID generation: generateId() must be overridden, because the inherited
+ *     // default implementation throws UnsupportedOperationException.
+ *     @Override
+ *     default Long generateId() {
+ *         return System.currentTimeMillis();
+ *     }
+ *
+ *     // generateId() will be called if user.id is null or 0
  *     default User createUser(String name, String email) throws SQLException {
  *         User user = new User(name, email);
  *         insert(user);   // generateId() called automatically if needed
@@ -74,13 +81,20 @@ public @interface DaoConfig {
     /**
      * Controls whether to automatically add a LIMIT clause (or its database equivalent) to
      * single-result {@link com.landawn.abacus.query.condition.Condition Condition}-based query
-     * methods declared by {@code Dao}/{@code CrudDao}.
+     * methods declared by {@code Dao}/{@code CrudDao}, and to the {@code CrudDao} single-value
+     * lookups by ID.
      *
      * <p>When {@code true}, the framework appends:</p>
      * <ul>
-     *   <li>{@code LIMIT 1} for {@code exists(Condition)}, {@code findFirst(...)} and {@code queryForSingleXxx(...)} variants</li>
-     *   <li>{@code LIMIT 2} for {@code findOnlyOne(...)} and {@code queryForUniqueXxx(...)} variants (so duplicates can still be detected)</li>
+     *   <li>{@code LIMIT 1} for {@code exists(Condition)}, {@code findFirst(...)}, the typed single-value
+     *       {@code queryForBoolean(...)} through {@code queryForBytes(...)} methods, and the
+     *       {@code queryForSingleValue(...)}/{@code queryForSingleNonNull(...)} variants</li>
+     *   <li>{@code LIMIT 2} for {@code findOnlyOne(...)} and the {@code queryForUniqueValue(...)}/{@code queryForUniqueNonNull(...)}
+     *       variants (so duplicates can still be detected)</li>
      * </ul>
+     *
+     * <p>The single-value {@code queryForXxx} methods get the limit both in their {@code Condition} form and
+     * in the {@code CrudDao} form that looks a value up by ID.</p>
      *
      * <p>The LIMIT is <em>not</em> added for {@code count(Condition)} (which already issues a
      * {@code SELECT COUNT(*)}) or for arbitrary user-supplied SQL in {@link Query @Query} methods.</p>
@@ -108,8 +122,13 @@ public @interface DaoConfig {
      * when the ID field is not set or has a default value.
      *
      * <p>This applies to {@code CrudDao.insert(T entity)} and {@code CrudDao.batchInsert(Collection<T> entities)}
-     * methods. The ID is considered "not set" when it's null or has the default value for its type
-     * (0 for numeric types, null for objects).</p>
+     * methods (including the {@code batchSize} overloads), and to their {@code propNamesToInsert} overloads
+     * when the ID property is among the properties to insert. The ID is considered "not set" when it's null
+     * or has the default value for its type (0 for numeric types, null for objects).</p>
+     *
+     * <p>The DAO must override {@code generateId()}: the inherited default implementation throws
+     * {@code UnsupportedOperationException}, so with this flag enabled an insert of an entity whose ID is
+     * not set fails with that exception.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -137,12 +156,19 @@ public @interface DaoConfig {
      *
      * <p>This applies to {@code CrudDao.insert(String sql, T entity)} and
      * {@code CrudDao.batchInsert(String sql, Collection<T> entities)} methods.
-     * Similar to {@link #callGenerateIdForInsertIfIdNotSet()} but for custom SQL inserts.</p>
+     * Similar to {@link #callGenerateIdForInsertIfIdNotSet()} but for custom SQL inserts; the DAO must
+     * likewise override {@code generateId()}, whose inherited default implementation throws
+     * {@code UnsupportedOperationException}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(callGenerateIdForInsertWithSqlIfIdNotSet = true)
      * public interface OrderDao extends CrudDao<Order, Long, OrderDao> {
+     *     @Override
+     *     default Long generateId() {
+     *         return System.currentTimeMillis();
+     *     }
+     *
      *     default void insertWithAudit(Order order) throws SQLException {
      *         String sql = "INSERT INTO orders (id, customer_id, total, created_by) " +
      *                     "VALUES (:id, :customerId, :total, CURRENT_USER())";

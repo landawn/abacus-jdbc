@@ -329,7 +329,7 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is {@code null}, blank, or malformed,
      *         or the derived class or field names are invalid or collide
-     * @throws UncheckedSQLException if querying rows or metadata, or closing the query's JDBC resources fails
+     * @throws UncheckedSQLException if reading database product metadata, querying rows or metadata, or closing the query's JDBC resources fails
      */
     public static String generateEntityClass(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         return generateEntityClass(conn, tableName, (EntityCodeConfig) null);
@@ -378,7 +378,7 @@ public final class JdbcCodeGenerationUtil {
      * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or empty, or
-     *             if a generated class or field name is not a valid Java identifier or collides with another generated name
+     *             if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
      */
     public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query)
@@ -440,7 +440,7 @@ public final class JdbcCodeGenerationUtil {
      * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or empty, or
-     *             if a generated class or field name is not a valid Java identifier or collides with another generated name
+     *             if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
      * @throws UncheckedSQLException if querying rows or metadata, or closing the query's JDBC resources fails
      */
     public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query)
@@ -563,9 +563,11 @@ public final class JdbcCodeGenerationUtil {
 
         final String finalClassName = Strings.isEmpty(className) ? deriveClassName(entityName) : className;
 
-        if (!Strings.isValidJavaIdentifier(finalClassName)) {
+        // A type name must be a TypeIdentifier: the restricted identifiers var/yield/record/sealed/permits are
+        // legal variable names but can't name a class ("public class record {" does not compile on JDK 17+).
+        if (!Strings.isValidJavaTypeIdentifier(finalClassName)) {
             throw new IllegalArgumentException(
-                    "Generated class name '" + finalClassName + "' is not a valid Java identifier. Configure EntityCodeConfig.className with a valid name");
+                    "Generated class name '" + finalClassName + "' is not a valid Java type name. Configure EntityCodeConfig.className with a valid name");
         }
 
         if (Strings.isNotEmpty(packageName)) {
@@ -1056,6 +1058,9 @@ public final class JdbcCodeGenerationUtil {
                 result = result.replace("import com.landawn.abacus.util.NamingPolicy;\n", "");
             }
 
+            // Checked on the final (pruned) import list, before anything is written to srcDir.
+            checkGeneratedClassNameCollision(finalClassName, Strings.split(result, LINE_SEPARATOR), configToUse.isGeneratePropNameTable());
+
             if (Strings.isNotEmpty(srcDir)) {
                 String packageDir = srcDir;
 
@@ -1203,7 +1208,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a SELECT SQL statement for the specified table.
      * The generated SQL includes all columns from the table.
-     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
+     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore), or whose
+     * letter case the database would fold when unquoted (for example {@code userId} on H2, Oracle, or PostgreSQL), are quoted
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
@@ -1233,8 +1239,8 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates a SELECT SQL statement for the specified table using an existing connection.
-     * Column names containing special characters are properly escaped with backticks (MySQL/MariaDB)
-     * or double quotes (other databases).
+     * Column names containing special characters, or whose letter case the database would fold when unquoted, are properly escaped
+     * with backticks (MySQL/MariaDB) or double quotes (other databases).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1263,13 +1269,14 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             // Guard the zero-column case (e.g. a view with no columns, or all columns filtered out) so we
             // throw a clear IAE here rather than emitting malformed "SELECT  FROM ...".
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "SELECT ",
+            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ", "SELECT ",
                     " FROM " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1346,6 +1353,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
@@ -1354,7 +1362,7 @@ public final class JdbcCodeGenerationUtil {
 
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ", "SELECT ", " FROM "
+            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ", "SELECT ", " FROM "
                     + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + (Strings.isEmpty(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1364,7 +1372,8 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an INSERT SQL statement for the specified table.
      * The generated SQL uses positional parameters (?) for all column values.
-     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
+     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore), or whose
+     * letter case the database would fold when unquoted (for example {@code userId} on H2, Oracle, or PostgreSQL), are quoted
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
@@ -1394,7 +1403,8 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates an INSERT SQL statement for the specified table using an existing connection.
-     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
+     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore), or whose
+     * letter case the database would fold when unquoted (for example {@code userId} on H2, Oracle, or PostgreSQL), are quoted
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
@@ -1423,12 +1433,13 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             // Guard the zero-column case so we throw a clear IAE here rather than emitting malformed "INSERT INTO () VALUES ()".
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ",
+            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ",
                     "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
@@ -1506,6 +1517,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
@@ -1514,7 +1526,7 @@ public final class JdbcCodeGenerationUtil {
 
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ",
+            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ",
                     "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
@@ -1585,13 +1597,14 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             // Guard the zero-column case so we throw a clear IAE here rather than emitting malformed "INSERT INTO () VALUES ()".
             checkColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ",
+            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ",
                     "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
         } catch (final SQLException e) {
@@ -1670,6 +1683,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
@@ -1679,7 +1693,7 @@ public final class JdbcCodeGenerationUtil {
             checkColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(checkColumnName(columnLabelList, dbProductInfo), ", ",
+            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ",
                     "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
         } catch (final SQLException e) {
@@ -1752,11 +1766,12 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             checkUpdateSetColumnLabels(columnLabelList, tableName);
 
             return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(columnLabelList).map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = ?").join(", ");
+                    + Stream.of(columnLabelList).map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = ?").join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1831,6 +1846,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             final String resolvedKeyColumnName = resolveKeyColumnNames(N.asList(keyColumnName), columnLabelList, tableName).get(0);
             final List<String> updateColumnLabelList = Stream.of(columnLabelList).filter(columnLabel -> !columnLabel.equals(resolvedKeyColumnName)).toList();
@@ -1839,9 +1855,9 @@ public final class JdbcCodeGenerationUtil {
 
             return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET "
                     + Stream.of(updateColumnLabelList)
-                            .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = ?")
+                            .map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = ?")
                             .join(", ")
-                    + " WHERE " + SqlIdentifierUtil.checkColumnName(resolvedKeyColumnName, dbProductInfo, false) + " = ?";
+                    + " WHERE " + renderColumnLabel(resolvedKeyColumnName, dbProductInfo, unquotedIdentifierCase) + " = ?";
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1948,15 +1964,17 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> allColumnLabels = JdbcUtil.getColumnLabels(rs);
             final List<String> resolvedKeyColumnNames = resolveKeyColumnNames(keyColumnNames, allColumnLabels, tableName);
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)
-                    .append(resolvedKeyColumnNames)
-                    .map(Strings::toCamelCase)
-                    .collect(Collectors.toSet());
+            // Key columns are already resolved to actual labels, so drop exactly those from the SET clause (as the
+            // single-key overload does); only the caller's excludedColumnNames are matched after camelCase
+            // normalization, which would otherwise also drop a distinct column such as "userId" for key "user_id".
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(allColumnLabels)
-                    .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
+                    .filter(columnLabel -> !(resolvedKeyColumnNames.contains(columnLabel) || excludedColumnNameSet.contains(columnLabel)
+                            || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
             checkUpdateSetColumnLabels(columnLabelList, tableName);
@@ -1968,7 +1986,7 @@ public final class JdbcCodeGenerationUtil {
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
                     whereSection += Stream.of(resolvedKeyColumnNames)
-                            .map(c -> SqlIdentifierUtil.checkColumnName(c, dbProductInfo, false) + " = ?")
+                            .map(c -> renderColumnLabel(c, dbProductInfo, unquotedIdentifierCase) + " = ?")
                             .join(" AND ");
 
                     if (Strings.isNotEmpty(whereClause)) {
@@ -1980,7 +1998,7 @@ public final class JdbcCodeGenerationUtil {
             }
 
             return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(columnLabelList).map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = ?").join(", ")
+                    + Stream.of(columnLabelList).map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = ?").join(", ")
                     + whereSection;
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2056,12 +2074,13 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             checkUpdateSetColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
             return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
-                    .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = :" + Strings.toCamelCase(columnLabel))
+                    .map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(columnLabel))
                     .join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2137,6 +2156,7 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             final String resolvedKeyColumnName = resolveKeyColumnNames(N.asList(keyColumnName), columnLabelList, tableName).get(0);
             final List<String> updateColumnLabelList = Stream.of(columnLabelList).filter(columnLabel -> !columnLabel.equals(resolvedKeyColumnName)).toList();
@@ -2145,8 +2165,8 @@ public final class JdbcCodeGenerationUtil {
             checkNamedParameterColumnLabels(Stream.of(updateColumnLabelList).append(resolvedKeyColumnName).toList(), tableName);
 
             return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET " + Stream.of(updateColumnLabelList)
-                    .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = :" + Strings.toCamelCase(columnLabel))
-                    .join(", ") + " WHERE " + SqlIdentifierUtil.checkColumnName(resolvedKeyColumnName, dbProductInfo, false) + " = :"
+                    .map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(columnLabel))
+                    .join(", ") + " WHERE " + renderColumnLabel(resolvedKeyColumnName, dbProductInfo, unquotedIdentifierCase) + " = :"
                     + Strings.toCamelCase(resolvedKeyColumnName);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2252,15 +2272,17 @@ public final class JdbcCodeGenerationUtil {
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> allColumnLabels = JdbcUtil.getColumnLabels(rs);
             final List<String> resolvedKeyColumnNames = resolveKeyColumnNames(keyColumnNames, allColumnLabels, tableName);
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames)
-                    .append(resolvedKeyColumnNames)
-                    .map(Strings::toCamelCase)
-                    .collect(Collectors.toSet());
+            // Key columns are already resolved to actual labels, so drop exactly those from the SET clause (as the
+            // single-key overload does); only the caller's excludedColumnNames are matched after camelCase
+            // normalization, which would otherwise also drop a distinct column such as "userId" for key "user_id".
+            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(allColumnLabels)
-                    .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
+                    .filter(columnLabel -> !(resolvedKeyColumnNames.contains(columnLabel) || excludedColumnNameSet.contains(columnLabel)
+                            || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
                     .toList();
 
             checkUpdateSetColumnLabels(columnLabelList, tableName);
@@ -2273,7 +2295,7 @@ public final class JdbcCodeGenerationUtil {
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
                     whereSection += Stream.of(resolvedKeyColumnNames)
-                            .map(c -> SqlIdentifierUtil.checkColumnName(c, dbProductInfo, false) + " = :" + Strings.toCamelCase(c))
+                            .map(c -> renderColumnLabel(c, dbProductInfo, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(c))
                             .join(" AND ");
 
                     if (Strings.isNotEmpty(whereClause)) {
@@ -2285,7 +2307,7 @@ public final class JdbcCodeGenerationUtil {
             }
 
             return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
-                    .map(columnLabel -> SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, false) + " = :" + Strings.toCamelCase(columnLabel))
+                    .map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(columnLabel))
                     .join(", ") + whereSection;
 
         } catch (final SQLException e) {
@@ -3142,16 +3164,53 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Validates the given column labels against the database product's identifier rules, quoting them when
-     * necessary.
+     * Reports how the database folds the letter case of unquoted identifiers.
      *
-     * @param columnLabelList the column labels to validate
+     * @param conn the connection whose database metadata is inspected
+     * @return a positive value if unquoted identifiers are stored in upper case, a negative value if they are stored in
+     *         lower case, or {@code 0} if their case is preserved or the database reports neither
+     * @throws SQLException if the database metadata cannot be read
+     */
+    private static int getUnquotedIdentifierCase(final Connection conn) throws SQLException {
+        final DatabaseMetaData metadata = conn.getMetaData();
+
+        return metadata.storesUpperCaseIdentifiers() ? 1 : (metadata.storesLowerCaseIdentifiers() ? -1 : 0);
+    }
+
+    /**
+     * Renders the given column labels, read from result-set metadata, for the database product; see
+     * {@link #renderColumnLabel(String, ProductInfo, int)}.
+     *
+     * @param columnLabelList the column labels to render
      * @param dbProductInfo the database product info
-     * @return the validated column labels
+     * @param unquotedIdentifierCase the case folding of unquoted identifiers, as returned by {@link #getUnquotedIdentifierCase(Connection)}
+     * @return the rendered column labels
      * @throws IllegalArgumentException if any column label is {@code null} or blank.
      */
-    private static List<String> checkColumnName(final List<String> columnLabelList, final ProductInfo dbProductInfo) throws IllegalArgumentException {
-        return N.map(columnLabelList, it -> SqlIdentifierUtil.checkColumnName(it, dbProductInfo, false));
+    private static List<String> renderColumnLabels(final List<String> columnLabelList, final ProductInfo dbProductInfo, final int unquotedIdentifierCase)
+            throws IllegalArgumentException {
+        return N.map(columnLabelList, it -> renderColumnLabel(it, dbProductInfo, unquotedIdentifierCase));
+    }
+
+    /**
+     * Renders a column label read from result-set metadata for the database product. Such a label is the column's
+     * stored spelling, so in addition to a label containing characters that always require delimiters, a label whose
+     * letter case the database would fold when unquoted (for example {@code userId} on H2/Oracle, which store unquoted
+     * identifiers in upper case, or on PostgreSQL, which stores them in lower case) is quoted; left unquoted, it would
+     * resolve to a different column.
+     *
+     * @param columnLabel the column label to render
+     * @param dbProductInfo the database product info
+     * @param unquotedIdentifierCase the case folding of unquoted identifiers, as returned by {@link #getUnquotedIdentifierCase(Connection)}
+     * @return the rendered column label
+     * @throws IllegalArgumentException if {@code columnLabel} is {@code null} or blank.
+     */
+    private static String renderColumnLabel(final String columnLabel, final ProductInfo dbProductInfo, final int unquotedIdentifierCase)
+            throws IllegalArgumentException {
+        final boolean caseWouldBeFolded = columnLabel != null && ((unquotedIdentifierCase > 0 && !columnLabel.equals(columnLabel.toUpperCase(Locale.ROOT)))
+                || (unquotedIdentifierCase < 0 && !columnLabel.equals(columnLabel.toLowerCase(Locale.ROOT))));
+
+        return SqlIdentifierUtil.checkColumnName(columnLabel, dbProductInfo, caseWouldBeFolded);
     }
 
     /**
@@ -3332,6 +3391,38 @@ public final class JdbcCodeGenerationUtil {
             if (!supportedTarget) {
                 throw new IllegalArgumentException(configName + " annotation " + annotationClass.getCanonicalName() + " cannot target " + requiredTarget);
             }
+        }
+    }
+
+    /**
+     * Rejects a generated class name that makes the generated source uncompilable: a top-level class can't share its
+     * simple name with a single-type import (JLS 7.5.1; e.g. a table named {@code data} derives {@code Data}, which
+     * clashes with {@code import lombok.Data;}) or with its nested property-name interface (JLS 8.1).
+     *
+     * @param className the generated class name
+     * @param lines the lines of the generated source, after unused imports have been pruned
+     * @param generatePropNameTable whether the nested property-name interface {@link #X} is generated
+     * @throws IllegalArgumentException if the class name collides with an imported type or the nested interface
+     */
+    private static void checkGeneratedClassNameCollision(final String className, final String[] lines, final boolean generatePropNameTable)
+            throws IllegalArgumentException {
+        final String suggestion = ". Configure EntityCodeConfig.className with a different name";
+
+        for (final String line : lines) {
+            final String trimmedLine = line.trim();
+
+            if (trimmedLine.startsWith("public class ")) {
+                break; // imports precede the class declaration.
+            }
+
+            if (trimmedLine.startsWith("import ") && !trimmedLine.startsWith("import static ") && trimmedLine.endsWith("." + className + ";")) {
+                throw new IllegalArgumentException("Generated class name '" + className + "' collides with the imported type '"
+                        + trimmedLine.substring("import ".length(), trimmedLine.length() - 1).trim() + "'" + suggestion);
+            }
+        }
+
+        if (generatePropNameTable && X.equals(className)) {
+            throw new IllegalArgumentException("Generated class name '" + className + "' collides with its nested property-name interface" + suggestion);
         }
     }
 

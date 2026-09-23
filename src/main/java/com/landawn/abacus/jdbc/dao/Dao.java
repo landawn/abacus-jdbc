@@ -451,6 +451,10 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * otherwise updates the existing record.
      * More flexible than property-based upsert for complex conditions.
      *
+     * <p>When a record is found, the non-{@code null} non-id properties of {@code entity} are copied into
+     * the loaded record before it is updated; a {@code null} property keeps the existing value, so an
+     * upsert cannot clear a column to {@code NULL}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();

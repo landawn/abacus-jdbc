@@ -459,13 +459,13 @@ public final class JdbcUtil {
      */
     static volatile TriConsumer<String, Long, Long> _sqlLogHandler = null; //NOSONAR
 
-    @SuppressWarnings("rawtypes")
     // Keyed by (daoInterface, entityClass, idType): the cached key extractor depends on the DAO interface's
     // registration in idExtractorPool, so DAOs sharing the same entity/id types must not share entries.
     /**
      * Cache of per-DAO (generated-key extractor, id getter, id setter) triples, keyed by
      * (DAO interface, entity class, id type) and then by {@link NamingPolicy}.
      */
+    @SuppressWarnings("rawtypes")
     private static final Map<Tuple3<Class<?>, Class<?>, Class<?>>, Map<NamingPolicy, Tuple3<BiRowMapper, com.landawn.abacus.util.function.Function, com.landawn.abacus.util.function.BiConsumer>>> idGeneratorGetterSetterPool = new ConcurrentHashMap<>();
 
     /**
@@ -1141,8 +1141,8 @@ public final class JdbcUtil {
      *     rs = stmt.executeQuery("SELECT * FROM orders");
      *     // ... process results
      * } finally {
-     *     // Closes both the ResultSet and the Statement
-     *     JdbcUtil.close(rs, stmt);
+     *     // Closes both the ResultSet and the Statement that created it
+     *     JdbcUtil.close(rs, true);
      * }
      * }</pre>
      *
@@ -1173,8 +1173,8 @@ public final class JdbcUtil {
      *     rs = stmt.executeQuery("SELECT * FROM products");
      *     // ... process results
      * } finally {
-     *     // Closes rs, stmt, and conn
-     *     JdbcUtil.close(rs, stmt, conn);
+     *     // Closes rs, then the Statement and Connection it came from (stmt and conn)
+     *     JdbcUtil.close(rs, true, true);
      * }
      * }</pre>
      *
@@ -1568,8 +1568,8 @@ public final class JdbcUtil {
      * } catch (SQLException e) {
      *     // ...
      * } finally {
-     *     // Quietly closes both the ResultSet and the Statement.
-     *     JdbcUtil.closeQuietly(rs, stmt);
+     *     // Quietly closes both the ResultSet and the Statement that created it.
+     *     JdbcUtil.closeQuietly(rs, true);
      * }
      * }</pre>
      *
@@ -1599,8 +1599,8 @@ public final class JdbcUtil {
      * } catch (SQLException e) {
      *     // ...
      * } finally {
-     *     // Quietly closes all three resources.
-     *     JdbcUtil.closeQuietly(rs, stmt, conn);
+     *     // Quietly closes rs, then the Statement and Connection it came from.
+     *     JdbcUtil.closeQuietly(rs, true, true);
      * }
      * }</pre>
      *
@@ -1631,7 +1631,8 @@ public final class JdbcUtil {
             if (closeConnection && stmt != null) {
                 conn = stmt.getConnection();
             }
-        } catch (final SQLException e) {
+        } catch (final Exception e) {
+            // Quiet contract: like closeQuietly(ResultSet, Statement, Connection), swallow unchecked driver failures too.
             logger.warn(e, "Failed to get Statement or Connection from ResultSet(closeStatement={}, closeConnection={})", closeStatement, closeConnection);
         } finally {
             closeQuietly(rs, stmt, conn);
@@ -2802,12 +2803,12 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to retrieve values from. It will be iterated to the end.
      * @param columnLabel The label of the column to retrieve.
      * @return A {@link List} containing all values from the specified column.
+     * @throws IllegalArgumentException if the column label does not exist in the result set.
      * @throws NullPointerException if {@code rs} is {@code null}.
      * @throws SQLException if advancing the result set, resolving its columns, or reading a requested value fails.
-     * @throws IllegalArgumentException if the column label does not exist in the result set.
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel)
-            throws NullPointerException, SQLException, IllegalArgumentException {
+            throws IllegalArgumentException, NullPointerException, SQLException {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
 
         if (columnIndex < 1) {
@@ -10123,7 +10124,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is blank or otherwise invalid, or {@code schema} is
      *         {@code null} or empty.
      * @throws UncheckedSQLException if checking whether the table exists fails, or the {@code CREATE} fails and the table still does
-     *         not exist afterwards.
+     *         not exist afterwards (or that re-check fails; its failure is attached to the {@code CREATE} failure as suppressed).
      */
     public static boolean createTableIfNotExists(final Connection conn, final String tableName, final String schema)
             throws IllegalArgumentException, UncheckedSQLException {
@@ -10144,7 +10145,17 @@ public final class JdbcUtil {
             return true;
         } catch (final SQLException e) {
             // The table may have been created concurrently by another thread/process
-            if (tableExists(conn, tableName)) {
+            boolean createdConcurrently = false;
+
+            try {
+                createdConcurrently = tableExists(conn, tableName);
+            } catch (final RuntimeException recheckFailure) {
+                // The failed CREATE may have left the connection unusable (e.g., an aborted PostgreSQL
+                // transaction); the re-check failure must not mask the CREATE failure itself.
+                e.addSuppressed(recheckFailure);
+            }
+
+            if (createdConcurrently) {
                 logger.debug("Table was created concurrently(tableName={})", tableName);
                 return false;
             }
@@ -10160,9 +10171,12 @@ public final class JdbcUtil {
      * <p>The method first checks for existence via {@link #tableExists(Connection, String)} and only
      * issues a {@code DROP TABLE} if the table is found. If the drop itself fails because the table no
      * longer exists (for example, a concurrent drop), the method returns {@code false}; any other SQL
-     * error is wrapped and rethrown as {@link UncheckedSQLException}. For an unquoted simple name, a
-     * case-folded, unquoted retry may be attempted when a database stores unquoted identifiers in a
-     * canonical case. An explicitly delimited name is never retried unquoted, preserving its exact identity.</p>
+     * error is wrapped and rethrown as {@link UncheckedSQLException}. The {@code DROP} quotes the name, after
+     * folding undelimited parts to the database's canonical identifier case when the driver reports one. If
+     * that quoted {@code DROP} reports "table not found" while the table is still found to exist (for example,
+     * when the driver reports no canonical case and only an upper- or lower-case variant matched), an
+     * unquoted retry lets the database apply its own case folding. An explicitly delimited name is never
+     * retried unquoted, preserving its exact identity.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10203,10 +10217,10 @@ public final class JdbcUtil {
             return true;
         } catch (final SQLException e) {
             if (isTableNotExistsException(e)) {
-                // Quoting makes the identifier case-exact while tableExists matches case-tolerantly:
-                // on case-folding databases (H2/Oracle/DB2, ...) a table created unquoted is stored
-                // upper-case, so the quoted as-supplied name may miss it. Retry unquoted so the
-                // database applies its own case folding.
+                // Quoting makes the identifier case-exact while tableExists can match case-tolerantly
+                // (upper-/lower-case variants when the driver reports no canonical identifier case),
+                // so the quoted name may miss the table. Retry unquoted so the database applies its
+                // own case folding.
                 final String simpleTableName = buildSimpleQualifiedName(tableName);
 
                 if (!hasDelimitedIdentifierPart(tableName) && simpleTableName != null && !simpleTableName.equals(sqlTableName)
@@ -10847,8 +10861,9 @@ public final class JdbcUtil {
     private static final Map<Class<?>, Map<String, Optional<PropInfo>>> entityPropInfoQueueMap = new ConcurrentHashMap<>();
 
     /**
-     * Returns the {@link PropInfo} for a possibly nested property path (e.g., {@code address.street}) of
-     * the given entity class, or {@code null} if the path does not resolve to a property.
+     * Returns the {@link PropInfo} for a nested, dot-separated property path (e.g., {@code address.street}) of
+     * the given entity class, or {@code null} if the path does not resolve to a property. A name without
+     * {@code '.'} always yields {@code null}: callers resolve simple names through {@link BeanInfo#getPropInfo(String)}.
      *
      * @param entityClass The entity class to inspect.
      * @param propName The property name or dot-separated property path.
@@ -11010,7 +11025,8 @@ public final class JdbcUtil {
 
     /**
      * Extracts the named parameters from the given SQL string.
-     * Named parameters are placeholders in SQL that start with ':' followed by the parameter name.
+     * Named parameters are placeholders written as {@code :paramName} or in iBatis/MyBatis style as
+     * {@code #{paramName}}; SQL using only positional {@code ?} placeholders yields an empty list.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11019,8 +11035,8 @@ public final class JdbcUtil {
      * // Returns: ["name", "age", "city"]
      * }</pre>
      *
-     * @param sql The SQL string containing named parameters (e.g., :paramName).
-     * @return A list of named parameter names found in the SQL string (without the ':' prefix).
+     * @param sql The SQL string containing named parameters (e.g., {@code :paramName} or {@code #{paramName}}).
+     * @return A list of named parameter names found in the SQL string (without the {@code :} or {@code #{...}} decoration).
      * @throws IllegalArgumentException if {@code sql} is {@code null}, empty, or blank, mixes parameter styles
      *         ({@code ?}, {@code :name}, {@code #{name}}), or contains a malformed parameter placeholder.
      */
@@ -11034,10 +11050,10 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * String sql = "SELECT * FROM users WHERE name = :name AND age > ?";
+     * String sql = "SELECT * FROM users WHERE name = :name AND age > :age";
      * ParsedSql parsedSql = JdbcUtil.parseSql(sql);
-     * List<String> namedParams = parsedSql.namedParameters();   // ["name"]
-     * String convertedSql = parsedSql.parameterizedSql();       // SQL with named params converted to ?
+     * List<String> namedParams = parsedSql.namedParameters();   // ["name", "age"]
+     * String convertedSql = parsedSql.parameterizedSql();       // "SELECT * FROM users WHERE name = ? AND age > ?"
      * }</pre>
      *
      * @param sql The SQL string to be parsed.
@@ -11159,8 +11175,8 @@ public final class JdbcUtil {
     /**
      * Gets the property names suitable for UPDATE operations for the given entity class.
      * This method returns all property names that should be included in an UPDATE statement,
-     * excluding properties marked with {@code @ReadOnly}, {@code @NonUpdatable}, {@code @Id},
-     * {@link JoinedBy}, etc.
+     * excluding properties marked with {@code @ReadOnly}, {@code @ReadOnlyId}, {@code @NonUpdatable},
+     * {@link JoinedBy}, etc. A plain (writable) {@code @Id} property is <i>not</i> excluded.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11340,7 +11356,7 @@ public final class JdbcUtil {
 
     /**
      * Writes the content of a Clob to a file and frees the Clob resources.
-     * This method streams the Clob content directly to the specified file.
+     * This method streams the Clob content directly to the specified file, encoded as UTF-8.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

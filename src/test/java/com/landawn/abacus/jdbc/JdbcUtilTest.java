@@ -1359,6 +1359,23 @@ public class JdbcUtilTest extends TestBase {
     //    }
 
     @Test
+    public void testCreateTableIfNotExists_RecheckFailureDoesNotMaskCreateFailure() throws SQLException {
+        final SQLException tableNotFound = new SQLException("Table not found", "42S02");
+        final SQLException createFailure = new SQLException("syntax error at end of input", "42601");
+        final SQLException transactionAborted = new SQLException("current transaction is aborted, commands ignored", "25P02");
+        // 1) existence probe: table missing; 2) CREATE fails; 3) the concurrent-creation re-check fails
+        //    because the failed CREATE left the connection unusable.
+        when(mockPreparedStatement.execute()).thenThrow(tableNotFound, createFailure, transactionAborted);
+
+        final UncheckedSQLException ex = assertThrows(UncheckedSQLException.class,
+                () -> JdbcUtil.createTableIfNotExists(mockConnection, "users", "CREATE TABLE users (id INT"));
+
+        assertSame(createFailure, ex.getCause(), "the CREATE failure must be reported, not the re-check failure");
+        assertEquals(1, createFailure.getSuppressed().length);
+        assertSame(transactionAborted, createFailure.getSuppressed()[0].getCause());
+    }
+
+    @Test
     public void testDropTableIfExists() throws SQLException {
         when(mockPreparedStatement.executeQuery()).thenReturn(mockResultSet);
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
@@ -2744,6 +2761,16 @@ public class JdbcUtilTest extends TestBase {
         doThrow(new SQLException("getStatement failed")).when(mockResultSet).getStatement();
         // Should not throw even when getStatement() fails
         assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockResultSet, true, true));
+    }
+
+    // closeQuietly must stay quiet when the statement lookup fails with an unchecked exception, and still close rs.
+    @Test
+    public void testCloseQuietlyWithStatementAndConnection_StatementRuntimeException() throws SQLException {
+        doThrow(new IllegalStateException("getStatement failed")).when(mockResultSet).getStatement();
+
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockResultSet, true, true));
+        assertDoesNotThrow(() -> JdbcUtil.closeQuietly(mockResultSet, true));
+        verify(mockResultSet, org.mockito.Mockito.times(2)).close();
     }
 
     // Test closeQuietly(rs, stmt, conn) convenience method

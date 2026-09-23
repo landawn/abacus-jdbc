@@ -200,6 +200,12 @@ public @interface Handler {
      * <p>This is useful for handlers that should only apply when the DAO is called from
      * outside code, not when DAO methods call each other internally.</p>
      *
+     * <p>More precisely, a call counts as internal when it is made on the same thread while another
+     * DAO method that has at least one {@code @Handler} applied is still executing &mdash; on this DAO
+     * or on any other DAO proxy. A calling method with no applicable handler (for example, a
+     * {@code default} method that no type-level {@link #filter()} matches) does not mark its nested
+     * calls as internal, so a handler with {@code externalCallsOnly = true} still runs for them.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Handler(impl = TransactionHandler.class, externalCallsOnly = true)

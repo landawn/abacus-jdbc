@@ -572,7 +572,7 @@ public final class Jdbc {
          * ResultExtractor<LinkedHashMap<Integer, String>> extractor = ResultExtractor.toMap(
          * rs -> rs.getInt("id"),
          * rs -> rs.getString("name"),
-         * LinkedHashMap::new
+         * () -> new LinkedHashMap<>()   // not LinkedHashMap::new: ambiguous with the BinaryOperator overload
          * );
          * }</pre>
          *
@@ -1371,7 +1371,7 @@ public final class Jdbc {
          * BiResultExtractor<LinkedHashMap<Integer, String>> extractor = BiResultExtractor.toMap(
          *     (rs, cols) -> rs.getInt("id"),
          *     (rs, cols) -> rs.getString("name"),
-         *     LinkedHashMap::new
+         *     () -> new LinkedHashMap<>()   // not LinkedHashMap::new: ambiguous with the BinaryOperator overload
          * );
          * }</pre>
          *
@@ -3071,6 +3071,10 @@ public final class Jdbc {
          * Create a new instance for each distinct query structure.
          * </p>
          *
+         * <p>This is equivalent to {@code to(targetClass, false)}: for a bean target, the returned mapper's
+         * {@code apply} method throws an {@link IllegalArgumentException} if a result column cannot be mapped
+         * to any property. Use {@link #to(Class, boolean)} with {@code true} to skip such columns.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Assumes User class has properties matching column names like 'id', 'name'.
@@ -3122,6 +3126,10 @@ public final class Jdbc {
          * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
+         *
+         * <p>This is equivalent to {@code to(targetClass, columnNameFilter, columnNameConverter, false)}: for a bean
+         * target, the returned mapper's {@code apply} method throws an {@link IllegalArgumentException} if a column
+         * that passes the filter cannot be mapped to any property.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -3498,6 +3506,10 @@ public final class Jdbc {
          * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
          * cached, shared across different query structures, or used in parallel streams.
          * </p>
+         *
+         * <p>This is equivalent to {@code to(entityClass, prefixAndPropNameMap, false)}: for a bean target, the
+         * returned mapper's {@code apply} method throws an {@link IllegalArgumentException} if a result column cannot be mapped
+         * to any property.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -3918,7 +3930,7 @@ public final class Jdbc {
          * RowExtractor extractor = RowExtractor.forType(User.class);
          * BiRowMapper<Map<String, Object>> mapper = BiRowMapper.toMap(
          *     extractor,
-         *     Strings::toCamelCase,
+         *     (Function<String, String>) Strings::toCamelCase,
          *     (size) -> new TreeMap<>()
          * );
          * }</pre>
@@ -5562,7 +5574,9 @@ public final class Jdbc {
                         columnCount = columnLabelList.size();
                         final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
 
-                        columnTypes = new Type[columnCount];
+                        // Resolve into a local array and publish it only once every column is mapped: 'columnTypes != null'
+                        // is the initialized flag, so a failed first call must not leave a partial mapping behind.
+                        final Type<?>[] resolvedColumnTypes = new Type[columnCount];
                         PropInfo propInfo = null;
 
                         for (int i = 0; i < columnCount; i++) {
@@ -5616,14 +5630,16 @@ public final class Jdbc {
                                 }
 
                                 if (propInfo == null) {
-                                    columnTypes[i] = null;
+                                    resolvedColumnTypes[i] = null;
                                 } else {
-                                    columnTypes[i] = propInfo.dbType;
+                                    resolvedColumnTypes[i] = propInfo.dbType;
                                 }
                             } else {
-                                columnTypes[i] = propInfo.dbType;
+                                resolvedColumnTypes[i] = propInfo.dbType;
                             }
                         }
+
+                        columnTypes = resolvedColumnTypes;
                     }
 
                     N.checkArgument(outputRow.length >= columnCount, "The output array length (%s) must be at least the column count (%s)", outputRow.length,
@@ -6915,16 +6931,17 @@ public final class Jdbc {
         /**
          * This method is invoked after the DAO method completes, whether successfully or with an exception.
          * Handlers are invoked in the reverse order of their {@link #beforeInvoke} calls; if this
-         * handler's {@code beforeInvoke} did not run (because an earlier handler failed) then {@code afterInvoke}
-         * is not invoked for it. It can be used for inspecting results, logging, or resource cleanup.
+         * handler's {@code beforeInvoke} did not complete normally (because it threw, or an earlier handler's
+         * {@code beforeInvoke} threw) then {@code afterInvoke} is not invoked for it. If any {@code beforeInvoke}
+         * throws, the DAO method itself is not invoked. It can be used for inspecting results, logging, or resource cleanup.
          *
          * <p>Exceptions thrown from this method are logged and attached as suppressed exceptions to any primary
          * failure from the DAO method itself (they never replace it); if the DAO method completed normally, the
          * first such exception is propagated to the caller.</p>
          *
          * @param result the value returned by the method. Will be {@code null} if the method's return type is
-         *               {@code void} or if the method threw an exception (in which case the throwable is not
-         *               surfaced here).
+         *               {@code void}, if the method threw an exception (in which case the throwable is not
+         *               surfaced here), or if the method was not invoked because a {@code beforeInvoke} call threw.
          * @param proxy the proxy instance on which the method was invoked.
          * @param args the arguments passed to the method.
          * @param methodSignature a tuple containing the {@code Method} object, a list of parameter types, and the return type.
@@ -7423,14 +7440,14 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * DaoCache cache = DaoCache.create(1000, 3000);
-         * // defaultCacheKey format: fullMethodName#tableName#jsonArrayOfParameters
+         * // defaultCacheKey format: fullMethodName#tableName#serializedParameters
          * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig);
          * if (hit == null) {
          *     // cache miss: execute the query and populate the cache via put(...)
          * }
          * }</pre>
          *
-         * @param defaultCacheKey the default cache key (fullMethodName#tableName#jsonArrayOfParameters).
+         * @param defaultCacheKey the default cache key (fullMethodName#tableName#serializedParameters).
          * @param daoProxy the DAO proxy instance on which the method was called.
          * @param args the arguments passed to the method.
          * @param methodSignature a tuple containing method metadata.
@@ -7570,7 +7587,7 @@ public final class Jdbc {
          * The {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused by this
          * implementation; only {@code defaultCacheKey} is consulted.
          *
-         * @param defaultCacheKey the cache key (fullMethodName#tableName#jsonArrayOfParameters).
+         * @param defaultCacheKey the cache key (fullMethodName#tableName#serializedParameters).
          * @param daoProxy the DAO proxy instance (unused).
          * @param args the method arguments (unused).
          * @param methodSignature a tuple containing method metadata (unused).
@@ -7665,7 +7682,7 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000);
-         * // Cache key format: fullMethodName#tableName#jsonArrayOfParameters
+         * // Cache key format: fullMethodName#tableName#serializedParameters
          * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
          * // An update against the "users" table invalidates all entries for that table.
          * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);

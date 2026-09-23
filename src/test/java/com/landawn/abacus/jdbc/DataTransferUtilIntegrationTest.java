@@ -196,6 +196,29 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         }
     }
 
+    // BUG FIX: exportCsv writes a value containing a line break as one quoted field spanning lines; importCsv read one
+    // physical line per row, so re-importing that CSV failed with ParsingException. The value must round-trip intact.
+    @Test
+    public void testExportThenImportCsv_RoundTripsLineBreakInValue() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("INSERT INTO copy_src (id, name, amount) VALUES (4, 'two' || CHAR(13) || CHAR(10) || 'lines', 1.0)");
+        }
+
+        final java.io.StringWriter csv = new java.io.StringWriter();
+        assertEquals(4, DataTransferUtil.exportCsv(ds, "SELECT id, name, amount FROM copy_src ORDER BY id", csv));
+
+        final long imported = DataTransferUtil.importCsvFrom(new java.io.StringReader(csv.toString())).parameterSetter((pq, row) -> {
+            pq.setLong(1, Long.parseLong(row[0]));
+            pq.setString(2, row[1]);
+            pq.setDouble(3, Double.parseDouble(row[2]));
+        }).to(ds, CSV_INSERT_SQL);
+
+        assertEquals(4, imported);
+        assertEquals("two\r\nlines", nameOf(4));
+        assertEquals("Alice", nameOf(1));
+    }
+
     // exportCsv(rs, selectColumnNames, File) onto a fresh (non-existent) path drives the createNewFile branch.
     @Test
     public void testExportCsv_CreatesNewFile() throws SQLException, java.io.IOException {

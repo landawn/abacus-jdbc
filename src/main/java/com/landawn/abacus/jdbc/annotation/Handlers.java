@@ -49,6 +49,10 @@ import java.lang.annotation.Target;
  *   <li>This creates a nested interception pattern.</li>
  * </ol>
  *
+ * <p>When both type-level and method-level handlers apply to a method, the type-level handlers
+ * (whose {@link Handler#filter() filter} matches the method, starting with those declared on the
+ * DAO's super-interfaces) form the outer part of the chain and the method-level handlers the inner part.</p>
+ *
  * <p>Execution flow example with three handlers A, B, C:</p>
  * <pre>
  * A.beforeInvoke()

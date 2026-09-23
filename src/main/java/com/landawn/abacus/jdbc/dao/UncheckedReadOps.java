@@ -108,6 +108,8 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
 
     /**
      * Counts the number of records that match the specified condition.
+     * Any {@code LIMIT}/{@code OFFSET} or {@code ORDER BY} carried by {@code cond} is ignored (unless it also has a
+     * {@code GROUP BY}, in which case the condition is used as-is and the count of the first group is returned).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

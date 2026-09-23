@@ -61,7 +61,11 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * and {@link #maxIdleTimeMillis()} must be {@code >= 0}, and {@code 0 <= minSize() <= maxSize()} must hold;
  * violating either range rule fails DAO initialization with {@code UnsupportedOperationException} as well.
  * These range checks run only when caching is effectively enabled for the method, so an
- * {@code @CacheResult(enabled = false)} carrying out-of-range values is ignored rather than rejected.</p>
+ * {@code @CacheResult(enabled = false)} carrying out-of-range values is ignored rather than rejected.
+ * Note that the built-in {@link com.landawn.abacus.jdbc.Jdbc.DefaultDaoCache} (the default
+ * {@link Cache#impl()}) requires both time limits to be <em>positive</em>: a value of {@code 0} passes
+ * DAO initialization, but every invocation then executes the query and fails with
+ * {@code IllegalArgumentException} when the result is stored.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -136,7 +140,9 @@ public @interface CacheResult {
      * After this time expires, the entry is removed from cache and the next
      * request will execute the query again.
      *
-     * <p>The default is {@link JdbcUtil#DEFAULT_CACHE_LIVE_TIME} (30 minutes).</p>
+     * <p>The default is {@link JdbcUtil#DEFAULT_CACHE_LIVE_TIME} (30 minutes). Use a positive value: the
+     * built-in {@link com.landawn.abacus.jdbc.Jdbc.DefaultDaoCache} rejects {@code 0} when storing a
+     * result (see the type-level documentation).</p>
      *
      * <p>Common time duration values:</p>
      * <ul>
@@ -167,7 +173,9 @@ public @interface CacheResult {
      * <p>The entry expires when either {@code maxLiveTimeMillis} or {@code maxIdleTimeMillis}
      * is exceeded, whichever comes first.</p>
      *
-     * <p>The default is {@link JdbcUtil#DEFAULT_CACHE_MAX_IDLE_TIME} (3 minutes).</p>
+     * <p>The default is {@link JdbcUtil#DEFAULT_CACHE_MAX_IDLE_TIME} (3 minutes). Use a positive value: the
+     * built-in {@link com.landawn.abacus.jdbc.Jdbc.DefaultDaoCache} rejects {@code 0} when storing a
+     * result (see the type-level documentation).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

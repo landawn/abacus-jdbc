@@ -1804,7 +1804,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                                  if the class of {@code entity} is not a bean class (it has no property
      *                                  getter/setter method and no public field), or if {@code parameterNamesToSet}
      *                                  contains a {@code null} element or a name that does not correspond to a
-     *                                  property of the entity class
+     *                                  property of the entity class; this query is closed before the exception is thrown
      * @throws SQLException if binding a value fails, for example because the driver rejects a name in {@code parameterNamesToSet}
      *         that is not a parameter of the stored procedure or the statement is closed; this query is closed before the exception is rethrown
      * @see Beans#getPropNameList(Class)
@@ -1815,6 +1815,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(parameterNamesToSet, cs.parameterNamesToSet);
 
         final Class<?> cls = entity.getClass();
+
+        if (!Beans.isBeanClass(cls)) {
+            final IllegalArgumentException iae = new IllegalArgumentException(
+                    "Unsupported parameter type: " + ClassUtil.getCanonicalClassName(cls) + ". Only Entity/Record types are supported here");
+
+            closeSuppressingFailure(iae);
+            throw iae;
+        }
+
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
         PropInfo propInfo = null;
 

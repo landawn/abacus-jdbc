@@ -131,7 +131,8 @@ public @interface Query {
      * {@code UnsupportedOperationException} when multiple entries are declared on an abstract method.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if
-     * applicable, and passed to that {@code String[]} parameter at runtime.</p>
+     * applicable, and passed to that {@code String[]} parameter at runtime. The caller must leave that
+     * parameter empty; passing any SQL in it fails the call with {@code IllegalArgumentException}.</p>
      *
      * <p>The SQL can include:</p>
      * <ul>
@@ -212,7 +213,8 @@ public @interface Query {
      * {@code UnsupportedOperationException} when multiple entries are declared on an abstract method.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@link #value()} and {@code id} are collected, dereferenced through the SQL mapper if
-     * applicable, and passed to that {@code String[]} parameter at runtime.</p>
+     * applicable, and passed to that {@code String[]} parameter at runtime. The caller must leave that
+     * parameter empty; passing any SQL in it fails the call with {@code IllegalArgumentException}.</p>
      *
      * <p>The SQL mapper can be specified at the DAO interface level using the {@link SqlSource} annotation,
      * which points to XML files or other configuration sources containing SQL definitions.</p>

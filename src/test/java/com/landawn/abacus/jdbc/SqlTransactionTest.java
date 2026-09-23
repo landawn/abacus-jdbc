@@ -1250,6 +1250,33 @@ public class SqlTransactionTest extends TestBase {
         outer.rollbackIfNotCommitted();
     }
 
+    // Regression: incrementAndGetRef cleared the one-shot cleanup latch BEFORE the nested isolation
+    // change. A rejected nested begin therefore turned the enclosing scope's post-commit cleanup into
+    // a real scope exit that rolled back the whole transaction, after which the outer commit was
+    // silently ignored.
+    @Test
+    public void testIncrementAndGetRef_NestedFailure_KeepsEnclosingCleanupNoOp() throws Exception {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final SqlTransaction inner = JdbcUtil.beginTransaction(dataSource);
+        assertSame(outer, inner);
+
+        inner.commit(); // nested: deferred to the outer scope; arms the latch for inner's cleanup
+
+        doThrow(new SQLException("nested-isolation-fail")).when(connection).setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
+        assertThrows(UncheckedSQLException.class, () -> JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE));
+
+        inner.rollbackIfNotCommitted(); // still the no-op paired with inner.commit()
+
+        assertEquals(Transaction.Status.ACTIVE, outer.status());
+        verify(connection, never()).rollback();
+
+        outer.commit();
+
+        assertEquals(Transaction.Status.COMMITTED, outer.status());
+        verify(connection).commit();
+        verify(connection, never()).rollback();
+    }
+
     @Test
     public void testIncrementAndGetRef_UncheckedFailureRestoresNestedState() throws Exception {
         final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);

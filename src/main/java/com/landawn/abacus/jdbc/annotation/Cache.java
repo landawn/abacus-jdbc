@@ -116,7 +116,10 @@ public @interface Cache {
      *
      * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY} (3 seconds).
      * Smaller values cause more frequent sweeps (lower memory footprint, higher CPU cost);
-     * larger values reduce sweep overhead at the cost of holding expired entries longer.</p>
+     * larger values reduce sweep overhead at the cost of holding expired entries longer.
+     * With the default {@link Jdbc.DefaultDaoCache}, {@code 0} disables the background sweep entirely:
+     * an expired entry is still never returned (it is discarded when it is next looked up), but it can
+     * keep occupying capacity until it is looked up or evicted to make room.</p>
      *
      * <p>Common interval values:</p>
      * <ul>

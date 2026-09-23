@@ -54,7 +54,11 @@ import com.landawn.abacus.util.N;
  * {@code NamedParameterJdbcTemplate}. This class wraps a {@link PreparedStatement} and lets you bind
  * values using named parameters (e.g. {@code :name}, {@code :age}) instead of positional placeholders
  * ({@code ?}). The same named parameter may appear multiple times in the SQL; every occurrence is
- * bound to the same value.
+ * bound to the same value. For stream and {@code Reader} values (the {@code setXxxStream},
+ * {@code setBlob(String, InputStream...)}, {@code setClob(String, Reader...)} and
+ * {@code setNClob(String, Reader...)} setters) the same stream object is passed to every occurrence,
+ * and a stream can typically be consumed only once, so later occurrences may receive empty or partial
+ * data (H2, for example, binds an empty value); use a distinct parameter name per occurrence instead.
  *
  * <p>If a name passed to a by-name {@code setXxx(String, ...)} setter (or to
  * {@link #setObject(String, Object)} and its overloads) does not match any named parameter declared
@@ -2865,7 +2869,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read data from the Reader as needed until end-of-file is reached.
      *
      * <p>This method is useful for setting large text data without loading it entirely into memory.
-     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * If the parameter name appears multiple times in the query, the same {@code Reader} is passed to every
+     * occurrence; since it can typically be read only once, later occurrences may receive no data.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2931,7 +2936,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>This method provides more control over the amount of data read from the Reader compared to
      * {@link #setClob(String, Reader)}. If the parameter name appears multiple times in the query,
-     * all occurrences will be set to the same value.
+     * the same {@code Reader} is passed to every occurrence; since it can typically be read only once,
+     * later occurrences may receive no data.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3063,7 +3069,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read data from the Reader as needed until end-of-file is reached.
      *
      * <p>This method is useful for setting large Unicode text data without loading it entirely into memory.
-     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * If the parameter name appears multiple times in the query, the same {@code Reader} is passed to every
+     * occurrence; since it can typically be read only once, later occurrences may receive no data.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3128,7 +3135,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read exactly 'length' characters from the Reader.
      *
      * <p>This method provides more control over the amount of Unicode data read from the Reader.
-     * If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
+     * If the parameter name appears multiple times in the query, the same {@code Reader} is passed to every
+     * occurrence; since it can typically be read only once, later occurrences may receive no data.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

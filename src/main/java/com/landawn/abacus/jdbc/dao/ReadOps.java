@@ -117,6 +117,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     /**
      * Counts the number of records that match the specified condition.
      * Returns the exact count of matching records.
+     * Any {@code LIMIT}/{@code OFFSET} or {@code ORDER BY} carried by {@code cond} is ignored (unless it also has a
+     * {@code GROUP BY}, in which case the condition is used as-is and the count of the first group is returned).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1531,7 +1533,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * {@link UncheckedSQLException} when the stream is consumed.</p>
      *
      * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
-     * @param pageSize the number of records per page
+     * @param pageSize the number of records per page, applied as a {@code LIMIT}; if {@code cond} already carries its own
+     *                 limit, that limit is kept and {@code pageSize} only sets the fetch size
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @return stream of Dataset pages
@@ -1558,7 +1561,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * @param <R> the result type
      * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
-     * @param pageSize the number of records per page
+     * @param pageSize the number of records per page, applied as a {@code LIMIT}; if {@code cond} already carries its own
+     *                 limit, that limit is kept and {@code pageSize} only sets the fetch size
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor function to process each page's ResultSet
@@ -1586,7 +1590,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * @param <R> the result type
      * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
-     * @param pageSize the number of records per page
+     * @param pageSize the number of records per page, applied as a {@code LIMIT}; if {@code cond} already carries its own
+     *                 limit, that limit is kept and {@code pageSize} only sets the fetch size
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor bi-function to process each page
@@ -1611,7 +1616,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
-     * @param pageSize the number of records per page
+     * @param pageSize the number of records per page, applied as a {@code LIMIT}; if {@code cond} already carries its own
+     *                 limit, that limit is kept and {@code pageSize} only sets the fetch size
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @return stream of Dataset pages with selected properties
@@ -1639,7 +1645,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
-     * @param pageSize the number of records per page
+     * @param pageSize the number of records per page, applied as a {@code LIMIT}; if {@code cond} already carries its own
+     *                 limit, that limit is kept and {@code pageSize} only sets the fetch size
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor function to process each page
@@ -1669,7 +1676,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param <R> the result type
      * @param selectPropNames the properties to select, {@code null} for all
      * @param cond the condition; must include an {@code orderBy} clause for consistent pagination
-     * @param pageSize the number of records per page
+     * @param pageSize the number of records per page, applied as a {@code LIMIT}; if {@code cond} already carries its own
+     *                 limit, that limit is kept and {@code pageSize} only sets the fetch size
      * @param paramSetter function to set parameters for the next page based on the previous page's result
      *                   (the second argument is {@code null} when fetching the first page)
      * @param resultExtractor bi-function to process each page

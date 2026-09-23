@@ -37,6 +37,7 @@ import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.dao.CrudDao;
+import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.NonUpdateCrudDao;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlDialect;
@@ -466,6 +467,172 @@ public class DaoImplIntegrationTest extends TestBase {
         assertTrue(mixedIdDao.findFirst(Filters.eq("name", "Generated-2")).isPresent());
     }
 
+    @Table("composite_key_row")
+    public static class CompositeKeyRow {
+        @Id
+        private Long tenantId;
+        @Id
+        private Long rowId;
+        private String name;
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public Long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final Long rowId) {
+            this.rowId = rowId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    // A plain (non-CRUD) Dao declares no ID type.
+    public interface CompositeKeyRowDao extends Dao<CompositeKeyRow, CompositeKeyRowDao> {
+    }
+
+    private static CompositeKeyRow newCompositeKeyRow(final long tenantId, final long rowId, final String name) {
+        final CompositeKeyRow row = new CompositeKeyRow();
+        row.setTenantId(tenantId);
+        row.setRowId(rowId);
+        row.setName(name);
+        return row;
+    }
+
+    // save/batchSave on a plain Dao whose entity has a composite @Id used to fail with a NullPointerException: with no
+    // declared ID type, the composite ID was built as an instance of the (null) ID class.
+    @Test
+    public void testSaveAndBatchSave_NonCrudDaoWithCompositeId() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS composite_key_row (tenant_id BIGINT, row_id BIGINT, name VARCHAR(64), PRIMARY KEY (tenant_id, row_id))");
+            st.execute("DELETE FROM composite_key_row");
+        }
+
+        try {
+            final CompositeKeyRowDao compositeDao = JdbcUtil.createDao(CompositeKeyRowDao.class, ds);
+
+            compositeDao.save(newCompositeKeyRow(1, 1, "single"));
+            compositeDao.batchSave(List.of(newCompositeKeyRow(1, 2, "batch-1"), newCompositeKeyRow(2, 1, "batch-2")), 1);
+            compositeDao.batchSave(List.of(newCompositeKeyRow(3, 1, "batch-3")));
+
+            assertEquals(4, compositeDao.count(Filters.isNotNull("tenantId")));
+            assertEquals("batch-2", compositeDao.findOnlyOne(Filters.and(Filters.eq("tenantId", 2L), Filters.eq("rowId", 1L))).get().getName());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS composite_key_row");
+            }
+        }
+    }
+
+    @Table("generated_key_row")
+    public static class GeneratedKeyRow {
+        @Id
+        private Long tenantId;
+        @Id
+        private Long rowId;
+        private String name;
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public Long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final Long rowId) {
+            this.rowId = rowId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    // Composite ID class without @Id annotations: its properties are matched to the entity's @Id properties by name.
+    public static class GeneratedKeyRowId {
+        private Long tenantId;
+        private Long rowId;
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public Long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final Long rowId) {
+            this.rowId = rowId;
+        }
+    }
+
+    public interface GeneratedKeyRowDao extends CrudDao<GeneratedKeyRow, GeneratedKeyRowId, GeneratedKeyRowDao> {
+    }
+
+    // batchInsert re-checked the generated composite IDs with the generic default-ID test, which treats any bean whose
+    // class declares no @Id property as "all default", so the generated IDs were dropped and never set on the entities.
+    @Test
+    public void testBatchInsert_GeneratedCompositeIdOfIdClassWithoutIdAnnotation_IsSetOnEntities() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS generated_key_row (tenant_id BIGINT DEFAULT 7, row_id BIGINT AUTO_INCREMENT, name VARCHAR(64), "
+                    + "PRIMARY KEY (tenant_id, row_id))");
+            st.execute("DELETE FROM generated_key_row");
+        }
+
+        try {
+            final GeneratedKeyRowDao generatedKeyDao = JdbcUtil.createDao(GeneratedKeyRowDao.class, ds);
+            final GeneratedKeyRow first = new GeneratedKeyRow();
+            first.setName("first");
+            final GeneratedKeyRow second = new GeneratedKeyRow();
+            second.setName("second");
+
+            final List<GeneratedKeyRowId> ids = generatedKeyDao.batchInsert(List.of(first, second));
+
+            assertEquals(2, ids.size());
+            assertEquals(7L, first.getTenantId());
+            assertEquals(7L, second.getTenantId());
+            assertNotNull(first.getRowId());
+            assertNotNull(second.getRowId());
+            assertTrue(first.getRowId() < second.getRowId());
+            assertEquals(first.getRowId(), ids.get(0).getRowId());
+            assertEquals(second.getRowId(), ids.get(1).getRowId());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS generated_key_row");
+            }
+        }
+    }
+
     // list / count / findFirst with a Condition exercise the query-builder execution path.
     @Test
     public void testQueryByCondition() throws SQLException {
@@ -479,6 +646,25 @@ public class DaoImplIntegrationTest extends TestBase {
         final Optional<UserAccount> first = dao.findFirst(Filters.eq("firstName", "Q1"));
         assertTrue(first.isPresent());
         assertEquals(18, first.get().getAge());
+    }
+
+    // count(cond) counts the matching records: a LIMIT/OFFSET or ORDER BY on the condition used to be applied to the single
+    // COUNT(*) row, so an OFFSET skipped it (count 0) and ORDER BY failed with an aggregate error.
+    @Test
+    public void testCount_IgnoresLimitOffsetAndOrderBy() throws SQLException {
+        dao.insert(newUser("Q1", "Cond", 18));
+        dao.insert(newUser("Q2", "Cond", 25));
+        dao.insert(newUser("Q3", "Cond", 25));
+        dao.insert(newUser("Q4", "Other", 25));
+
+        final Condition byLastName = Filters.eq("lastName", "Cond");
+
+        assertEquals(3, dao.count(Criteria.builder().where(byLastName).limit(2).build()));
+        assertEquals(3, dao.count(Criteria.builder().where(byLastName).limit(2, 1).build()));
+        assertEquals(3, dao.count(Criteria.builder().where(byLastName).orderBy("id").limit(2, 1).build()));
+        assertEquals(3, dao.count(Criteria.builder().where(byLastName).orderBy("id").build()));
+        assertEquals(4, dao.count(Filters.limit(2, 1)));
+        assertEquals(1, dao.count(Criteria.builder().where(Filters.eq("age", 18)).limit(1, 5).build()));
     }
 
     // upsert inserts when absent and updates when the unique-prop match exists.
@@ -667,6 +853,60 @@ public class DaoImplIntegrationTest extends TestBase {
         // restored both thread-locals.
         assertEquals(priorSqlLogEnabled, JdbcUtil.isSqlLogEnabled(), "SQL log thread-local must be restored after beginTransaction failure");
         assertEquals(priorMinPerfLog, JdbcUtil.getSqlPerfLogThresholdMillis(), "Perf log thread-local must be restored after beginTransaction failure");
+    }
+
+    // Many-to-many @JoinedBy fixtures (UserRoleUserEntity/RoleLookupEntity/UserRoleLink) are the
+    // package-level classes declared in JoinInfoTest: the intermediate entity must be a top-level class
+    // in the entity's package.
+    public interface UserRoleUserDao
+            extends com.landawn.abacus.jdbc.dao.UncheckedDao<UserRoleUserEntity, UserRoleUserDao>,
+            com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper<UserRoleUserEntity, UserRoleUserDao> {
+    }
+
+    // Regression: the batch (more than one source entity) many-to-many load grouped the joined rows by the
+    // RAW JDBC value of the intermediate table's key column (rs.getObject), while the source entities are
+    // matched by their typed Java property value. With a column whose JDBC type differs from the property
+    // type (INT column -> Integer vs long property -> Long; Oracle NUMBER -> BigDecimal), no key ever
+    // matched and every source entity silently received an empty collection.
+    @Test
+    public void testLoadJoinEntities_ManyToManyBatch_KeyColumnTypeDiffersFromPropertyType() throws Exception {
+        final DataSource scratchDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:daoimpl_m2m", "sa", "");
+
+        try {
+            try (Connection conn = scratchDs.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("CREATE TABLE user_role_user_entity (user_id INT PRIMARY KEY)");
+                st.execute("CREATE TABLE role_lookup_entity (role_id INT PRIMARY KEY, name VARCHAR(32))");
+                st.execute("CREATE TABLE user_role_link (user_id INT, role_id INT)");
+                st.execute("INSERT INTO user_role_user_entity VALUES (1), (2), (3)");
+                st.execute("INSERT INTO role_lookup_entity VALUES (10, 'admin'), (20, 'dev')");
+                st.execute("INSERT INTO user_role_link VALUES (1, 10), (1, 20), (2, 20)");
+            }
+
+            final UserRoleUserDao userDao = JdbcUtil.createDao(UserRoleUserDao.class, scratchDs);
+            final List<UserRoleUserEntity> users = new ArrayList<>();
+
+            for (final long userId : new long[] { 1, 2, 3 }) {
+                final UserRoleUserEntity user = new UserRoleUserEntity();
+                user.setUserId(userId);
+                users.add(user);
+            }
+
+            userDao.loadJoinEntities(users, "roles", null);
+
+            assertEquals(2, users.get(0).getRoles().size());
+            assertEquals(1, users.get(1).getRoles().size());
+            assertEquals("dev", users.get(1).getRoles().get(0).getName());
+            assertTrue(users.get(2).getRoles().isEmpty());
+
+            // The single-entity path must agree with the batch path.
+            final UserRoleUserEntity single = new UserRoleUserEntity();
+            single.setUserId(1);
+            userDao.loadJoinEntities(single, "roles", null);
+            assertEquals(2, single.getRoles().size());
+        } finally {
+            ((com.zaxxer.hikari.HikariDataSource) scratchDs).close();
+        }
     }
 
     // CrudDao queryFor* single-column-by-id family: each typed accessor drives a distinct generated
@@ -1041,6 +1281,40 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(30, sorted.get(2).getAge());
     }
 
+    // SQL referenced by id (@SqlScript/SqlMapper) is stored in its parameterized form ("?" markers). When the
+    // method also has a @SqlFragment, the expanded SQL used to be re-parsed from that parameterized text, so the
+    // named parameters were lost and binding ':ln' failed at invocation (IllegalArgumentException).
+    public interface ScriptFragmentDao extends CrudDao<UserAccount, Long, ScriptFragmentDao> {
+        @com.landawn.abacus.jdbc.annotation.SqlScript(id = "sortedByLastName")
+        String SORTED_BY_LAST_NAME = "SELECT * FROM user_account WHERE last_name = :ln ORDER BY {sortCol}";
+
+        @Query(id = "sortedByLastName")
+        List<UserAccount> findSortedById(@com.landawn.abacus.jdbc.annotation.SqlFragment("sortCol") String sortCol,
+                @com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query("sortedByLastName")
+        List<UserAccount> findSortedByValueId(@com.landawn.abacus.jdbc.annotation.SqlFragment("sortCol") String sortCol,
+                @com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    @Test
+    public void testCustomSelect_SqlFragmentWithNamedSqlReferencedById() throws SQLException {
+        final ScriptFragmentDao scriptDao = JdbcUtil.createDao(ScriptFragmentDao.class, ds);
+        dao.insert(newUser("S1", "ScriptFrag", 30));
+        dao.insert(newUser("S2", "ScriptFrag", 10));
+        dao.insert(newUser("S3", "Other", 20));
+
+        final List<UserAccount> byId = scriptDao.findSortedById("age", "ScriptFrag");
+        assertEquals(2, byId.size());
+        assertEquals(10, byId.get(0).getAge());
+        assertEquals(30, byId.get(1).getAge());
+
+        final List<UserAccount> byValueId = scriptDao.findSortedByValueId("age DESC", "ScriptFrag");
+        assertEquals(2, byValueId.size());
+        assertEquals(30, byValueId.get(0).getAge());
+        assertEquals(10, byValueId.get(1).getAge());
+    }
+
     public interface NamedFragmentDao extends CrudDao<UserAccount, Long, NamedFragmentDao> {
         @Query(value = "SELECT * FROM user_account WHERE {condition} ORDER BY id", fragmentsContainNamedParameters = true)
         List<UserAccount> byAge(@com.landawn.abacus.jdbc.annotation.SqlFragment("condition") String condition,
@@ -1351,6 +1625,52 @@ public class DaoImplIntegrationTest extends TestBase {
 
         // a different arg is a cache miss -> fresh query against the (empty for this name) table.
         assertEquals(0, cachedDao.findCachedByLastName("CacheOther").size());
+    }
+
+    @com.landawn.abacus.jdbc.annotation.Cache(capacity = 100, evictDelayMillis = 60000)
+    public interface JsonCachedUserDao extends NonUpdateCrudDao<UserAccount, Long, JsonCachedUserDao> {
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, serialization = com.landawn.abacus.jdbc.annotation.CacheSerialization.JSON)
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        List<UserAccount> findJsonCachedByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, serialization = com.landawn.abacus.jdbc.annotation.CacheSerialization.JSON)
+        @Query("SELECT id, first_name, last_name, age, active FROM user_account WHERE last_name = :ln ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MappedByKey(value = "id", mapClass = java.util.LinkedHashMap.class)
+        Map<Long, UserAccount> findJsonCachedMapByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, serialization = com.landawn.abacus.jdbc.annotation.CacheSerialization.JSON)
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        Optional<UserAccount> findJsonCachedFirstByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    // Regression: JSON cache serialization deserialized the copy through the runtime class alone
+    // (e.g. ArrayList.class), erasing the declared generic type arguments, so a cache hit returned a
+    // List/Map/Optional of HashMaps instead of entities (ClassCastException in the caller).
+    @Test
+    public void testCachedQuery_JsonSerialization_KeepsElementType() throws SQLException {
+        final JsonCachedUserDao cachedDao = JdbcUtil.createDao(JsonCachedUserDao.class, ds);
+        final long id = dao.insert(newUser("J1", "JsonGrp", 10));
+
+        final List<UserAccount> first = cachedDao.findJsonCachedByLastName("JsonGrp");
+        final List<UserAccount> second = cachedDao.findJsonCachedByLastName("JsonGrp");
+
+        assertEquals(1, first.size());
+        assertEquals(1, second.size());
+        assertEquals(UserAccount.class, ((List<?>) first).get(0).getClass());
+        assertEquals(UserAccount.class, ((List<?>) second).get(0).getClass());
+        assertEquals("J1", second.get(0).getFirstName());
+
+        cachedDao.findJsonCachedMapByLastName("JsonGrp");
+        final Map<Long, UserAccount> cachedMap = cachedDao.findJsonCachedMapByLastName("JsonGrp");
+        assertEquals(java.util.LinkedHashMap.class, cachedMap.getClass());
+        assertEquals(Long.class, ((Map<?, ?>) cachedMap).keySet().iterator().next().getClass());
+        assertEquals(UserAccount.class, ((Map<?, ?>) cachedMap).values().iterator().next().getClass());
+        assertEquals("J1", cachedMap.get(id).getFirstName());
+
+        cachedDao.findJsonCachedFirstByLastName("JsonGrp");
+        final Optional<UserAccount> cachedFirst = cachedDao.findJsonCachedFirstByLastName("JsonGrp");
+        assertEquals(UserAccount.class, ((Optional<?>) cachedFirst).get().getClass());
+        assertEquals("J1", cachedFirst.get().getFirstName());
     }
 
     // =====================================================================================

@@ -1857,16 +1857,18 @@ public class JoinInfoTest extends TestBase {
     }
 
     // M2M DAO whose middle FK column (perm_ref) does NOT collide with any referenced-entity column
-    // (perm_id, label). This exercises the hasSameColumnName == false branch of the batch SELECT SQL
-    // builder (JoinInfo L422 in the eager build and L447 in the dynamic lambda) — the existing M2M
-    // fixtures all collide (UserRoleLink.roleId vs RoleLookupEntity.roleId), so only the true branch
-    // was covered before.
+    // (perm_id, label), unlike the other M2M fixtures (UserRoleLink.roleId vs RoleLookupEntity.roleId).
+    // The batch SELECT builder now qualifies the referenced columns in both cases.
     @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface UserPermDao extends Dao<UserPermEntity, UserPermDao> {
     }
 
     @DaoConfig(allowNullOrDefaultJoinKeys = true)
     interface AliasedUserRoleDao extends Dao<AliasedUserRoleEntity, AliasedUserRoleDao> {
+    }
+
+    @DaoConfig(allowNullOrDefaultJoinKeys = true)
+    interface TagUserDao extends Dao<TagUserEntity, TagUserDao> {
     }
 
     @Test
@@ -1888,6 +1890,43 @@ public class JoinInfoTest extends TestBase {
         final String sqlCols = plan._1.apply(List.of("label"), 2);
         assertNotNull(sqlCols);
         assertTrue(sqlCols.contains("JOIN"));
+    }
+
+    // Regression: the M2M batch SELECT qualified the referenced-entity columns only when the middle FK
+    // column name (tag_ref) also appeared among them. Any other column name shared by both tables (here
+    // the surrogate "id") stayed unqualified next to the INNER JOIN, so the database rejected the
+    // statement as ambiguous and batch-loading the join property failed.
+    @Test
+    public void testGetBatchSelectSqlPlan_ManyToMany_SharedNonKeyColumnIsQualified() throws Exception {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(TagUserDao.class, TagUserEntity.class, "tag_user_entity", "tags");
+        final BiFunction<Collection<String>, Integer, String> sqlBuilder = joinInfo.batchSelectSqlPlan(PSC)._1;
+
+        try (java.sql.Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:join_info_m2m_shared_id", "sa", "");
+                java.sql.Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE tag_lookup_entity (id BIGINT PRIMARY KEY, label VARCHAR(32))");
+            stmt.execute("CREATE TABLE tag_user_link (id BIGINT PRIMARY KEY, user_id BIGINT, tag_ref BIGINT)");
+            stmt.execute("INSERT INTO tag_lookup_entity VALUES (1, 'a'), (2, 'b')");
+            stmt.execute("INSERT INTO tag_user_link VALUES (100, 7, 1), (101, 8, 2)");
+
+            for (final List<String> selectPropNames : Arrays.asList(null, List.of("label"))) {
+                final String sql = sqlBuilder.apply(selectPropNames, 2);
+                final List<String> rows = new java.util.ArrayList<>();
+
+                try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setLong(1, 7L);
+                    ps.setLong(2, 8L);
+
+                    try (java.sql.ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            rows.add(rs.getLong("id") + ":" + rs.getString("label") + ":" + rs.getLong(3));
+                        }
+                    }
+                }
+
+                rows.sort(null);
+                assertEquals(List.of("1:a:7", "2:b:8"), rows, sql);
+            }
+        }
     }
 
     // Regression: @Table aliases qualify the generated SELECT/WHERE columns. The old token
@@ -2184,6 +2223,82 @@ final class UserPermLink {
 
     public void setPermRef(final long permRef) {
         this.permRef = permRef;
+    }
+}
+
+// M2M fixture whose middle table has its own surrogate "id" column, like the referenced table. The
+// middle FK column (tag_ref) does not collide with a referenced column, but "id" does.
+final class TagUserEntity {
+    private long userId;
+
+    @JoinedBy("userId = TagUserLink.userId, TagUserLink.tagRef = id")
+    private List<TagLookupEntity> tags;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(final long userId) {
+        this.userId = userId;
+    }
+
+    public List<TagLookupEntity> getTags() {
+        return tags;
+    }
+
+    public void setTags(final List<TagLookupEntity> tags) {
+        this.tags = tags;
+    }
+}
+
+final class TagLookupEntity {
+    private long id;
+    private String label;
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(final long id) {
+        this.id = id;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(final String label) {
+        this.label = label;
+    }
+}
+
+final class TagUserLink {
+    private long id;
+    private long userId;
+    private long tagRef;
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(final long id) {
+        this.id = id;
+    }
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(final long userId) {
+        this.userId = userId;
+    }
+
+    public long getTagRef() {
+        return tagRef;
+    }
+
+    public void setTagRef(final long tagRef) {
+        this.tagRef = tagRef;
     }
 }
 

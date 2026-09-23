@@ -163,6 +163,55 @@ public class UncheckedCrudDaoTest extends TestBase {
         assertEquals(1, dao.count(ids));
     }
 
+    interface CompositeIdUncheckedCrudDao extends UncheckedCrudDao<CompositeIdEntity, Object, CompositeIdUncheckedCrudDao> {
+    }
+
+    static final class CompositeIdEntity {
+        @Id
+        private Long orderId;
+        @Id
+        private Integer lineNum;
+
+        public Long getOrderId() {
+            return orderId;
+        }
+
+        public void setOrderId(final Long orderId) {
+            this.orderId = orderId;
+        }
+
+        public Integer getLineNum() {
+            return lineNum;
+        }
+
+        public void setLineNum(final Integer lineNum) {
+            this.lineNum = lineNum;
+        }
+    }
+
+    // A null composite (Map) id among non-null ids is ignored by the id condition; it must not be rejected as
+    // "all null" just because de-duplication/chunking leaves it alone in the last chunk.
+    @Test
+    public void testBatchGetAndCount_CompositeMapIdsWithTrailingNull_NotRejectedByChunking() {
+        final CompositeIdUncheckedCrudDao dao = Mockito.mock(CompositeIdUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(CompositeIdEntity.class).when(dao).targetEntityClass();
+        Mockito.doReturn(List.of()).when(dao).list(ArgumentMatchers.<Collection<String>> isNull(), ArgumentMatchers.any(Condition.class));
+        when(dao.count(ArgumentMatchers.any(Condition.class))).thenReturn(1);
+
+        final List<Object> ids = Arrays.asList(java.util.Map.of("orderId", 1L, "lineNum", 1), null);
+        assertEquals(List.of(), dao.batchGet(ids, null, 1));
+        verify(dao, Mockito.times(1)).list(ArgumentMatchers.<Collection<String>> isNull(), ArgumentMatchers.any(Condition.class));
+
+        final List<Object> manyIds = new java.util.ArrayList<>();
+        for (int i = 0; i < JdbcUtil.DEFAULT_BATCH_SIZE; i++) {
+            manyIds.add(java.util.Map.of("orderId", (long) i, "lineNum", i));
+        }
+        manyIds.add(null);
+
+        assertEquals(1, dao.count(manyIds));
+        verify(dao, Mockito.times(1)).count(ArgumentMatchers.any(Condition.class));
+    }
+
     @Test
     public void testBatchInsert_NamedInsertUsesDefaultBatchSize() {
         TestUncheckedCrudDao dao = Mockito.mock(TestUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
@@ -575,6 +624,21 @@ public class UncheckedCrudDaoTest extends TestBase {
         assertEquals("fresh", entity.getName());
     }
 
+    @Test
+    public void testRefresh_WithPropNames_CopiesNullDatabaseValue() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(3L);
+        entity.setName("stale");
+        IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(3L);
+
+        when(dao.getOrNull(ArgumentMatchers.eq(3L), ArgumentMatchers.anyCollection())).thenReturn(dbEntity);
+
+        assertTrue(dao.refresh(entity, List.of("name")));
+        assertNull(entity.getName());
+    }
+
     // batchRefresh(entities, batchSize) — non-empty delegates to batchRefresh with props
     @Test
     public void testBatchRefresh_WithBatchSize_NonEmpty_Delegates() {
@@ -614,6 +678,22 @@ public class UncheckedCrudDaoTest extends TestBase {
 
         assertEquals(1, dao.batchRefresh(List.of(entity), List.of("name"), 5));
         assertEquals("fresh", entity.getName());
+    }
+
+    // A column that is now SQL NULL must overwrite the stale in-memory value (the default Beans.mergeInto keeps it).
+    @Test
+    public void testBatchRefresh_FullSig_CopiesNullDatabaseValue() {
+        IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        IdAnnotatedEntity entity = new IdAnnotatedEntity();
+        entity.setId(1L);
+        entity.setName("stale");
+        IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(1L);
+
+        Mockito.doReturn(List.of(dbEntity)).when(dao).batchGet(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyCollection(), ArgumentMatchers.eq(5));
+
+        assertEquals(1, dao.batchRefresh(List.of(entity), List.of("name"), 5));
+        assertNull(entity.getName());
     }
 
     // batchUpsert(entities, uniquePropNamesForQuery, batchSize) — single unique prop, insert only

@@ -89,16 +89,20 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
     /**
      * Updates records matching the condition using all updatable properties from the entity.
      * This updates every property of the entity that is considered updatable
-     * (i.e., excluding {@code @ReadOnly}, {@code @NonUpdatable}, {@code @Id},
+     * (i.e., excluding {@code @ReadOnly}/{@code @ReadOnlyId}, {@code @NonUpdatable},
      * {@link JoinedBy @JoinedBy}, etc.),
      * regardless of whether the value is {@code null}.
      *
+     * <p><b>Note:</b> a plain (writable) {@code @Id} property is <i>not</i> excluded: its current value in
+     * {@code entity} is written to every matched row, so an unset ID can overwrite the key with {@code null}
+     * or a default value. Use {@link #update(Object, Collection, Condition)} to restrict the updated properties.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * User updates = new User();
-     * updates.setStatus("ACTIVE");
-     * updates.setLastLogin(new java.util.Date());
-     * int count = dao.update(updates, Filters.eq("id", userId));
+     * User user = dao.findOnlyOne(Filters.eq("email", email)).orElseThrow();
+     * user.setStatus("ACTIVE");
+     * user.setLastLogin(new java.util.Date());
+     * int count = dao.update(user, Filters.eq("email", email));
      * }</pre>
      *
      * @param entity the entity containing update values

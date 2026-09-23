@@ -157,8 +157,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
 
     /**
      * Performs an upsert operation: inserts {@code entity} if no record matches the specified
-     * condition; otherwise copies non-id properties from {@code entity} into the existing record
-     * (loaded via {@link #findOnlyOne(Condition)}) and updates it.
+     * condition; otherwise copies the non-{@code null} non-id properties from {@code entity} into the existing record
+     * (loaded via {@link #findOnlyOne(Condition)}) and updates it. A {@code null} property of {@code entity}
+     * keeps the existing value, so an upsert cannot clear a column to {@code NULL}.
      * This allows for upsert logic based on any criteria, not just ID fields.
      *
      * <p><b>Usage Examples:</b></p>
@@ -180,7 +181,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @param entity the entity to insert or update (must not be {@code null})
      * @param cond the condition used to look up an existing record (must not be {@code null})
      * @return the saved entity: the inserted {@code entity} when no existing record was found,
-     *         or the loaded database entity (with non-id properties copied from {@code entity}) when an existing record was updated
+     *         or the loaded database entity (with non-{@code null} non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
      *                                  and {@code entity} has a property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
@@ -322,7 +323,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *
      * <p>Internally, the entities are partitioned into those that already exist (matched by the
      * supplied unique properties) and those that do not. New entities are inserted via
-     * {@link #batchInsert(Collection, int)}; existing entities are updated by copying non-id
+     * {@link #batchInsert(Collection, int)}; existing entities are updated by copying the non-{@code null}, non-id
      * (and non-unique-key) properties from the input entity into the loaded database entity and
      * calling {@link #batchUpdate(Collection, int)}. When both inserts and updates are needed
      * (or either set is large), the operation is wrapped in a transaction.</p>

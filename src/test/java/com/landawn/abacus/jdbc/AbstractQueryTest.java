@@ -1141,6 +1141,73 @@ public class AbstractQueryTest extends TestBase {
         assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
     }
 
+    // Regression: a driver without setLargeMaxRows support (JDBC 4.2 default throws UnsupportedOperationException)
+    // used to leave the captured default behind, so closing the query replayed setLargeMaxRows and hit the UOE again.
+    @Test
+    public void testSetLargeMaxRows_UnsupportedByDriver_DoesNotReplayOnClose() throws SQLException {
+        final UnsupportedOperationException unsupported = new UnsupportedOperationException("setLargeMaxRows not implemented");
+        when(preparedStatement.getLargeMaxRows()).thenReturn(75L);
+        doThrow(unsupported).when(preparedStatement).setLargeMaxRows(anyLong());
+
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class, () -> query.setLargeMaxRows(500L));
+
+        assertSame(unsupported, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+        verify(preparedStatement, times(1)).setLargeMaxRows(anyLong()); // only the user's failed call; no replay on close
+        verify(preparedStatement).close();
+        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
+    }
+
+    // Regression: the statement-config setters used to leave the query open when the driver failed. In the fluent
+    // idiom `JdbcUtil.prepareQuery(ds, sql).setFetchSize(n)...` the caller never gets the query back, so the statement
+    // (and, for DataSource-based queries, the pooled connection released by the close handler) leaked.
+    @Test
+    public void testStatementConfigSetters_DriverFailure_ClosesQueryAndRethrows() throws SQLException {
+        final List<Throwables.Consumer<TestQuery, Exception>> setterCalls = Arrays.asList( //
+                q -> q.setFetchDirection(FetchDirection.FORWARD), //
+                TestQuery::setFetchDirectionToForward, //
+                q -> q.setFetchSize(100), //
+                q -> q.setMaxFieldSize(1024), //
+                q -> q.setMaxRows(10), //
+                q -> q.setLargeMaxRows(10L), //
+                q -> q.setQueryTimeout(30));
+
+        for (int i = 0; i < setterCalls.size(); i++) {
+            final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+            final SQLException driverFailure = new SQLException("driver rejected setter " + i);
+            doThrow(driverFailure).when(stmt).setFetchDirection(anyInt());
+            doThrow(driverFailure).when(stmt).setFetchSize(anyInt());
+            doThrow(driverFailure).when(stmt).setMaxFieldSize(anyInt());
+            doThrow(driverFailure).when(stmt).setMaxRows(anyInt());
+            doThrow(driverFailure).when(stmt).setLargeMaxRows(anyLong());
+            doThrow(driverFailure).when(stmt).setQueryTimeout(anyInt());
+
+            final TestQuery q = new TestQuery(stmt);
+            final AtomicInteger closeHandlerCalls = new AtomicInteger();
+            q.onClose(closeHandlerCalls::incrementAndGet);
+
+            final Throwables.Consumer<TestQuery, Exception> setterCall = setterCalls.get(i);
+            final SQLException thrown = assertThrows(SQLException.class, () -> setterCall.accept(q));
+
+            assertSame(driverFailure, thrown, "setter " + i);
+            verify(stmt).close();
+            assertEquals(1, closeHandlerCalls.get(), "close handler (e.g. connection release) must run for setter " + i);
+            assertThrows(IllegalStateException.class, q::query, "query must be closed after failing setter " + i);
+        }
+    }
+
+    // A failure while capturing the original value (before anything is changed) closes the query too.
+    @Test
+    public void testSetFetchSize_CaptureFailure_ClosesQuery() throws SQLException {
+        final SQLException captureFailure = new SQLException("getFetchSize failed");
+        when(preparedStatement.getFetchSize()).thenThrow(captureFailure);
+
+        assertSame(captureFailure, assertThrows(SQLException.class, () -> query.setFetchSize(100)));
+
+        verify(preparedStatement, never()).setFetchSize(anyInt());
+        verify(preparedStatement).close();
+    }
+
     // setMaxRows second call should reuse the captured default (covers the
     // `if (defaultMaxRows < 0)` else branch).
     @Test

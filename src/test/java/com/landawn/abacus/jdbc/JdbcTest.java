@@ -1916,6 +1916,18 @@ public class JdbcTest extends TestBase {
         assertEquals(7L, output[0]);
     }
 
+    // A failed first-row initialization must not leave a partially resolved type mapping behind that later
+    // calls silently use: the 'id' column resolved before the null label failed, so the retry used to
+    // "succeed" with that partial mapping instead of failing again.
+    @Test
+    public void testRowExtractorForTypeFailedInitializationIsNotCommitted() throws SQLException {
+        final Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class, Arrays.asList("id", null));
+        final Object[] output = new Object[2];
+
+        assertThrows(RuntimeException.class, () -> extractor.accept(mockResultSet, output));
+        assertThrows(RuntimeException.class, () -> extractor.accept(mockResultSet, output));
+    }
+
     @Test
     public void testRowExtractorBuilderSnapshotsConfigurationWhenBuilt() throws SQLException {
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);

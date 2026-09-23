@@ -733,6 +733,13 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         // happen to fall across chunk boundaries: duplicates inside one chunk collapse via the IN
         // list, but duplicates straddling chunks would return the same entity twice.
         final List<ID> idList = ids instanceof Set ? new ArrayList<>(ids) : N.distinct(ids);
+
+        if (firstId != null && !isEntityId && idPropNameList.size() > 1) {
+            // A null composite (Map/entity) id matches nothing and is skipped by the condition, but a chunk holding
+            // only that null would be rejected as "all null", making the outcome depend on chunk boundaries.
+            idList.removeIf(id -> id == null);
+        }
+
         final List<T> resultList = new ArrayList<>(idList.size());
 
         for (int i = 0, size = idList.size(); i < size; i += batchSize) {
@@ -831,6 +838,12 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId), "Input 'ids' can not be EntityIds/Maps or entities for single id");
 
         final List<ID> idList = ids instanceof Set ? new ArrayList<>(ids) : N.distinct(ids);
+
+        if (firstId != null && !isEntityId && idPropNameList.size() > 1) {
+            // Same as batchGet: drop the null composite id so a trailing chunk holding only it isn't rejected as "all null".
+            idList.removeIf(id -> id == null);
+        }
+
         final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
         long result = 0;
 
@@ -925,7 +938,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         if (dbEntity == null) {
             return false;
         } else {
-            Beans.mergeInto(dbEntity, entity, propNamesToRefresh);
+            // selectFirst: copy the database value even when it is null (the default merge keeps the stale target value).
+            Beans.mergeInto(dbEntity, entity, propNamesToRefresh, Fn.selectFirst());
 
             return true;
         }
@@ -1109,7 +1123,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
 
                 if (N.notEmpty(matchingEntities)) {
                     for (final T entity : matchingEntities) {
-                        Beans.mergeInto(dbEntity, entity, propNamesToRefresh);
+                        Beans.mergeInto(dbEntity, entity, propNamesToRefresh, Fn.selectFirst());
                     }
                 }
 

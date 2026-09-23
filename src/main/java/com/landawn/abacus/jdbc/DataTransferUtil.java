@@ -167,6 +167,11 @@ import com.landawn.abacus.util.Throwables;
  * are padded with {@code null}; a data row with more fields than the header is rejected with an
  * {@link IllegalArgumentException} instead of being silently truncated.</p>
  *
+ * <p><b>CSV records:</b> With the default {@link CsvUtil} parsers, CSV import reads logical records: a line
+ * break inside a quoted field (as {@code exportCsv} writes a value containing CR or LF) is kept as part of
+ * that field, so exported CSV can be imported again. A custom parser installed through {@link CsvUtil}
+ * receives one physical line at a time.</p>
+ *
  * <p><b>Caller-supplied callbacks:</b> An unchecked exception thrown by a caller-supplied row
  * {@link Predicate} filter or {@code parameterSetter} propagates out of the enclosing
  * {@code importData}, {@code importCsv} or {@code copy} call unchanged &mdash; it is neither wrapped
@@ -1921,25 +1926,29 @@ public final class DataTransferUtil {
         final BiConsumer<String, String[]> lineParser = CsvUtil.getCurrentLineParser();
         final boolean isBufferedReader = IOUtil.isBufferedReader(reader);
         final BufferedReader br = isBufferedReader ? (BufferedReader) reader : Objectory.createBufferedReader(reader);
+        final CsvRecordReader records = new CsvRecordReader(br);
+        // Like CsvUtil's own loaders, the default parsers read logical CSV records, so a quoted field containing a
+        // line break (as exportCsv writes such a value) stays one field; other parsers get one physical line at a time.
+        final boolean logicalCsvRows = lineParser == CsvUtil.CSV_LINE_PARSER;
         long result = 0;
         boolean hasExecutedBatch = false;
 
         logger.debug("Importing CSV data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
 
         try {
-            String line = br.readLine();
+            String line = records.readRecord(headerParser == CsvUtil.CSV_HEADER_PARSER, true);
 
             if (line == null) {
                 logger.info("Imported CSV data rows(imported=0, columns=0)");
                 return 0;
             }
 
-            final String[] titles = headerParser.apply(line);
+            final String[] titles = headerParser.apply(stripByteOrderMark(line));
 
             final int columnCount = titles.length;
             final String[] output = new String[columnCount];
 
-            while ((line = br.readLine()) != null) {
+            while ((line = records.readRecord(logicalCsvRows, false)) != null) {
                 parseCsvRow(lineParser, line, output);
 
                 if (filter != null && !filter.test(output)) {
@@ -1994,6 +2003,134 @@ public final class DataTransferUtil {
             lineParser.accept(line, output);
         } catch (final IndexOutOfBoundsException e) {
             throw new IllegalArgumentException("CSV data row has more fields than the header's " + output.length + " column(s): " + line, e);
+        }
+    }
+
+    /**
+     * Removes a leading UTF-8 byte-order mark from the CSV header record, as {@link CsvUtil}'s loaders do, so it
+     * cannot hide an opening quote from the header parser.
+     *
+     * @param headerLine the header record
+     * @return {@code headerLine} without a leading byte-order mark
+     */
+    private static String stripByteOrderMark(final String headerLine) {
+        return Strings.isNotEmpty(headerLine) && headerLine.charAt(0) == '\uFEFF' ? headerLine.substring(1) : headerLine;
+    }
+
+    /**
+     * Reads the records of CSV input for {@code importCsv}, framing them the way {@link CsvUtil}'s own loaders do.
+     * In logical mode (used with the default {@link CsvUtil#CSV_HEADER_PARSER}/{@link CsvUtil#CSV_LINE_PARSER}) a line
+     * break inside a quoted field belongs to the field and is kept exactly (CR, LF or CRLF), so a value written by
+     * {@code exportCsv} with an embedded line break is read back as one field. Otherwise each physical line is one
+     * record. The quoted-region rules mirror the default parser's. The underlying reader is not closed.
+     */
+    private static final class CsvRecordReader {
+        /**
+         * The reader supplying the CSV characters; not closed by this class.
+         */
+        private final BufferedReader reader;
+        /**
+         * Whether the previous record ended with CR, so a directly following LF belongs to that line break.
+         */
+        private boolean skipLF;
+
+        /**
+         * Creates a record reader over the given reader.
+         *
+         * @param reader the reader supplying the CSV characters
+         */
+        CsvRecordReader(final BufferedReader reader) {
+            this.reader = reader;
+        }
+
+        /**
+         * Reads the next character, skipping the LF of a CRLF line break that ended the previous record.
+         *
+         * @return the next character, or {@code -1} at end of input
+         * @throws IOException if reading from the underlying reader fails
+         */
+        private int read() throws IOException {
+            int value = reader.read();
+
+            if (skipLF) {
+                skipLF = false;
+
+                if (value == '\n') {
+                    value = reader.read();
+                }
+            }
+
+            return value;
+        }
+
+        /**
+         * Reads the next record.
+         *
+         * @param logicalCsv {@code true} to keep a line break inside a quoted field as part of the record
+         * @param header {@code true} if this is the header record, whose leading byte-order mark does not start a field
+         * @return the next record without its terminating line break, or {@code null} at end of input
+         * @throws IOException if reading from the underlying reader fails
+         * @throws ParsingException if {@code logicalCsv} is {@code true} and the input ends inside a quoted field
+         */
+        String readRecord(final boolean logicalCsv, final boolean header) throws IOException, ParsingException {
+            final StringBuilder record = new StringBuilder();
+            boolean inQuotes = false;
+            boolean afterQuote = false;
+            boolean fieldHasContent = false;
+            boolean leadingWhitespace = true;
+            int value;
+
+            while ((value = read()) != -1) {
+                final char ch = (char) value;
+
+                if ((!logicalCsv || !inQuotes) && (ch == '\r' || ch == '\n')) {
+                    skipLF = ch == '\r';
+
+                    return record.toString();
+                }
+
+                record.append(ch);
+
+                if (!logicalCsv || (header && record.length() == 1 && ch == '\uFEFF')) {
+                    continue;
+                }
+
+                // A doubled quote is recognized on the character after it, so no mark/reset is needed.
+                if (ch == '"') {
+                    leadingWhitespace = false;
+
+                    if (afterQuote) {
+                        inQuotes = true;
+                        fieldHasContent = true;
+                        afterQuote = false;
+                    } else if (inQuotes) {
+                        inQuotes = false;
+                        afterQuote = true;
+                    } else if (!fieldHasContent) {
+                        inQuotes = true;
+                    }
+                } else if (!inQuotes && ch == ',') {
+                    fieldHasContent = false;
+                    leadingWhitespace = true;
+                } else if (inQuotes || !leadingWhitespace || !Character.isWhitespace(ch)) {
+                    fieldHasContent = true;
+                    leadingWhitespace = false;
+                }
+
+                if (ch != '"') {
+                    afterQuote = false;
+                }
+            }
+
+            if (inQuotes) {
+                // An unclosed quote absorbs the rest of the input; echo only a bounded prefix of it.
+                final int maxEchoedLength = 256;
+                final String echoed = record.length() > maxEchoedLength ? record.substring(0, maxEchoedLength) + "..." : record.toString();
+
+                throw new ParsingException("Un-terminated quoted field at end of CSV input: " + echoed);
+            }
+
+            return record.length() == 0 ? null : record.toString();
         }
     }
 
@@ -2143,7 +2280,8 @@ public final class DataTransferUtil {
      * This method executes the statement and writes all results to the specified file.
      *
      * <p>This method is useful when you need to set parameters on the statement before execution
-     * or when you want to reuse a prepared statement for multiple exports.</p>
+     * or when you want to reuse a prepared statement for multiple exports. The statement's parameters are cleared
+     * after it executes, so bind them again before reusing it.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2461,7 +2599,7 @@ public final class DataTransferUtil {
      * <ul>
      *   <li>Column headers in the first line</li>
      *   <li>Proper escaping of special characters</li>
-     *   <li>Null value handling</li>
+     *   <li>Null value handling: a SQL {@code NULL} is written as the unquoted text {@code null}, which CSV import reads back as the string {@code "null"}</li>
      *   <li>Type-aware conversion based on each value's runtime type (including heterogeneous result columns)</li>
      * </ul>
      *
@@ -4141,7 +4279,7 @@ public final class DataTransferUtil {
     /**
      * Creates a fluent builder for importing the rows of a CSV {@link File} into a database table.
      *
-     * <p>The first line is treated as a header and skipped; every subsequent line is tokenized (using the current
+     * <p>The first record is treated as a header and skipped; every subsequent record is tokenized (using the current
      * {@link CsvUtil} parser) and exposed to the builder as a {@code String[]} of column values. Bind each row with
      * {@link RowImportBuilder#parameterSetter(Throwables.BiConsumer)}, optionally skipping rows with
      * {@link RowImportBuilder#filter(Predicate)}. The file is opened when a terminal
@@ -4170,7 +4308,7 @@ public final class DataTransferUtil {
     /**
      * Creates a fluent builder for importing the rows of CSV data read from a {@link Reader} into a database table.
      *
-     * <p>The first line is treated as a header and skipped; each subsequent line is tokenized into a {@code String[]}.
+     * <p>The first record is treated as a header and skipped; each subsequent record is tokenized into a {@code String[]}.
      * See {@link #importCsvFrom(File)} for configuration. The caller-supplied {@code Reader} is NOT closed by this builder.</p>
      *
      * @param reader the reader supplying CSV data (must not be {@code null}); not closed by this builder

@@ -839,6 +839,18 @@ public class CallableQueryTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> callableQuery.setParameters(bean, java.util.List.of("nonExistent")));
     }
 
+    // A non-bean entity must close the query before the IAE, like every other failure of this method
+    // (and like NamedQuery.setParameters(Object, Collection)); it previously leaked the open statement.
+    @Test
+    public void testSetParameters_EntityNotBean_ClosesQuery() throws SQLException {
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> callableQuery.setParameters(Integer.valueOf(42), java.util.List.of("value")));
+
+        verify(callableStatement).close();
+        assertThrows(IllegalStateException.class, () -> callableQuery.executeAndGetOutParameters());
+        assertTrue(ex.getMessage().contains("Unsupported parameter type"));
+    }
+
     private static class SimpleTestBean {
         private String name;
 

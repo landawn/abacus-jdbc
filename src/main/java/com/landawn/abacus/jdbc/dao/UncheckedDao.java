@@ -45,7 +45,8 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p>Through its {@code Unchecked*Ops} super-interfaces it redeclares the save operations and the
  * condition-based query, update, and delete operations so callers do not need to handle checked
- * exceptions for those methods; this interface itself redeclares the {@code upsert} operations.
+ * exceptions for those methods; this interface itself redeclares the {@code upsert} operations and the
+ * {@link Dao}-only {@code prepareQuery}/{@code prepareNamedQuery}/{@code prepareCallableQuery} overloads.
  * Inherited methods that are not redeclared keep the checked-exception contract from {@link Dao}.</p>
  *
  * <p><b>Usage Examples:</b></p>
@@ -308,6 +309,10 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
     /**
      * Executes an upsert operation: inserts the entity if no record matches the condition,
      * otherwise updates the existing record.
+     *
+     * <p>When a record is found, the non-{@code null} non-id properties of {@code entity} are copied into
+     * the loaded record before it is updated; a {@code null} property keeps the existing value, so an
+     * upsert cannot clear a column to {@code NULL}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

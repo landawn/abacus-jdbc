@@ -35,6 +35,13 @@ public enum CacheSerialization {
      */
     KRYO,
 
-    /** Uses JSON to deep-copy cached values that require copying. */
+    /**
+     * Uses JSON to deep-copy cached values that require copying.
+     *
+     * <p>The copy is rebuilt as the value's runtime class, using the element, key/value or wrapped types
+     * declared by the DAO method's generic return type (for example {@code List<User>},
+     * {@code Map<Long, User>} or {@code u.Optional<User>}). If the declared return type cannot be resolved
+     * (for example, it uses a type variable), only the runtime class is used and generic type arguments are lost.</p>
+     */
     JSON
 }

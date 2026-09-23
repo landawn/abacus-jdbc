@@ -123,7 +123,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
-     *                                  or no join property is found for one of the specified types in the entity class,
+     *                                  or a matching entity is found and no join property exists for one of the specified types in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
@@ -251,7 +251,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
-     *                                  or no join property is found for one of the specified types in the entity class,
+     *                                  or a matching entity is found and no join property exists for one of the specified types in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
@@ -389,7 +389,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param cond the condition to match
      * @return a list of entities matching the condition with the specified join entities loaded
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
-     *                                  or no join property is found for one of the specified types in the entity class,
+     *                                  or a matching entity is found and no join property exists for one of the specified types in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading

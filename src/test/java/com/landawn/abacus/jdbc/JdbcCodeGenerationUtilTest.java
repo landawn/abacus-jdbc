@@ -431,6 +431,51 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertEquals("SELECT id, \"we\"\"ird\" FROM demo", sql);
     }
 
+    // A metadata label is the column's stored spelling. On a database that folds unquoted identifiers to lower
+    // case (PostgreSQL), a mixed- or upper-case label emitted unquoted resolves to a different column, so it
+    // must be quoted even though it contains only letters/digits/underscores.
+    @Test
+    public void testGenerateSqlQuotesLabelsWhoseCaseWouldBeFolded_LowerCaseDatabase() throws SQLException {
+        when(databaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(databaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
+        when(resultSetMetaData.getColumnLabel(2)).thenReturn("createdAt");
+        when(resultSetMetaData.getColumnLabel(3)).thenReturn("STATUS");
+
+        assertEquals("SELECT id, \"createdAt\", \"STATUS\" FROM order_history", JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history"));
+        assertEquals("INSERT INTO order_history(id, \"createdAt\", \"STATUS\") VALUES (:id, :createdAt, :status)",
+                JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
+        assertEquals("UPDATE order_history SET \"createdAt\" = ?, \"STATUS\" = ? WHERE id = ?",
+                JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "id"));
+    }
+
+    // Same on a database that folds unquoted identifiers to upper case (H2): the generated SQL must round-trip
+    // against the real table, including the key column of the WHERE clause.
+    @Test
+    public void testGenerateSqlQuotesLabelsWhoseCaseWouldBeFolded_H2() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:codegen_case_folding", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE case_guard (id INT PRIMARY KEY, \"userId\" INT, \"note\" VARCHAR(20))");
+
+            final String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "case_guard");
+            final String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "case_guard");
+            final String namedUpdateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "case_guard", null, List.of("userId"), null);
+
+            assertEquals("SELECT ID, \"userId\", \"note\" FROM case_guard", selectSql);
+            assertEquals("INSERT INTO case_guard(ID, \"userId\", \"note\") VALUES (?, ?, ?)", insertSql);
+            assertEquals("UPDATE case_guard SET ID = :id, \"note\" = :note WHERE \"userId\" = :userId", namedUpdateSql);
+
+            assertEquals(1, JdbcUtil.executeUpdate(conn, insertSql, 1, 7, "old"));
+            assertEquals(1, JdbcUtil.executeUpdate(conn, namedUpdateSql, java.util.Map.of("id", 1, "note", "new", "userId", 7)));
+
+            try (ResultSet rows = stmt.executeQuery(selectSql)) {
+                assertTrue(rows.next());
+                assertEquals(7, rows.getInt(2));
+                assertEquals("new", rows.getString(3));
+                assertFalse(rows.next());
+            }
+        }
+    }
+
     @Test
     public void testGenerateSelectSql_DataSourceWrapsSQLException() throws SQLException {
         DataSource dataSource = Mockito.mock(DataSource.class);
@@ -527,6 +572,47 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config));
+    }
+
+    // var/yield/record/sealed/permits are valid identifiers but not type identifiers: "public class record {"
+    // does not compile, so the class name must be rejected like any other invalid name.
+    @Test
+    public void testGenerateEntityClass_RejectsRestrictedIdentifierAsClassName() throws SQLException {
+        setupFullGenerateEntityClassMock();
+
+        for (final String className : List.of("record", "var", "yield", "sealed", "permits")) {
+            final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().className(className).build();
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config),
+                    className);
+        }
+    }
+
+    // A top-level class can't share its simple name with a single-type import (JLS 7.5.1): a table named "data"
+    // derives class "Data", which clashes with the always-emitted "import lombok.Data;".
+    @Test
+    public void testGenerateEntityClass_RejectsClassNameCollidingWithImport() throws SQLException {
+        setupFullGenerateEntityClassMock();
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        when(databaseMetaData.getPrimaryKeys(null, null, "data")).thenReturn(pkRs);
+
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "data", "SELECT * FROM order_history WHERE 1 > 2", null));
+        assertTrue(ex.getMessage().contains("lombok.Data"), ex.getMessage());
+
+        // Also the always-used column annotation, and the nested property-name interface (JLS 8.1).
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2",
+                        JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("Column").build()));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2",
+                        JdbcCodeGenerationUtil.EntityCodeConfig.builder().className(JdbcCodeGenerationUtil.X).generatePropNameTable(true).build()));
+
+        // An import pruned as unused doesn't collide: no @Id field is generated here, so class "Id" is fine.
+        final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2",
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("Id").build());
+        assertTrue(result.contains("public class Id {"), result);
     }
 
     @Test
@@ -2133,6 +2219,24 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(thrown.getMessage().contains("matches both"), () -> "unexpected message: " + thrown.getMessage());
         assertTrue(thrown.getMessage().contains("user_id"), () -> "unexpected message: " + thrown.getMessage());
         assertTrue(thrown.getMessage().contains("userId"), () -> "unexpected message: " + thrown.getMessage());
+    }
+
+    // A resolved key column is removed from the SET clause by its exact label, as in the single-key overload. Removing it
+    // after camelCase normalization silently dropped a distinct column ("userId" for key "user_id") from the SET clause.
+    @Test
+    public void testGenerateUpdateSql_KeyColumnsRemovedFromSetByExactLabel() throws SQLException {
+        when(resultSetMetaData.getColumnLabel(1)).thenReturn("user_id");
+        when(resultSetMetaData.getColumnLabel(2)).thenReturn("userId");
+
+        assertEquals("UPDATE order_history SET userId = ?, status = ? WHERE user_id = ?",
+                JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("user_id"), null));
+        assertEquals(JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "user_id") + " AND (status = 'OPEN')",
+                JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("user_id"), "status = 'OPEN'"));
+
+        // Named form: the kept "userId" column and the key "user_id" both map to :userId, rejected like the single-key overload.
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", "user_id"));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", null, List.of("user_id"), null));
     }
 
     // Exercise continue on line 481 when excludedFields match by column name (snake_case)

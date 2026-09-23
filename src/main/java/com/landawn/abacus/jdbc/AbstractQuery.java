@@ -228,7 +228,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     boolean isFetchDirectionSet = false;
 
     /**
-     * Whether the current parameter set has been added to the statement's batch via {@link #addBatch()}.
+     * Whether {@link #addBatch()} has completed successfully at least once on this query. It is set to {@code true}
+     * by {@code addBatch()} and never reset (executing or clearing the batch does not clear it).
      */
     boolean isBatch = false;
 
@@ -2312,11 +2313,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Sets an Object parameter value.
      * If the value is {@code null}, it is set as SQL {@code NULL}; otherwise the value is set
      * using the Abacus {@link Type} resolved from its runtime class, which maps it to an
-     * appropriate SQL type.
+     * appropriate SQL type. Note that a bean/entity value is not expanded into columns: it is bound as
+     * its JSON string via {@code setString}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * query.setObject(1, user)
+     * query.setObject(1, "John")
      *      .setObject(2, LocalDate.now())
      *      .setObject(3, BigDecimal.valueOf(123.45));
      * }</pre>
@@ -4442,7 +4444,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     int defaultMaxRows = -1;
     /**
      * The statement's original large maximum row count, captured when {@link #setLargeMaxRows(long)} is the first
-     * row-limit setter used and restored by {@link #closeStatement()}. {@code -1} means "not captured here".
+     * row-limit setter used (and the driver accepted the call) and restored by {@link #closeStatement()}.
+     * {@code -1} means "not captured here".
      */
     long defaultLargeMaxRows = -1L;
 
@@ -4464,18 +4467,23 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code direction} is {@code null}
      * @throws SQLException if reading the statement's current fetch direction (captured on the first call so it can be restored on close)
-     *         or setting the new direction fails
+     *         or setting the new direction fails; this query is closed before the exception is rethrown
      * @see FetchDirection
      * @see java.sql.Statement#setFetchDirection(int)
      */
     public This setFetchDirection(final FetchDirection direction) throws IllegalArgumentException, SQLException {
         checkArgNotNull(direction, cs.direction);
 
-        if (defaultFetchDirection < 0) {
-            defaultFetchDirection = stmt.getFetchDirection();
-        }
+        try {
+            if (defaultFetchDirection < 0) {
+                defaultFetchDirection = stmt.getFetchDirection();
+            }
 
-        stmt.setFetchDirection(direction.intValue());
+            stmt.setFetchDirection(direction.intValue());
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
+        }
 
         isFetchDirectionSet = true;
 
@@ -4495,7 +4503,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if reading the statement's current fetch direction (captured on the first call so it can be restored on close)
-     *         or setting the new direction fails
+     *         or setting the new direction fails; this query is closed before the exception is rethrown
      * @see #setFetchDirection(FetchDirection)
      */
     public This setFetchDirectionToForward() throws SQLException {
@@ -4519,16 +4527,22 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *        row-by-row streaming.
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if reading the statement's current fetch size (captured on the first call so it can be restored on close) or
-     *         setting the new value fails, including when the driver rejects a negative {@code fetchSize}
+     *         setting the new value fails, including when the driver rejects a negative {@code fetchSize}; this query is closed
+     *         before the exception is rethrown
      * @see java.sql.Statement#setFetchSize(int)
      */
     public This setFetchSize(final int fetchSize) throws SQLException {
-        if (!isFetchSizeCaptured) {
-            defaultFetchSize = stmt.getFetchSize();
-            isFetchSizeCaptured = true;
-        }
+        try {
+            if (!isFetchSizeCaptured) {
+                defaultFetchSize = stmt.getFetchSize();
+                isFetchSizeCaptured = true;
+            }
 
-        stmt.setFetchSize(fetchSize);
+            stmt.setFetchSize(fetchSize);
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
+        }
 
         return (This) this;
     }
@@ -4547,15 +4561,21 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param max the new column size limit in bytes; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if reading the statement's current max field size (captured on the first call so it can be restored on close) or
-     *         setting the new value fails, including when the driver rejects a negative {@code max}
+     *         setting the new value fails, including when the driver rejects a negative {@code max}; this query is closed before the
+     *         exception is rethrown
      * @see java.sql.Statement#setMaxFieldSize(int)
      */
     public This setMaxFieldSize(final int max) throws SQLException {
-        if (defaultMaxFieldSize < 0) {
-            defaultMaxFieldSize = stmt.getMaxFieldSize();
-        }
+        try {
+            if (defaultMaxFieldSize < 0) {
+                defaultMaxFieldSize = stmt.getMaxFieldSize();
+            }
 
-        stmt.setMaxFieldSize(max);
+            stmt.setMaxFieldSize(max);
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
+        }
 
         return (This) this;
     }
@@ -4575,15 +4595,21 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param max the new max rows limit; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if reading the statement's current max rows (captured on the first row-limit call so it can be restored on close) or
-     *         setting the new value fails, including when the driver rejects a negative {@code max}
+     *         setting the new value fails, including when the driver rejects a negative {@code max}; this query is closed before the
+     *         exception is rethrown
      * @see java.sql.Statement#setMaxRows(int)
      */
     public This setMaxRows(final int max) throws SQLException {
-        if (defaultMaxRows < 0 && defaultLargeMaxRows < 0) {
-            defaultMaxRows = stmt.getMaxRows();
-        }
+        try {
+            if (defaultMaxRows < 0 && defaultLargeMaxRows < 0) {
+                defaultMaxRows = stmt.getMaxRows();
+            }
 
-        stmt.setMaxRows(max);
+            stmt.setMaxRows(max);
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
+        }
 
         return (This) this;
     }
@@ -4606,18 +4632,31 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param max the new max rows limit; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if reading the statement's current large max rows (captured on the first row-limit call so it can be restored on close) or
-     *         setting the new value fails, including when the driver rejects a negative {@code max}
+     *         setting the new value fails, including when the driver rejects a negative {@code max}; this query is closed before the
+     *         exception is rethrown
      * @throws UnsupportedOperationException if the JDBC driver does not implement
-     *         {@link java.sql.Statement#setLargeMaxRows(long)} (the JDBC 4.2 default implementation throws it);
-     *         use {@link #setMaxRows(int)} with such a driver
+     *         {@link java.sql.Statement#setLargeMaxRows(long)} (the JDBC 4.2 default implementation throws it); this query is closed
+     *         before the exception is rethrown, so use {@link #setMaxRows(int)} instead with such a driver
      * @see java.sql.Statement#setLargeMaxRows(long)
      */
     public This setLargeMaxRows(final long max) throws SQLException, UnsupportedOperationException {
-        if (defaultMaxRows < 0 && defaultLargeMaxRows < 0) {
-            defaultLargeMaxRows = stmt.getLargeMaxRows();
-        }
+        try {
+            if (defaultMaxRows < 0 && defaultLargeMaxRows < 0) {
+                final long originalLargeMaxRows = stmt.getLargeMaxRows();
 
-        stmt.setLargeMaxRows(max);
+                stmt.setLargeMaxRows(max);
+
+                // Record the original only once the driver has accepted the call: a driver without
+                // setLargeMaxRows support throws UnsupportedOperationException, and closeStatement()
+                // must then not replay setLargeMaxRows (the UOE would escape close()).
+                defaultLargeMaxRows = originalLargeMaxRows;
+            } else {
+                stmt.setLargeMaxRows(max);
+            }
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
+        }
 
         return (This) this;
     }
@@ -4635,15 +4674,21 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param seconds the new query timeout limit in seconds; zero means there is no limit. A negative value is rejected by the JDBC driver with a {@code SQLException}.
      * @return this AbstractQuery instance for method chaining
      * @throws SQLException if reading the statement's current query timeout (captured on the first call so it can be restored on close) or
-     *         setting the new value fails, including when the driver rejects a negative {@code seconds}
+     *         setting the new value fails, including when the driver rejects a negative {@code seconds}; this query is closed before
+     *         the exception is rethrown
      * @see java.sql.Statement#setQueryTimeout(int)
      */
     public This setQueryTimeout(final int seconds) throws SQLException {
-        if (defaultQueryTimeout < 0) {
-            defaultQueryTimeout = stmt.getQueryTimeout();
-        }
+        try {
+            if (defaultQueryTimeout < 0) {
+                defaultQueryTimeout = stmt.getQueryTimeout();
+            }
 
-        stmt.setQueryTimeout(seconds);
+            stmt.setQueryTimeout(seconds);
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
+        }
 
         return (This) this;
     }
@@ -5106,9 +5151,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
      *
      * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
-     * query produces no rows. If a row exists but the column is SQL {@code NULL}, the returned
-     * {@code Nullable} is <i>present-but-null</i> ({@code Nullable.of(null)}), preserving the distinction
-     * between "no row matched" and "row matched but value is null".</p>
+     * query produces no rows. If a row exists but the column is SQL {@code NULL} (or, since the value is read
+     * as a string, an empty string), the returned {@code Nullable} is <i>present-but-null</i>
+     * ({@code Nullable.of(null)}), preserving the distinction between "no row matched" and "row matched but
+     * value is null".</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

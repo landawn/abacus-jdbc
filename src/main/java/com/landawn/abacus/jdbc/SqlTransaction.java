@@ -491,7 +491,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * {@link Status#ROLLED_BACK} (or {@link Status#FAILED_ROLLBACK} if that rollback also fails).
      * After the commit attempt (success or failure) the connection's original auto-commit and
      * isolation level are restored, and the connection is released back to its data source if this
-     * transaction was created with connection ownership.</p>
+     * transaction was created with connection ownership. The one exception is a failed automatic
+     * rollback: restoring the connection state could then commit the pending work, so it is skipped
+     * and an owned connection is only released.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -970,8 +972,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         N.checkArgument(isolationLevel != IsolationLevel.NONE,
                 "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
 
-        _isMarkedByCommitOrRollbackPreviously = false;
-
         final boolean shouldPushStacks = _refCount.get() > 0;
         // DEFAULT means do not change the connection. In a nested scope that means inheriting
         // the currently effective level, not replacing the in-memory value with DEFAULT. Otherwise,
@@ -1035,6 +1035,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             }
         }
 
+        // Clear the enclosing scope's one-shot cleanup latch only once this scope has actually been
+        // entered: a failed entry opens no scope, so it must not turn the enclosing scope's pending
+        // no-op cleanup (after its explicit commit/rollback) into a real scope exit.
+        _isMarkedByCommitOrRollbackPreviously = false;
         _isolationLevel = effectiveIsolationLevel;
         _isForUpdateOnly = forUpdateOnly;
 

@@ -342,7 +342,7 @@ public final class DaoUtil {
      * dispatching on the shape of the IDs: {@link EntityId}s, {@link Map}s, a single-column id (rendered as an
      * {@code IN} clause with an {@code IS NULL} branch when needed), or multi-column ids. Shared by
      * {@link CrudReadOps#batchGet(Collection, Collection, int)} and
-     * {@link CrudReadOps#count(Collection)}; declared {@code static} so it is not treated as a DAO operation by the proxy.
+     * {@link CrudReadOps#count(Collection)}.
      *
      * @param ids the (batch of) IDs to match
      * @param idPropNameList the id property names of the entity
