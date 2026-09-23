@@ -26,7 +26,6 @@ import java.sql.SQLException;
 import java.sql.SQLType;
 import java.sql.Timestamp;
 import java.sql.Types;
-import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -239,7 +238,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param sqlType the SQL type code defined in {@link java.sql.Types}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding SQL {@code NULL} at a position mapped to {@code parameterName} fails, for example because the statement is
+     *         closed or the driver does not support {@code sqlType}
      * @see java.sql.Types
      */
     public NamedQuery setNull(final String parameterName, final int sqlType) throws IllegalArgumentException, SQLException {
@@ -302,7 +302,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param typeName the SQL type name (for SQL user-defined or REF types)
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding SQL {@code NULL} at a position mapped to {@code parameterName} fails, for example because the statement is
+     *         closed or the driver does not support {@code sqlType}
      * @see java.sql.Types
      */
     public NamedQuery setNull(final String parameterName, final int sqlType, final String typeName) throws IllegalArgumentException, SQLException {
@@ -363,7 +364,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the boolean value to set
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setBoolean(final String parameterName, final boolean value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -423,7 +425,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Boolean value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setBoolean(final String parameterName, final Boolean value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -451,7 +454,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the byte value to set
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setByte(final String parameterName, final byte value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -511,7 +515,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Byte value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setByte(final String parameterName, final Byte value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -539,7 +544,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the short value to set
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setShort(final String parameterName, final short value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -599,7 +605,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Short value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setShort(final String parameterName, final Short value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -627,7 +634,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the int value to set
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setInt(final String parameterName, final int value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -687,7 +695,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Integer value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setInt(final String parameterName, final Integer value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -717,7 +726,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the char value to set
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setString(String, char)
      * @deprecated Generally {@code char} should be saved as {@code String} in DB. Use {@link #setString(String, char)} instead.
      */
@@ -745,7 +755,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Character value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setString(String, Character)
      * @deprecated Generally {@code char} should be saved as {@code String} in DB. Use {@link #setString(String, Character)} instead.
      */
@@ -777,7 +788,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the long value to set
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setLong(final String parameterName, final long value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -837,7 +849,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Long value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setLong(final String parameterName, final Long value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -874,11 +887,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
      * @throws ArithmeticException if the BigInteger value will not fit in a {@code long}; when this is thrown the
      *         underlying statement is also closed
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
-    public NamedQuery setLong(final String parameterName, final BigInteger value) throws IllegalArgumentException, SQLException, ArithmeticException {
+    public NamedQuery setLong(final String parameterName, final BigInteger value) throws IllegalArgumentException, ArithmeticException, SQLException {
         checkParameterName(parameterName);
 
         if (value == null) {
@@ -912,7 +926,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the float value to set
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setFloat(final String parameterName, final float value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -972,7 +987,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Float value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setFloat(final String parameterName, final Float value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1002,7 +1018,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the double value to set
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setDouble(final String parameterName, final double value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -1062,7 +1079,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Double value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setDouble(final String parameterName, final Double value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1091,7 +1109,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the BigDecimal value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setBigDecimal(final String parameterName, final BigDecimal value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -1153,7 +1172,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setBigDecimal(final String parameterName, final BigInteger value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1182,7 +1202,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setString(String, BigInteger)
      * @see #setBigDecimal(String, BigInteger)
      * @see #setLong(String, BigInteger)
@@ -1208,7 +1229,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the String value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setString(final String parameterName, final String value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -1270,7 +1292,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the CharSequence value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setString(final String parameterName, final CharSequence value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1292,7 +1315,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the char value to set
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setString(final String parameterName, final char value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1316,7 +1340,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Character value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setString(final String parameterName, final Character value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1340,7 +1365,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setString(final String parameterName, final BigInteger value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1367,7 +1393,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the String value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setNString(final String parameterName, final String value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -1429,7 +1456,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the CharSequence value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setNString(final String parameterName, final CharSequence value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1452,7 +1480,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the java.sql.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setDate(final String parameterName, final java.sql.Date value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -1515,7 +1544,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the java.util.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setDate(final String parameterName, final java.util.Date value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1540,7 +1570,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the LocalDate value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setDate(final String parameterName, final LocalDate value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1564,7 +1595,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the java.sql.Time value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setTime(final String parameterName, final java.sql.Time value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -1633,7 +1665,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the java.util.Date value containing the time to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setTime(final String parameterName, final java.util.Date value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1666,7 +1699,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the LocalTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setTime(final String parameterName, final LocalTime value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1699,7 +1733,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the java.sql.Timestamp value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setTimestamp(final String parameterName, final java.sql.Timestamp value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -1767,7 +1802,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the java.util.Date value to convert and set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setTimestamp(final String parameterName, final java.util.Date value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1801,7 +1837,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the LocalDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setTimestamp(final String parameterName, final LocalDateTime value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1832,10 +1869,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the value is outside the range supported by {@link Timestamp}
-     * @throws DateTimeException if {@code value} is outside the range that can be converted to an {@link Instant}
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
-    public NamedQuery setTimestamp(final String parameterName, final ZonedDateTime value) throws IllegalArgumentException, DateTimeException, SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final ZonedDateTime value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
 
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value.toInstant()));
@@ -1864,10 +1901,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the value is outside the range supported by {@link Timestamp}
-     * @throws DateTimeException if {@code value} is outside the range that can be converted to an {@link Instant}
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
-    public NamedQuery setTimestamp(final String parameterName, final OffsetDateTime value) throws IllegalArgumentException, DateTimeException, SQLException {
+    public NamedQuery setTimestamp(final String parameterName, final OffsetDateTime value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
 
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value.toInstant()));
@@ -1898,7 +1935,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the value is outside the range supported by {@link Timestamp}
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setTimestamp(final String parameterName, final Instant value) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -1936,7 +1974,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the byte array to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setBytes(final String parameterName, final byte[] value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2001,7 +2040,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the InputStream containing ASCII data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setAsciiStream(String, InputStream, long)
      */
     public NamedQuery setAsciiStream(final String parameterName, final InputStream value) throws IllegalArgumentException, SQLException {
@@ -2068,7 +2108,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param length the number of bytes in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setAsciiStream(String, InputStream)
      */
     public NamedQuery setAsciiStream(final String parameterName, final InputStream value, final long length) throws IllegalArgumentException, SQLException {
@@ -2134,7 +2175,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the InputStream containing binary data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setBinaryStream(String, InputStream, long)
      */
     public NamedQuery setBinaryStream(final String parameterName, final InputStream value) throws IllegalArgumentException, SQLException {
@@ -2202,7 +2244,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param length the number of bytes in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setBinaryStream(String, InputStream)
      */
     public NamedQuery setBinaryStream(final String parameterName, final InputStream value, final long length) throws IllegalArgumentException, SQLException {
@@ -2268,7 +2311,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Reader containing character data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setCharacterStream(String, Reader, long)
      */
     public NamedQuery setCharacterStream(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
@@ -2335,7 +2379,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setCharacterStream(String, Reader)
      */
     public NamedQuery setCharacterStream(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
@@ -2401,7 +2446,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Reader containing national character data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setNCharacterStream(String, Reader, long)
      */
     public NamedQuery setNCharacterStream(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
@@ -2468,7 +2514,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      * @see #setNCharacterStream(String, Reader)
      */
     public NamedQuery setNCharacterStream(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
@@ -2550,7 +2597,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the java.sql.Blob object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setBlob(final String parameterName, final java.sql.Blob value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2615,7 +2663,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the InputStream containing the BLOB data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setBlob(final String parameterName, final InputStream value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2682,7 +2731,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param length the number of bytes to read from the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setBlob(final String parameterName, final InputStream value, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2763,7 +2813,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the java.sql.Clob object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setClob(final String parameterName, final java.sql.Clob value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2827,7 +2878,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Reader object containing the CLOB data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setClob(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2891,7 +2943,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or the length is less than zero
+     * @throws SQLException if binding the reader at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         {@code length} is less than zero
      */
     public NamedQuery setClob(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -2958,7 +3011,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the NClob object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setNClob(final String parameterName, final java.sql.NClob value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3022,7 +3076,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Reader object containing the NCLOB data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setNClob(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3086,7 +3141,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or the length is less than zero
+     * @throws SQLException if binding the reader at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         {@code length} is less than zero
      */
     public NamedQuery setNClob(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3147,7 +3203,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the URL object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setURL(final String parameterName, final URL value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3216,7 +3273,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the SQLXML object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setSQLXML(final String parameterName, final java.sql.SQLXML value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3278,7 +3336,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the RowId object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setRowId(final String parameterName, final java.sql.RowId value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3340,7 +3399,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Ref object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setRef(final String parameterName, final java.sql.Ref value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3407,7 +3467,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Array object, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the driver rejects the value
      */
     public NamedQuery setArray(final String parameterName, final java.sql.Array value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3481,7 +3542,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the object containing the parameter value, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if a database access error occurs or the given object cannot be converted to a SQL type
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the value cannot be converted to a SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object value) throws IllegalArgumentException, SQLException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -3548,10 +3610,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query,
      *                                  or {@code sqlType} is not a standard {@code java.sql.Types} constant
-     * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the value cannot be converted to {@code sqlType}
      * @see java.sql.Types
      */
     public NamedQuery setObject(final String parameterName, final Object value, final int sqlType) throws IllegalArgumentException, SQLException {
+        checkParameterName(parameterName);
+        checkSqlType(sqlType);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -3624,11 +3690,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query,
      *                                  or {@code sqlType} is not a standard {@code java.sql.Types} constant
-     * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed or
+     *         the value cannot be converted to {@code sqlType}
      * @see java.sql.Types
      */
     public NamedQuery setObject(final String parameterName, final Object value, final int sqlType, final int scaleOrLength)
             throws IllegalArgumentException, SQLException {
+        checkParameterName(parameterName);
+        checkSqlType(sqlType);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -3691,7 +3761,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param sqlType the SQLType to be used
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or {@code sqlType} is {@code null}
-     * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed, the
+     *         value cannot be converted to {@code sqlType}, or the driver does not support the JDBC 4.2 {@code SQLType} overload
      */
     public NamedQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -3765,7 +3836,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or {@code sqlType} is {@code null}
-     * @throws SQLException if a database access error occurs or the object cannot be converted to the specified SQL type
+     * @throws SQLException if binding the value at a position mapped to {@code parameterName} fails, for example because the statement is closed, the
+     *         value cannot be converted to {@code sqlType}, or the driver does not support the JDBC 4.2 {@code SQLType} overload
      */
     public NamedQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength)
             throws IllegalArgumentException, SQLException {
@@ -3841,7 +3913,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param type the Type handler to use for setting the parameter. Must not be {@code null}.
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or {@code type} is {@code null}
-     * @throws SQLException if a database access error occurs or the type handler throws {@code SQLException}
+     * @throws SQLException if {@code type} throws {@code SQLException} while binding the value at a position mapped to {@code parameterName}, for
+     *         example because the statement is closed
      */
     public <T> NamedQuery setObject(final String parameterName, final T value, final Type<T> type) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
@@ -3913,7 +3986,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameters a map containing parameter names (without the ':' prefix) as keys and their values
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameters} is {@code null}
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding one of the mapped values to the underlying {@code PreparedStatement} fails
      */
     public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
@@ -3942,7 +4015,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param entityId the EntityId containing parameter values
      * @throws NullPointerException if {@code entityId} is {@code null} and this query contains at least one parameter
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding one of the {@code entityId} values to the underlying {@code PreparedStatement} fails
      */
     void setParameters(final EntityId entityId) throws NullPointerException, SQLException {
         try {
@@ -3997,7 +4070,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         unbound when no matching property exists — bind them separately); or if it is none of a bean,
      *         {@code Map}, {@code Collection}, reference array or {@code EntityId} and the SQL does not have
      *         exactly one parameter placeholder
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding one of the parameter values to the underlying {@code PreparedStatement} fails, for example because a collection
+     *         or array supplies more values than the SQL has parameter placeholders
      * @see JdbcUtil#getNamedParameters(String)
      */
     @SuppressWarnings("rawtypes")
@@ -4093,7 +4167,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if {@code entity} is {@code null} or is not a bean/record class,
      *         if {@code parameterNamesToSet} is {@code null} or contains a {@code null} element, if a listed
      *         property does not exist on the entity, or if a listed name is not a parameter in the SQL query
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if binding one of the property values to the underlying {@code PreparedStatement} fails
      * @see Beans#getPropNameList(Class)
      * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#getNamedParameters(String)
@@ -4192,7 +4266,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parametersSetter a tri-consumer that receives the parsed SQL, this NamedQuery instance, and the parameters object
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parametersSetter} is {@code null}
-     * @throws SQLException if a database access error occurs or the parameter setter throws {@code SQLException}
+     * @throws SQLException if {@code parametersSetter} throws {@code SQLException}, for example because a value it binds is rejected by the driver
      */
     public <T> NamedQuery setParameters(final T parameters, final Jdbc.TriParametersSetter<? super NamedQuery, ? super T> parametersSetter)
             throws IllegalArgumentException, SQLException {
@@ -4258,9 +4332,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
      *         lacks a property matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if clearing or binding parameters on the underlying {@code PreparedStatement}, or adding a row to its batch, fails
      * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId},
-     *         and a later non-null row is not of the same kind
+     *         and a later non-null row is not of the same kind; or if the first row is a bean and a later
+     *         non-null row is not an instance of the first row's class
      * @see #setParameters(Object)
      * @see #addBatch()
      */
@@ -4329,9 +4404,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
      *         lacks a property matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if clearing or binding parameters on the underlying {@code PreparedStatement}, or adding a row to its batch, fails
      * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId},
-     *         and a later non-null row is not of the same kind
+     *         and a later non-null row is not of the same kind; or if the first row is a bean and a later
+     *         non-null row is not an instance of the first row's class
      * @see #setParameters(Object)
      * @see #addBatchParameters(Collection)
      * @see #addBatch()
@@ -4514,7 +4590,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * parameter placeholder.
      *
      * @throws IllegalArgumentException if {@code parameterCount} is not exactly {@code 1}
-     * @throws SQLException if a database access error occurs while clearing or setting the parameter
+     * @throws SQLException if clearing the parameters, binding SQL {@code NULL}, or adding the row to the batch fails
      */
     private void addNullBatchParameter() throws IllegalArgumentException, SQLException {
         if (parameterCount != 1) {

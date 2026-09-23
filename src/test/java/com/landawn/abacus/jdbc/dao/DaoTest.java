@@ -674,7 +674,7 @@ public class DaoTest extends TestBase {
 
         when(dao.findOnlyOne(condition)).thenReturn(Optional.of(dbEntity));
         when(dao.targetEntityClass()).thenReturn(NoIdEntity.class);
-        when(dao.update(ArgumentMatchers.same(dbEntity), ArgumentMatchers.same(condition))).thenReturn(1);
+        Mockito.doReturn(1).when(dao).update(ArgumentMatchers.same(dbEntity), ArgumentMatchers.same(condition));
 
         final NoIdEntity result = dao.upsert(entity, condition);
 

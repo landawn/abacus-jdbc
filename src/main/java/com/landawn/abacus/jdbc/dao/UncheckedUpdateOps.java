@@ -104,11 +104,14 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entity the entity containing values to update
      * @param cond the condition to match records to update
      * @return the number of records updated
-     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or if the entity class has no updatable property
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
     default int update(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotNull(cond, cs.cond);
+
         @SuppressWarnings("deprecation")
         final Collection<String> propNamesToUpdate = JdbcUtil.getUpdatePropNames(targetEntityClass());
 

@@ -293,14 +293,15 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the entity class
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or the configuration
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null}, blank, or malformed, or the configuration
      *             cannot produce valid Java source (for example, names collide, an annotation is unusable,
      *             or a field is both read-only and non-updatable)
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
+     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config)
-            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException, UncheckedIOException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
 
@@ -350,13 +351,15 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the entity class
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or the configuration
-     *             cannot produce valid Java source
-     * @throws UncheckedSQLException if querying rows or metadata, or closing the query's JDBC resources fails
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null}, blank, or malformed, or the configuration
+     *             cannot produce valid Java source (for example, names collide, an annotation is unusable,
+     *             or a field is both read-only and non-updatable)
+     * @throws UncheckedSQLException if reading database product metadata, querying rows or metadata, or closing the query's JDBC resources fails
+     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config)
-            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException, UncheckedIOException {
         return generateEntityClassByQuery(conn, tableName, createQueryByTableName(conn, tableName), config);
     }
 
@@ -406,10 +409,11 @@ public final class JdbcCodeGenerationUtil {
      *             if the configuration cannot produce valid Java source (for example, generated names are invalid or collide, an annotation is unusable, or a
      *             field is both read-only and non-updatable)
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
+     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query, final EntityCodeConfig config)
-            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException, UncheckedIOException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(entityName, cs.entityName);
         N.checkArgNotEmpty(query, cs.query);
@@ -468,10 +472,11 @@ public final class JdbcCodeGenerationUtil {
      *             if the configuration cannot produce valid Java source (for example, generated names are invalid or collide, an annotation is unusable, or a
      *             field is both read-only and non-updatable)
      * @throws UncheckedSQLException if querying rows or metadata, or closing the query's JDBC resources fails
+     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query, final EntityCodeConfig config)
-            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
+            throws IllegalArgumentException, UncheckedSQLException, NullPointerException, UncheckedIOException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(entityName, cs.entityName);
         N.checkArgNotEmpty(query, cs.query);
@@ -495,6 +500,7 @@ public final class JdbcCodeGenerationUtil {
      * @param rs the result set whose column metadata defines the generated fields
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
+     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws IllegalArgumentException if the configuration cannot produce valid Java source (for example,
      *             generated names are invalid or collide, an annotation is unusable, or a field is both
      *             read-only and non-updatable)
@@ -503,7 +509,7 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     static String generateEntityClass(final String entityName, final ResultSet rs, final EntityCodeConfig config)
-            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
+            throws NullPointerException, IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
         final EntityCodeConfig configToUse = N.defaultIfNull(config, defaultEntityCodeConfig);
 
         final String className = configToUse.getClassName();
@@ -1094,7 +1100,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the connection used to resolve the database product info
      * @param tableName the name of the table to query
      * @return a {@code SELECT} statement that matches no rows, used to read column metadata
-     * @throws IllegalArgumentException if the table name is {@code null}, blank, or malformed, or {@code conn} is {@code null}
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or the table name is {@code null}, blank, or malformed
      * @throws UncheckedSQLException if reading database product metadata fails.
      */
     private static String createQueryByTableName(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {

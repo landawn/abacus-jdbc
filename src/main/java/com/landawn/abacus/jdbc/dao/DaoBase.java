@@ -144,7 +144,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql) throws SQLException {
+    default PreparedQuery prepareQuery(final String sql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQuery(dataSource(), sql);
     }
 
@@ -169,7 +169,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final Condition cond) throws SQLException {
+    default PreparedQuery prepareQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareQuery(null, cond);
     }
 
@@ -196,7 +196,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
+    PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Creates a PreparedQuery optimized for queries that return large result sets.
@@ -213,7 +214,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final String sql) throws SQLException {
+    default PreparedQuery prepareQueryForLargeResult(final String sql)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQueryForLargeResult(dataSource(), sql);
     }
 
@@ -231,7 +233,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final Condition cond) throws SQLException {
+    default PreparedQuery prepareQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareQueryForLargeResult(null, cond);
     }
 
@@ -249,7 +251,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+    default PreparedQuery prepareQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult);
     }
 
@@ -278,7 +281,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedSql) throws SQLException {
+    default NamedQuery prepareNamedQuery(final String namedSql)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql);
     }
 
@@ -297,7 +301,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws SQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql);
     }
 
@@ -314,7 +319,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final Condition cond) throws SQLException {
+    default NamedQuery prepareNamedQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareNamedQuery(null, cond);
     }
 
@@ -332,7 +337,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws SQLException;
+    NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Creates a NamedQuery optimized for large result sets.
@@ -349,7 +355,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final String namedSql) throws SQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final String namedSql)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedSql);
     }
 
@@ -367,7 +374,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedSql) throws SQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedSql)
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedSql);
     }
 
@@ -384,7 +392,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final Condition cond) throws SQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareNamedQueryForLargeResult(null, cond);
     }
 
@@ -402,7 +410,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws SQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareNamedQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult);
     }
 
@@ -436,7 +445,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @SuppressWarnings("deprecation")
     @Beta
     @NonDBOperation
-    default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction) {
+    default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction)
+            throws IllegalArgumentException, RejectedExecutionException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         return callAsync(sqlAction, executor());
@@ -475,7 +485,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor) {
+    default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction, final Executor executor)
+            throws IllegalArgumentException, RejectedExecutionException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
         N.checkArgNotNull(executor, cs.executor);
 
@@ -510,7 +521,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @SuppressWarnings("deprecation")
     @Beta
     @NonDBOperation
-    default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction) {
+    default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction)
+            throws IllegalArgumentException, RejectedExecutionException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
 
         return runAsync(sqlAction, executor());
@@ -553,7 +565,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor) {
+    default ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super TD, SQLException> sqlAction, final Executor executor)
+            throws IllegalArgumentException, RejectedExecutionException {
         N.checkArgNotNull(sqlAction, cs.sqlAction);
         N.checkArgNotNull(executor, cs.executor);
 

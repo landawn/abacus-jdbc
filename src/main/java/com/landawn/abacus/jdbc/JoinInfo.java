@@ -1070,18 +1070,18 @@ public final class JoinInfo {
      * @throws UnsupportedOperationException if this is a many-to-many join &mdash; use {@link #setJoinPropEntities(Collection, Map)}
      *                                  with keys derived from the junction table instead &mdash; or if the {@code @JoinedBy} join
      *                                  property is read-only, so the matched join entities cannot be stored back onto the source entity.
+     * @throws NullPointerException if {@code entities} is {@code null} for a supported one-to-many or many-to-one join,
+     *                                  or if {@code entities} or {@code joinPropEntities} contains a {@code null} element
+     *                                  (its join key cannot be read). A {@code null} {@code joinPropEntities} is treated as empty.
      * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
      *                                  if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}, or if the declared collection or map type
      *                                  of the join property has no supported construction path.
-     * @throws NullPointerException if {@code entities} is {@code null} for a supported one-to-many or many-to-one join,
-     *                                  or if {@code entities} or {@code joinPropEntities} contains a {@code null} element
-     *                                  (its join key cannot be read). A {@code null} {@code joinPropEntities} is treated as empty.
      *
      * @see #setJoinPropEntities(Collection, Map)
      */
     public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities)
-            throws UnsupportedOperationException, IllegalArgumentException, NullPointerException {
+            throws UnsupportedOperationException, NullPointerException, IllegalArgumentException {
         if (isManyToManyJoin) {
             // For many-to-many, srcEntityKeyExtractor reads the source-side join key (e.g.,
             // employee.employeeId) while referencedEntityKeyExtractor reads the referenced-side

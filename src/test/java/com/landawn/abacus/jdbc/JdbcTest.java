@@ -192,9 +192,9 @@ public class JdbcTest extends TestBase {
     }
 
     @Test
-    public void testDaoCacheLifetimeValidationOnlyAppliesToStoredPoolEntries() {
+    public void testDaoCacheLifetimeValidationPrecedesNullResultShortCircuit() {
         final Jdbc.DaoCache pooled = Jdbc.DaoCache.create(2, 0);
-        assertFalse(pooled.put("key", null, 0, -1, null, null, null));
+        assertThrows(IllegalArgumentException.class, () -> pooled.put("key", null, 0, -1, null, null, null));
         assertThrows(IllegalArgumentException.class, () -> pooled.put("key", "value", 0, 1, null, null, null));
         assertThrows(IllegalArgumentException.class, () -> pooled.put("key", "value", 1, 0, null, null, null));
         assertNull(pooled.get("key", null, null, null));

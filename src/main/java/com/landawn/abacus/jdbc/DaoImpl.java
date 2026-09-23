@@ -2043,10 +2043,10 @@ final class DaoImpl {
      * @throws IllegalArgumentException if the SQL left after fragment substitution cannot be parsed, if a bound name
      *         has no matching named parameter in the expanded SQL, or if an argument value has a type that cannot be
      *         bound to a named parameter
-     * @throws SQLException if preparing or configuring the query fails
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
      *         connection from the DAO data source
+     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws SQLException if preparing or configuring the query, or binding its parameters, fails
      */
     @SuppressWarnings({ "rawtypes", "unused" })
     private static AbstractQuery prepareQuery(final DaoBase proxy, final QueryInfo queryInfo, final MergedById mergedByIdAnno, final Class<?> returnType,
@@ -2054,7 +2054,7 @@ final class DaoImpl {
             final BiFunction<Annotation, Object, String>[] fragmentMappers, final boolean returnGeneratedKeys, final String[] generatedKeyColumnNames,
             final List<OutParameter> outParameterList, final Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter,
             final boolean isExistsQueryMethod, final boolean isSingleReturnTypeMethod, final boolean isListQueryMethod)
-            throws ParsingException, UncheckedIOException, IllegalArgumentException, SQLException, UncheckedSQLException, CannotGetJdbcConnectionException {
+            throws ParsingException, UncheckedIOException, IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         final QueryOperation queryOperation = queryInfo.queryOperation;
         String query = queryInfo.sql;
         ParsedSql parsedSql = queryInfo.parsedSql;
@@ -2582,9 +2582,9 @@ final class DaoImpl {
      *         nor {@link SqlPolicy#PARAMETERIZED_SQL}, if duplicate SQL keys are defined, if an XML SQL mapper file
      *         referenced by {@code @SqlSource} cannot be found or holds an invalid SQL definition, or if the
      *         DAO interface has invalid annotation configurations or generic type arguments
-     * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
      *         connection from {@code ds}
+     * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      * @throws UncheckedIOException if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read
      * @throws ParsingException if an XML SQL mapper file referenced by {@code @SqlSource} is not well-formed XML or
      *         does not have {@code <sqlMapper>} as its root element
@@ -2597,8 +2597,9 @@ final class DaoImpl {
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
-            final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) throws IllegalArgumentException, UncheckedSQLException,
-            CannotGetJdbcConnectionException, UncheckedIOException, ParsingException, UnsupportedOperationException, IllegalStateException {
+            final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UncheckedIOException, ParsingException,
+            UnsupportedOperationException, IllegalStateException {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
         N.checkArgNotNull(ds, cs.ds);
@@ -7373,14 +7374,14 @@ final class DaoImpl {
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or contains positional parameters,
      *         if the data source is {@code null}, if a batch row is {@code null} or has no property matching a named
      *         parameter, or if {@code batchSize} is not positive when the entities are split into chunks
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
      *         connection from the data source
+     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing a batch fails
      */
     @SuppressWarnings("rawtypes")
     private static void executeBatchSave(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize)
-            throws IllegalArgumentException, UncheckedSQLException, CannotGetJdbcConnectionException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         if (entities.size() <= batchSize) {
             proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
         } else {
@@ -7407,15 +7408,15 @@ final class DaoImpl {
      *         if {@code keyExtractor} or {@code isDefaultIdTester} is {@code null}, if a batch row is {@code null}
      *         or has no property matching a named parameter, or if {@code batchSize} is not positive when the
      *         entities are split into chunks
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
      *         connection from the data source
+     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
      */
     @SuppressWarnings("rawtypes")
     private static List<Object> executeBatchInsert(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
             final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester)
-            throws IllegalArgumentException, UncheckedSQLException, CannotGetJdbcConnectionException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         if (entities.size() <= batchSize) {
             return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
                     .addBatchParameters(entities)
@@ -7448,9 +7449,9 @@ final class DaoImpl {
      *         if {@code keyExtractor} or {@code isDefaultIdTester} is {@code null}, if a batch row is {@code null}
      *         or has no property matching a named parameter, or if {@code batchSize} is not positive when the
      *         entities are split into chunks
-     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
      *         connection from the data source
+     * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
      * @throws UnsupportedOperationException if an entity id property is read-only, so a generated id cannot be stored
      */
@@ -7458,7 +7459,7 @@ final class DaoImpl {
     private static void executeBatchInsertRun(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
             final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester,
             final BiConsumer<Object, Object> idSetter, final Logger daoLogger)
-            throws IllegalArgumentException, UncheckedSQLException, CannotGetJdbcConnectionException, SQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UnsupportedOperationException {
         List<Object> ids = executeBatchInsert(proxy, namedInsertSql, entities, batchSize, generatedKeyColumnNames, keyExtractor, isDefaultIdTester);
 
         if (JdbcUtil.isAllNullIds(ids)) {

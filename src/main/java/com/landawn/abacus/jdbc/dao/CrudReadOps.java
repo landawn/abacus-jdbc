@@ -979,7 +979,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                     large collections into chunks of this size for optimal performance.
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
+     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}, or {@code batchSize} is not positive
      * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
      *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a required database connection fails
@@ -1026,8 +1026,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param propNamesToRefresh the properties to refresh from the database (must not be {@code null} or empty)
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty,
-     *                                  or the first element of a nonempty {@code entities} collection is {@code null}
+     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null},
+     *                                  or {@code propNamesToRefresh} is {@code null} or empty
      * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
      *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a required database connection fails
@@ -1062,8 +1062,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                     large collections into chunks of this size for optimal performance.
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive, or if the first element of
-     *                                  {@code entities} is {@code null}
+     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null},
+     *                                  or {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive
      * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
      *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a required database connection fails
@@ -1077,11 +1077,11 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize)
             throws IllegalArgumentException, NullPointerException, UncheckedSQLException, SQLException, DuplicateResultException,
             UnsupportedOperationException {
-        N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
         if (N.notEmpty(entities)) {
             N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
         }
 
+        N.checkArgNotEmpty(propNamesToRefresh, cs.propNamesToRefresh);
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {

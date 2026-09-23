@@ -95,9 +95,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param id the entity ID to retrieve
      * @param joinEntityClass the class of the join entities to load
      * @return an Optional containing the entity with join entities loaded, or empty if not found
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
+     *                                  if no join property of the specified type is found in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -162,9 +162,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @return an Optional containing the entity with selected properties and join entities loaded, or empty if not found
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
+     *                                  if no join property of the specified type is found in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -199,9 +199,11 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
      * @return an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if an element of {@code joinEntityClasses} is {@code null} and its
+     *                                  metadata is needed (because {@code sourceSelectPropNames} is nonempty or a matching record is found),
+     *                                  or, when a matching record is found, if no join property is found for one of the specified types
+     *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
+     *                                  map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -269,9 +271,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param id the entity ID to retrieve
      * @param joinEntityClass the class of the join entities to load
      * @return the entity with specified join entities loaded, or {@code null} if not found
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
+     *                                  if no join property of the specified type is found in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -283,6 +285,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     default T getOrNull(final ID id, final Class<?> joinEntityClass)
             throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
+        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
 
@@ -355,9 +358,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClass the class of the join entities to load
      * @return the entity with selected properties and join entities loaded, or {@code null} if not found
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property of the specified type is found in the entity class,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
+     *                                  if no join property of the specified type is found in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -369,6 +372,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
             throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
+        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClass));
 
@@ -400,9 +404,11 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
      * @return the entity with selected properties and specified join entities loaded, or {@code null} if not found
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if no join property is found for one of the specified types in the entity class,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if an element of {@code joinEntityClasses} is {@code null} and its
+     *                                  metadata is needed (because {@code sourceSelectPropNames} is nonempty or a matching record is found),
+     *                                  or, when a matching record is found, if no join property is found for one of the specified types
+     *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
+     *                                  map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -489,10 +495,13 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param ids the collection of IDs to retrieve
      * @param joinEntityClass the class of the join entities to load for each entity
      * @return a list of entities with the specified join entities loaded
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class,
-     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null},
+     *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
+     *                                  or, when matching records are found, if no join property of the specified type is found in the
+     *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
+     *                                  map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -525,7 +534,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return a list of entities with join entities loaded as specified
-     * @throws IllegalArgumentException if nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
@@ -560,10 +571,13 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClass the class of the join entities to load for each entity
      * @return a list of entities with selected properties and join entities loaded
-     * @throws IllegalArgumentException if no join property of the specified type is found in the entity class,
-     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null},
+     *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
+     *                                  or, when matching records are found, if no join property of the specified type is found in the
+     *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
+     *                                  map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -597,10 +611,14 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClasses the collection of join entity classes to load for each entity
      * @return a list of entities with selected properties and specified join entities loaded
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class,
-     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if an element of {@code joinEntityClasses} is {@code null} and its metadata is needed
+     *                                  (because {@code sourceSelectPropNames} is nonempty or matching records are found),
+     *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
+     *                                  or, when matching records are found, if no join property is found for one of the specified types
+     *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for
+     *                                  a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -636,7 +654,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param includeAllJoinEntities if {@code true}, all join entities will be loaded;
      *                                  if {@code false}, no join entities are loaded
      * @return a list of entities with selected properties and join entities as specified
-     * @throws IllegalArgumentException if nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
@@ -674,10 +694,13 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and join entities loaded
-     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property of the specified type is found in the entity class,
-     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code joinEntityClass} is {@code null}, or {@code batchSize} is not positive,
+     *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
+     *                                  or, when matching records are found, if no join property of the specified type is found in the
+     *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
+     *                                  map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -689,6 +712,7 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass,
             final int batchSize)
             throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+        N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)
@@ -729,10 +753,15 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and specified join entities loaded
-     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if no join property is found for one of the specified types in the entity class,
-     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code batchSize} is not positive,
+     *                                  or if an element of {@code joinEntityClasses} is {@code null} and its metadata is needed
+     *                                  (because {@code sourceSelectPropNames} is nonempty or matching records are found),
+     *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
+     *                                  or, when matching records are found, if no join property is found for one of the specified types
+     *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for
+     *                                  a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -792,7 +821,9 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and join entities as specified
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
-     *                                  or nonempty {@code ids} contain composite ID representations for a single-ID entity,
+     *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading

@@ -85,7 +85,9 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param namedInsertSql the named INSERT SQL statement
      * @param entity the entity providing the parameter values
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code entity} is {@code null},
-     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
+     *                                  or if {@code entity} has no property for a named parameter in {@code namedInsertSql}
+     *                                  other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
@@ -200,7 +202,9 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param namedInsertSql the named INSERT SQL statement
      * @param entities the entities providing parameter values
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty,
-     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
+     *                                  or if an element of {@code entities} has no property for a named parameter in
+     *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
@@ -229,7 +233,9 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive,
-     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters
+     *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
+     *                                  or if an element of {@code entities} has no property for a named parameter in
+     *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,

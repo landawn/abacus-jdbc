@@ -1165,8 +1165,8 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
     }
 
     // The Collection+Class overloads must reject a null joinEntityClass naming the PUBLIC parameter instead of
-    // letting JoinInfo surface its internal joinPropEntityClass name - while an empty collection stays a pure
-    // no-op that never resolves join metadata at all.
+    // letting JoinInfo surface its internal joinPropEntityClass name - and, per the validate-before-early-return
+    // policy, it is rejected even for an empty collection.
     @Test
     @Tag("2025")
     public void testCollectionByClassOverloads_NullClassNamesJoinEntityClass() throws SQLException {
@@ -1180,8 +1180,11 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(oneEntity, (Class<?>) null)).getMessage()
                 .contains("joinEntityClass"));
 
-        assertEquals(0, dao.deleteJoinEntities(List.<TestEntity> of(), (Class<?>) null));
-        dao.loadJoinEntities(List.<TestEntity> of(), (Class<?>) null);
-        dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), (Class<?>) null);
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.deleteJoinEntities(List.<TestEntity> of(), (Class<?>) null)).getMessage()
+                .contains("joinEntityClass"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntities(List.<TestEntity> of(), (Class<?>) null)).getMessage()
+                .contains("joinEntityClass"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), (Class<?>) null)).getMessage()
+                .contains("joinEntityClass"));
     }
 }

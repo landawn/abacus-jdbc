@@ -484,9 +484,18 @@ public class NamedQueryTest extends TestBase {
     }
 
     @Test
-    public void testEntityTypeIsCheckedBeforeParameterNames() throws SQLException {
+    public void testParameterNamesNullCheckPrecedesEntityTypeCheck() throws SQLException {
         final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
                 () -> namedQuery.setParameters("not an entity", (Collection<String>) null));
+
+        assertTrue(failure.getMessage().contains("parameterNamesToSet"));
+        verify(mockPreparedStatement, times(1)).close();
+    }
+
+    @Test
+    public void testNonEntityTypeIsRejected() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> namedQuery.setParameters("not an entity", List.of("param1")));
 
         assertTrue(failure.getMessage().contains("Unsupported parameter type: java.lang.String"));
         verify(mockPreparedStatement, times(1)).close();

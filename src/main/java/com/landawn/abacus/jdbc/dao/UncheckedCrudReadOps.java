@@ -945,7 +945,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param batchSize the size of each batch
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
+     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}, or {@code batchSize} is not positive
      * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
      *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
@@ -980,8 +980,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param propNamesToRefresh the properties to refresh for each entity
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty,
-     *                                  or the first element of a nonempty {@code entities} collection is {@code null}
+     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null},
+     *                                  or {@code propNamesToRefresh} is {@code null} or empty
      * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
      *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
@@ -1022,8 +1022,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param batchSize the size of each batch
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive, or if the first element of
-     *                                  {@code entities} is {@code null}
+     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null},
+     *                                  or {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive
      * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
      *                              is checked; a later {@code null} fails while its id is being extracted)
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails

@@ -279,14 +279,14 @@ public final class Jdbc {
          * must match the order of values in the input array and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is {@code null} or not a valid bean class.
          */
         @Beta
         @SequentialOnly
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, T[]> forArray(final List<String> fieldNameList, final Class<?> entityClass)
                 throws IllegalArgumentException {
-            N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
+            N.checkArgNotEmpty(fieldNameList, cs.fieldNameList);
             N.checkArgument(Beans.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
             final List<String> fieldNames = new ArrayList<>(fieldNameList);
@@ -357,14 +357,14 @@ public final class Jdbc {
          * must match the order of values in the input list and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
          * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
-         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is not a valid bean class.
+         * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is {@code null} or not a valid bean class.
          */
         @Beta
         @SequentialOnly
         @Stateful
         static <T> BiParametersSetter<PreparedStatement, List<T>> forList(final List<String> fieldNameList, final Class<?> entityClass)
                 throws IllegalArgumentException {
-            N.checkArgNotEmpty(fieldNameList, "'fieldNameList' can't be null or empty");
+            N.checkArgNotEmpty(fieldNameList, cs.fieldNameList);
             N.checkArgument(Beans.isBeanClass(entityClass), "{} is not a valid entity class with getter/setter methods", entityClass);
 
             final List<String> fieldNames = new ArrayList<>(fieldNameList);
@@ -2463,6 +2463,7 @@ public final class Jdbc {
              */
             public RowMapperBuilder getObject(final int columnIndex, final Class<?> type) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, cs.columnIndex);
+                N.checkArgNotNull(type, cs.type);
 
                 return get(columnIndex, ColumnGetter.forType(type));
             }
@@ -3181,14 +3182,22 @@ public final class Jdbc {
                 final Function<? super String, String> columnNameConverter, final boolean ignoreUnmatchedColumns) throws IllegalArgumentException {
             N.checkArgNotNull(targetClass, cs.targetClass);
 
+            final boolean noColumnNameFilterOrConversion = (columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
+                    && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()));
+
+            if (!noColumnNameFilterOrConversion && !Object[].class.isAssignableFrom(targetClass) && !List.class.isAssignableFrom(targetClass)
+                    && !Map.class.isAssignableFrom(targetClass) && !Beans.isBeanClass(targetClass)) {
+                throw new IllegalArgumentException(
+                        "'columnNameFilter' and 'columnNameConverter' are not supported to convert single column to target type: " + targetClass);
+            }
+
             final Predicate<? super String> columnNameFilterToBeUsed = columnNameFilter == null ? Fn.alwaysTrue() : columnNameFilter;
             final Function<? super String, String> columnNameConverterToBeUsed = columnNameConverter == null ? Fn.identity() : columnNameConverter;
 
             if (Object[].class.isAssignableFrom(targetClass)) {
                 final ColumnGetter<?> componentGetter = ColumnGetter.forType(targetClass.getComponentType());
 
-                if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
-                        && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
+                if (noColumnNameFilterOrConversion) {
                     return (rs, columnLabelList) -> {
                         final int columnCount = columnLabelList.size();
                         final Object[] a = Array.newInstance(targetClass.getComponentType(), columnCount);
@@ -3237,8 +3246,7 @@ public final class Jdbc {
                     };
                 }
             } else if (List.class.isAssignableFrom(targetClass)) {
-                if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
-                        && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
+                if (noColumnNameFilterOrConversion) {
                     return (rs, columnLabelList) -> {
                         final int columnCount = columnLabelList.size();
                         @SuppressWarnings("rawtypes")
@@ -3288,8 +3296,7 @@ public final class Jdbc {
                     };
                 }
             } else if (Map.class.isAssignableFrom(targetClass)) {
-                if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
-                        && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
+                if (noColumnNameFilterOrConversion) {
                     return new BiRowMapper<>() {
                         private String[] columnLabels = null;
                         private int columnCount = -1;
@@ -3460,28 +3467,21 @@ public final class Jdbc {
                     }
                 };
             } else {
-                if ((columnNameFilter == null || Objects.equals(columnNameFilter, Fn.alwaysTrue()))
-                        && (columnNameConverter == null || Objects.equals(columnNameConverter, Fn.identity()))) {
-                    return new BiRowMapper<>() {
-                        private final Type<? extends T> targetType = N.typeOf(targetClass);
-                        private int columnCount = -1;
+                // Single-column scalar target: a non-trivial filter/converter was already rejected above.
+                return new BiRowMapper<>() {
+                    private final Type<? extends T> targetType = N.typeOf(targetClass);
+                    private int columnCount = -1;
 
-                        @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
-                            if (columnCount != 1 && (columnCount = columnLabelList.size()) != 1) {
-                                throw new IllegalArgumentException(
-                                        "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
-                            }
-
-                            return targetType.get(rs, 1);
+                    @Override
+                    public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
+                        if (columnCount != 1 && (columnCount = columnLabelList.size()) != 1) {
+                            throw new IllegalArgumentException(
+                                    "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
                         }
-                    };
-                } else
 
-                {
-                    throw new IllegalArgumentException(
-                            "'columnNameFilter' and 'columnNameConverter' are not supported to convert single column to target type: " + targetClass);
-                }
+                        return targetType.get(rs, 1);
+                    }
+                };
             }
         }
 
@@ -3544,11 +3544,12 @@ public final class Jdbc {
         @Stateful
         static <T> BiRowMapper<T> to(final Class<? extends T> entityClass, final Map<String, String> prefixAndPropNameMap, final boolean ignoreUnmatchedColumns)
                 throws IllegalArgumentException {
+            N.checkArgNotNull(entityClass, cs.entityClass);
+            N.checkArgument(N.isEmpty(prefixAndPropNameMap) || Beans.isBeanClass(entityClass), "{} is not an entity class", entityClass);
+
             if (N.isEmpty(prefixAndPropNameMap)) {
                 return to(entityClass, ignoreUnmatchedColumns);
             }
-
-            N.checkArgument(Beans.isBeanClass(entityClass), "{} is not an entity class", entityClass);
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
             final Map<String, String> configuredprefixAndPropNameMap = new HashMap<>(prefixAndPropNameMap);
@@ -3669,7 +3670,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code entryFilter} or {@code mapSupplier} is {@code null}
          */
         static BiRowMapper<Map<String, Object>> toMap(final BiPredicate<String, Object> entryFilter,
-                final IntFunction<? extends Map<String, Object>> mapSupplier) {
+                final IntFunction<? extends Map<String, Object>> mapSupplier) throws IllegalArgumentException {
             N.checkArgNotNull(entryFilter, cs.entryFilter);
             N.checkArgNotNull(mapSupplier, cs.mapSupplier);
 
@@ -3724,7 +3725,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final BiPredicate<String, Object> entryFilter,
-                final IntFunction<? extends Map<String, Object>> mapSupplier) {
+                final IntFunction<? extends Map<String, Object>> mapSupplier) throws IllegalArgumentException {
             N.checkArgNotNull(rowExtractor, cs.rowExtractor);
             N.checkArgNotNull(entryFilter, cs.entryFilter);
             N.checkArgNotNull(mapSupplier, cs.mapSupplier);
@@ -3783,7 +3784,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter) {
+        static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter) throws IllegalArgumentException {
             return toMap(columnNameConverter, IntFunctions.ofMap());
         }
 
@@ -3815,7 +3816,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final Function<? super String, String> columnNameConverter,
-                final IntFunction<? extends Map<String, Object>> mapSupplier) {
+                final IntFunction<? extends Map<String, Object>> mapSupplier) throws IllegalArgumentException {
             N.checkArgNotNull(columnNameConverter, cs.columnNameConverter);
             N.checkArgNotNull(mapSupplier, cs.mapSupplier);
 
@@ -3869,7 +3870,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor) {
+        static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor) throws IllegalArgumentException {
             N.checkArgNotNull(rowExtractor, cs.rowExtractor);
 
             return new BiRowMapper<>() {
@@ -3927,7 +3928,7 @@ public final class Jdbc {
         @SequentialOnly
         @Stateful
         static BiRowMapper<Map<String, Object>> toMap(final RowExtractor rowExtractor, final Function<? super String, String> columnNameConverter,
-                final IntFunction<? extends Map<String, Object>> mapSupplier) {
+                final IntFunction<? extends Map<String, Object>> mapSupplier) throws IllegalArgumentException {
             N.checkArgNotNull(rowExtractor, cs.rowExtractor);
             N.checkArgNotNull(columnNameConverter, cs.columnNameConverter);
             N.checkArgNotNull(mapSupplier, cs.mapSupplier);
@@ -3979,7 +3980,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
          */
         @Beta
-        static BiRowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) {
+        static BiRowMapper<Object[]> toArray(final ColumnGetter<?> columnGetterForAll) throws IllegalArgumentException {
             N.checkArgNotNull(columnGetterForAll, cs.columnGetterForAll);
 
             return (rs, columnLabels) -> {
@@ -4009,7 +4010,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code columnGetterForAll} is {@code null}
          */
         @Beta
-        static BiRowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) {
+        static BiRowMapper<List<Object>> toList(final ColumnGetter<?> columnGetterForAll) throws IllegalArgumentException {
             return toCollection(columnGetterForAll, IntFunctions.ofList());
         }
 
@@ -4032,7 +4033,8 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code columnGetterForAll} or {@code supplier} is {@code null}
          */
         @Beta
-        static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier) {
+        static <C extends Collection<?>> BiRowMapper<C> toCollection(final ColumnGetter<?> columnGetterForAll, final IntFunction<? extends C> supplier)
+                throws IllegalArgumentException {
             N.checkArgNotNull(columnGetterForAll, cs.columnGetterForAll);
             N.checkArgNotNull(supplier, cs.supplier);
 
@@ -4110,6 +4112,10 @@ public final class Jdbc {
          * extracted with the default {@code Object} reader (via {@code JdbcUtil.getColumnValue}) and placed
          * into the output array at their original column index.</p>
          *
+         * <p>{@code entityClass} is only checked for {@code null} here; its bean metadata is resolved when the
+         * returned mapper is first applied, so a class that is not a bean class makes that first
+         * {@code apply} call throw an {@link IllegalArgumentException}.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * BiRowMapper<DisposableObjArray> mapper = BiRowMapper.toDisposableObjArray(User.class);
@@ -4124,7 +4130,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static BiRowMapper<DisposableObjArray> toDisposableObjArray(final Class<?> entityClass) {
+        static BiRowMapper<DisposableObjArray> toDisposableObjArray(final Class<?> entityClass) throws IllegalArgumentException {
             N.checkArgNotNull(entityClass, cs.entityClass);
 
             return new BiRowMapper<>() {
@@ -4214,7 +4220,7 @@ public final class Jdbc {
          * @return a new {@code BiRowMapperBuilder}
          * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
          */
-        static BiRowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
+        static BiRowMapperBuilder builder(final ColumnGetter<?> defaultColumnGetter) throws IllegalArgumentException {
             return new BiRowMapperBuilder(defaultColumnGetter);
         }
 
@@ -4264,7 +4270,7 @@ public final class Jdbc {
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
              * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
-            BiRowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) {
+            BiRowMapperBuilder(final ColumnGetter<?> defaultColumnGetter) throws IllegalArgumentException {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
 
                 this.defaultColumnGetter = defaultColumnGetter;
@@ -4279,7 +4285,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getBoolean(final String columnName) {
+            public BiRowMapperBuilder getBoolean(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_BOOLEAN);
             }
 
@@ -4290,7 +4296,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getByte(final String columnName) {
+            public BiRowMapperBuilder getByte(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_BYTE);
             }
 
@@ -4301,7 +4307,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getShort(final String columnName) {
+            public BiRowMapperBuilder getShort(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_SHORT);
             }
 
@@ -4312,7 +4318,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getInt(final String columnName) {
+            public BiRowMapperBuilder getInt(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_INT);
             }
 
@@ -4323,7 +4329,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getLong(final String columnName) {
+            public BiRowMapperBuilder getLong(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_LONG);
             }
 
@@ -4334,7 +4340,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getFloat(final String columnName) {
+            public BiRowMapperBuilder getFloat(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_FLOAT);
             }
 
@@ -4345,7 +4351,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getDouble(final String columnName) {
+            public BiRowMapperBuilder getDouble(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_DOUBLE);
             }
 
@@ -4356,7 +4362,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getBigDecimal(final String columnName) {
+            public BiRowMapperBuilder getBigDecimal(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_BIG_DECIMAL);
             }
 
@@ -4367,7 +4373,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getString(final String columnName) {
+            public BiRowMapperBuilder getString(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_STRING);
             }
 
@@ -4378,7 +4384,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getDate(final String columnName) {
+            public BiRowMapperBuilder getDate(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_DATE);
             }
 
@@ -4389,7 +4395,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getTime(final String columnName) {
+            public BiRowMapperBuilder getTime(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_TIME);
             }
 
@@ -4400,7 +4406,7 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              */
-            public BiRowMapperBuilder getTimestamp(final String columnName) {
+            public BiRowMapperBuilder getTimestamp(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_TIMESTAMP);
             }
 
@@ -4417,7 +4423,7 @@ public final class Jdbc {
              * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific getter is set.
              */
             @Deprecated
-            public BiRowMapperBuilder getObject(final String columnName) {
+            public BiRowMapperBuilder getObject(final String columnName) throws IllegalArgumentException {
                 return get(columnName, ColumnGetter.GET_OBJECT);
             }
 
@@ -4438,8 +4444,9 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}, or {@code type} is {@code null}
              */
-            public BiRowMapperBuilder getObject(final String columnName, final Class<?> type) {
+            public BiRowMapperBuilder getObject(final String columnName, final Class<?> type) throws IllegalArgumentException {
                 N.checkArgNotNull(columnName, cs.columnName);
+                N.checkArgNotNull(type, cs.type);
 
                 return get(columnName, ColumnGetter.forType(type));
             }
@@ -4475,7 +4482,8 @@ public final class Jdbc {
              * @return an array with one resolved {@code ColumnGetter} per result column
              * @throws IllegalArgumentException if a configured column name is not found among the result column labels
              */
-            ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList, final Map<String, ColumnGetter<?>> configuredColumnGetters) { //NOSONAR
+            ColumnGetter<?>[] initColumnGetter(final List<String> columnLabelList, final Map<String, ColumnGetter<?>> configuredColumnGetters) //NOSONAR
+                    throws IllegalArgumentException {
                 final int rsColumnCount = columnLabelList.size();
                 final ColumnGetter<?>[] rsColumnGetters = new ColumnGetter<?>[rsColumnCount];
 
@@ -4541,7 +4549,7 @@ public final class Jdbc {
              */
             @SequentialOnly
             @Stateful
-            public <T> BiRowMapper<T> to(final Class<? extends T> targetClass) {
+            public <T> BiRowMapper<T> to(final Class<? extends T> targetClass) throws IllegalArgumentException {
                 return to(targetClass, false);
             }
 
@@ -4566,7 +4574,7 @@ public final class Jdbc {
              */
             @SequentialOnly
             @Stateful
-            public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreUnmatchedColumns) {
+            public <T> BiRowMapper<T> to(final Class<? extends T> targetClass, final boolean ignoreUnmatchedColumns) throws IllegalArgumentException {
                 N.checkArgNotNull(targetClass, cs.targetClass);
 
                 final Map<String, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
@@ -4788,7 +4796,7 @@ public final class Jdbc {
          * @return a composed {@code RowConsumer} that performs in sequence this operation followed by the {@code after} operation.
          * @throws IllegalArgumentException if {@code after} is {@code null}.
          */
-        default RowConsumer andThen(final Throwables.Consumer<? super ResultSet, SQLException> after) {
+        default RowConsumer andThen(final Throwables.Consumer<? super ResultSet, SQLException> after) throws IllegalArgumentException {
             N.checkArgNotNull(after, cs.after);
 
             return rs -> {
@@ -4832,7 +4840,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer forEachColumn(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
+        static RowConsumer forEachColumn(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) throws IllegalArgumentException {
             N.checkArgNotNull(consumerForAll, cs.consumerForAll);
 
             return new RowConsumer() {
@@ -4878,7 +4886,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer forDisposableObjArray(final Consumer<DisposableObjArray> consumer) {
+        static RowConsumer forDisposableObjArray(final Consumer<DisposableObjArray> consumer) throws IllegalArgumentException {
             N.checkArgNotNull(consumer, cs.consumer);
 
             return new RowConsumer() {
@@ -4912,6 +4920,10 @@ public final class Jdbc {
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
          * This consumer should not be reused across different queries or used in parallel streams.</p>
          *
+         * <p>{@code entityClass} is only checked for {@code null} here; its bean metadata is resolved when the
+         * returned consumer processes its first row, so a class that is not a bean class makes that first
+         * {@code accept} call throw an {@link IllegalArgumentException}.</p>
+         *
          * @param entityClass the class used to infer column types for fetching values from the {@code ResultSet}.
          * @param consumer the consumer to process the typed {@code DisposableObjArray} for each row.
          * @return a new stateful {@code RowConsumer}.
@@ -4920,7 +4932,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static RowConsumer forDisposableObjArray(final Class<?> entityClass, final Consumer<DisposableObjArray> consumer) {
+        static RowConsumer forDisposableObjArray(final Class<?> entityClass, final Consumer<DisposableObjArray> consumer) throws IllegalArgumentException {
             N.checkArgNotNull(entityClass, cs.entityClass);
             N.checkArgNotNull(consumer, cs.consumer);
 
@@ -5026,7 +5038,8 @@ public final class Jdbc {
          * @return a composed {@code BiRowConsumer} that performs in sequence this operation followed by the {@code after} operation.
          * @throws IllegalArgumentException if {@code after} is {@code null}.
          */
-        default BiRowConsumer andThen(final Throwables.BiConsumer<? super ResultSet, ? super List<String>, SQLException> after) {
+        default BiRowConsumer andThen(final Throwables.BiConsumer<? super ResultSet, ? super List<String>, SQLException> after)
+                throws IllegalArgumentException {
             N.checkArgNotNull(after, cs.after);
 
             return (rs, cls) -> {
@@ -5053,7 +5066,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code consumerForAll} is {@code null}
          */
         @Beta
-        static BiRowConsumer forEachColumn(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) {
+        static BiRowConsumer forEachColumn(final Throwables.ObjIntConsumer<? super ResultSet, SQLException> consumerForAll) throws IllegalArgumentException {
             N.checkArgNotNull(consumerForAll, cs.consumerForAll);
 
             return (rs, columnLabels) -> {
@@ -5081,7 +5094,7 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static BiRowConsumer forDisposableObjArray(final BiConsumer<List<String>, DisposableObjArray> consumer) {
+        static BiRowConsumer forDisposableObjArray(final BiConsumer<List<String>, DisposableObjArray> consumer) throws IllegalArgumentException {
             N.checkArgNotNull(consumer, cs.consumer);
 
             return new BiRowConsumer() {
@@ -5115,6 +5128,10 @@ public final class Jdbc {
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
          * This consumer should not be reused across different queries or in parallel streams.</p>
          *
+         * <p>{@code entityClass} is only checked for {@code null} here; its bean metadata is resolved when the
+         * returned consumer processes its first row, so a class that is not a bean class makes that first
+         * {@code accept} call throw an {@link IllegalArgumentException}.</p>
+         *
          * @param entityClass the class used to infer column types for fetching values from the {@code ResultSet}.
          * @param consumer the consumer to process the column labels and typed {@code DisposableObjArray} for each row.
          * @return a new stateful {@code BiRowConsumer}.
@@ -5123,7 +5140,8 @@ public final class Jdbc {
         @Beta
         @SequentialOnly
         @Stateful
-        static BiRowConsumer forDisposableObjArray(final Class<?> entityClass, final BiConsumer<List<String>, DisposableObjArray> consumer) {
+        static BiRowConsumer forDisposableObjArray(final Class<?> entityClass, final BiConsumer<List<String>, DisposableObjArray> consumer)
+                throws IllegalArgumentException {
             N.checkArgNotNull(entityClass, cs.entityClass);
             N.checkArgNotNull(consumer, cs.consumer);
 
@@ -5258,7 +5276,7 @@ public final class Jdbc {
          * @return a new composed {@code RowFilter} that returns {@code true} only if both this filter and {@code other} return {@code true}.
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
-        default RowFilter and(final Throwables.Predicate<? super ResultSet, SQLException> other) {
+        default RowFilter and(final Throwables.Predicate<? super ResultSet, SQLException> other) throws IllegalArgumentException {
             N.checkArgNotNull(other, cs.other);
 
             return rs -> test(rs) && other.test(rs);
@@ -5272,7 +5290,7 @@ public final class Jdbc {
          * @return a new composed {@code RowFilter} that returns {@code true} if either this filter or {@code other} returns {@code true}.
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
-        default RowFilter or(final Throwables.Predicate<? super ResultSet, SQLException> other) {
+        default RowFilter or(final Throwables.Predicate<? super ResultSet, SQLException> other) throws IllegalArgumentException {
             N.checkArgNotNull(other, cs.other);
 
             return rs -> test(rs) || other.test(rs);
@@ -5371,7 +5389,7 @@ public final class Jdbc {
          * @return a new composed {@code BiRowFilter} that returns {@code true} only if both this filter and {@code other} return {@code true}.
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
-        default BiRowFilter and(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
+        default BiRowFilter and(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) throws IllegalArgumentException {
             N.checkArgNotNull(other, cs.other);
 
             return (rs, cls) -> test(rs, cls) && other.test(rs, cls);
@@ -5385,7 +5403,7 @@ public final class Jdbc {
          * @return a new composed {@code BiRowFilter} that returns {@code true} if either this filter or {@code other} returns {@code true}.
          * @throws IllegalArgumentException if {@code other} is {@code null}.
          */
-        default BiRowFilter or(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) {
+        default BiRowFilter or(final Throwables.BiPredicate<? super ResultSet, ? super List<String>, SQLException> other) throws IllegalArgumentException {
             N.checkArgNotNull(other, cs.other);
 
             return (rs, cls) -> test(rs, cls) || other.test(rs, cls);
@@ -5438,7 +5456,7 @@ public final class Jdbc {
          * @throws SQLException if reading the current row's column values, or the result set metadata needed to map them, fails.
          */
         @Override
-        void accept(final ResultSet rs, final Object[] outputRow) throws SQLException;
+        void accept(final ResultSet rs, final Object[] outputRow) throws IllegalArgumentException, SQLException;
 
         /**
          * Creates a stateful {@code RowExtractor} that maps {@code ResultSet} columns to an {@code Object} array
@@ -5454,7 +5472,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor forType(final Class<?> entityClassForFetch) {
+        static RowExtractor forType(final Class<?> entityClassForFetch) throws IllegalArgumentException {
             return forType(entityClassForFetch, null, null);
         }
 
@@ -5472,7 +5490,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor forType(final Class<?> entityClassForFetch, final Map<String, String> prefixAndPropNameMap) {
+        static RowExtractor forType(final Class<?> entityClassForFetch, final Map<String, String> prefixAndPropNameMap) throws IllegalArgumentException {
             return forType(entityClassForFetch, null, prefixAndPropNameMap);
         }
 
@@ -5490,7 +5508,7 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor forType(final Class<?> entityClassForFetch, final List<String> columnLabels) {
+        static RowExtractor forType(final Class<?> entityClassForFetch, final List<String> columnLabels) throws IllegalArgumentException {
             return forType(entityClassForFetch, columnLabels, null);
         }
 
@@ -5518,7 +5536,8 @@ public final class Jdbc {
          */
         @SequentialOnly
         @Stateful
-        static RowExtractor forType(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndPropNameMap) {
+        static RowExtractor forType(final Class<?> entityClassForFetch, final List<String> columnLabels, final Map<String, String> prefixAndPropNameMap)
+                throws IllegalArgumentException {
             N.checkArgument(Beans.isBeanClass(entityClassForFetch), "{} is not a valid entity class with getter/setter methods", entityClassForFetch);
 
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClassForFetch);
@@ -5631,7 +5650,7 @@ public final class Jdbc {
          * @return a new {@code RowExtractorBuilder}.
          * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}.
          */
-        static RowExtractorBuilder builder(final ColumnGetter<?> defaultColumnGetter) {
+        static RowExtractorBuilder builder(final ColumnGetter<?> defaultColumnGetter) throws IllegalArgumentException {
             return new RowExtractorBuilder(defaultColumnGetter);
         }
 
@@ -5675,7 +5694,7 @@ public final class Jdbc {
              * @param defaultColumnGetter the default {@code ColumnGetter} to use; must not be null
              * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}
              */
-            RowExtractorBuilder(final ColumnGetter<?> defaultColumnGetter) {
+            RowExtractorBuilder(final ColumnGetter<?> defaultColumnGetter) throws IllegalArgumentException {
                 N.checkArgNotNull(defaultColumnGetter, cs.defaultColumnGetter);
 
                 columnGetterMap = new HashMap<>(9);
@@ -5689,7 +5708,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getBoolean(final int columnIndex) {
+            public RowExtractorBuilder getBoolean(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_BOOLEAN);
             }
 
@@ -5700,7 +5719,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getByte(final int columnIndex) {
+            public RowExtractorBuilder getByte(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_BYTE);
             }
 
@@ -5711,7 +5730,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getShort(final int columnIndex) {
+            public RowExtractorBuilder getShort(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_SHORT);
             }
 
@@ -5722,7 +5741,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getInt(final int columnIndex) {
+            public RowExtractorBuilder getInt(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_INT);
             }
 
@@ -5733,7 +5752,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getLong(final int columnIndex) {
+            public RowExtractorBuilder getLong(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_LONG);
             }
 
@@ -5744,7 +5763,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getFloat(final int columnIndex) {
+            public RowExtractorBuilder getFloat(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_FLOAT);
             }
 
@@ -5755,7 +5774,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getDouble(final int columnIndex) {
+            public RowExtractorBuilder getDouble(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_DOUBLE);
             }
 
@@ -5766,7 +5785,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getBigDecimal(final int columnIndex) {
+            public RowExtractorBuilder getBigDecimal(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_BIG_DECIMAL);
             }
 
@@ -5777,7 +5796,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getString(final int columnIndex) {
+            public RowExtractorBuilder getString(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_STRING);
             }
 
@@ -5788,7 +5807,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getDate(final int columnIndex) {
+            public RowExtractorBuilder getDate(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_DATE);
             }
 
@@ -5799,7 +5818,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getTime(final int columnIndex) {
+            public RowExtractorBuilder getTime(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_TIME);
             }
 
@@ -5810,7 +5829,7 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              */
-            public RowExtractorBuilder getTimestamp(final int columnIndex) {
+            public RowExtractorBuilder getTimestamp(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_TIMESTAMP);
             }
 
@@ -5827,7 +5846,7 @@ public final class Jdbc {
              * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific {@code ColumnGetter} is set for the column.
              */
             @Deprecated
-            public RowExtractorBuilder getObject(final int columnIndex) {
+            public RowExtractorBuilder getObject(final int columnIndex) throws IllegalArgumentException {
                 return get(columnIndex, ColumnGetter.GET_OBJECT);
             }
 
@@ -5840,8 +5859,9 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive, or {@code type} is {@code null}.
              */
-            public RowExtractorBuilder getObject(final int columnIndex, final Class<?> type) {
+            public RowExtractorBuilder getObject(final int columnIndex, final Class<?> type) throws IllegalArgumentException {
                 N.checkArgPositive(columnIndex, cs.columnIndex);
+                N.checkArgNotNull(type, cs.type);
 
                 return get(columnIndex, ColumnGetter.forType(type));
             }
@@ -6107,7 +6127,7 @@ public final class Jdbc {
          * @return a {@code ColumnGetter} for the specified type.
          * @throws IllegalArgumentException if {@code cls} is {@code null}.
          */
-        static <T> ColumnGetter<T> forType(final Class<? extends T> cls) {
+        static <T> ColumnGetter<T> forType(final Class<? extends T> cls) throws IllegalArgumentException {
             N.checkArgNotNull(cls, cs.cls);
 
             return forType(N.typeOf(cls));
@@ -6125,7 +6145,7 @@ public final class Jdbc {
          * @return a {@code ColumnGetter} for the specified type.
          * @throws IllegalArgumentException if {@code type} is {@code null}.
          */
-        static <T> ColumnGetter<T> forType(final Type<? extends T> type) {
+        static <T> ColumnGetter<T> forType(final Type<? extends T> type) throws IllegalArgumentException {
             N.checkArgNotNull(type, cs.type);
 
             final ColumnGetter<?> columnGetter = COLUMN_GETTER_POOL.computeIfAbsent(type, k -> type::get);
@@ -6458,7 +6478,7 @@ public final class Jdbc {
              * @return a {@code RowMapper} for the specified type.
              * @throws IllegalArgumentException if {@code firstColumnType} is {@code null}
              */
-            public static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) {
+            public static <T> RowMapper<T> get(final Class<? extends T> firstColumnType) throws IllegalArgumentException {
                 N.checkArgNotNull(firstColumnType, cs.firstColumnType);
 
                 return get(N.typeOf(firstColumnType));
@@ -6483,7 +6503,7 @@ public final class Jdbc {
              * @return a {@code RowMapper} for the specified type
              * @throws IllegalArgumentException if {@code type} is {@code null}
              */
-            public static <T> RowMapper<T> get(final Type<? extends T> type) {
+            public static <T> RowMapper<T> get(final Type<? extends T> type) throws IllegalArgumentException {
                 N.checkArgNotNull(type, cs.type);
 
                 RowMapper<T> rowMapper = rowMapperPool.get(type);
@@ -6517,7 +6537,7 @@ public final class Jdbc {
              * @return a {@code RowMapper} that performs JSON deserialization.
              * @throws IllegalArgumentException if {@code targetType} is {@code null}
              */
-            public static <T> RowMapper<T> readJson(final Class<? extends T> targetType) {
+            public static <T> RowMapper<T> readJson(final Class<? extends T> targetType) throws IllegalArgumentException {
                 N.checkArgNotNull(targetType, cs.targetType);
 
                 return rs -> N.fromJson(rs.getString(1), targetType);
@@ -6544,7 +6564,7 @@ public final class Jdbc {
              * @return a {@code RowMapper} that performs XML deserialization.
              * @throws IllegalArgumentException if {@code targetType} is {@code null}
              */
-            public static <T> RowMapper<T> readXml(final Class<? extends T> targetType) {
+            public static <T> RowMapper<T> readXml(final Class<? extends T> targetType) throws IllegalArgumentException {
                 N.checkArgNotNull(targetType, cs.targetType);
 
                 return rs -> N.fromXml(rs.getString(1), targetType);
@@ -6570,7 +6590,7 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code type} is {@code null}
              */
             @SuppressWarnings("rawtypes")
-            public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type) {
+            public static <T> BiParametersSetter<AbstractQuery, T> set(final Class<T> type) throws IllegalArgumentException {
                 N.checkArgNotNull(type, cs.type);
 
                 return set(N.typeOf(type));
@@ -6592,7 +6612,7 @@ public final class Jdbc {
              * @throws IllegalArgumentException if {@code type} is {@code null}
              */
             @SuppressWarnings("rawtypes")
-            public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) {
+            public static <T> BiParametersSetter<AbstractQuery, T> set(final Type<T> type) throws IllegalArgumentException {
                 N.checkArgNotNull(type, cs.type);
 
                 return (preparedQuery, x) -> type.set(preparedQuery.stmt, 1, x);
@@ -6687,7 +6707,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code parameterIndex} is not positive
          * @see CallableStatement#registerOutParameter(int, int)
          */
-        public static OutParam of(int parameterIndex, int sqlType) {
+        public static OutParam of(int parameterIndex, int sqlType) throws IllegalArgumentException {
             N.checkArgument(parameterIndex > 0, "'parameterIndex' must be greater than 0 (1-based), but was: %s", parameterIndex);
             return new OutParam(parameterIndex, null, sqlType, null, 0);
         }
@@ -6709,7 +6729,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code parameterName} is {@code null} or empty
          * @see CallableStatement#registerOutParameter(String, int)
          */
-        public static OutParam of(String parameterName, int sqlType) {
+        public static OutParam of(String parameterName, int sqlType) throws IllegalArgumentException {
             N.checkArgNotEmpty(parameterName, cs.parameterName);
 
             return new OutParam(0, parameterName, sqlType, null, 0);
@@ -7064,7 +7084,7 @@ public final class Jdbc {
          * @return the handler instance, or {@code null} if not found.
          * @throws IllegalArgumentException if {@code qualifier} is {@code null} or empty.
          */
-        public static Handler<?> get(final String qualifier) { //NOSONAR
+        public static Handler<?> get(final String qualifier) throws IllegalArgumentException { //NOSONAR
             N.checkArgNotEmpty(qualifier, cs.qualifier);
 
             Handler<?> result = handlerPool.get(qualifier);
@@ -7110,7 +7130,7 @@ public final class Jdbc {
          * @return the handler instance, or {@code null} if not found.
          * @throws IllegalArgumentException if {@code handlerClass} is {@code null}.
          */
-        public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) { //NOSONAR
+        public static Handler<?> get(final Class<? extends Handler<?>> handlerClass) throws IllegalArgumentException { //NOSONAR
             N.checkArgNotNull(handlerClass, cs.handlerClass);
 
             final String qualifier = ClassUtil.getCanonicalClassName(handlerClass);
@@ -7344,7 +7364,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code capacity} or {@code evictDelay} is negative.
          * @throws IllegalStateException if JVM shutdown has begun and the backing pool cannot register its shutdown hook.
          */
-        static DaoCache create(final int capacity, final long evictDelay) {
+        static DaoCache create(final int capacity, final long evictDelay) throws IllegalArgumentException, IllegalStateException {
             return new DefaultDaoCache(capacity, evictDelay);
         }
 
@@ -7370,7 +7390,7 @@ public final class Jdbc {
          * @return a new {@code DaoCache} instance backed by the provided map.
          * @throws IllegalArgumentException if {@code map} is {@code null}.
          */
-        static DaoCache createByMap(Map<String, Object> map) {
+        static DaoCache createByMap(Map<String, Object> map) throws IllegalArgumentException {
             N.checkArgNotNull(map, cs.map);
 
             return new DaoCacheByMap(map);
@@ -7384,7 +7404,7 @@ public final class Jdbc {
          * @return a new {@code DaoCache} instance backed by a {@code ConcurrentHashMap}.
          * @throws IllegalArgumentException if {@code capacity} is negative.
          */
-        static DaoCache createByMap(final int capacity) {
+        static DaoCache createByMap(final int capacity) throws IllegalArgumentException {
             return new DaoCacheByMap(capacity);
         }
 
@@ -7537,7 +7557,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code capacity} or {@code evictDelay} is negative.
          * @throws IllegalStateException if JVM shutdown has begun and the backing pool cannot register its shutdown hook.
          */
-        public DefaultDaoCache(final int capacity, final long evictDelay) {
+        public DefaultDaoCache(final int capacity, final long evictDelay) throws IllegalArgumentException, IllegalStateException {
             pool = PoolFactory.createKeyedObjectPool(capacity, evictDelay);
         }
 
@@ -7557,8 +7577,8 @@ public final class Jdbc {
         @Override
         @SuppressWarnings("unused")
         public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException, IllegalStateException {
+            N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
 
             final PoolableAdapter<Object> w = pool.get(defaultCacheKey);
 
@@ -7586,8 +7606,8 @@ public final class Jdbc {
         @Override
         @SuppressWarnings("unused")
         public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException, IllegalStateException {
+            N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
 
             // Reject null result to match DaoCacheByMap.put — otherwise a cached null is
             // indistinguishable from a miss (the sentinel-free contract of get()) and the
@@ -7614,14 +7634,15 @@ public final class Jdbc {
          * @param methodSignature a tuple containing method metadata (unused).
          * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null}
          *         or the backing pool rejected the entry.
-         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}, or if {@code result} is non-null
-         *         and {@code liveTime} or {@code maxIdleTime} is not positive.
+         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}, or {@code liveTime} or {@code maxIdleTime} is not positive.
          * @throws IllegalStateException if {@code result} is non-null and the backing pool has been closed during JVM shutdown.
          */
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
-                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException, IllegalStateException {
+            N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
+            N.checkArgPositive(liveTime, cs.liveTime);
+            N.checkArgPositive(maxIdleTime, cs.maxIdleTime);
 
             if (result == null) {
                 return false;
@@ -7660,8 +7681,9 @@ public final class Jdbc {
         @Override
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature)
+                throws IllegalArgumentException, NullPointerException, ClassCastException, IllegalStateException {
+            N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
 
             final Method method = methodSignature._1;
 
@@ -7686,7 +7708,7 @@ public final class Jdbc {
          * @throws IllegalStateException if the backing pool has been closed during JVM shutdown.
          */
         @Override
-        public void clear() {
+        public void clear() throws IllegalStateException {
             pool.clear();
         }
     }
@@ -7717,7 +7739,7 @@ public final class Jdbc {
          * @param capacity the initial capacity for the backing {@code ConcurrentHashMap}.
          * @throws IllegalArgumentException if {@code capacity} is negative.
          */
-        public DaoCacheByMap(final int capacity) {
+        public DaoCacheByMap(final int capacity) throws IllegalArgumentException {
             this(new ConcurrentHashMap<>(capacity));
         }
 
@@ -7741,8 +7763,8 @@ public final class Jdbc {
         @Override
         @SuppressWarnings("unused")
         public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException {
+            N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
 
             return cache.get(defaultCacheKey);
         }
@@ -7756,8 +7778,8 @@ public final class Jdbc {
         @Override
         @SuppressWarnings("unused")
         public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException, UnsupportedOperationException {
+            N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
 
             if (result == null) {
                 return false;
@@ -7777,8 +7799,8 @@ public final class Jdbc {
          */
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
-                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+                Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException, UnsupportedOperationException {
+            N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
 
             if (result == null) {
                 return false;
@@ -7804,8 +7826,9 @@ public final class Jdbc {
         @Override
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
-                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
-            N.checkArgNotNull(defaultCacheKey, "Key cannot be null");
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature)
+                throws IllegalArgumentException, NullPointerException, ClassCastException, UnsupportedOperationException {
+            N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
 
             final Method method = methodSignature._1;
 
@@ -7830,7 +7853,7 @@ public final class Jdbc {
          * @throws UnsupportedOperationException if the backing map does not support clearing.
          */
         @Override
-        public void clear() {
+        public void clear() throws UnsupportedOperationException {
             cache.clear();
         }
 

@@ -54,7 +54,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    default int update(final String propName, final Object propValue, final Condition cond) throws IllegalArgumentException, SQLException {
+    default int update(final String propName, final Object propValue, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(propName, cs.propName);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -83,7 +84,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    int update(final Map<String, Object> updateProps, final Condition cond) throws IllegalArgumentException, SQLException;
+    int update(final Map<String, Object> updateProps, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Updates records matching the condition using all updatable properties from the entity.
@@ -103,11 +104,14 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entity the entity containing update values
      * @param cond the condition to match records
      * @return the number of records updated
-     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or if the entity class has no updatable property
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    default int update(final T entity, final Condition cond) throws IllegalArgumentException, SQLException {
+    default int update(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotNull(cond, cs.cond);
+
         @SuppressWarnings("deprecation")
         final Collection<String> propNamesToUpdate = JdbcUtil.getUpdatePropNames(targetEntityClass());
 
@@ -139,6 +143,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws IllegalArgumentException, SQLException;
+    int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
 }

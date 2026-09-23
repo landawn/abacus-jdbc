@@ -104,12 +104,17 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *
      * @param entity the entity to insert or update (must not be {@code null})
      * @return the saved entity (either newly inserted or updated)
-     * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or an existing row is updated and {@code entity}
+     *                                  has a property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
+     * @throws UnsupportedOperationException if no existing row is found,
+     *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set
+     *         and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default T upsert(final T entity) throws SQLException, DuplicateResultException {
+    default T upsert(final T entity)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
@@ -135,14 +140,19 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param cond the condition used to look up an existing record (must not be {@code null})
      * @return the saved entity: the inserted {@code entity} when no existing record was found,
      *         or the loaded database entity (with non-id properties copied from {@code entity}) when an existing record was updated
-     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
+     *                                  and {@code entity} has a property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
+     * @throws UnsupportedOperationException if no existing row is found,
+     *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set
+     *         and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      * @see Filters
      */
     @Override
-    default T upsert(final T entity, final Condition cond) throws SQLException, DuplicateResultException {
+    default T upsert(final T entity, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -185,8 +195,12 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
      *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     * @throws UnsupportedOperationException if an entity is inserted while
+     *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
+     *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities) throws SQLException {
+    default List<T> batchUpsert(final Collection<? extends T> entities)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -213,8 +227,12 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
      *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     * @throws UnsupportedOperationException if an entity is inserted while
+     *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
+     *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws SQLException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {
@@ -252,8 +270,12 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
      *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     * @throws UnsupportedOperationException if an entity is inserted while
+     *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
+     *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws SQLException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, matchPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -292,8 +314,12 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
      *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     * @throws UnsupportedOperationException if an entity is inserted while
+     *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
+     *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws SQLException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
         N.checkArgPositive(batchSize, cs.batchSize);
 
@@ -301,10 +327,10 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             return new ArrayList<>();
         }
 
-        final List<String> uniquePropNameList = matchPropNames instanceof List ? (List<String>) matchPropNames : new ArrayList<>(matchPropNames);
         final T first = N.firstOrNullIfEmpty(entities);
         N.checkArgNotNull(first, "The first element in the specified collection 'entities' cannot be null");
 
+        final List<String> uniquePropNameList = matchPropNames instanceof List ? (List<String>) matchPropNames : new ArrayList<>(matchPropNames);
         final Class<?> cls = first.getClass();
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.landawn.abacus.annotation.Internal;
+import com.landawn.abacus.exception.UncheckedInterruptedException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -97,7 +98,7 @@ public final class DaoUtil {
      *         otherwise {@code false}.
      * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
-    public static boolean isCacheable(final Class<?> daoInterface) {
+    public static boolean isCacheable(final Class<?> daoInterface) throws NullPointerException {
         return NonUpdateDao.class.isAssignableFrom(daoInterface) || ReadOnlyDao.class.isAssignableFrom(daoInterface);
     }
 
@@ -108,7 +109,7 @@ public final class DaoUtil {
      * @return {@code true} if {@code daoInterface} extends {@link CrudReadOps}; otherwise {@code false}.
      * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
-    public static boolean isCrudReadOps(final Class<?> daoInterface) {
+    public static boolean isCrudReadOps(final Class<?> daoInterface) throws NullPointerException {
         return CrudReadOps.class.isAssignableFrom(daoInterface);
     }
 
@@ -131,7 +132,7 @@ public final class DaoUtil {
      * @return {@code true} if {@code daoInterface} extends {@link CrudJoinEntityReadOps}; otherwise {@code false}.
      * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
-    public static boolean isCrudJoinEntityReadOps(final Class<?> daoInterface) {
+    public static boolean isCrudJoinEntityReadOps(final Class<?> daoInterface) throws NullPointerException {
         return CrudJoinEntityReadOps.class.isAssignableFrom(daoInterface);
     }
 
@@ -142,7 +143,7 @@ public final class DaoUtil {
      * @return {@code true} if {@code daoInterface} extends {@link JoinEntityReadOps}; otherwise {@code false}.
      * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
-    public static boolean isJoinEntityReadOps(final Class<?> daoInterface) {
+    public static boolean isJoinEntityReadOps(final Class<?> daoInterface) throws NullPointerException {
         return JoinEntityReadOps.class.isAssignableFrom(daoInterface);
     }
 
@@ -153,7 +154,7 @@ public final class DaoUtil {
      * @return {@code true} if {@code daoInterface} extends {@link UncheckedReadOps}; otherwise {@code false}.
      * @throws NullPointerException if {@code daoInterface} is {@code null}
      */
-    public static boolean isUncheckedReadOps(final Class<?> daoInterface) {
+    public static boolean isUncheckedReadOps(final Class<?> daoInterface) throws NullPointerException {
         return UncheckedReadOps.class.isAssignableFrom(daoInterface);
     }
 
@@ -164,7 +165,7 @@ public final class DaoUtil {
      * @return {@code true} if methods declared by {@code declaringClass} are base DAO operations; otherwise {@code false}.
      * @throws NullPointerException if {@code declaringClass} is {@code null}
      */
-    public static boolean isDaoOperationDeclaringClass(final Class<?> declaringClass) {
+    public static boolean isDaoOperationDeclaringClass(final Class<?> declaringClass) throws NullPointerException {
         return declaringClass.equals(Dao.class) || declaringClass.equals(UncheckedDao.class) || declaringClass.equals(ReadOps.class)
                 || declaringClass.equals(InsertOps.class) || declaringClass.equals(UpdateOps.class) || declaringClass.equals(DeleteOps.class)
                 || declaringClass.equals(UncheckedReadOps.class) || declaringClass.equals(UncheckedInsertOps.class)
@@ -179,7 +180,7 @@ public final class DaoUtil {
      * @return {@code true} if methods declared by {@code declaringClass} are CRUD DAO operations; otherwise {@code false}.
      * @throws NullPointerException if {@code declaringClass} is {@code null}
      */
-    public static boolean isCrudDaoOperationDeclaringClass(final Class<?> declaringClass) {
+    public static boolean isCrudDaoOperationDeclaringClass(final Class<?> declaringClass) throws NullPointerException {
         return declaringClass.equals(CrudDao.class) || declaringClass.equals(UncheckedCrudDao.class) || declaringClass.equals(CrudReadOps.class)
                 || declaringClass.equals(CrudInsertOps.class) || declaringClass.equals(CrudUpdateOps.class) || declaringClass.equals(CrudDeleteOps.class)
                 || declaringClass.equals(UncheckedCrudReadOps.class) || declaringClass.equals(UncheckedCrudInsertOps.class)
@@ -193,7 +194,7 @@ public final class DaoUtil {
      * @return {@code true} if methods declared by {@code declaringClass} are join-entity helper operations; otherwise {@code false}.
      * @throws NullPointerException if {@code declaringClass} is {@code null}
      */
-    public static boolean isJoinEntityHelperDeclaringClass(final Class<?> declaringClass) {
+    public static boolean isJoinEntityHelperDeclaringClass(final Class<?> declaringClass) throws NullPointerException {
         return declaringClass.equals(JoinEntityReadOps.class) || declaringClass.equals(JoinEntityDeleteOps.class)
                 || declaringClass.equals(UncheckedJoinEntityReadOps.class) || declaringClass.equals(UncheckedJoinEntityDeleteOps.class)
                 || declaringClass.equals(JoinEntityHelper.class) || declaringClass.equals(UncheckedJoinEntityHelper.class);
@@ -210,13 +211,13 @@ public final class DaoUtil {
      *
      * @param dao the DAO used to generate the identifier; must implement {@link CrudInsertOps}.
      * @return the generated identifier.
+     * @throws ClassCastException if {@code dao} is not {@code null} and does not implement {@link CrudInsertOps}.
      * @throws NullPointerException if {@code dao} is {@code null}
-     * @throws ClassCastException if {@code dao} does not implement {@link CrudInsertOps}.
      * @throws UnsupportedOperationException if {@code dao} does not override {@link CrudInsertOps#generateId()}.
      * @throws SQLException if the DAO's overriding ID generator fails while accessing the database.
      */
     @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
-    public static Object generateId(final DaoBase dao) throws SQLException {
+    public static Object generateId(final DaoBase dao) throws ClassCastException, NullPointerException, UnsupportedOperationException, SQLException {
         return ((CrudInsertOps) dao).generateId();
     }
 
@@ -253,11 +254,13 @@ public final class DaoUtil {
      * @param entityInfo the bean information for the entity class
      * @return the extracted ID value (simple value for single ID, {@link Seid} for composite ID)
      * @throws IllegalArgumentException if {@code entity}, {@code idPropNameList}, or
-     *                                  {@code entityInfo} is {@code null}, or if
-     *                                  {@code idPropNameList} is empty
+     *                                  {@code entityInfo} is {@code null}, if
+     *                                  {@code idPropNameList} is empty, or if it contains a {@code null} name
+     * @throws NullPointerException if a name in {@code idPropNameList} is not a property described by {@code entityInfo}
      */
     @SuppressWarnings({ "deprecation", "unchecked" })
-    static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo) {
+    static <T, ID> ID extractId(final T entity, final List<String> idPropNameList, final BeanInfo entityInfo)
+            throws IllegalArgumentException, NullPointerException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
         N.checkArgNotNull(entityInfo, cs.entityInfo);
@@ -305,10 +308,13 @@ public final class DaoUtil {
      * @param entityInfo the bean information for the entity class
      * @return a function that extracts ID values from entities
      * @throws IllegalArgumentException if {@code idPropNameList} or {@code entityInfo} is
-     *                                  {@code null}, or if {@code idPropNameList} is empty
+     *                                  {@code null}, if {@code idPropNameList} is empty, or if it contains a {@code null} name
+     * @throws NullPointerException if {@code idPropNameList} holds a single name that is not a property described by {@code entityInfo}
+     *                              (for a composite id, an unknown name fails only when the returned function is applied)
      */
     @SuppressWarnings({ "deprecation", "unchecked" })
-    static <T, ID> Function<T, ID> createIdExtractor(final List<String> idPropNameList, final BeanInfo entityInfo) {
+    static <T, ID> Function<T, ID> createIdExtractor(final List<String> idPropNameList, final BeanInfo entityInfo)
+            throws IllegalArgumentException, NullPointerException {
         N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
         N.checkArgNotNull(entityInfo, cs.entityInfo);
 
@@ -347,10 +353,13 @@ public final class DaoUtil {
      *                                  {@link EntityId} with no keys; if {@code isMap} and the non-null elements are not all
      *                                  {@link Map}s, or one of them is empty or has a key that is not a non-blank {@link String};
      *                                  or if {@code idPropNameList} holds more than one name and either it names a property that
-     *                                  is not readable from the ids or every element of {@code ids} is {@code null}
+     *                                  is not readable from the ids, a non-null element of {@code ids} is a {@link Map}, or every
+     *                                  element of {@code ids} is {@code null}
+     * @throws ClassCastException if {@code isEntityId} and a non-null element of {@code ids} is not an {@link EntityId}
      */
     @SuppressWarnings("unchecked")
-    static Condition idsToCondition(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap) {
+    static Condition idsToCondition(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap)
+            throws IllegalArgumentException, ClassCastException {
         if (isEntityId) {
             return Filters.idToCond((Collection<? extends EntityId>) ids);
         } else if (isMap) {
@@ -372,7 +381,7 @@ public final class DaoUtil {
      * @return an {@code IN}, {@code IS NULL}, or combined {@code OR} condition as appropriate
      * @throws IllegalArgumentException if {@code propName} or {@code values} is {@code null} or empty.
      */
-    static Condition singlePropValuesToCondition(final String propName, final Collection<?> values) {
+    static Condition singlePropValuesToCondition(final String propName, final Collection<?> values) throws IllegalArgumentException {
         N.checkArgNotEmpty(propName, cs.propName);
         N.checkArgNotEmpty(values, cs.values);
 
@@ -432,7 +441,8 @@ public final class DaoUtil {
      *         {@link HashSet} containing both the requested properties and all ID properties
      * @throws NullPointerException if {@code idPropNameList} is {@code null}
      */
-    static Collection<String> getRefreshSelectPropNames(final Collection<String> propNamesToRefresh, final List<String> idPropNameList) {
+    static Collection<String> getRefreshSelectPropNames(final Collection<String> propNamesToRefresh, final List<String> idPropNameList)
+            throws NullPointerException {
         if (propNamesToRefresh == null) {
             return new HashSet<>(idPropNameList);
         }
@@ -474,7 +484,8 @@ public final class DaoUtil {
      * @throws NullPointerException if {@code dao} is {@code null}
      * @throws UnsupportedOperationException if the DAO does not implement CrudReadOps interface.
      */
-    static <T, ID, TD extends DaoBase<T, TD>> CrudReadOps<T, ID, TD> getCrudReadOps(final CrudJoinEntityReadOps<T, ID, TD> dao) {
+    static <T, ID, TD extends DaoBase<T, TD>> CrudReadOps<T, ID, TD> getCrudReadOps(final CrudJoinEntityReadOps<T, ID, TD> dao)
+            throws NullPointerException, UnsupportedOperationException {
         if (dao instanceof CrudReadOps) {
             return (CrudReadOps<T, ID, TD>) dao;
         } else {
@@ -509,7 +520,8 @@ public final class DaoUtil {
      * @throws NullPointerException if {@code dao} is {@code null}
      * @throws UnsupportedOperationException if the DAO does not implement ReadOps interface.
      */
-    static <T, TD extends DaoBase<T, TD>> ReadOps<T, TD> getReadOps(final JoinEntityBase<T, TD> dao) {
+    static <T, TD extends DaoBase<T, TD>> ReadOps<T, TD> getReadOps(final JoinEntityBase<T, TD> dao)
+            throws NullPointerException, UnsupportedOperationException {
         if (dao instanceof ReadOps) {
             return (ReadOps<T, TD>) dao;
         } else {
@@ -544,7 +556,8 @@ public final class DaoUtil {
      * @throws NullPointerException if {@code dao} is {@code null}
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedReadOps interface.
      */
-    static <T, TD extends UncheckedDaoBase<T, TD>> UncheckedReadOps<T, TD> getReadOps(final UncheckedJoinEntityReadOps<T, TD> dao) {
+    static <T, TD extends UncheckedDaoBase<T, TD>> UncheckedReadOps<T, TD> getReadOps(final UncheckedJoinEntityReadOps<T, TD> dao)
+            throws NullPointerException, UnsupportedOperationException {
         if (dao instanceof UncheckedReadOps) {
             return (UncheckedReadOps<T, TD>) dao;
         } else {
@@ -580,7 +593,8 @@ public final class DaoUtil {
      * @throws NullPointerException if {@code dao} is {@code null}
      * @throws UnsupportedOperationException if the DAO does not implement UncheckedCrudReadOps interface.
      */
-    static <T, ID, TD extends UncheckedDaoBase<T, TD>> UncheckedCrudReadOps<T, ID, TD> getCrudReadOps(final UncheckedCrudJoinEntityReadOps<T, ID, TD> dao) {
+    static <T, ID, TD extends UncheckedDaoBase<T, TD>> UncheckedCrudReadOps<T, ID, TD> getCrudReadOps(final UncheckedCrudJoinEntityReadOps<T, ID, TD> dao)
+            throws NullPointerException, UnsupportedOperationException {
         if (dao instanceof UncheckedCrudReadOps) {
             return (UncheckedCrudReadOps<T, ID, TD>) dao;
         } else {
@@ -618,7 +632,8 @@ public final class DaoUtil {
      * @throws IllegalArgumentException if an argument is {@code null} or a join annotation is invalid
      * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
-    static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName) {
+    static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName)
+            throws IllegalArgumentException, IllegalStateException {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass, targetTableName);
     }
 
@@ -632,12 +647,13 @@ public final class DaoUtil {
      * @param joinEntityClass the join entity class whose required source property names are included.
      * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
      *         names added; null or empty selections are returned unchanged because they select all default properties.
+     * @throws NullPointerException if {@code dao} is {@code null} and {@code sourceSelectPropNames} is not empty
      * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid, or a requested join entity class is {@code null}
      * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     @SuppressWarnings("deprecation")
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
-            final Class<?> joinEntityClass) {
+            final Class<?> joinEntityClass) throws NullPointerException, IllegalArgumentException, IllegalStateException {
         if (N.isEmpty(sourceSelectPropNames)) {
             return sourceSelectPropNames;
         }
@@ -670,11 +686,13 @@ public final class DaoUtil {
      * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
      *         names added; returned unchanged if the selection is null or empty (all default properties),
      *         or {@code joinEntityClasses} is empty.
+     * @throws NullPointerException if {@code dao} is {@code null}, {@code sourceSelectPropNames} is not empty and {@code joinEntityClasses}
+     *                              is not empty
      * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid, or a requested join entity class is {@code null}
      * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
-            final Collection<Class<?>> joinEntityClasses) {
+            final Collection<Class<?>> joinEntityClasses) throws NullPointerException, IllegalArgumentException, IllegalStateException {
         if (N.isEmpty(sourceSelectPropNames) || N.isEmpty(joinEntityClasses)) {
             return sourceSelectPropNames;
         }
@@ -697,11 +715,13 @@ public final class DaoUtil {
      * @param sourceSelectPropNames the source property names to select.
      * @return {@code sourceSelectPropNames} (possibly unchanged) with all required source join property
      *         names added; null or empty selections are returned unchanged because they select all default properties.
+     * @throws NullPointerException if {@code dao} is {@code null} and {@code sourceSelectPropNames} is not empty
      * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid
      * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     @SuppressWarnings("deprecation")
-    static Collection<String> includeAllSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames) {
+    static Collection<String> includeAllSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames)
+            throws NullPointerException, IllegalArgumentException, IllegalStateException {
         if (N.isEmpty(sourceSelectPropNames)) {
             return sourceSelectPropNames;
         }
@@ -779,7 +799,7 @@ public final class DaoUtil {
      * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     static List<String> getJoinEntityPropNamesByType(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName,
-            final Class<?> joinEntityClass) {
+            final Class<?> joinEntityClass) throws IllegalArgumentException, IllegalStateException {
         return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, targetTableName, joinEntityClass);
     }
 
@@ -851,8 +871,10 @@ public final class DaoUtil {
      * @param futures the list of futures to complete. Must not be {@code null}.
      * @throws NullPointerException if {@code futures} is {@code null} or contains a {@code null} future
      * @throws UncheckedSQLException if the first failed future has a SQL-related exception
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for a future to complete
      */
-    static void uncheckedComplete(final List<ContinuableFuture<Void>> futures) throws UncheckedSQLException {
+    static void uncheckedComplete(final List<ContinuableFuture<Void>> futures)
+            throws NullPointerException, UncheckedSQLException, UncheckedInterruptedException {
         Exception firstException = null;
 
         for (final ContinuableFuture<Void> f : futures) {
@@ -896,9 +918,11 @@ public final class DaoUtil {
      * @return the sum of all integer results from the futures
      * @throws NullPointerException if {@code futures} is {@code null}, contains a {@code null} future, or a successful future returns {@code null}
      * @throws UncheckedSQLException if the first failed future has a SQL-related exception
-     * @throws ArithmeticException if the sum overflows an {@code int}.
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for a future to complete
+     * @throws ArithmeticException if no future failed and the sum overflows an {@code int}.
      */
-    static int uncheckedCompleteSum(final List<ContinuableFuture<Integer>> futures) throws UncheckedSQLException {
+    static int uncheckedCompleteSum(final List<ContinuableFuture<Integer>> futures)
+            throws NullPointerException, UncheckedSQLException, UncheckedInterruptedException, ArithmeticException {
         long result = 0;
         Result<Integer, Exception> ret = null;
         Exception firstException = null;
@@ -945,8 +969,9 @@ public final class DaoUtil {
      * @param futures the list of futures to complete. Must not be {@code null}.
      * @throws NullPointerException if {@code futures} is {@code null} or contains a {@code null} future
      * @throws SQLException if the first failed future has a SQL-related exception
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for a future to complete
      */
-    static void complete(final List<ContinuableFuture<Void>> futures) throws SQLException {
+    static void complete(final List<ContinuableFuture<Void>> futures) throws NullPointerException, SQLException, UncheckedInterruptedException {
         Exception firstException = null;
 
         for (final ContinuableFuture<Void> f : futures) {
@@ -990,9 +1015,11 @@ public final class DaoUtil {
      * @return the sum of all integer results from the futures
      * @throws NullPointerException if {@code futures} is {@code null}, contains a {@code null} future, or a successful future returns {@code null}
      * @throws SQLException if the first failed future has a SQL-related exception
-     * @throws ArithmeticException if the sum overflows an {@code int}.
+     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for a future to complete
+     * @throws ArithmeticException if no future failed and the sum overflows an {@code int}.
      */
-    static int completeSum(final List<ContinuableFuture<Integer>> futures) throws SQLException {
+    static int completeSum(final List<ContinuableFuture<Integer>> futures)
+            throws NullPointerException, SQLException, UncheckedInterruptedException, ArithmeticException {
         long result = 0;
         Result<Integer, Exception> ret = null;
         Exception firstException = null;
@@ -1061,8 +1088,9 @@ public final class DaoUtil {
      *
      * @param primary the failure that will be propagated
      * @param secondary the additional failure to retain
+     * @throws NullPointerException if exactly one of {@code primary} and {@code secondary} is {@code null}
      */
-    static void addSuppressedIfDifferent(final Throwable primary, final Throwable secondary) {
+    static void addSuppressedIfDifferent(final Throwable primary, final Throwable secondary) throws NullPointerException {
         if (primary != secondary) {
             primary.addSuppressed(secondary);
         }
@@ -1070,10 +1098,14 @@ public final class DaoUtil {
 
     /**
      * Executes a statement-building action and translates a checked SQL failure for the unchecked DAO hierarchy.
+     *
+     * @param <R> the result type of {@code action}
+     * @param action the action to execute
+     * @return the result of {@code action}
      * @throws NullPointerException if {@code action} is {@code null}
      * @throws UncheckedSQLException if the action fails with a SQL-related exception; other runtime failures are propagated
      */
-    static <R> R uncheckedSql(final Throwables.Supplier<R, SQLException> action) throws UncheckedSQLException {
+    static <R> R uncheckedSql(final Throwables.Supplier<R, SQLException> action) throws NullPointerException, UncheckedSQLException {
         try {
             return action.get();
         } catch (final Exception e) {

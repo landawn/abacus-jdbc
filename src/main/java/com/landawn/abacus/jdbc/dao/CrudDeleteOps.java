@@ -51,7 +51,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      */
-    int delete(final T entity) throws IllegalArgumentException, SQLException;
+    int delete(final T entity) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Deletes an entity by its ID.
@@ -71,7 +71,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      */
-    int deleteById(final ID id) throws IllegalArgumentException, SQLException;
+    int deleteById(final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Performs batch delete of multiple entities using the default batch size
@@ -93,7 +93,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
-    default int batchDelete(final Collection<? extends T> entities) throws IllegalStateException, SQLException, ArithmeticException {
+    default int batchDelete(final Collection<? extends T> entities) throws IllegalStateException, UncheckedSQLException, SQLException, ArithmeticException {
         return batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -120,7 +120,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     int batchDelete(final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, SQLException, ArithmeticException;
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException, ArithmeticException;
 
     /**
      * Deletes multiple entities by their IDs using the default batch size
@@ -142,7 +142,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
-    default int batchDeleteByIds(final Collection<? extends ID> ids) throws IllegalStateException, SQLException, ArithmeticException {
+    default int batchDeleteByIds(final Collection<? extends ID> ids) throws IllegalStateException, UncheckedSQLException, SQLException, ArithmeticException {
         return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -169,6 +169,6 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, SQLException, ArithmeticException;
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException, ArithmeticException;
 
 }

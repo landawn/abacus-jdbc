@@ -45,6 +45,6 @@ sealed interface DeleteOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      */
-    int delete(final Condition cond) throws IllegalArgumentException, SQLException;
+    int delete(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
 }

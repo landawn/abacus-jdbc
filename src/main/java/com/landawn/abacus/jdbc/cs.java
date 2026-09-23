@@ -535,6 +535,11 @@ public final class cs { // NOSONAR
      * Parameter name for the JDBC fetch size applied to a statement or result set.
      */
     public static final String fetchSize = "fetchSize";
+
+    /**
+     * Parameter name for the list of bean property names bound, in order, as statement parameters.
+     */
+    public static final String fieldNameList = "fieldNameList";
     /**
      * Parameter name for {@link java.io.File} objects to read from or write to.
      */
@@ -567,6 +572,16 @@ public final class cs { // NOSONAR
      * Parameter name for the live time, in milliseconds, of a lock or cache entry.
      */
     public static final String liveTime = "liveTime";
+
+    /**
+     * Parameter name for the maximum idle time, in milliseconds, of a cache entry.
+     */
+    public static final String maxIdleTime = "maxIdleTime";
+
+    /**
+     * Parameter name for the default cache key of a DAO cache entry.
+     */
+    public static final String defaultCacheKey = "defaultCacheKey";
     /**
      * Parameter name for {@link java.util.Map} instances supplied as backing storage.
      */
