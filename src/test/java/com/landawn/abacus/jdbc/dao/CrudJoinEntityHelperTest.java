@@ -235,4 +235,24 @@ public class CrudJoinEntityHelperTest extends TestBase {
         verify(dao, times(2)).loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), eq(Integer.class));
         verify(dao, times(2)).loadAllJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any());
     }
+
+    // A null element in joinEntityClasses is rejected up front, naming the public parameter, before any lookup -
+    // it used to fail only when join metadata was needed, or not at all when no row matched.
+    @Test
+    public void testCollectionOfClassesOverloads_NullElementRejectedEagerly() throws SQLException {
+        final TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        final List<Class<?>> classes = java.util.Arrays.asList(String.class, null);
+
+        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.get(1L, null, classes)).getMessage()
+                .contains("joinEntityClasses"));
+        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.getOrNull(1L, null, classes)).getMessage()
+                .contains("joinEntityClasses"));
+        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.batchGet(List.of(1L), null, classes)).getMessage()
+                .contains("joinEntityClasses"));
+        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.batchGet(List.of(1L), null, classes, 2)).getMessage()
+                .contains("joinEntityClasses"));
+
+        verify(dao, never()).getOrNull(ArgumentMatchers.any(), ArgumentMatchers.<Collection<String>> any());
+        verify(dao, never()).batchGet(ArgumentMatchers.<Collection<Long>> any(), ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.anyInt());
+    }
 }

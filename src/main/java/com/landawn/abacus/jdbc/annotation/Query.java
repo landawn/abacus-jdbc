@@ -456,6 +456,9 @@ public @interface Query {
      *       named parameters, one element per batch row</li>
      *   <li>An optional second {@code int} parameter overrides {@link #batchSize()} at call time</li>
      *   <li>No other parameters are supported for batch methods</li>
+     *   <li>A {@code null} or empty batch {@code Collection} executes no statement: a batch INSERT
+     *       returns an empty list and a batch UPDATE/DELETE reports {@code 0} ({@code false} for a
+     *       boolean return type)</li>
      * </ul>
      *
      * <p>A batch method whose statement parameters do not have that exact shape, or that carries a

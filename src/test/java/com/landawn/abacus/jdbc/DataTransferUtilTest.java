@@ -1789,4 +1789,34 @@ public class DataTransferUtilTest extends TestBase {
         verify(mockPreparedStatement).setString(2, null);
         verify(mockPreparedStatement).setString(3, null);
     }
+
+    // Malformed table/column names of a table copy are rejected before either connection is acquired, and are
+    // reported under the public parameter name.
+    @Test
+    public void testCopyTables_MalformedNamesRejectedBeforeConnectionAcquired() throws SQLException {
+        final DataSource targetDs = mock(DataSource.class);
+
+        final IllegalArgumentException source = assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockDataSource, targetDs, "a..b", "t"));
+        assertTrue(source.getMessage().contains("sourceTableName"), source.getMessage());
+
+        final IllegalArgumentException target = assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockDataSource, targetDs, "s", "a..b"));
+        assertTrue(target.getMessage().contains("targetTableName"), target.getMessage());
+
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(mockDataSource, targetDs, "s", "t", List.of("a.b")));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(mockDataSource, targetDs, "s", "t", List.of("  ")));
+
+        verify(mockDataSource, never()).getConnection();
+        verify(targetDs, never()).getConnection();
+    }
+
+    // Blank select SQL is rejected before a connection is checked out of the data source.
+    @Test
+    public void testExportCsvFromDataSource_BlankSqlRejectedBeforeConnectionAcquired() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.exportCsv(mockDataSource, "   ", new StringWriter()));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.exportCsvFrom(mockDataSource, "   ").to(new StringWriter()));
+
+        verify(mockDataSource, never()).getConnection();
+    }
 }

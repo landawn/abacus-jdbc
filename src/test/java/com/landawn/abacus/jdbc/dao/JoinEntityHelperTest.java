@@ -2133,4 +2133,27 @@ public class JoinEntityHelperTest extends TestBase {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), (Class<?>) null)).getMessage()
                 .contains("joinEntityClass"));
     }
+
+    // A null element in joinEntityClasses is rejected up front, naming the public parameter, regardless of the
+    // selection or of whether any row matches (it used to fail only when join metadata was needed, as
+    // JoinInfo's internal 'joinPropEntityClass', or not at all when nothing matched).
+    @Test
+    public void testCollectionOfClassesOverloads_NullElementRejectedEagerly() {
+        final TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        final Condition cond = Mockito.mock(Condition.class);
+        final List<Class<?>> classes = java.util.Arrays.asList(String.class, null);
+
+        for (final Collection<String> selectPropNames : java.util.Arrays.<Collection<String>> asList(null, List.of("id"))) {
+            assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.findFirst(selectPropNames, classes, cond)).getMessage()
+                    .contains("joinEntityClasses"));
+            assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.findOnlyOne(selectPropNames, classes, cond)).getMessage()
+                    .contains("joinEntityClasses"));
+            assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.list(selectPropNames, classes, cond)).getMessage()
+                    .contains("joinEntityClasses"));
+            assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.stream(selectPropNames, classes, cond)).getMessage()
+                    .contains("joinEntityClasses"));
+        }
+
+        Mockito.verifyNoInteractions(cond);
+    }
 }

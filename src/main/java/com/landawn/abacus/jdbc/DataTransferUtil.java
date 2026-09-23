@@ -2031,6 +2031,8 @@ public final class DataTransferUtil {
         N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
         N.checkArgNotEmpty(selectSql, cs.selectSql);
         N.checkArgNotNull(output, cs.output);
+        // Reject blank or unparsable SQL before acquiring a connection; the delegate reuses the cached parse.
+        ParsedSql.parse(selectSql);
 
         final Connection conn = JdbcUtil.getConnection(sourceDataSource);
 
@@ -2349,6 +2351,8 @@ public final class DataTransferUtil {
         N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
         N.checkArgNotEmpty(selectSql, cs.selectSql);
         N.checkArgNotNull(output, cs.output);
+        // Reject blank or unparsable SQL before acquiring a connection; the delegate reuses the cached parse.
+        ParsedSql.parse(selectSql);
 
         final Connection conn = JdbcUtil.getConnection(sourceDataSource);
 
@@ -2718,8 +2722,8 @@ public final class DataTransferUtil {
             final String targetTableName, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
-        N.checkArgNotBlank(sourceTableName, cs.sourceTableName);
-        N.checkArgNotBlank(targetTableName, cs.targetTableName);
+        checkCopyTableName(sourceTableName, cs.sourceTableName);
+        checkCopyTableName(targetTableName, cs.targetTableName);
         N.checkArgPositive(batchSize, cs.batchSize);
 
         String selectSql = null;
@@ -2819,8 +2823,8 @@ public final class DataTransferUtil {
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
-        N.checkArgNotBlank(sourceTableName, cs.sourceTableName);
-        N.checkArgNotBlank(targetTableName, cs.targetTableName);
+        checkCopyTableName(sourceTableName, cs.sourceTableName);
+        checkCopyTableName(targetTableName, cs.targetTableName);
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(columnNames)) {
@@ -2830,6 +2834,7 @@ public final class DataTransferUtil {
         // Snapshot once so SELECT and INSERT use exactly the same column order even if the
         // caller supplies a collection whose iterator can change between traversals.
         final List<String> copiedColumnNames = new ArrayList<>(columnNames);
+        checkCopyColumnNames(copiedColumnNames);
 
         String selectSql = null;
         String insertSql = null;
@@ -3148,8 +3153,8 @@ public final class DataTransferUtil {
             final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(sourceConn, cs.sourceConn);
         N.checkArgNotNull(targetConn, cs.targetConn);
-        N.checkArgNotBlank(sourceTableName, cs.sourceTableName);
-        N.checkArgNotBlank(targetTableName, cs.targetTableName);
+        checkCopyTableName(sourceTableName, cs.sourceTableName);
+        checkCopyTableName(targetTableName, cs.targetTableName);
         N.checkArgPositive(batchSize, cs.batchSize);
 
         // Generate the SELECT from source first, then derive the column ordering from the
@@ -3266,8 +3271,8 @@ public final class DataTransferUtil {
             final Collection<String> columnNames, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(sourceConn, cs.sourceConn);
         N.checkArgNotNull(targetConn, cs.targetConn);
-        N.checkArgNotBlank(sourceTableName, cs.sourceTableName);
-        N.checkArgNotBlank(targetTableName, cs.targetTableName);
+        checkCopyTableName(sourceTableName, cs.sourceTableName);
+        checkCopyTableName(targetTableName, cs.targetTableName);
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(columnNames)) {
@@ -3277,11 +3282,38 @@ public final class DataTransferUtil {
         // Snapshot once so SELECT and INSERT use exactly the same column order even if the
         // caller supplies a collection whose iterator can change between traversals.
         final List<String> copiedColumnNames = new ArrayList<>(columnNames);
+        checkCopyColumnNames(copiedColumnNames);
 
         final String selectSql = generateSelectSql(sourceConn, sourceTableName, copiedColumnNames);
         final String insertSql = generateInsertSql(targetConn, targetTableName, copiedColumnNames);
 
         return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetConn, insertSql, batchSize);
+    }
+
+    /**
+     * Validates a table name of a table copy before any connection is acquired or any metadata is read.
+     * It applies the same parser that later renders the name into the generated SQL, so it rejects exactly the
+     * names the SQL generation would reject, but reports them under the caller's parameter name.
+     *
+     * @param tableName the table name to validate
+     * @param argName the name of the public parameter that supplied {@code tableName}
+     * @throws IllegalArgumentException if {@code tableName} is {@code null}, blank, or malformed
+     */
+    private static void checkCopyTableName(final String tableName, final String argName) throws IllegalArgumentException {
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, argName);
+    }
+
+    /**
+     * Validates the selected column names of a table copy before any connection is acquired or any metadata is
+     * read, applying the same rules the SQL generation applies later when it renders each name.
+     *
+     * @param columnNames the selected column names; each must be a single, non-blank identifier
+     * @throws IllegalArgumentException if a column name is {@code null}, blank, or malformed
+     */
+    private static void checkCopyColumnNames(final Collection<String> columnNames) throws IllegalArgumentException {
+        for (final String columnName : columnNames) {
+            SqlIdentifierUtil.renderColumnName(columnName, null);
+        }
     }
 
     /**
@@ -4646,8 +4678,12 @@ public final class DataTransferUtil {
                 throws IllegalStateException, IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException {
             assertSingleSource();
 
+            ParsedSql sql = null;
+
             if (dataSource != null || conn != null) {
                 N.checkArgNotEmpty(selectSql, cs.selectSql);
+                // Reject blank or unparsable SQL before a connection is acquired.
+                sql = ParsedSql.parse(selectSql);
             }
 
             if (rs != null) {
@@ -4663,12 +4699,12 @@ public final class DataTransferUtil {
                     JdbcUtil.closeQuietly(r);
                 }
             } else if (conn != null) {
-                return exportFromConnection(conn, exporter);
+                return exportFromConnection(conn, sql, exporter);
             } else {
                 final Connection c = JdbcUtil.getConnection(dataSource);
 
                 try {
-                    return exportFromConnection(c, exporter);
+                    return exportFromConnection(c, sql, exporter);
                 } finally {
                     JdbcUtil.releaseConnection(c, dataSource);
                 }
@@ -4705,20 +4741,20 @@ public final class DataTransferUtil {
         }
 
         /**
-         * Executes {@link #selectSql} on the given connection with settings tuned for large result sets and
-         * exports the rows. The connection is not closed by this method.
+         * Executes the already-parsed {@link #selectSql} on the given connection with settings tuned for large
+         * result sets and exports the rows. The connection is not closed by this method.
          *
          * @param c the connection to run the query on; not closed by this method
+         * @param sql the parsed {@link #selectSql}
          * @param exporter writes the result set rows to the CSV target
          * @return the number of rows exported
-         * @throws IllegalArgumentException if the configured SQL is empty, blank, or cannot be parsed, or the exporter requests a missing column.
+         * @throws IllegalArgumentException if the exporter requests a missing column.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          * @throws UncheckedSQLException if the database product metadata lookup fails.
          * @throws UncheckedIOException if the exporter cannot write the CSV output.
          */
-        private long exportFromConnection(final Connection c, final ResultSetExporter exporter)
+        private long exportFromConnection(final Connection c, final ParsedSql sql, final ResultSetExporter exporter)
                 throws IllegalArgumentException, SQLException, UncheckedSQLException, UncheckedIOException {
-            final ParsedSql sql = ParsedSql.parse(selectSql);
             final PreparedStatement st = JdbcUtil.prepareStatement(c, sql.parameterizedSql(), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
 
             try {
@@ -4857,7 +4893,7 @@ public final class DataTransferUtil {
      * @param sourceDataSource the data source to read from (must not be {@code null})
      * @param sourceTableName the name of the source table (must not be blank)
      * @return a {@link CopyTableFromDataSource} for configuring and running the copy
-     * @throws IllegalArgumentException if {@code sourceDataSource} is {@code null} or {@code sourceTableName} is blank
+     * @throws IllegalArgumentException if {@code sourceDataSource} is {@code null}, or {@code sourceTableName} is {@code null} or blank
      * @see CopyTableFromDataSource
      * @see #copy(javax.sql.DataSource, javax.sql.DataSource, String, String)
      */
@@ -4883,7 +4919,7 @@ public final class DataTransferUtil {
      * @param sourceConn the connection to read from (must not be {@code null})
      * @param sourceTableName the name of the source table (must not be blank)
      * @return a {@link CopyTableFromConnection} for configuring and running the copy
-     * @throws IllegalArgumentException if {@code sourceConn} is {@code null} or {@code sourceTableName} is blank
+     * @throws IllegalArgumentException if {@code sourceConn} is {@code null}, or {@code sourceTableName} is {@code null} or blank
      * @see CopyTableFromConnection
      * @see #copy(Connection, Connection, String, String)
      */

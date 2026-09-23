@@ -38,7 +38,7 @@ import java.lang.annotation.Target;
  * pre-approved SQL fragments; do not use it for caller-supplied data.</p>
  *
  * <p>The DAO proxy ({@code DaoImpl}) performs these substitutions while assembling the SQL.
- * Empty collections produce an empty string in place of the token (which is usually a SQL syntax
+ * A {@code null} or empty collection/array produces an empty string in place of the token (which is usually a SQL syntax
  * error — callers should guard against that case).</p>
  *
  * <p><b>Restriction:</b> the annotated parameter must be of a {@code Collection} or array type;
@@ -107,7 +107,7 @@ public @interface SqlFragmentList {
      * <p>The resolved name must correspond to a {@code {name}} token in the surrounding
      * {@link Query @Query} SQL; a name with no matching token fails DAO initialization with
      * {@code IllegalArgumentException}. The collection/array elements are comma-joined (with no surrounding
-     * parentheses) and rewritten into that token; an empty collection yields an empty fragment,
+     * parentheses) and rewritten into that token; a {@code null} or empty collection/array yields an empty fragment,
      * which is usually a SQL syntax error, so guard against it at the call site.</p>
      *
      * @return the template-variable name; empty means use the method parameter name (requires {@code -parameters})

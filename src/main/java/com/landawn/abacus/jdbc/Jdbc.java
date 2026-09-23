@@ -2127,6 +2127,10 @@ public final class Jdbc {
          * <p>Columns whose label does not match any property of {@code entityClass} are read with the default
          * {@code Object} column reader (no type-specific conversion is applied to them).</p>
          *
+         * <p>{@code entityClass} is only checked for {@code null} here; its bean metadata is resolved when the
+         * returned mapper is first applied, so a class that is not a bean class makes that first
+         * {@code apply} call throw an {@link IllegalArgumentException}.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * RowMapper<DisposableObjArray> mapper = RowMapper.toDisposableObjArray(User.class);

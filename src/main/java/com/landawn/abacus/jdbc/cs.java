@@ -671,6 +671,10 @@ public final class cs { // NOSONAR
      */
     public static final String joinEntityClass = "joinEntityClass";
     /**
+     * Parameter name for the collection of entity classes used by a multi-class join operation.
+     */
+    public static final String joinEntityClasses = "joinEntityClasses";
+    /**
      * Parameter name for the property selected by a single-column query.
      */
     public static final String singleSelectPropName = "singleSelectPropName";

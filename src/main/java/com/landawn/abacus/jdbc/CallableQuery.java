@@ -2401,7 +2401,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameter the context object to be passed to the {@code BiParametersSetter}.
      * @param registrar the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code registrar} is {@code null}.
+     * @throws IllegalArgumentException if {@code registrar} is {@code null}
      * @throws SQLException if {@code registrar} throws {@code SQLException}, for example because the driver fails to register an
      *         OUT parameter; this query is closed before the exception is rethrown
      */

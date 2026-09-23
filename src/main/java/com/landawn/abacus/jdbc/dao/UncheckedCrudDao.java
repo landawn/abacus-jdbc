@@ -220,6 +220,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its match key is being extracted)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -230,7 +232,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities)
-            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
+            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -252,6 +254,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its match key is being extracted)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -262,7 +266,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
+            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {
@@ -296,6 +300,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty,
      *                                  or, for nonempty input, the first entity is {@code null} or a match property does not exist
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its match key is being extracted)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -306,7 +312,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames)
-            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
+            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, matchPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -345,6 +351,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *                                  if {@code batchSize} is not positive,
      *                                  if the first element of {@code entities} is {@code null},
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
+     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
+     *                              is checked; a later {@code null} fails while its match key is being extracted)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -355,7 +363,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize)
-            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
+            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
         try {
             return CrudDao.super.batchUpsert(entities, matchPropNames, batchSize);
         } catch (final SQLException e) {

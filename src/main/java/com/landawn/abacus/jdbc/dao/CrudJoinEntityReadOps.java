@@ -216,8 +216,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
      * @return an Optional containing the entity with selected properties and specified join entities loaded, or empty if not found
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if an element of {@code joinEntityClasses} is {@code null} and its
-     *                                  metadata is needed (because {@code sourceSelectPropNames} is nonempty or a matching record is found),
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if {@code joinEntityClasses} contains a {@code null} element,
      *                                  or, when a matching record is found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
@@ -415,8 +414,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                        If {@code null}, all properties of the main entity are selected
      * @param joinEntityClasses the collection of join entity classes to load
      * @return the entity with selected properties and specified join entities loaded, or {@code null} if not found
-     * @throws IllegalArgumentException if {@code id} is {@code null}, or if an element of {@code joinEntityClasses} is {@code null} and its
-     *                                  metadata is needed (because {@code sourceSelectPropNames} is nonempty or a matching record is found),
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or if {@code joinEntityClasses} contains a {@code null} element,
      *                                  or, when a matching record is found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
@@ -431,6 +429,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
             throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException, DuplicateResultException,
             UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
+        N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id, DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses));
 
@@ -615,8 +614,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                       If {@code null}, all properties of the entities are selected
      * @param joinEntityClasses the collection of join entity classes to load for each entity
      * @return a list of entities with selected properties and specified join entities loaded
-     * @throws IllegalArgumentException if an element of {@code joinEntityClasses} is {@code null} and its metadata is needed
-     *                                  (because {@code sourceSelectPropNames} is nonempty or matching records are found),
+     * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element,
      *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
@@ -750,9 +748,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of entities with selected properties and specified join entities loaded
-     * @throws IllegalArgumentException if {@code batchSize} is not positive,
-     *                                  or if an element of {@code joinEntityClasses} is {@code null} and its metadata is needed
-     *                                  (because {@code sourceSelectPropNames} is nonempty or matching records are found),
+     * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element,
+     *                                  or if {@code batchSize} is not positive,
      *                                  or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
@@ -769,6 +766,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses,
             final int batchSize) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException, DuplicateResultException,
             UnsupportedOperationException {
+        N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)

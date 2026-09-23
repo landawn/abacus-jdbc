@@ -69,7 +69,8 @@ import java.util.Map;
  * <ul>
  *   <li>The key must be a property (getter) of the DAO's target entity class</li>
  *   <li>The map's value type must be the target entity type or a supertype ({@code Map<K, ? super Entity>})</li>
- *   <li>Null key values will be included in the map (if the Map implementation supports {@code null} keys)</li>
+ *   <li>Rows whose key value is {@code null} are skipped while merging, so they never appear in the
+ *       map and no {@code null} key is ever produced</li>
  *   <li>Rows sharing the same key are merged into one entity before the map is built</li>
  *   <li>The return type must be a Map or a subtype of Map</li>
  * </ul>

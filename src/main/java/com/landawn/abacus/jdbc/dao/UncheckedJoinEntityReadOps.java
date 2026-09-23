@@ -122,10 +122,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                          If {@code null} or empty, no join entities are loaded and the matched entity is returned as-is
      * @param cond the condition to match
      * @return an Optional containing the entity with join entities loaded, or empty if not found
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class,
-     *                                  or {@code cond} is {@code null},
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
+     *                                  or no join property is found for one of the specified types in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -134,6 +133,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Override
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, UnsupportedOperationException {
+        N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
         N.checkArgNotNull(cond, cs.cond);
 
         final Optional<T> result = DaoUtil.getReadOps(this).findFirst(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), cond);
@@ -250,10 +250,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                          If {@code null} or empty, no join entities are loaded and the matched entity is returned as-is
      * @param cond the condition to match
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class,
-     *                                  or {@code cond} is {@code null},
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
+     *                                  or no join property is found for one of the specified types in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -263,6 +262,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Override
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+        N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
         N.checkArgNotNull(cond, cs.cond);
 
         final Optional<T> result = DaoUtil.getReadOps(this)
@@ -388,10 +388,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                          If {@code null} or empty, no join entities are loaded and the matched entities are returned as-is
      * @param cond the condition to match
      * @return a list of entities matching the condition with the specified join entities loaded
-     * @throws IllegalArgumentException if no join property is found for one of the specified types in the entity class,
-     *                                  or {@code cond} is {@code null},
-     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
-     *                                  or a requested join entity class is {@code null} when its metadata is needed
+     * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
+     *                                  or no join property is found for one of the specified types in the entity class,
+     *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
@@ -401,6 +400,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Override
     default List<T> list(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
             throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, UnsupportedOperationException {
+        N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
         N.checkArgNotNull(cond, cs.cond);
 
         final List<T> result = DaoUtil.getReadOps(this).list(DaoUtil.includeSourceJoinPropNames(this, sourceSelectPropNames, joinEntityClasses), cond);
