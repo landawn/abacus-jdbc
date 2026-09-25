@@ -533,6 +533,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * <p>If the transaction is marked for rollback only (status {@link Status#MARKED_ROLLBACK}), it
      * will be rolled back instead of committed, and {@code actionAfterCommit} is not run.</p>
      *
+     * <p>After a successful commit, the action runs after connection cleanup has been attempted,
+     * even if cleanup fails. An action failure is suppressed on an earlier cleanup failure.</p>
+     *
      * @param actionAfterCommit the action to be executed after the current transaction is committed successfully in this
      *        (outermost) scope; for a nested scope the commit is deferred to the outermost scope and this action is
      *        <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
@@ -596,9 +599,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             if (_status == Status.COMMITTED) {
                 logger.info("Transaction(id={}) has been committed successfully", _timedId);
 
-                resetAndCloseConnection();
-
-                actionAfterCommit.run();
+                complete(actionAfterCommit, null);
             } else {
                 if (commitException == null) {
                     logger.warn("Commit did not complete transaction(id={}). Automatically rolling back", _timedId);
@@ -674,6 +675,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * <p>When called on a nested transaction (reference count still greater than 0 after decrementing),
      * this method marks the transaction for rollback ({@link Status#MARKED_ROLLBACK}). The actual rollback
      * occurs when the outermost transaction completes (reference count reaches 0).</p>
+     *
+     * <p>The outermost action runs after rollback and connection cleanup have been attempted,
+     * even if either fails. Later failures are suppressed on the first failure.</p>
      *
      * @param actionAfterRollback the action to be executed after the rollback completes in this (outermost) scope; for a nested scope the rollback is deferred to the outermost scope and this action is <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
      * @throws IllegalStateException if called from a thread other than the transaction's owner
@@ -796,6 +800,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * restored only after a successful rollback; changing auto-commit or isolation after a failed
      * rollback could commit the pending work. An owned connection is released in either case.</p>
      *
+     * <p>The action runs after the cleanup attempt, even if rollback or cleanup fails. The first
+     * failure remains primary, with distinct later failures attached as suppressed exceptions.</p>
+     *
      * @param actionAfterRollback the action to be executed after rollback, must not be {@code null}
      * @throws UncheckedSQLException if the JDBC connection rejects the rollback
      */
@@ -829,36 +836,44 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 logger.warn(rollbackException, "Failed to roll back transaction(id={})", _timedId);
             }
 
-            try {
-                resetAndCloseConnection();
-            } catch (final RuntimeException | Error cleanupEx) {
-                if (rollbackFailure != null) {
-                    if (rollbackFailure != cleanupEx) {
-                        rollbackFailure.addSuppressed(cleanupEx);
-                    }
-                    logger.warn(cleanupEx, "Connection cleanup failed after rollback failure; attached as suppressed (transaction id={})", _timedId);
-                } else {
-                    throw cleanupEx;
-                }
-            }
+            complete(actionAfterRollback, rollbackFailure);
+        }
+    }
 
-            // Guard against the post-rollback action masking a primary rollback failure. When
-            // rollbackFailure is non-null, an UncheckedSQLException, RuntimeException, or Error is
-            // propagating from the try block; letting another unchecked failure escape the finally
-            // would replace it and hide the primary rollback failure from the caller.
-            try {
-                actionAfterRollback.run();
-            } catch (final RuntimeException | Error actionEx) {
-                if (rollbackFailure != null) {
-                    if (rollbackFailure != actionEx) {
-                        rollbackFailure.addSuppressed(actionEx);
-                    }
-                    logger.warn(actionEx,
-                            "actionAfterRollback threw after a rollback failure; attached as suppressed to preserve the primary rollback exception (transaction id={})",
-                            _timedId);
-                } else {
-                    throw actionEx;
-                }
+    /**
+     * Attempts connection cleanup and then runs the completion action, preserving the first failure.
+     *
+     * @param actionAfterCompletion the non-null action to run after the cleanup attempt
+     * @param primaryFailure an already propagating failure, or {@code null} if the database operation succeeded
+     */
+    private void complete(final Runnable actionAfterCompletion, final Throwable primaryFailure) {
+        Throwable failure = primaryFailure;
+
+        try {
+            resetAndCloseConnection();
+        } catch (final RuntimeException | Error e) {
+            if (failure == null) {
+                failure = e;
+            } else if (failure != e) {
+                failure.addSuppressed(e);
+            }
+        }
+
+        try {
+            actionAfterCompletion.run();
+        } catch (final RuntimeException | Error e) {
+            if (failure == null) {
+                failure = e;
+            } else if (failure != e) {
+                failure.addSuppressed(e);
+            }
+        }
+
+        if (primaryFailure == null) {
+            if (failure instanceof RuntimeException runtimeFailure) {
+                throw runtimeFailure;
+            } else if (failure instanceof Error error) {
+                throw error;
             }
         }
     }

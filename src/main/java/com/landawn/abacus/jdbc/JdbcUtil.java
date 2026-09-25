@@ -672,6 +672,8 @@ public final class JdbcUtil {
     public static javax.sql.DataSource createHikariDataSource(final String url, final String user, final String password, final int minIdle,
             final int maxPoolSize) throws IllegalArgumentException, RuntimeException {
         N.checkArgNotEmpty(url, cs.url);
+        N.checkArgNotNegative(minIdle, cs.minIdle);
+        N.checkArgPositive(maxPoolSize, cs.maxPoolSize);
 
         try {
             final com.zaxxer.hikari.HikariConfig config = new com.zaxxer.hikari.HikariConfig();
@@ -716,11 +718,13 @@ public final class JdbcUtil {
      * @param password The password for database authentication.
      * @return A {@code javax.sql.DataSource} instance configured with C3P0 defaults.
      * @throws IllegalArgumentException if {@code url} is {@code null} or empty.
+     * @throws RuntimeException if constructing or configuring the C3P0 connection pool fails.
      * @see #createC3p0DataSource(String, String, String, int, int)
      * @see com.mchange.v2.c3p0.ComboPooledDataSource
      */
     @Beta
-    public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password) throws IllegalArgumentException {
+    public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password)
+            throws IllegalArgumentException, RuntimeException {
         N.checkArgNotEmpty(url, cs.url);
 
         try {
@@ -766,12 +770,13 @@ public final class JdbcUtil {
      * @param maxPoolSize The maximum number of connections the pool will allow.
      * @return A {@code javax.sql.DataSource} instance configured with C3P0 and custom pool settings.
      * @throws IllegalArgumentException if {@code url} is {@code null} or empty.
+     * @throws RuntimeException if constructing or configuring the C3P0 connection pool fails.
      * @see #createC3p0DataSource(String, String, String)
      * @see com.mchange.v2.c3p0.ComboPooledDataSource
      */
     @Beta
     public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password, final int minPoolSize,
-            final int maxPoolSize) throws IllegalArgumentException {
+            final int maxPoolSize) throws IllegalArgumentException, RuntimeException {
         N.checkArgNotEmpty(url, cs.url);
 
         try {
@@ -817,15 +822,15 @@ public final class JdbcUtil {
      * @param user The username for database authentication.
      * @param password The password for database authentication.
      * @return A new {@link Connection} object.
-     * @throws IllegalArgumentException if {@code url} is {@code null} or empty, the driver class cannot be determined from
-     *         the URL, or that driver class cannot be loaded.
-     * @throws UncheckedSQLException if registering the driver with {@link DriverManager} fails, or the JDBC driver rejects the URL,
-     *         credentials, or connection request.
+     * @throws IllegalArgumentException if {@code url} is {@code null} or empty, its driver cannot be determined or loaded, or the driver class is abstract
+     *         or has no supported constructor.
+     * @throws RuntimeException if reflective construction of the JDBC driver fails.
+     * @throws UncheckedSQLException if registering the JDBC driver or opening the connection fails.
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#getConnection(String, String, String)
      */
     public static Connection createConnection(final String url, final String user, final String password)
-            throws IllegalArgumentException, UncheckedSQLException {
+            throws IllegalArgumentException, RuntimeException, UncheckedSQLException {
         return createConnection(getDriverClassByUrl(url), url, user, password);
     }
 
@@ -853,15 +858,15 @@ public final class JdbcUtil {
      * @param user The username for database authentication.
      * @param password The password for database authentication.
      * @return A new {@link Connection} object.
-     * @throws IllegalArgumentException if {@code driverClass} or {@code url} is {@code null} or empty, or
-     *         {@code driverClass} cannot be loaded, is abstract, or has no no-arg constructor.
-     * @throws ClassCastException if the class named by {@code driverClass} does not implement {@link Driver}.
-     * @throws UncheckedSQLException if registering the driver with {@link DriverManager} fails, or the JDBC driver rejects the URL,
-     *         credentials, or connection request.
+     * @throws IllegalArgumentException if {@code driverClass} or {@code url} is {@code null} or empty, or the driver class cannot be loaded, is abstract,
+     *         or has no supported constructor.
+     * @throws RuntimeException if reflective construction of the JDBC driver fails.
+     * @throws ClassCastException if the named class does not implement {@link Driver}.
+     * @throws UncheckedSQLException if registering the JDBC driver or opening the connection fails.
      * @see #createConnection(Class, String, String, String)
      */
     public static Connection createConnection(final String driverClass, final String url, final String user, final String password)
-            throws IllegalArgumentException, ClassCastException, UncheckedSQLException {
+            throws IllegalArgumentException, RuntimeException, ClassCastException, UncheckedSQLException {
         N.checkArgNotEmpty(driverClass, cs.driverClass);
         N.checkArgNotEmpty(url, cs.url);
 
@@ -900,15 +905,15 @@ public final class JdbcUtil {
      * @param user The username for database authentication.
      * @param password The password for database authentication.
      * @return A new {@link Connection} object.
-     * @throws IllegalArgumentException if {@code driverClass} is {@code null}, {@code url} is {@code null} or empty,
-     *         or {@code driverClass} is abstract or has no no-arg constructor.
-     * @throws UncheckedSQLException if registering the driver with {@link DriverManager} fails, or the JDBC driver rejects the URL,
-     *         credentials, or connection request.
+     * @throws IllegalArgumentException if {@code driverClass} is {@code null}, {@code url} is {@code null} or empty, or the driver class is abstract
+     *         or has no supported constructor.
+     * @throws RuntimeException if reflective construction of the JDBC driver fails.
+     * @throws UncheckedSQLException if registering the JDBC driver or opening the connection fails.
      * @see #createConnection(String, String, String, String)
      * @see DriverManager#registerDriver(Driver)
      */
     public static Connection createConnection(final Class<? extends Driver> driverClass, final String url, final String user, final String password)
-            throws IllegalArgumentException, UncheckedSQLException {
+            throws IllegalArgumentException, RuntimeException, UncheckedSQLException {
         N.checkArgNotNull(driverClass, cs.driverClass);
         N.checkArgNotEmpty(url, cs.url);
 
@@ -1829,11 +1834,11 @@ public final class JdbcUtil {
      * @param rowsToSkip The number of rows to skip; values {@code <= 0} are no-ops.
      * @return The number of rows actually skipped (may be less than {@code rowsToSkip} if the end of
      *         the {@code ResultSet} is reached).
-     * @throws NullPointerException if {@code rs} is {@code null} and {@code rowsToSkip} is positive.
+     * @throws IllegalArgumentException if {@code rs} is {@code null} and {@code rowsToSkip} is positive.
      * @throws SQLException if reading the cursor position or advancing the result set fails.
      * @see #skip(ResultSet, long)
      */
-    public static int skip(final ResultSet rs, final int rowsToSkip) throws NullPointerException, SQLException {
+    public static int skip(final ResultSet rs, final int rowsToSkip) throws IllegalArgumentException, SQLException {
         return (int) skip(rs, (long) rowsToSkip);
     }
 
@@ -1869,11 +1874,15 @@ public final class JdbcUtil {
      * @param rowsToSkip The number of rows to skip. Values {@code <= 0} are no-ops and return {@code 0}.
      * @return The number of rows actually skipped, which may be less than {@code rowsToSkip} if the end of the
      *         {@code ResultSet} is reached.
-     * @throws NullPointerException if {@code rs} is {@code null} and {@code rowsToSkip} is positive.
+     * @throws IllegalArgumentException if {@code rs} is {@code null} and {@code rowsToSkip} is positive.
      * @throws SQLException if reading the cursor position or advancing the result set fails.
      * @see ResultSet#absolute(int)
      */
-    public static long skip(final ResultSet rs, long rowsToSkip) throws NullPointerException, SQLException {
+    public static long skip(final ResultSet rs, long rowsToSkip) throws IllegalArgumentException, SQLException {
+        if (rowsToSkip > 0) {
+            N.checkArgNotNull(rs, cs.rs);
+        }
+
         if (rowsToSkip <= 0) {
             return 0;
         } else if (rowsToSkip == 1) {
@@ -1974,12 +1983,14 @@ public final class JdbcUtil {
      *
      * @param rs The {@link ResultSet} to query; must not be {@code null}.
      * @return The number of columns in the result set.
-     * @throws NullPointerException if {@code rs} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} is {@code null}.
      * @throws SQLException if obtaining result-set metadata or reading its column count fails.
      * @see ResultSet#getMetaData()
      * @see ResultSetMetaData#getColumnCount()
      */
-    public static int getColumnCount(final ResultSet rs) throws NullPointerException, SQLException {
+    public static int getColumnCount(final ResultSet rs) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rs, cs.rs);
+
         return rs.getMetaData().getColumnCount();
     }
 
@@ -2014,7 +2025,7 @@ public final class JdbcUtil {
      * @param tableName The name of the table for which to retrieve column names.
      * @return A {@link List} of column names in the order they are defined in the table.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
-     * @throws SQLException if reading column metadata and the fallback table query fail, including when the table does not exist.
+     * @throws SQLException if reading connection or column metadata fails, the fallback table query fails, or no columns can be found for the table.
      * @see #getColumnLabels(ResultSet)
      */
     public static List<String> getColumnNames(final Connection conn, final String tableName) throws IllegalArgumentException, SQLException {
@@ -2224,7 +2235,7 @@ public final class JdbcUtil {
      * @param conn The connection to query with.
      * @param qualifiedTableName The (possibly qualified) table name to select from.
      * @return The column names in ordinal order.
-     * @throws SQLException if preparing or executing the metadata probe, reading column metadata, or closing its JDBC resources fails.
+     * @throws SQLException if preparing or executing the metadata probe or reading its column metadata fails.
      */
     private static List<String> getColumnNamesBySelect(final Connection conn, final String qualifiedTableName) throws SQLException {
         final String query = "SELECT * FROM " + qualifiedTableName + " WHERE 1 > 2";
@@ -2268,12 +2279,14 @@ public final class JdbcUtil {
      *
      * @param rs The {@link ResultSet} to read; must not be {@code null}.
      * @return A {@link List} of column labels (or column names when no label is set), in column-order.
-     * @throws NullPointerException if {@code rs} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} is {@code null}.
      * @throws SQLException if obtaining metadata or reading column labels and names fails.
      * @see #getColumnLabel(ResultSetMetaData, int)
      * @see ResultSetMetaData#getColumnLabel(int)
      */
-    public static List<String> getColumnLabels(final ResultSet rs) throws NullPointerException, SQLException {
+    public static List<String> getColumnLabels(final ResultSet rs) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rs, cs.rs);
+
         final ResultSetMetaData metaData = rs.getMetaData();
         final int columnCount = metaData.getColumnCount();
         final List<String> labelList = new ArrayList<>(columnCount);
@@ -2309,12 +2322,14 @@ public final class JdbcUtil {
      * @param rsmd The {@link ResultSetMetaData} to read from; must not be {@code null}.
      * @param columnIndex The 1-based index of the column.
      * @return The column label if non-empty, otherwise the column name.
-     * @throws NullPointerException if {@code rsmd} is {@code null}.
+     * @throws IllegalArgumentException if {@code rsmd} is {@code null}.
      * @throws SQLException if reading the label or fallback name fails, including an invalid column index.
      * @see ResultSetMetaData#getColumnLabel(int)
      * @see ResultSetMetaData#getColumnName(int)
      */
-    public static String getColumnLabel(final ResultSetMetaData rsmd, final int columnIndex) throws NullPointerException, SQLException {
+    public static String getColumnLabel(final ResultSetMetaData rsmd, final int columnIndex) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rsmd, cs.rsmd);
+
         final String result = rsmd.getColumnLabel(columnIndex);
 
         return Strings.isEmpty(result) ? rsmd.getColumnName(columnIndex) : result;
@@ -2341,11 +2356,13 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to search within; must not be {@code null}.
      * @param columnLabel The column label (or name) to look up; case-insensitive.
      * @return The 1-based index of the matching column, or {@code -1} if none matches.
-     * @throws NullPointerException if {@code rs} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} is {@code null}.
      * @throws SQLException if obtaining metadata or reading column labels and names fails.
      * @see #getColumnIndex(ResultSetMetaData, String)
      */
-    public static int getColumnIndex(final ResultSet rs, final String columnLabel) throws NullPointerException, SQLException {
+    public static int getColumnIndex(final ResultSet rs, final String columnLabel) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rs, cs.rs);
+
         return getColumnIndex(rs.getMetaData(), columnLabel);
     }
 
@@ -2368,11 +2385,13 @@ public final class JdbcUtil {
      * @param rsmd The {@link ResultSetMetaData} to search within.
      * @param columnLabel The label (or name) of the column to find.
      * @return The 1-based index of the column, or -1 if not found.
-     * @throws NullPointerException if {@code rsmd} is {@code null}.
+     * @throws IllegalArgumentException if {@code rsmd} is {@code null}.
      * @throws SQLException if obtaining metadata or reading column labels and names fails.
      * @see #getColumnIndex(ResultSet, String)
      */
-    public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnLabel) throws NullPointerException, SQLException {
+    public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnLabel) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rsmd, cs.rsmd);
+
         final int columnCount = rsmd.getColumnCount();
 
         String colName = null;
@@ -2544,11 +2563,13 @@ public final class JdbcUtil {
      * @param columnIndex The 1-based index of the column.
      * @return The column value as a standard Java object. {@link Blob} is returned as {@code byte[]},
      *         {@link Clob} as {@code String}; converted LOBs are freed before this method returns.
-     * @throws NullPointerException if {@code rs} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} is {@code null}.
      * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @see #getColumnValue(ResultSet, String)
      */
-    public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws NullPointerException, SQLException {
+    public static Object getColumnValue(final ResultSet rs, final int columnIndex) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rs, cs.rs);
+
         return getColumnValue(rs, columnIndex, true);
     }
 
@@ -2613,14 +2634,16 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} from which to retrieve the value.
      * @param columnLabel The label of the column to retrieve.
      * @return The value of the specified column.
-     * @throws NullPointerException if {@code rs} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} is {@code null}.
      * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @deprecated Use {@link #getColumnValue(ResultSet, int)} with a cached column index for better performance.
      * @see #getColumnValue(ResultSet, int)
      * @see #getColumnIndex(ResultSet, String)
      */
     @Deprecated
-    public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws NullPointerException, SQLException {
+    public static Object getColumnValue(final ResultSet rs, final String columnLabel) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rs, cs.rs);
+
         return getColumnValue(rs, columnLabel, true);
     }
 
@@ -2765,11 +2788,13 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to retrieve values from. It will be iterated to the end.
      * @param columnIndex The 1-based index of the column to retrieve.
      * @return A {@link List} containing all values from the specified column.
-     * @throws NullPointerException if {@code rs} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} is {@code null}.
      * @throws SQLException if advancing the result set, resolving its columns, or reading a requested value fails.
      */
     @SuppressWarnings("unchecked")
-    public static <T> List<T> getAllColumnValues(final ResultSet rs, final int columnIndex) throws NullPointerException, SQLException {
+    public static <T> List<T> getAllColumnValues(final ResultSet rs, final int columnIndex) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rs, cs.rs);
+
         final List<T> result = new ArrayList<>();
 
         while (rs.next()) {
@@ -2803,12 +2828,10 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to retrieve values from. It will be iterated to the end.
      * @param columnLabel The label of the column to retrieve.
      * @return A {@link List} containing all values from the specified column.
-     * @throws IllegalArgumentException if the column label does not exist in the result set.
-     * @throws NullPointerException if {@code rs} is {@code null}.
-     * @throws SQLException if advancing the result set, resolving its columns, or reading a requested value fails.
+     * @throws IllegalArgumentException if {@code rs} is {@code null} or no column matches {@code columnLabel}.
+     * @throws SQLException if resolving column metadata, advancing the result set, or reading or converting a column value fails.
      */
-    public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+    public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws IllegalArgumentException, SQLException {
         final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
 
         if (columnIndex < 1) {
@@ -2841,13 +2864,15 @@ public final class JdbcUtil {
      * @param columnIndex The 1-based index of the column.
      * @param targetClass The {@link Class} of the desired type {@code T}.
      * @return The column value, converted to the specified {@code targetClass}.
-     * @throws IllegalArgumentException if {@code targetClass} is {@code null}.
-     * @throws NullPointerException if {@code rs} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} or {@code targetClass} is {@code null}.
      * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @see #getColumnValue(ResultSet, String, Class)
      */
     public static <T> T getColumnValue(final ResultSet rs, final int columnIndex, final Class<? extends T> targetClass)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+            throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rs, cs.rs);
+        N.checkArgNotNull(targetClass, cs.targetClass);
+
         return Type.<T> of(targetClass).get(rs, columnIndex);
     }
 
@@ -2882,15 +2907,17 @@ public final class JdbcUtil {
      * @param columnLabel The label of the column to retrieve.
      * @param targetClass The {@link Class} of the desired type {@code T}.
      * @return The column value, converted to the specified {@code targetClass}.
-     * @throws IllegalArgumentException if {@code targetClass} is {@code null}.
-     * @throws NullPointerException if {@code rs} is {@code null}.
+     * @throws IllegalArgumentException if {@code rs} or {@code targetClass} is {@code null}.
      * @throws SQLException if reading or converting the requested JDBC column, or materializing or freeing a returned LOB, fails.
      * @deprecated Use {@link #getColumnValue(ResultSet, int, Class)} with a cached column index for better performance.
      * @see #getColumnIndex(ResultSet, String)
      */
     @Deprecated
     public static <T> T getColumnValue(final ResultSet rs, final String columnLabel, final Class<? extends T> targetClass)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+            throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(rs, cs.rs);
+        N.checkArgNotNull(targetClass, cs.targetClass);
+
         return Type.<T> of(targetClass).get(rs, columnLabel);
     }
 
@@ -5519,6 +5546,7 @@ public final class JdbcUtil {
     /**
      * Prepares a PreparedStatement for the given SQL query and sets the provided parameters.
      * The SQL string can contain either positional (?) or named parameters (:paramName).
+     * The new statement is closed if parameter binding fails; any close failure is suppressed on the binding failure.
      *
      * @param conn The database connection to use.
      * @param sql The SQL statement, which may contain positional or named parameters.
@@ -5527,7 +5555,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null}, empty, or blank, mixes parameter styles, or
      *         contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named
      *         parameters.
-     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL or bind a supplied parameter.
      */
     static PreparedStatement prepareStmt(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -5541,8 +5569,8 @@ public final class JdbcUtil {
             // lets SQL containing placeholders reach the driver with unbound parameters,
             // even though setParameters has a deterministic validation error for that case.
             setParameters(parsedSql, stmt, parameters);
-        } catch (final Exception e) {
-            closeQuietly(stmt);
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeAfterPreparationFailure(stmt, e);
             throw e;
         }
 
@@ -5552,6 +5580,7 @@ public final class JdbcUtil {
     /**
      * Prepares a CallableStatement for executing stored procedures or functions with the given SQL and parameters.
      * The SQL string can contain either positional (?) or named parameters (:paramName).
+     * The new statement is closed if parameter binding fails; any close failure is suppressed on the binding failure.
      *
      * @param conn The database connection to use.
      * @param sql The SQL call statement, which may contain positional or named parameters.
@@ -5560,7 +5589,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null}, empty, or blank, mixes parameter styles, or
      *         contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named
      *         parameters.
-     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL or bind a supplied parameter.
      */
     static CallableStatement prepareCall(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -5575,8 +5604,8 @@ public final class JdbcUtil {
         if (N.notEmpty(parameters)) {
             try {
                 setParameters(parsedSql, stmt, parameters);
-            } catch (final Exception e) {
-                closeQuietly(stmt);
+            } catch (final SQLException | RuntimeException | Error e) {
+                closeAfterPreparationFailure(stmt, e);
                 throw e;
             }
         }
@@ -5588,6 +5617,7 @@ public final class JdbcUtil {
      * Prepares a PreparedStatement for batch execution with multiple sets of parameters.
      * Each element in the parameters list represents one batch of parameters to be added to the statement.
      * The SQL string can contain either positional (?) or named parameters (:paramName).
+     * The new statement is closed if binding or adding a batch fails; any close failure is suppressed on the original failure.
      *
      * @param conn The database connection to use.
      * @param sql The SQL statement, which may contain positional or named parameters.
@@ -5596,7 +5626,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null}, empty, or blank, mixes parameter styles, or
      *         contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named
      *         parameters.
-     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL, bind a supplied parameter, or add a batch.
      */
     static PreparedStatement prepareBatchStmt(final Connection conn, final String sql, final List<?> parametersList)
             throws IllegalArgumentException, SQLException {
@@ -5611,8 +5641,8 @@ public final class JdbcUtil {
                 setParameters(parsedSql, stmt, N.asArray(parameters));
                 stmt.addBatch();
             }
-        } catch (final Exception e) {
-            closeQuietly(stmt);
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeAfterPreparationFailure(stmt, e);
             throw e;
         }
 
@@ -5623,6 +5653,7 @@ public final class JdbcUtil {
      * Prepares a CallableStatement for batch execution of stored procedures or functions with multiple sets of parameters.
      * Each element in the parameters list represents one batch of parameters to be added to the statement.
      * The SQL string can contain either positional (?) or named parameters (:paramName).
+     * The new statement is closed if binding or adding a batch fails; any close failure is suppressed on the original failure.
      *
      * @param conn The database connection to use.
      * @param sql The SQL call statement, which may contain positional or named parameters.
@@ -5631,7 +5662,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null}, empty, or blank, mixes parameter styles, or
      *         contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named
      *         parameters.
-     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL, bind a supplied parameter, or add a batch.
      */
     static CallableStatement prepareBatchCall(final Connection conn, final String sql, final List<?> parametersList)
             throws IllegalArgumentException, SQLException {
@@ -5646,12 +5677,26 @@ public final class JdbcUtil {
                 setParameters(parsedSql, stmt, N.asArray(parameters));
                 stmt.addBatch();
             }
-        } catch (final Exception e) {
-            closeQuietly(stmt);
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeAfterPreparationFailure(stmt, e);
             throw e;
         }
 
         return stmt;
+    }
+
+    /**
+     * Closes a statement that could not be prepared completely, preserving the original binding or batch failure.
+     *
+     * @param stmt the statement created for the failed preparation
+     * @param failure the original binding or batch failure that receives any close failure as a suppressed exception
+     */
+    private static void closeAfterPreparationFailure(final Statement stmt, final Throwable failure) {
+        try {
+            stmt.close();
+        } catch (final SQLException | RuntimeException | Error closeFailure) {
+            addSuppressedIfDistinct(failure, closeFailure);
+        }
     }
 
     /**
@@ -5660,7 +5705,8 @@ public final class JdbcUtil {
      *
      * @param namedSql the SQL statement containing named parameters
      * @return a ParsedSql object representing the parsed and validated named SQL
-     * @throws IllegalArgumentException if the SQL is not a valid named SQL (contains positional parameters)
+     * @throws IllegalArgumentException if {@code namedSql} is {@code null}, empty, or blank, mixes parameter styles, has a malformed placeholder, or
+     *         contains unnamed parameters.
      */
     private static ParsedSql parseNamedSql(final String namedSql) throws IllegalArgumentException {
         N.checkArgNotEmpty(namedSql, cs.namedSql);
@@ -7598,6 +7644,10 @@ public final class JdbcUtil {
      * This is the most comprehensive extraction method providing full control over the extraction process,
      * including pagination (offset/count), filtering (RowFilter), and transformation (RowExtractor).
      *
+     * <p>When {@code closeResultSet} is {@code true}, a close error is suppressed on a failure from date-type
+     * detection or extraction. Other exceptions from closing the result set, including SQL and runtime exceptions,
+     * are logged and ignored by {@link #closeQuietly(ResultSet)}, including after successful extraction.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Page + filter + transform in a single pass, leaving the ResultSet open.
@@ -7623,7 +7673,7 @@ public final class JdbcUtil {
      *               returns {@code true} will be processed. Must not be {@code null}.
      * @param rowExtractor The RowExtractor applied to extract data from the current row of the {@code ResultSet} and populate the {@code outputRow} array.
      *                     Must not be {@code null}.
-     * @param closeResultSet Whether to close the ResultSet after extraction completes (or if an error occurs).
+     * @param closeResultSet whether to close the ResultSet after successful argument validation, including when date-type detection or extraction fails
      * @return A {@link Dataset} containing the filtered and transformed data.
      * @throws IllegalArgumentException if {@code rs} is {@code null}, {@code offset} or {@code count} is negative, or {@code filter} or
      *         {@code rowExtractor} is {@code null}.
@@ -7639,15 +7689,27 @@ public final class JdbcUtil {
         N.checkArgNotNegative(count, cs.count);
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(rowExtractor, cs.rowExtractor);
-        // A ResultSetProxy already normalizes date/time types itself, so getColumnValue ignores this flag for proxies.
-        // Skip the DatabaseMetaData lookup in that case (behavior-identical, avoids a potential server round-trip).
-        final boolean checkDateType = !(rs instanceof ResultSetProxy) && checkDateType(rs);
+        Throwable primaryFailure = null;
 
         try {
+            // A ResultSetProxy already normalizes date/time types itself, so getColumnValue ignores this flag for proxies.
+            // Skip the DatabaseMetaData lookup in that case (behavior-identical, avoids a potential server round-trip).
+            final boolean checkDateType = !(rs instanceof ResultSetProxy) && checkDateType(rs);
             return JdbcUtil.extractResultSetToDataset(rs, offset, count, filter, rowExtractor, checkDateType);
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
             if (closeResultSet) {
-                closeQuietly(rs);
+                try {
+                    closeQuietly(rs);
+                } catch (final RuntimeException | Error closeFailure) {
+                    if (primaryFailure == null) {
+                        throw closeFailure;
+                    }
+
+                    addSuppressedIfDistinct(primaryFailure, closeFailure);
+                }
             }
         }
     }
@@ -7887,6 +7949,11 @@ public final class JdbcUtil {
             private boolean hasNext;
             private boolean exhausted;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if advancing the result set to the next row fails.
+             */
             @Override
             public boolean hasNext() throws UncheckedSQLException {
                 if (!hasNext && !exhausted) {
@@ -7901,6 +7968,12 @@ public final class JdbcUtil {
                 return hasNext;
             }
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if locating the next row, reading metadata, or invoking the configured row mapper fails with an SQL exception.
+             * @throws NoSuchElementException if no unconsumed row remains after applying any configured filter.
+             */
             @Override
             public T next() throws UncheckedSQLException, NoSuchElementException {
                 if (!hasNext()) {
@@ -7916,6 +7989,12 @@ public final class JdbcUtil {
                 }
             }
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws IllegalArgumentException if {@code n} is negative.
+             * @throws UncheckedSQLException if advancing the result set while skipping rows fails.
+             */
             @Override
             public void advance(final long n) throws IllegalArgumentException, UncheckedSQLException {
                 N.checkArgNotNegative(n, cs.n);
@@ -7935,6 +8014,11 @@ public final class JdbcUtil {
                 hasNext = false;
             }
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if advancing the result set while counting the remaining rows fails.
+             */
             @Override
             public long count() throws UncheckedSQLException {
                 if (exhausted) {
@@ -7959,8 +8043,13 @@ public final class JdbcUtil {
 
             private boolean isClosed = false;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws RuntimeException if the configured close action throws an exception on the first close.
+             */
             @Override
-            public void closeResource() {
+            public void closeResource() throws RuntimeException {
                 if (isClosed) {
                     return;
                 }
@@ -8031,6 +8120,11 @@ public final class JdbcUtil {
             private boolean hasNext;
             private boolean exhausted;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if advancing the result set or evaluating the configured row filter fails with an SQL exception.
+             */
             @Override
             public boolean hasNext() throws UncheckedSQLException {
                 if (!hasNext && !exhausted) {
@@ -8051,6 +8145,12 @@ public final class JdbcUtil {
                 return hasNext;
             }
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if locating the next row, reading metadata, or invoking the configured row mapper fails with an SQL exception.
+             * @throws NoSuchElementException if no unconsumed row remains after applying any configured filter.
+             */
             @Override
             public T next() throws UncheckedSQLException, NoSuchElementException {
                 if (!hasNext()) {
@@ -8068,8 +8168,13 @@ public final class JdbcUtil {
 
             private boolean isClosed = false;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws RuntimeException if the configured close action throws an exception on the first close.
+             */
             @Override
-            public void closeResource() {
+            public void closeResource() throws RuntimeException {
                 if (isClosed) {
                     return;
                 }
@@ -8138,6 +8243,11 @@ public final class JdbcUtil {
             private boolean hasNext;
             private boolean exhausted;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if advancing the result set to the next row fails.
+             */
             @Override
             public boolean hasNext() throws UncheckedSQLException {
                 if (!hasNext && !exhausted) {
@@ -8152,6 +8262,12 @@ public final class JdbcUtil {
                 return hasNext;
             }
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if locating the next row, reading metadata, or invoking the configured row mapper fails with an SQL exception.
+             * @throws NoSuchElementException if no unconsumed row remains after applying any configured filter.
+             */
             @Override
             public T next() throws UncheckedSQLException, NoSuchElementException {
                 if (!hasNext()) {
@@ -8175,6 +8291,12 @@ public final class JdbcUtil {
                 }
             }
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws IllegalArgumentException if {@code n} is negative.
+             * @throws UncheckedSQLException if advancing the result set while skipping rows fails.
+             */
             @Override
             public void advance(final long n) throws IllegalArgumentException, UncheckedSQLException {
                 N.checkArgNotNegative(n, cs.n);
@@ -8194,6 +8316,11 @@ public final class JdbcUtil {
                 hasNext = false;
             }
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if advancing the result set while counting the remaining rows fails.
+             */
             @Override
             public long count() throws UncheckedSQLException {
                 if (exhausted) {
@@ -8218,8 +8345,13 @@ public final class JdbcUtil {
 
             private boolean isClosed = false;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws RuntimeException if the configured close action throws an exception on the first close.
+             */
             @Override
-            public void closeResource() {
+            public void closeResource() throws RuntimeException {
                 if (isClosed) {
                     return;
                 }
@@ -8302,6 +8434,12 @@ public final class JdbcUtil {
             private boolean hasNext;
             private boolean exhausted;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if reading column metadata, advancing the result set, or evaluating the configured row filter fails with an
+             *         SQL exception.
+             */
             @Override
             public boolean hasNext() throws UncheckedSQLException {
                 if (columnLabels == null) {
@@ -8330,6 +8468,12 @@ public final class JdbcUtil {
                 return hasNext;
             }
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if locating the next row, reading metadata, or invoking the configured row mapper fails with an SQL exception.
+             * @throws NoSuchElementException if no unconsumed row remains after applying any configured filter.
+             */
             @Override
             public T next() throws UncheckedSQLException, NoSuchElementException {
                 if (!hasNext()) {
@@ -8430,6 +8574,12 @@ public final class JdbcUtil {
             private int columnIndex = 0;
             private boolean checkDateType = true;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws SQLException if reading result-set metadata or a requested column value fails.
+             * @throws IllegalArgumentException if the result set has no column matching the configured column label.
+             */
             @Override
             public T apply(final ResultSet resultSet) throws SQLException, IllegalArgumentException {
                 if (columnIndex == 0) {
@@ -8599,6 +8749,11 @@ public final class JdbcUtil {
             private boolean isNextResultSet = isFirstResultSet;
             private boolean noMoreResult = false;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if reading the current result set or update count, or advancing the statement to another result, fails.
+             */
             @Override
             public boolean hasNext() throws UncheckedSQLException {
                 if (resultSetHolder.isNull() && !noMoreResult) {
@@ -8634,6 +8789,12 @@ public final class JdbcUtil {
                 return resultSetHolder.isNotNull();
             }
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if locating or advancing past the next result set fails.
+             * @throws NoSuchElementException if the statement has no more result sets.
+             */
             @Override
             public ResultSet next() throws UncheckedSQLException, NoSuchElementException {
                 if (!hasNext()) {
@@ -9593,7 +9754,8 @@ public final class JdbcUtil {
      * @return {@code true} if the table exists, {@code false} otherwise.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is blank or otherwise invalid.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
-     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error.
+     * @throws UncheckedSQLException if acquiring a connection or reading table metadata fails, or the fallback table query fails
+     *         with an SQL error other than "table not found".
      * @see #tableExists(Connection, String)
      */
     public static boolean tableExists(final javax.sql.DataSource ds, final String tableName)
@@ -9639,7 +9801,8 @@ public final class JdbcUtil {
      * @param tableName The table name (optionally qualified); must not be blank.
      * @return {@code true} if the table exists, {@code false} otherwise.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
-     * @throws UncheckedSQLException if a database error occurs that is not a "table not found" error.
+     * @throws UncheckedSQLException if reading connection or table metadata fails, or the fallback table query fails
+     *         with an SQL error other than "table not found".
      */
     public static boolean tableExists(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -10122,7 +10285,8 @@ public final class JdbcUtil {
      * @return {@code true} if this call created the table; {@code false} if the table already existed
      *         when checked, or was created concurrently while this call was running.
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is blank or otherwise invalid, or {@code schema} is
-     *         {@code null} or empty.
+     *         {@code null} or empty; also if the table is absent and {@code schema} is blank, mixes parameter styles, has malformed placeholders,
+     *         or requires parameter values that this method does not supply.
      * @throws UncheckedSQLException if checking whether the table exists fails, or the {@code CREATE} fails and the table still does
      *         not exist afterwards (or that re-check fails; its failure is attached to the {@code CREATE} failure as suppressed).
      */
@@ -10972,15 +11136,19 @@ public final class JdbcUtil {
      *                  if {@code null} or empty, an empty {@link OutParamResult} is returned.
      * @return An {@link OutParamResult} containing the retrieved output parameter values keyed by
      *         parameter index (for index-based out params) or parameter name (for name-based out params).
-     * @throws IllegalArgumentException if {@code stmt} is {@code null}.
-     * @throws SQLException if reading a registered output parameter or freeing its returned LOB fails, or if a
-     *         returned {@link Blob}/{@link Clob} exceeds {@link Integer#MAX_VALUE} bytes/characters.
+     * @throws IllegalArgumentException if {@code stmt} is {@code null} or {@code outParams} contains a {@code null} entry.
+     * @throws SQLException if reading a registered output parameter or its result-set rows fails, or materializing or freeing a returned LOB fails or
+     *         exceeds {@link Integer#MAX_VALUE} bytes/characters.
      */
     public static OutParamResult getOutParameters(final CallableStatement stmt, final List<OutParam> outParams) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(stmt, cs.stmt);
 
         if (N.isEmpty(outParams)) {
             return new OutParamResult(N.emptyList(), N.emptyMap());
+        }
+
+        for (final OutParam outParam : outParams) {
+            N.checkArgNotNull(outParam, "outParams must not contain null entries");
         }
 
         final Map<Object, Object> outParamValues = new LinkedHashMap<>(outParams.size());
@@ -12607,8 +12775,9 @@ public final class JdbcUtil {
      *
      * @param tran The transaction to roll back.
      * @param commandFailure The failure thrown by the transaction command, or {@code null} if it completed normally.
+     * @throws RuntimeException if rollback fails and {@code commandFailure} is {@code null}; otherwise the rollback failure is suppressed on that failure.
      */
-    static void rollbackAfterTransactionCommand(final SqlTransaction tran, final Throwable commandFailure) {
+    static void rollbackAfterTransactionCommand(final SqlTransaction tran, final Throwable commandFailure) throws RuntimeException {
         try {
             tran.rollbackIfNotCommitted();
         } catch (final RuntimeException | Error rollbackFailure) {
@@ -13129,6 +13298,12 @@ public final class JdbcUtil {
      * Returns the tuple of (generated-key extractor, ID getter, ID setter) used to populate entity IDs
      * from JDBC generated keys for the given DAO interface and entity class.
      *
+     * <p>When invoked, an ID getter for an entity with ID properties rejects a null entity with
+     * {@link IllegalArgumentException}. An ID setter does the same when the supplied ID would assign
+     * an entity property. Callbacks for entities without ID properties remain no-ops, and composite-ID
+     * setters still ignore null or unsupported IDs. A composite {@link EntityId} with no entries matching
+     * entity properties also leaves the entity untouched.</p>
+     *
      * @param <ID> The ID type.
      * @param daoInterface The DAO interface class.
      * @param entityClass The entity class.
@@ -13160,8 +13335,14 @@ public final class JdbcUtil {
             final BeanInfo idBeanInfo = Beans.isBeanClass(idType) ? ParserUtil.getBeanInfo(idType) : null;
 
             final com.landawn.abacus.util.function.Function<Object, ID> idGetter = isNoId ? noIdGeneratorGetterSetter._2 //
-                    : (isOneId ? idPropInfo::getPropValue //
+                    : (isOneId ? entity -> {
+                        N.checkArgNotNull(entity, cs.entity);
+
+                        return idPropInfo.getPropValue(entity);
+                    } //
                             : (isEntityId ? entity -> {
+                                N.checkArgNotNull(entity, cs.entity);
+
                                 final Seid ret = Seid.of(ClassUtil.getSimpleClassName(entityClass));
 
                                 for (final PropInfo propInfo : idPropInfoList) {
@@ -13170,6 +13351,8 @@ public final class JdbcUtil {
 
                                 return (ID) ret;
                             } : entity -> {
+                                N.checkArgNotNull(entity, cs.entity);
+
                                 final Object ret = idBeanInfo.createBeanResult();
 
                                 for (final PropInfo propInfo : idPropInfoList) {
@@ -13180,13 +13363,17 @@ public final class JdbcUtil {
                             }));
 
             final com.landawn.abacus.util.function.BiConsumer<ID, Object> idSetter = isNoId ? noIdGeneratorGetterSetter._3 //
-                    : (isOneId ? (id, entity) -> idPropInfo.setPropValue(entity, id) //
+                    : (isOneId ? (id, entity) -> {
+                        N.checkArgNotNull(entity, cs.entity);
+                        idPropInfo.setPropValue(entity, id);
+                    } //
                             : (isEntityId ? (id, entity) -> {
                                 if (id instanceof final EntityId entityId) {
                                     PropInfo propInfo = null;
 
                                     for (final String propName : entityId.keySet()) {
                                         if ((propInfo = entityInfo.getPropInfo(propName)) != null) {
+                                            N.checkArgNotNull(entity, cs.entity);
                                             propInfo.setPropValue(entity, entityId.get(propName));
                                         }
                                     }
@@ -13196,6 +13383,8 @@ public final class JdbcUtil {
                                 }
                             } : (id, entity) -> {
                                 if (id != null && Beans.isBeanClass(id.getClass())) {
+                                    N.checkArgNotNull(entity, cs.entity);
+
                                     @SuppressWarnings("UnnecessaryLocalVariable")
                                     final Object entityId = id;
 

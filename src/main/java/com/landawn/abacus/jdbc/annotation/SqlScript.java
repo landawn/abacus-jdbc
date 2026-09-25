@@ -48,7 +48,7 @@ import java.lang.annotation.Target;
  *
  *     @SqlScript
  *     String sql_listUserWithBiggerId =
- *             Dsl.PSC.selectFrom(User.class).where(Filters.gt("id")).build().query();
+ *             "SELECT * FROM users WHERE id > :id";
  *
  *     @SqlScript(id = "sql_softDeleteById")          // explicit id overrides field name
  *     String softDeleteByIdSql =
@@ -80,7 +80,7 @@ public @interface SqlScript {
      * <pre>{@code
      * @SqlScript(id = "sql_listUserWithBiggerId")
      * static final String listUserWithBiggerId =
-     *         Dsl.PSC.selectFrom(User.class).where(Filters.gt("id")).build().query();
+     *         "SELECT * FROM users WHERE id > :id";
      * }</pre>
      *
      * <p>When supplied, the id must be a non-empty, valid Java identifier, unique among all

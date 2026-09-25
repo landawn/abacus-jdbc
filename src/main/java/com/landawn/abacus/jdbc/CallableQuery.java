@@ -227,8 +227,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the boolean value to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBoolean(final String parameterName, final boolean value) throws SQLException {
         cstmt.setBoolean(parameterName, value);
@@ -249,8 +249,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Boolean value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBoolean(final String parameterName, final Boolean value) throws SQLException {
         if (value == null) {
@@ -273,8 +273,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the byte value to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setByte(final String parameterName, final byte value) throws SQLException {
         cstmt.setByte(parameterName, value);
@@ -295,8 +295,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Byte value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setByte(final String parameterName, final Byte value) throws SQLException {
         if (value == null) {
@@ -319,8 +319,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the short value to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setShort(final String parameterName, final short value) throws SQLException {
         cstmt.setShort(parameterName, value);
@@ -341,8 +341,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Short value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setShort(final String parameterName, final Short value) throws SQLException {
         if (value == null) {
@@ -365,8 +365,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the int value to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setInt(final String parameterName, final int value) throws SQLException {
         cstmt.setInt(parameterName, value);
@@ -387,8 +387,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Integer value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setInt(final String parameterName, final Integer value) throws SQLException {
         if (value == null) {
@@ -411,8 +411,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the long value to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setLong(final String parameterName, final long value) throws SQLException {
         cstmt.setLong(parameterName, value);
@@ -433,8 +433,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Long value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setLong(final String parameterName, final Long value) throws SQLException {
         if (value == null) {
@@ -463,9 +463,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @return this CallableQuery instance for method chaining
      * @throws ArithmeticException if {@code value} is outside the range of a {@code long}; this query is closed before the
      *         exception is rethrown
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value; when {@code value} is non-null,
-     *         this query is closed before the exception is rethrown
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}; when {@code value} is non-null, this query is closed before the exception
+     *         is rethrown
      */
     public CallableQuery setLong(final String parameterName, final BigInteger value) throws ArithmeticException, SQLException {
         if (value == null) {
@@ -493,8 +493,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the float value to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setFloat(final String parameterName, final float value) throws SQLException {
         cstmt.setFloat(parameterName, value);
@@ -515,8 +515,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Float value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setFloat(final String parameterName, final Float value) throws SQLException {
         if (value == null) {
@@ -541,8 +541,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the double value to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setDouble(final String parameterName, final double value) throws SQLException {
         cstmt.setDouble(parameterName, value);
@@ -563,8 +563,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Double value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setDouble(final String parameterName, final Double value) throws SQLException {
         if (value == null) {
@@ -589,8 +589,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the BigDecimal value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBigDecimal(final String parameterName, final BigDecimal value) throws SQLException {
         cstmt.setBigDecimal(parameterName, value);
@@ -611,8 +611,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the BigInteger value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBigDecimal(final String parameterName, final BigInteger value) throws SQLException {
         if (value == null) {
@@ -638,8 +638,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the BigInteger value to set as string, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      * @see #setString(String, BigInteger)
      * @see #setBigDecimal(String, BigInteger)
      * @see #setLong(String, BigInteger)
@@ -668,8 +668,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the String value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setString(final String parameterName, final String value) throws SQLException {
         cstmt.setString(parameterName, value);
@@ -689,8 +689,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the CharSequence value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setString(final String parameterName, final CharSequence value) throws SQLException {
         return setString(parameterName, value == null ? null : value.toString());
@@ -707,8 +707,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the char value to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setString(final String parameterName, final char value) throws SQLException {
         return setString(parameterName, String.valueOf(value));
@@ -727,8 +727,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Character value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setString(final String parameterName, final Character value) throws SQLException {
         return setString(parameterName, value == null ? (String) null : value.toString()); //NOSONAR
@@ -748,8 +748,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the BigInteger value to set as string, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setString(final String parameterName, final BigInteger value) throws SQLException {
         if (value == null) {
@@ -773,8 +773,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the String value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setNString(final String parameterName, final String value) throws SQLException {
         cstmt.setNString(parameterName, value);
@@ -796,8 +796,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the CharSequence value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setNString(final String parameterName, final CharSequence value) throws SQLException {
         return setNString(parameterName, value == null ? (String) null : value.toString()); //NOSONAR
@@ -815,8 +815,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the java.sql.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setDate(final String parameterName, final java.sql.Date value) throws SQLException {
         cstmt.setDate(parameterName, value);
@@ -839,8 +839,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the java.util.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setDate(final String parameterName, final java.util.Date value) throws SQLException {
         cstmt.setDate(parameterName, value == null ? null : value instanceof java.sql.Date ? (java.sql.Date) value : new java.sql.Date(value.getTime()));
@@ -860,8 +860,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the LocalDate value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setDate(final String parameterName, final LocalDate value) throws SQLException {
         setDate(parameterName, value == null ? null : java.sql.Date.valueOf(value));
@@ -881,8 +881,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the java.sql.Time value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setTime(final String parameterName, final java.sql.Time value) throws SQLException {
         cstmt.setTime(parameterName, value);
@@ -904,8 +904,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the java.util.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setTime(final String parameterName, final java.util.Date value) throws SQLException {
         cstmt.setTime(parameterName, value == null ? null : value instanceof java.sql.Time ? (java.sql.Time) value : new java.sql.Time(value.getTime()));
@@ -926,8 +926,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the LocalTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setTime(final String parameterName, final LocalTime value) throws SQLException {
         setTime(parameterName, value == null ? null : java.sql.Time.valueOf(value));
@@ -947,8 +947,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the java.sql.Timestamp value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setTimestamp(final String parameterName, final java.sql.Timestamp value) throws SQLException {
         cstmt.setTimestamp(parameterName, value);
@@ -968,8 +968,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the java.util.Date value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setTimestamp(final String parameterName, final java.util.Date value) throws SQLException {
         cstmt.setTimestamp(parameterName,
@@ -990,8 +990,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the LocalDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setTimestamp(final String parameterName, final LocalDateTime value) throws SQLException {
         setTimestamp(parameterName, value == null ? null : Timestamp.valueOf(value));
@@ -1012,9 +1012,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setTimestamp(final String parameterName, final ZonedDateTime value) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value.toInstant()));
@@ -1035,9 +1035,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setTimestamp(final String parameterName, final OffsetDateTime value) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value.toInstant()));
@@ -1058,9 +1058,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if the value is outside the range supported by {@link Timestamp}
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setTimestamp(final String parameterName, final Instant value) throws IllegalArgumentException, SQLException {
         setTimestamp(parameterName, value == null ? null : Timestamp.from(value));
@@ -1081,8 +1081,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the byte array to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBytes(final String parameterName, final byte[] value) throws SQLException {
         cstmt.setBytes(parameterName, value);
@@ -1104,8 +1104,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the {@code InputStream} object containing the ASCII parameter value
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setAsciiStream(final String parameterName, final InputStream value) throws SQLException {
         cstmt.setAsciiStream(parameterName, value);
@@ -1128,8 +1128,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the {@code InputStream} object containing the ASCII parameter value
      * @param length the number of bytes in the stream
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setAsciiStream(final String parameterName, final InputStream value, final long length) throws SQLException {
         cstmt.setAsciiStream(parameterName, value, length);
@@ -1151,8 +1151,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the {@code InputStream} object containing the binary parameter value
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBinaryStream(final String parameterName, final InputStream value) throws SQLException {
         cstmt.setBinaryStream(parameterName, value);
@@ -1175,8 +1175,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the {@code InputStream} object containing the binary parameter value
      * @param length the number of bytes in the stream
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBinaryStream(final String parameterName, final InputStream value, final long length) throws SQLException {
         cstmt.setBinaryStream(parameterName, value, length);
@@ -1198,8 +1198,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the {@code Reader} object containing the Unicode data
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setCharacterStream(final String parameterName, final Reader value) throws SQLException {
         cstmt.setCharacterStream(parameterName, value);
@@ -1221,8 +1221,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the {@code Reader} object containing the Unicode data
      * @param length the number of characters in the stream
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setCharacterStream(final String parameterName, final Reader value, final long length) throws SQLException {
         cstmt.setCharacterStream(parameterName, value, length);
@@ -1243,8 +1243,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the {@code Reader} object containing the Unicode data
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setNCharacterStream(final String parameterName, final Reader value) throws SQLException {
         cstmt.setNCharacterStream(parameterName, value);
@@ -1266,8 +1266,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the {@code Reader} object containing the Unicode data
      * @param length the number of characters in the stream
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setNCharacterStream(final String parameterName, final Reader value, final long length) throws SQLException {
         cstmt.setNCharacterStream(parameterName, value, length);
@@ -1292,8 +1292,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value a Blob object that maps to a SQL BLOB value
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBlob(final String parameterName, final java.sql.Blob value) throws SQLException {
         cstmt.setBlob(parameterName, value);
@@ -1315,8 +1315,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the {@code InputStream} object containing the data to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBlob(final String parameterName, final InputStream value) throws SQLException {
         cstmt.setBlob(parameterName, value);
@@ -1339,8 +1339,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the {@code InputStream} object containing the data to set
      * @param length the number of bytes in the parameter data
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setBlob(final String parameterName, final InputStream value, final long length) throws SQLException {
         cstmt.setBlob(parameterName, value, length);
@@ -1365,8 +1365,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value a Clob object that maps to a SQL CLOB value
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setClob(final String parameterName, final java.sql.Clob value) throws SQLException {
         cstmt.setClob(parameterName, value);
@@ -1388,8 +1388,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the {@code Reader} object containing the data to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setClob(final String parameterName, final Reader value) throws SQLException {
         cstmt.setClob(parameterName, value);
@@ -1411,8 +1411,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the {@code Reader} object containing the data to set
      * @param length the number of characters in the parameter data
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setClob(final String parameterName, final Reader value, final long length) throws SQLException {
         cstmt.setClob(parameterName, value, length);
@@ -1438,8 +1438,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value an NClob object that maps to a SQL NCLOB value
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setNClob(final String parameterName, final java.sql.NClob value) throws SQLException {
         cstmt.setNClob(parameterName, value);
@@ -1460,8 +1460,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the {@code Reader} object containing the Unicode data to set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setNClob(final String parameterName, final Reader value) throws SQLException {
         cstmt.setNClob(parameterName, value);
@@ -1483,8 +1483,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the {@code Reader} object containing the Unicode data to set
      * @param length the number of characters in the parameter data
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setNClob(final String parameterName, final Reader value, final long length) throws SQLException {
         cstmt.setNClob(parameterName, value, length);
@@ -1504,8 +1504,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the java.net.URL object to be set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setURL(final String parameterName, final URL value) throws SQLException {
         cstmt.setURL(parameterName, value);
@@ -1533,8 +1533,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value an SQLXML object that maps to a SQL XML value
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setSQLXML(final String parameterName, final java.sql.SQLXML value) throws SQLException {
         cstmt.setSQLXML(parameterName, value);
@@ -1555,8 +1555,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the RowId object to be set
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setRowId(final String parameterName, final java.sql.RowId value) throws SQLException {
         cstmt.setRowId(parameterName, value);
@@ -1580,8 +1580,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the object containing the input parameter value, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure),
-     *         the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
+     *         closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setObject(final String parameterName, final Object value) throws SQLException {
         if (value == null) {
@@ -1613,8 +1613,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param value the object containing the input parameter value
      * @param sqlType the SQL type code defined in {@link java.sql.Types}
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
-     *         or {@code sqlType}, the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure) or {@code sqlType},
+     *         the statement is closed, or the driver fails to bind the {@code value}
      * @see java.sql.Types
      */
     public CallableQuery setObject(final String parameterName, final Object value, final int sqlType) throws SQLException {
@@ -1644,8 +1644,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                      for {@link InputStream} or {@link Reader} values, the length of the data;
      *                      for all other types this value is ignored
      * @return this CallableQuery instance for method chaining
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
-     *         or {@code sqlType}, the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure) or {@code sqlType},
+     *         the statement is closed, or the driver fails to bind the {@code value}
      * @see java.sql.Types
      */
     public CallableQuery setObject(final String parameterName, final Object value, final int sqlType, final int scaleOrLength) throws SQLException {
@@ -1668,8 +1668,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the {@link SQLType} to be used
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code sqlType} is {@code null}
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
-     *         or {@code sqlType}, the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure) or {@code sqlType},
+     *         the statement is closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws IllegalArgumentException, SQLException {
         checkArgNotNull(sqlType, cs.sqlType);
@@ -1696,8 +1696,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                      for all other types this value is ignored
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code sqlType} is {@code null}
-     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
-     *         or {@code sqlType}, the statement is closed, or the driver fails to bind the value
+     * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure) or {@code sqlType},
+     *         the statement is closed, or the driver fails to bind the {@code value}
      */
     public CallableQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength)
             throws IllegalArgumentException, SQLException {
@@ -1725,8 +1725,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param type the {@link Type} handler to use for setting the parameter. Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code type} is {@code null}
-     * @throws SQLException if {@code type} throws {@code SQLException} while binding the value, for example because the driver
-     *         rejects {@code parameterName} (it is not a parameter of the procedure) or the statement is closed
+     * @throws SQLException if {@code type} throws {@code SQLException} while binding the {@code value}, for example because the driver rejects
+     *         {@code parameterName} (it is not a parameter of the procedure) or the statement is closed
      */
     public <T> CallableQuery setObject(final String parameterName, final T value, final Type<T> type) throws IllegalArgumentException, SQLException {
         checkArgNotNull(type, cs.type);
@@ -1800,11 +1800,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterNamesToSet a list of parameter names corresponding to properties in the entity.
      *                       Each name should match a property name in the entity class.
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code entity} or {@code parameterNamesToSet} is {@code null},
-     *                                  if the class of {@code entity} is not a bean class (it has no property
-     *                                  getter/setter method and no public field), or if {@code parameterNamesToSet}
-     *                                  contains a {@code null} element or a name that does not correspond to a
-     *                                  property of the entity class; this query is closed before the exception is thrown
+     * @throws IllegalArgumentException if {@code entity} is {@code null} or is not a bean class (it has no property getter/setter method and no
+     *         public field), or if {@code parameterNamesToSet} is {@code null}, contains a {@code null} element, or contains a name that does
+     *         not correspond to a property of the {@code entity} class; all listed names are checked before any property value is read or bound,
+     *         and this query is closed before the exception is thrown
      * @throws SQLException if binding a value fails, for example because the driver rejects a name in {@code parameterNamesToSet}
      *         that is not a parameter of the stored procedure or the statement is closed; this query is closed before the exception is rethrown
      * @see Beans#getPropNameList(Class)
@@ -1812,30 +1811,29 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery setParameters(final Object entity, final Collection<String> parameterNamesToSet) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, cs.entity);
+        final Class<?> cls = entity.getClass();
+        checkArgument(Beans.isBeanClass(cls),
+                "Unsupported parameter type: " + ClassUtil.getCanonicalClassName(cls) + ". Only Entity/Record types are supported here");
         checkArgNotNull(parameterNamesToSet, cs.parameterNamesToSet);
 
-        final Class<?> cls = entity.getClass();
-
-        if (!Beans.isBeanClass(cls)) {
-            final IllegalArgumentException iae = new IllegalArgumentException(
-                    "Unsupported parameter type: " + ClassUtil.getCanonicalClassName(cls) + ". Only Entity/Record types are supported here");
-
-            closeSuppressingFailure(iae);
-            throw iae;
-        }
-
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
-        PropInfo propInfo = null;
+        final List<String> names = new ArrayList<>(parameterNamesToSet);
+        final PropInfo[] propInfos = new PropInfo[names.size()];
 
         try {
-            for (final String parameterName : parameterNamesToSet) {
-                propInfo = entityInfo.getPropInfo(parameterName);
+            for (int i = 0; i < names.size(); i++) {
+                final String parameterName = names.get(i);
+                propInfos[i] = entityInfo.getPropInfo(parameterName);
 
-                if (propInfo == null) {
+                if (propInfos[i] == null) {
                     throw new IllegalArgumentException("No property found with name: " + parameterName + " in class: " + ClassUtil.getCanonicalClassName(cls));
                 }
+            }
 
-                propInfo.dbType.set(cstmt, parameterName, propInfo.getPropValue(entity));
+            for (int i = 0; i < names.size(); i++) {
+                final PropInfo propInfo = propInfos[i];
+
+                propInfo.dbType.set(cstmt, names.get(i), propInfo.getPropValue(entity));
             }
         } catch (final SQLException | RuntimeException | Error e) {
             closeSuppressingFailure(e);
@@ -1918,13 +1916,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterIndex the index of the parameter (starts from 1, not 0)
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based)
      * @throws SQLException if the driver rejects {@code parameterIndex} (for example, it does not correspond to a parameter marker in the call)
      *         or {@code sqlType}, the statement is closed, or the driver fails to register the OUT parameter
      * @see java.sql.CallableStatement#registerOutParameter(int, int)
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType) throws IllegalArgumentException, SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgPositive(parameterIndex, cs.parameterIndex);
 
         cstmt.registerOutParameter(parameterIndex, sqlType);
@@ -1956,6 +1958,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param scale the number of digits to the right of the decimal point.
      *              Used for DECIMAL and NUMERIC types.
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based)
      * @throws SQLException if the driver rejects {@code parameterIndex} (for example, it does not correspond to a parameter marker in the call)
      *         or {@code sqlType}, the statement is closed, or the driver fails to register the OUT parameter
@@ -1963,7 +1966,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.Types#DECIMAL
      * @see java.sql.Types#NUMERIC
      */
-    public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final int scale) throws IllegalArgumentException, SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final int scale)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgPositive(parameterIndex, cs.parameterIndex);
 
         cstmt.registerOutParameter(parameterIndex, sqlType, scale);
@@ -1995,6 +2001,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param typeName the fully-qualified SQL type name. For user-defined types,
      *                 this should include the schema name if required.
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based)
      * @throws SQLException if the driver rejects {@code parameterIndex} (for example, it does not correspond to a parameter marker in the call)
      *         or {@code sqlType}, the statement is closed, or the driver fails to register the OUT parameter
@@ -2002,7 +2009,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.Types#STRUCT
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final int sqlType, final String typeName)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgPositive(parameterIndex, cs.parameterIndex);
 
         cstmt.registerOutParameter(parameterIndex, sqlType, typeName);
@@ -2031,13 +2040,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter as defined in the stored procedure
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterName} is {@code null}
      * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
      *         or {@code sqlType}, the statement is closed, or the driver fails to register the OUT parameter
      * @see java.sql.CallableStatement#registerOutParameter(String, int)
      * @see java.sql.Types
      */
-    public CallableQuery registerOutParameter(final String parameterName, final int sqlType) throws IllegalArgumentException, SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final int sqlType)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(parameterName, cs.parameterName);
 
         cstmt.registerOutParameter(parameterName, sqlType);
@@ -2067,6 +2080,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @param scale the number of digits to the right of the decimal point
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterName} is {@code null}
      * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
      *         or {@code sqlType}, the statement is closed, or the driver fails to register the OUT parameter
@@ -2074,7 +2088,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.Types#DECIMAL
      * @see java.sql.Types#NUMERIC
      */
-    public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final int scale) throws IllegalArgumentException, SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final int scale)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(parameterName, cs.parameterName);
 
         cstmt.registerOutParameter(parameterName, sqlType, scale);
@@ -2102,6 +2119,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the SQL type code as defined in {@link java.sql.Types}
      * @param typeName the fully-qualified SQL type name
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterName} is {@code null}
      * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
      *         or {@code sqlType}, the statement is closed, or the driver fails to register the OUT parameter
@@ -2109,7 +2127,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.Types#STRUCT
      */
     public CallableQuery registerOutParameter(final String parameterName, final int sqlType, final String typeName)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(parameterName, cs.parameterName);
 
         cstmt.registerOutParameter(parameterName, sqlType, typeName);
@@ -2137,6 +2157,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}
      *        and must return a non-null vendor type number.
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), {@code sqlType} is {@code null},
      *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if the driver rejects {@code parameterIndex} (for example, it does not correspond to a parameter marker in the call)
@@ -2144,7 +2165,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.CallableStatement#registerOutParameter(int, java.sql.SQLType)
      * @see java.sql.JDBCType
      */
-    public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType) throws IllegalArgumentException, SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgPositive(parameterIndex, cs.parameterIndex);
         final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
@@ -2171,6 +2195,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *        and must return a non-null vendor type number.
      * @param scale the number of digits to the right of the decimal point
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), {@code sqlType} is {@code null},
      *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if the driver rejects {@code parameterIndex} (for example, it does not correspond to a parameter marker in the call)
@@ -2179,7 +2204,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.JDBCType#DECIMAL
      * @see java.sql.JDBCType#NUMERIC
      */
-    public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final int scale) throws IllegalArgumentException, SQLException {
+    public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final int scale)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgPositive(parameterIndex, cs.parameterIndex);
         final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
@@ -2206,6 +2234,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *        and must return a non-null vendor type number.
      * @param typeName the fully-qualified SQL type name
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterIndex} is not greater than 0 (1-based), {@code sqlType} is {@code null},
      *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if the driver rejects {@code parameterIndex} (for example, it does not correspond to a parameter marker in the call)
@@ -2215,7 +2244,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.JDBCType#ARRAY
      */
     public CallableQuery registerOutParameter(final int parameterIndex, final SQLType sqlType, final String typeName)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgPositive(parameterIndex, cs.parameterIndex);
         final int vendorTypeNumber = getVendorTypeNumber(sqlType);
 
@@ -2242,6 +2273,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param sqlType the SQL type from {@link java.sql.JDBCType} or vendor-specific implementation. Must not be {@code null}
      *        and must return a non-null vendor type number.
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterName} is {@code null}, {@code sqlType} is {@code null},
      *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
@@ -2249,7 +2281,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.CallableStatement#registerOutParameter(String, java.sql.SQLType)
      * @see java.sql.JDBCType
      */
-    public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType) throws IllegalArgumentException, SQLException {
+    public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(parameterName, cs.parameterName);
 
         final int vendorTypeNumber = getVendorTypeNumber(sqlType);
@@ -2278,6 +2313,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *        and must return a non-null vendor type number.
      * @param scale the number of digits to the right of the decimal point
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterName} is {@code null}, {@code sqlType} is {@code null},
      *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
@@ -2286,7 +2322,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.JDBCType#DECIMAL
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final int scale)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(parameterName, cs.parameterName);
 
         final int vendorTypeNumber = getVendorTypeNumber(sqlType);
@@ -2316,6 +2354,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *        and must return a non-null vendor type number.
      * @param typeName the fully-qualified SQL type name
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code parameterName} is {@code null}, {@code sqlType} is {@code null},
      *         or {@code sqlType.getVendorTypeNumber()} is {@code null}
      * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure)
@@ -2324,7 +2363,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see java.sql.JDBCType#STRUCT
      */
     public CallableQuery registerOutParameter(final String parameterName, final SQLType sqlType, final String typeName)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(parameterName, cs.parameterName);
 
         final int vendorTypeNumber = getVendorTypeNumber(sqlType);
@@ -2359,11 +2400,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param registrar the {@link Jdbc.ParametersSetter} that will register the OUT parameters.
      *                 Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code registrar} is {@code null}
      * @throws SQLException if {@code registrar} throws {@code SQLException}, for example because the driver fails to register an
      *         OUT parameter; this query is closed before the exception is rethrown
      */
-    public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> registrar) throws IllegalArgumentException, SQLException {
+    public CallableQuery registerOutParameters(final Jdbc.ParametersSetter<? super CallableQuery> registrar)
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(registrar, cs.registrar);
 
         try {
@@ -2410,12 +2455,15 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameter the context object to be passed to the {@code BiParametersSetter}.
      * @param registrar the {@link Jdbc.BiParametersSetter} that defines the registration logic. Must not be {@code null}.
      * @return this CallableQuery instance for method chaining
+     * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code registrar} is {@code null}
-     * @throws SQLException if {@code registrar} throws {@code SQLException}, for example because the driver fails to register an
-     *         OUT parameter; this query is closed before the exception is rethrown
+     * @throws SQLException if {@code registrar} throws {@code SQLException}, for example because the driver fails to register an OUT
+     *         parameter; this query is closed before the exception is rethrown
      */
     public <T> CallableQuery registerOutParameters(final T parameter, final Jdbc.BiParametersSetter<? super CallableQuery, ? super T> registrar)
-            throws IllegalArgumentException, SQLException {
+            throws IllegalStateException, IllegalArgumentException, SQLException {
+        assertNotClosed();
+
         checkArgNotNull(registrar, cs.registrar);
 
         try {
@@ -3625,8 +3673,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
-     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an
-     *                      OUT parameter fails, or the mapping throws {@code SQLException}
+     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the mapping
+     *         throws {@code SQLException}; also if closing a consumed result set fails
      * @see #listAndGetOutParameters(RowMapper)
      * @see #listAndGetOutParameters(BiRowMapper)
      */
@@ -3679,8 +3727,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
-     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an
-     *         OUT parameter fails, or the row mapper throws {@code SQLException}
+     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the row
+     *         mapper throws {@code SQLException}; also if closing a consumed result set fails
      * @see #listAndGetOutParameters(Class)
      * @see #listAndGetOutParameters(RowFilter, RowMapper)
      */
@@ -3752,8 +3800,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
-     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an
-     *         OUT parameter fails, or the row filter or mapper throws {@code SQLException}
+     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the row
+     *         filter or mapper throws {@code SQLException}; also if closing a consumed result set fails
      * @see #listAndGetOutParameters(BiRowFilter, BiRowMapper)
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
@@ -3827,8 +3875,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
-     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an
-     *         OUT parameter fails, or the row mapper throws {@code SQLException}
+     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the row
+     *         mapper throws {@code SQLException}; also if closing a consumed result set fails
      * @see #listAndGetOutParameters(RowMapper)
      * @see #listAndGetOutParameters(BiRowFilter, BiRowMapper)
      */
@@ -3915,8 +3963,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
-     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an
-     *         OUT parameter fails, or the row filter or mapper throws {@code SQLException}
+     * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the row
+     *         filter or mapper throws {@code SQLException}; also if closing a consumed result set fails
      * @see #listAndGetOutParameters(RowFilter, RowMapper)
      */
     public <T> Tuple2<List<T>, Jdbc.OutParamResult> listAndGetOutParameters(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)

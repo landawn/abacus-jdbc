@@ -1494,6 +1494,116 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
+    public void testCommitRunsCompletionActionWhenConnectionCleanupFails() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource);
+        final IllegalStateException cleanupFailure = new IllegalStateException("connection reset failed");
+        final AssertionError actionFailure = new AssertionError("completion action failed");
+        final AtomicBoolean actionCalled = new AtomicBoolean();
+        doThrow(cleanupFailure).when(connection).setAutoCommit(true);
+
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> transaction.commit(() -> {
+            actionCalled.set(true);
+            throw actionFailure;
+        }));
+
+        assertTrue(actionCalled.get());
+        assertSame(cleanupFailure, thrown);
+        assertArrayEquals(new Throwable[] { actionFailure }, thrown.getSuppressed());
+        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+        verify(connection).commit();
+        verify(connection).close();
+        verify(connection, never()).rollback();
+    }
+
+    @Test
+    public void testRollbackRunsCompletionActionWhenConnectionCleanupFails() throws SQLException {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource);
+        final AssertionError cleanupFailure = new AssertionError("connection reset failed");
+        final IllegalArgumentException actionFailure = new IllegalArgumentException("completion action failed");
+        final AtomicBoolean actionCalled = new AtomicBoolean();
+        doThrow(cleanupFailure).when(connection).setAutoCommit(true);
+
+        final AssertionError thrown = assertThrows(AssertionError.class, () -> transaction.rollback(() -> {
+            actionCalled.set(true);
+            throw actionFailure;
+        }));
+
+        assertTrue(actionCalled.get());
+        assertSame(cleanupFailure, thrown);
+        assertArrayEquals(new Throwable[] { actionFailure }, thrown.getSuppressed());
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        verify(connection).rollback();
+        verify(connection).close();
+    }
+
+    @Test
+    public void testCompletionPreservesCleanupFailureWhenActionSucceedsOrRethrowsIt() throws SQLException {
+        for (final boolean commit : new boolean[] { false, true }) {
+            for (final boolean rethrowCleanupFailure : new boolean[] { false, true }) {
+                final DataSource localDataSource = Mockito.mock(DataSource.class);
+                final Connection localConnection = Mockito.mock(Connection.class);
+                when(localDataSource.getConnection()).thenReturn(localConnection);
+                when(localConnection.getAutoCommit()).thenReturn(true);
+                when(localConnection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+                final SqlTransaction transaction = JdbcUtil.beginTransaction(localDataSource);
+                final IllegalStateException cleanupFailure = new IllegalStateException("connection reset failed");
+                final AtomicInteger actionCalls = new AtomicInteger();
+                doThrow(cleanupFailure).when(localConnection).setAutoCommit(true);
+                final Runnable action = () -> {
+                    actionCalls.incrementAndGet();
+                    if (rethrowCleanupFailure) {
+                        throw cleanupFailure;
+                    }
+                };
+
+                final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> {
+                    if (commit) {
+                        transaction.commit(action);
+                    } else {
+                        transaction.rollback(action);
+                    }
+                });
+
+                // A successful action cannot swallow cleanup failure, and rethrowing it must not self-suppress.
+                assertSame(cleanupFailure, thrown);
+                assertEquals(0, thrown.getSuppressed().length);
+                assertEquals(1, actionCalls.get());
+                assertEquals(commit ? Transaction.Status.COMMITTED : Transaction.Status.ROLLED_BACK, transaction.status());
+                verify(localConnection).close();
+                verify(localConnection, times(commit ? 1 : 0)).commit();
+                verify(localConnection, times(commit ? 0 : 1)).rollback();
+            }
+        }
+    }
+
+    @Test
+    public void testRollbackPreservesPrimaryFailureWithCleanupAndActionFailures() throws SQLException {
+        // Spring's release helper absorbs close failures; exercise the direct release path where an Error escapes.
+        JdbcUtil.runIgnoringSpringTransaction(() -> {
+            final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource);
+            final SQLException rollbackFailure = new SQLException("rollback failed");
+            final AssertionError cleanupFailure = new AssertionError("connection close failed");
+            final IllegalStateException actionFailure = new IllegalStateException("completion action failed");
+            final AtomicInteger actionCalls = new AtomicInteger();
+            doThrow(rollbackFailure).when(connection).rollback();
+            doThrow(cleanupFailure).when(connection).close();
+
+            final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> transaction.rollback(() -> {
+                actionCalls.incrementAndGet();
+                throw actionFailure;
+            }));
+
+            assertSame(rollbackFailure, thrown.getCause());
+            // Later failures remain attached to the primary operation in the order they occurred.
+            assertArrayEquals(new Throwable[] { cleanupFailure, actionFailure }, thrown.getSuppressed());
+            assertEquals(1, actionCalls.get());
+            assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+            verify(connection).close();
+            verify(connection, never()).setAutoCommit(true);
+        });
+    }
+
+    @Test
     public void testRollback_ActionAfterRollbackPropagatesWhenRollbackSucceeded() throws SQLException {
         final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
         // rollback succeeds; only the action throws.

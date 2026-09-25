@@ -445,6 +445,8 @@ public final class JoinInfo {
                     getJoinPropValue(srcPropInfos[0], entity));
 
             final Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> batchParaSetter = (stmt, entities) -> {
+                N.checkArgNotNull(entities, cs.entities);
+
                 int index = 1;
 
                 for (final Object entity : entities) {
@@ -539,6 +541,7 @@ public final class JoinInfo {
                         + batchSelectFromToJoinOn;
 
                 final BiFunction<Collection<String>, Integer, String> batchSqlBuilder = (selectPropNames, batchSize) -> {
+                    N.checkArgNotNull(batchSize, cs.batchSize);
                     N.checkArgPositive(batchSize, cs.batchSize);
 
                     if (N.isEmpty(selectPropNames)) {
@@ -672,12 +675,16 @@ public final class JoinInfo {
                     });
 
             final Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> batchParaSetter = srcPropInfos.length == 1 ? (stmt, entities) -> {
+                N.checkArgNotNull(entities, cs.entities);
+
                 int index = 1;
 
                 for (final Object entity : entities) {
                     srcPropInfos[0].dbType.set(stmt, index++, getJoinPropValue(srcPropInfos[0], entity));
                 }
             } : (srcPropInfos.length == 2 ? (stmt, entities) -> {
+                N.checkArgNotNull(entities, cs.entities);
+
                 int index = 1;
 
                 for (final Object entity : entities) {
@@ -685,6 +692,8 @@ public final class JoinInfo {
                     srcPropInfos[1].dbType.set(stmt, index++, getJoinPropValue(srcPropInfos[1], entity));
                 }
             } : (stmt, entities) -> {
+                N.checkArgNotNull(entities, cs.entities);
+
                 int index = 1;
 
                 for (final Object entity : entities) {
@@ -733,6 +742,7 @@ public final class JoinInfo {
                         : (sb, batchSize) -> sb.where(Filters.or(N.repeat(cond, batchSize)));
 
                 final BiFunction<Collection<String>, Integer, String> batchSelectSqlBuilder = (selectPropNames, batchSize) -> {
+                    N.checkArgNotNull(batchSize, cs.batchSize);
                     N.checkArgPositive(batchSize, cs.batchSize);
 
                     if (batchSize == 1) {
@@ -869,7 +879,7 @@ public final class JoinInfo {
      * Retrieves the SQL plan for single-entity select operations.
      * This method returns SQL builders and parameter setters for loading one joined entity graph.
      * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
-     * or {@link IllegalArgumentException} if a source entity has a disallowed null/default join key.
+     * or {@link IllegalArgumentException} if a source entity is {@code null} or has a disallowed null/default join key.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -907,8 +917,9 @@ public final class JoinInfo {
     /**
      * Retrieves the SQL plan for batch select operations.
      * This method returns SQL builders and parameter setters for loading joined entities in batches.
+     * The returned parameter setter rejects a {@code null} source collection with {@link IllegalArgumentException}; an empty collection is a no-op.
      * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
-     * or {@link IllegalArgumentException} if a source entity has a disallowed null/default join key.
+     * or {@link IllegalArgumentException} if a source entity is {@code null} or has a disallowed null/default join key.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -927,8 +938,7 @@ public final class JoinInfo {
      *         of selected property names and the batch size (a {@code null} or empty collection yields the default
      *         all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
      *         in the batch onto a {@link PreparedStatement}. The SQL-builder function requires a positive batch size
-     *         and throws {@link IllegalArgumentException} for zero or a negative value; because that parameter is a boxed
-     *         {@link Integer}, a {@code null} batch size fails with a {@link NullPointerException} while unboxing instead.
+     *         and throws {@link IllegalArgumentException} if the boxed {@link Integer} is {@code null}, zero, or negative.
      * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
      *
      * @see Dsl#PSC
@@ -951,7 +961,7 @@ public final class JoinInfo {
      * Retrieves the SQL plan for delete operations.
      * This method returns SQL statements for deleting joined entities.
      * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
-     * or {@link IllegalArgumentException} if a source entity has a disallowed null/default join key.
+     * or {@link IllegalArgumentException} if a source entity is {@code null} or has a disallowed null/default join key.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -989,8 +999,9 @@ public final class JoinInfo {
     /**
      * Retrieves the SQL plan for batch delete operations.
      * This method is used for building SQL DELETE statements for multiple joined entities.
+     * The returned parameter setter rejects a {@code null} source collection with {@link IllegalArgumentException}; an empty collection is a no-op.
      * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
-     * or {@link IllegalArgumentException} if a source entity has a disallowed null/default join key.
+     * or {@link IllegalArgumentException} if a source entity is {@code null} or has a disallowed null/default join key.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1056,14 +1067,13 @@ public final class JoinInfo {
      * }</pre>
      *
      * @param entities the source entities to populate with joined entities.
-     * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities.
+     * @param joinPropEntities the joined entities to be grouped by their referenced key and set on the source entities;
+     *                         {@code null} is treated as empty.
      * @throws UnsupportedOperationException if this is a many-to-many join &mdash; use {@link #setJoinPropEntities(Collection, Map)}
      *                                  with keys derived from the junction table instead &mdash; or if the {@code @JoinedBy} join
      *                                  property is read-only, so the matched join entities cannot be stored back onto the source entity.
-     * @throws NullPointerException if {@code entities} is {@code null} for a supported one-to-many or many-to-one join,
-     *                                  or if {@code entities} or {@code joinPropEntities} contains a {@code null} element
-     *                                  (its join key cannot be read). A {@code null} {@code joinPropEntities} is treated as empty.
-     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
+     * @throws IllegalArgumentException if {@code entities} is {@code null}, if a {@code null} source or joined entity is encountered,
+     *                                  if the join property is a map type and more than one joined entity matches a single source key,
      *                                  if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}, or if the declared collection or map type
      *                                  of the join property has no supported construction path.
@@ -1071,7 +1081,7 @@ public final class JoinInfo {
      * @see #setJoinPropEntities(Collection, Map)
      */
     public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities)
-            throws UnsupportedOperationException, NullPointerException, IllegalArgumentException {
+            throws UnsupportedOperationException, IllegalArgumentException {
         if (isManyToManyJoin) {
             // For many-to-many, srcEntityKeyExtractor reads the source-side join key (e.g.,
             // employee.employeeId) while referencedEntityKeyExtractor reads the referenced-side
@@ -1085,7 +1095,11 @@ public final class JoinInfo {
                     + "or have the framework load join entities via DaoImpl.");
         }
 
-        final Map<Object, List<Object>> groupedPropEntities = Stream.of((Collection<Object>) joinPropEntities).groupTo(referencedEntityKeyExtractor);
+        N.checkArgNotNull(entities, cs.entities);
+
+        final Map<Object, List<Object>> groupedPropEntities = Stream.of((Collection<Object>) joinPropEntities)
+                .onEach(entity -> N.checkArgNotNull(entity, "An element of 'joinPropEntities' cannot be null"))
+                .groupTo(referencedEntityKeyExtractor);
         setJoinPropEntities(entities, groupedPropEntities);
     }
 
@@ -1122,11 +1136,11 @@ public final class JoinInfo {
      *
      * @param entities the source entities to populate with joined entities.
      * @param groupedPropEntities a map of grouped joined entities keyed by the join key used to match source entities
-     *                            (the source key for one-to-many; the junction-table-derived key for many-to-many).
-     * @throws NullPointerException if {@code entities} is {@code null}, if it is nonempty and {@code groupedPropEntities}
-     *                                  is {@code null}, or if {@code entities} contains a {@code null} element (its join
-     *                                  key cannot be read)
-     * @throws IllegalArgumentException if the join property is a map type and more than one joined entity matches a single source key,
+     *                            (the source key for one-to-many; the junction-table-derived key for many-to-many);
+     *                            may be {@code null} when {@code entities} is empty.
+     * @throws IllegalArgumentException if {@code entities} is {@code null}, if it is nonempty and {@code groupedPropEntities} is {@code null},
+     *                                  if a {@code null} source entity is encountered,
+     *                                  if the join property is a map type and more than one joined entity matches a single source key,
      *                                  if a source entity has a {@code null}/default join key value while the owning DAO does not set
      *                                  {@code @DaoConfig(allowNullOrDefaultJoinKeys = true)}, or if the declared collection or map type
      *                                  of the join property has no supported construction path.
@@ -1134,7 +1148,12 @@ public final class JoinInfo {
      *                                  entities cannot be stored back onto the source entity.
      */
     public void setJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> groupedPropEntities)
-            throws NullPointerException, IllegalArgumentException, UnsupportedOperationException {
+            throws IllegalArgumentException, UnsupportedOperationException {
+        N.checkArgNotNull(entities, cs.entities);
+        if (!entities.isEmpty()) {
+            N.checkArgNotNull(groupedPropEntities, cs.groupedPropEntities);
+        }
+
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
         final boolean isMapProp = joinPropInfo.type.isMap();
 
@@ -1203,11 +1222,12 @@ public final class JoinInfo {
      * @param propInfo one of {@link #srcPropInfos}.
      * @param entity the source entity to read the join-key value from.
      * @return the property value, possibly {@code null} or a type default when such values are allowed.
-     * @throws IllegalArgumentException if the value is {@code null} or its type default and
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if the value is {@code null} or its type default and
      *                                  {@link #allowNullOrDefaultJoinKeys} is {@code false}.
-     * @throws NullPointerException if {@code entity} is {@code null}, since the join-key property cannot be read from it.
      */
-    private Object getJoinPropValue(final PropInfo propInfo, final Object entity) throws IllegalArgumentException, NullPointerException {
+    private Object getJoinPropValue(final PropInfo propInfo, final Object entity) throws IllegalArgumentException {
+        N.checkArgNotNull(entity, cs.entity);
+
         final Object value = propInfo.getPropValue(entity);
 
         if (!allowNullOrDefaultJoinKeys && JdbcUtil.isNullOrDefault(value)) {

@@ -38,6 +38,21 @@ import com.landawn.abacus.util.u.Optional;
 
 public class UncheckedCrudDaoTest extends TestBase {
 
+    @Test
+    public void testBatchUpsert_ValidatesEntitiesBeforeLaterArguments() {
+        final IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final List<IdAnnotatedEntity> entities = Arrays.asList((IdAnnotatedEntity) null);
+        final String expected = "The first element in the specified collection 'entities' cannot be null";
+
+        assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(entities, 0)).getMessage());
+        assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(entities, List.of(), 0)).getMessage());
+
+        final List<IdAnnotatedEntity> withNullLater = Arrays.asList(new IdAnnotatedEntity(), null);
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullLater, 2));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullLater, List.of("name"), 2));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchRefresh(withNullLater, 2));
+    }
+
     interface TestUncheckedCrudDao extends UncheckedCrudDao<TestEntity, Long, TestUncheckedCrudDao> {
     }
 

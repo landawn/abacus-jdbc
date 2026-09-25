@@ -17,6 +17,8 @@ package com.landawn.abacus.jdbc.dao;
 
 import java.util.Collection;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -51,10 +53,11 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity to delete (must have its ID populated)
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      */
     @Override
-    int delete(final T entity) throws IllegalArgumentException, UncheckedSQLException;
+    int delete(final T entity) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Deletes an entity by its ID.
@@ -71,10 +74,11 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param id the ID of the entity to delete
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      */
     @Override
-    int deleteById(final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    int deleteById(final ID id) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Performs batch delete of multiple entities using the default batch size
@@ -92,12 +96,16 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @return the total number of rows deleted
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
+     * @throws IllegalArgumentException if a {@code null} entity is encountered while reading or binding its ID properties,
+     *         or an entity lacks a property required by the generated DELETE statement
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    default int batchDelete(final Collection<? extends T> entities) throws IllegalStateException, UncheckedSQLException, ArithmeticException {
+    default int batchDelete(final Collection<? extends T> entities)
+            throws IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalArgumentException, ArithmeticException {
         return batchDelete(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -116,16 +124,19 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code batchSize} is not positive,
+     *         if a {@code null} entity is encountered while reading or binding its ID properties,
+     *         or an entity lacks a property required by the generated DELETE statement
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     int batchDelete(final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException;
 
     /**
      * Deletes multiple entities by their IDs using the default batch size
@@ -142,12 +153,15 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @return the total number of rows deleted
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
+     * @throws IllegalArgumentException if an ID is {@code null} and the entity uses a composite ID whose properties must be read
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
-    default int batchDeleteByIds(final Collection<? extends ID> ids) throws IllegalStateException, UncheckedSQLException, ArithmeticException {
+    default int batchDeleteByIds(final Collection<? extends ID> ids)
+            throws IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalArgumentException, ArithmeticException {
         return batchDeleteByIds(ids, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -166,15 +180,17 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param batchSize the number of IDs to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
      * @return the total number of rows deleted
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code batchSize} is not positive,
+     *         or if an ID is {@code null} and the entity uses a composite ID whose properties must be read
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     int batchDeleteByIds(final Collection<? extends ID> ids, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException;
 
 }

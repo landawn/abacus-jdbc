@@ -57,6 +57,13 @@ import sun.misc.Unsafe;
 @Tag("2025")
 public class DBLockTest extends TestBase {
 
+    @Test
+    public void testMalformedTableNameIsRejectedBeforeConnectionAcquisition() {
+        final DataSource unusedSource = mock(DataSource.class);
+        assertThrows(IllegalArgumentException.class, () -> new DBLock(unusedSource, "schema..locks"));
+        org.mockito.Mockito.verifyNoInteractions(unusedSource);
+    }
+
     private static final String REMOVE_SQL = "DELETE FROM test_lock WHERE target = ?";
     private static final String LOCK_SQL = "INSERT INTO test_lock(host_name, target, code, status, expiry_time, update_time, create_time) VALUES (?, ?, ?, ?, ?, ?, ?)";
     private static final String UNLOCK_SQL = "DELETE FROM test_lock WHERE target = ? AND code = ?";

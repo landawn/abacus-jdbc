@@ -256,6 +256,7 @@ public final class DBLock implements AutoCloseable {
             throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, RejectedExecutionException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         this.ds = ds;
         try (Connection conn = openLockConnection()) {

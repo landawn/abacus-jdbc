@@ -317,27 +317,24 @@ public class AbstractQueryTest extends TestBase {
     public void testCloseAfterExecution_ClosedQuery() throws SQLException {
         query.close();
 
-        // Non-execution configuration methods no longer check the closed state.
+        // Changing the automatic-close policy only stores a flag and does not access the statement.
         assertSame(query, query.closeAfterExecution(false));
     }
 
-    // New contract: only execution methods check the closed state. Parameter setters, batch staging,
-    // statement configuration, and lifecycle methods no longer throw IllegalStateException on a
-    // closed query — a closed underlying statement surfaces as the driver's SQLException instead —
-    // while execution methods still fail fast with IllegalStateException.
+    // Statement settings, batch staging, configuration, and execution retain the query-state check.
     @Test
     @Tag("2025")
-    public void testNonExecutionMethods_ClosedQuery_DoNotThrowIllegalState() throws SQLException {
+    public void testStatementOperations_ClosedQuery_ThrowIllegalState() throws SQLException {
         query.close();
 
-        assertSame(query, query.setFetchSize(100));
-        assertSame(query, query.setMaxRows(10));
-        assertSame(query, query.setLargeMaxRows(10L));
-        assertSame(query, query.setMaxFieldSize(256));
-        assertSame(query, query.setQueryTimeout(5));
-        assertSame(query, query.setFetchDirection(FetchDirection.FORWARD));
-        assertSame(query, query.addBatch());
-        assertSame(query, query.configureStatement(stmt -> stmt.setPoolable(false)));
+        assertThrows(IllegalStateException.class, () -> query.setFetchSize(100));
+        assertThrows(IllegalStateException.class, () -> query.setMaxRows(10));
+        assertThrows(IllegalStateException.class, () -> query.setLargeMaxRows(10L));
+        assertThrows(IllegalStateException.class, () -> query.setMaxFieldSize(256));
+        assertThrows(IllegalStateException.class, () -> query.setQueryTimeout(5));
+        assertThrows(IllegalStateException.class, () -> query.setFetchDirection(FetchDirection.FORWARD));
+        assertThrows(IllegalStateException.class, () -> query.addBatch());
+        assertThrows(IllegalStateException.class, () -> query.configureStatement(stmt -> stmt.setPoolable(false)));
 
         // Execution methods keep the fail-fast IllegalStateException.
         assertThrows(IllegalStateException.class, () -> query.exists());
@@ -514,6 +511,20 @@ public class AbstractQueryTest extends TestBase {
         assertSame(query, result);
         verify(preparedStatement).setInt(9, 99);
         verify(preparedStatement, never()).addBatch();
+    }
+
+    @Test
+    public void testConfigAddBatchActionRejectsNullAndPreservesClosedStatePrecedence() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> query.configAddBatchAction(null));
+
+        assertTrue(failure.getMessage().contains("addBatchAction"));
+        assertTrue(query.isClosed);
+        verify(preparedStatement).close();
+        verify(preparedStatement, never()).addBatch();
+
+        Mockito.clearInvocations(preparedStatement);
+        assertThrows(IllegalStateException.class, () -> query.configAddBatchAction(null));
+        Mockito.verifyNoInteractions(preparedStatement);
     }
 
     // addBatch() must close the statement when the addBatchAction throws, otherwise a
@@ -2057,6 +2068,252 @@ public class AbstractQueryTest extends TestBase {
         verify(second).close();
         verify(preparedStatement).getMoreResults();
         verify(preparedStatement, never()).close();
+    }
+
+    @Test
+    public void testRowStreamsRejectQueryClosedBeforeTraversal() throws SQLException {
+        for (final boolean closeAfterExecution : new boolean[] { false, true }) {
+            for (int mapperVariant = 0; mapperVariant < 4; mapperVariant++) {
+                final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+                final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution);
+
+                try (Stream<String> rows = switch (mapperVariant) {
+                    case 0 -> streamQuery.stream((Jdbc.RowMapper<String>) rs -> "value");
+                    case 1 -> streamQuery.stream((Jdbc.BiRowMapper<String>) (rs, labels) -> "value");
+                    case 2 -> streamQuery.stream(rs -> true, rs -> "value");
+                    default -> streamQuery.stream((rs, labels) -> true, (rs, labels) -> "value");
+                }) {
+                    streamQuery.close();
+
+                    final IllegalStateException failure = assertThrows(IllegalStateException.class, rows::toList);
+                    assertTrue(failure.getMessage().contains("already been closed"));
+                }
+
+                verify(statement, never()).getFetchDirection();
+                verify(statement, never()).executeQuery();
+                verify(statement).close();
+            }
+        }
+    }
+
+    @Test
+    public void testResultSetStreamsRejectQueryClosedBeforeTraversal() throws SQLException {
+        for (final boolean closeAfterExecution : new boolean[] { false, true }) {
+            for (final boolean withColumnLabels : new boolean[] { false, true }) {
+                final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+                final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution);
+                when(statement.getUpdateCount()).thenReturn(-1);
+
+                try (Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")
+                        : streamQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
+                    streamQuery.close();
+
+                    final IllegalStateException failure = assertThrows(IllegalStateException.class, results::toList);
+                    assertTrue(failure.getMessage().contains("already been closed"));
+                }
+
+                verify(statement, never()).execute();
+                verify(statement, never()).getMoreResults();
+                verify(statement).close();
+            }
+        }
+    }
+
+    @Test
+    public void testRowStreamTerminalPathsRemainLazyAndCloseOnce() throws SQLException {
+        for (final boolean closeAfterExecution : new boolean[] { false, true }) {
+            for (int mapperVariant = 0; mapperVariant < 4; mapperVariant++) {
+                for (int terminalVariant = 0; terminalVariant < 4; terminalVariant++) {
+                    final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+                    final ResultSet rs = Mockito.mock(ResultSet.class);
+                    final AtomicInteger mappedRows = new AtomicInteger();
+                    final AtomicInteger closeHandlerCalls = new AtomicInteger();
+                    final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution)
+                            .onClose(closeHandlerCalls::incrementAndGet);
+                    when(statement.executeQuery()).thenReturn(rs);
+                    when(rs.next()).thenReturn(true, true, true, false);
+                    when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
+                    final Jdbc.RowMapper<Integer> rowMapper = row -> mappedRows.incrementAndGet();
+                    final Jdbc.BiRowMapper<Integer> biRowMapper = (row, labels) -> mappedRows.incrementAndGet();
+
+                    try (Stream<Integer> rows = switch (mapperVariant) {
+                        case 0 -> streamQuery.stream(rowMapper);
+                        case 1 -> streamQuery.stream(biRowMapper);
+                        case 2 -> streamQuery.stream(row -> true, rowMapper);
+                        default -> streamQuery.stream((row, labels) -> true, biRowMapper);
+                    }) {
+                        Mockito.verifyNoInteractions(statement, rs);
+
+                        switch (terminalVariant) {
+                            case 0 -> assertEquals(3, rows.count());
+                            case 1 -> assertArrayEquals(new Object[] { 3 }, rows.skip(2).toArray());
+                            case 2 -> assertArrayEquals(new Integer[] { 1, 2, 3 }, rows.toArray(Integer[]::new));
+                            default -> assertEquals(0, rows.limit(0).count());
+                        }
+                    }
+
+                    assertEquals(terminalVariant == 3 ? 0 : 3, mappedRows.get());
+                    verify(statement, times(terminalVariant == 3 ? 0 : 1)).executeQuery();
+                    verify(rs, times(terminalVariant == 3 ? 0 : 4)).next();
+                    verify(rs, times(terminalVariant == 3 ? 0 : 1)).close();
+                    verify(statement, times(closeAfterExecution ? 1 : 0)).close();
+                    assertEquals(closeAfterExecution ? 1 : 0, closeHandlerCalls.get());
+                    assertEquals(closeAfterExecution, streamQuery.isClosed);
+                    streamQuery.close();
+                    verify(statement).close();
+                    assertEquals(1, closeHandlerCalls.get());
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testRowStreamCountSkipAndArrayKeepCleanupFailuresSuppressed() throws SQLException {
+        for (int terminalVariant = 0; terminalVariant < 3; terminalVariant++) {
+            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+            final ResultSet rs = Mockito.mock(ResultSet.class);
+            final SQLException readFailure = new SQLException("row read failed");
+            final IllegalStateException closeFailure = new IllegalStateException("query close handler failed");
+            final TestQuery streamQuery = new TestQuery(statement).onClose(() -> {
+                throw closeFailure;
+            });
+            when(statement.executeQuery()).thenReturn(rs);
+            when(rs.next()).thenThrow(readFailure);
+            final int operation = terminalVariant;
+
+            try (Stream<String> rows = streamQuery.stream((Jdbc.RowMapper<String>) row -> "value")) {
+                final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> {
+                    switch (operation) {
+                        case 0 -> rows.count();
+                        case 1 -> rows.skip(2).toArray();
+                        default -> rows.toArray(String[]::new);
+                    }
+                });
+
+                assertSame(readFailure, thrown.getCause());
+                assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
+            }
+
+            verify(rs).close();
+            verify(statement).close();
+            assertTrue(streamQuery.isClosed);
+        }
+    }
+
+    @Test
+    public void testRowStreamFailuresKeepCleanupSuppressed() throws SQLException {
+        for (final boolean failWhileReading : new boolean[] { false, true }) {
+            for (int mapperVariant = 0; mapperVariant < 4; mapperVariant++) {
+                final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+                final ResultSet rs = Mockito.mock(ResultSet.class);
+                final SQLException readFailure = new SQLException("row read failed");
+                final IllegalArgumentException mapperFailure = new IllegalArgumentException("row mapping failed");
+                final IllegalStateException closeFailure = new IllegalStateException("query close handler failed");
+                final AtomicInteger closeHandlerCalls = new AtomicInteger();
+                final TestQuery streamQuery = new TestQuery(statement).onClose(() -> {
+                    closeHandlerCalls.incrementAndGet();
+                    throw closeFailure;
+                });
+                when(statement.executeQuery()).thenReturn(rs);
+                when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
+
+                if (failWhileReading) {
+                    when(rs.next()).thenThrow(readFailure);
+                } else {
+                    when(rs.next()).thenReturn(true, false);
+                }
+
+                final Jdbc.RowMapper<String> rowMapper = row -> {
+                    throw mapperFailure;
+                };
+                final Jdbc.BiRowMapper<String> biRowMapper = (row, labels) -> {
+                    throw mapperFailure;
+                };
+
+                try (Stream<String> rows = switch (mapperVariant) {
+                    case 0 -> streamQuery.stream(rowMapper);
+                    case 1 -> streamQuery.stream(biRowMapper);
+                    case 2 -> streamQuery.stream(row -> true, rowMapper);
+                    default -> streamQuery.stream((row, labels) -> true, biRowMapper);
+                }) {
+                    final RuntimeException thrown = assertThrows(RuntimeException.class, rows::toList);
+                    if (failWhileReading) {
+                        assertTrue(thrown instanceof UncheckedSQLException);
+                        assertSame(readFailure, thrown.getCause());
+                    } else {
+                        assertSame(mapperFailure, thrown);
+                    }
+                    assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
+                }
+
+                verify(rs).close();
+                verify(statement).close();
+                assertEquals(1, closeHandlerCalls.get());
+                assertTrue(streamQuery.isClosed);
+            }
+        }
+    }
+
+    @Test
+    public void testResultSetStreamExtractorFailureKeepsReusableDrainFailureSuppressed() throws SQLException {
+        for (final boolean withColumnLabels : new boolean[] { false, true }) {
+            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+            final ResultSet rs = Mockito.mock(ResultSet.class);
+            final SQLException extractionFailure = new SQLException("result extraction failed");
+            final SQLException drainFailure = new SQLException("remaining result drain failed");
+            final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(false);
+            when(statement.execute()).thenReturn(true);
+            when(statement.getResultSet()).thenReturn(rs);
+            when(statement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(false);
+            when(statement.getMoreResults()).thenThrow(drainFailure);
+            when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
+            final Jdbc.ResultExtractor<String> extractor = result -> {
+                throw extractionFailure;
+            };
+            final Jdbc.BiResultExtractor<String> biExtractor = (result, labels) -> {
+                throw extractionFailure;
+            };
+
+            try (Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets(biExtractor) : streamQuery.streamAllResultSets(extractor)) {
+                final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
+                assertSame(extractionFailure, thrown.getCause());
+                assertEquals(1, thrown.getSuppressed().length);
+                assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
+                assertSame(drainFailure, thrown.getSuppressed()[0].getCause());
+            }
+
+            verify(rs).close();
+            verify(statement).getMoreResults();
+            verify(statement, never()).close();
+            assertFalse(streamQuery.isClosed);
+        }
+    }
+
+    @Test
+    public void testResultSetStreamReadFailureKeepsCloseHandlerFailureSuppressed() throws SQLException {
+        for (final boolean withColumnLabels : new boolean[] { false, true }) {
+            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+            final ResultSet rs = Mockito.mock(ResultSet.class);
+            final SQLException readFailure = new SQLException("advancing result sets failed");
+            final IllegalStateException closeFailure = new IllegalStateException("query close handler failed");
+            final TestQuery streamQuery = new TestQuery(statement).onClose(() -> {
+                throw closeFailure;
+            });
+            when(statement.execute()).thenReturn(true);
+            when(statement.getResultSet()).thenReturn(rs);
+            when(statement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(readFailure);
+
+            try (Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (result, labels) -> "value")
+                    : streamQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) result -> "value")) {
+                final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
+                assertSame(readFailure, thrown.getCause());
+                assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
+            }
+
+            verify(rs).close();
+            verify(statement).close();
+            assertTrue(streamQuery.isClosed);
+        }
     }
 
     @Test

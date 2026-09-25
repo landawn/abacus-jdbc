@@ -309,6 +309,12 @@ public class DaoImplTest extends TestBase {
         List<TestEntity> list() throws SQLException;
     }
 
+    @SqlSource("sql-source-settings.xml")
+    interface SqlSourceSettingsDao extends Dao<TestEntity, SqlSourceSettingsDao> {
+        @Query(id = "findWithSettings")
+        List<TestEntity> findWithSettings(@Bind("name") String name) throws SQLException;
+    }
+
     interface AmbiguousOutParameterDao extends Dao<TestEntity, AmbiguousOutParameterDao> {
         @Query(value = "{call test_proc(?)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
         @OutParameter(name = "out", position = 1, sqlType = Types.INTEGER)
@@ -1157,6 +1163,24 @@ public class DaoImplTest extends TestBase {
         assertEquals(41, queryInfo.fetchSize);
         assertEquals(43, queryInfo.batchSize);
         assertTrue(queryInfo.isNamedQuery);
+    }
+
+    @Test
+    public void testSqlSourceRetainsStatementAttributesAndNamedParameters() throws SQLException {
+        final com.landawn.abacus.query.SqlMapper source = new com.landawn.abacus.query.SqlMapper();
+        final com.landawn.abacus.query.ParsedSql sql = com.landawn.abacus.query.ParsedSql.parse("SELECT * FROM test_entity WHERE name = :name");
+        final Map<String, String> attributes = Map.of(com.landawn.abacus.query.SqlMapper.TIMEOUT, "37",
+                com.landawn.abacus.query.SqlMapper.FETCH_SIZE, "41", com.landawn.abacus.query.SqlMapper.BATCH_SIZE, "43");
+        source.add("findWithSettings", sql, attributes);
+
+        try (MockedStatic<com.landawn.abacus.query.SqlMapper> sqlMappers = Mockito.mockStatic(com.landawn.abacus.query.SqlMapper.class)) {
+            sqlMappers.when(() -> com.landawn.abacus.query.SqlMapper.loadFrom("sql-source-settings.xml")).thenReturn(source);
+            final SqlSourceSettingsDao dao = DaoImpl.createDao(SqlSourceSettingsDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
+
+            assertEquals(attributes, dao.sqlMapper().attributes("findWithSettings"));
+            assertSame(sql, dao.sqlMapper().get("findWithSettings"));
+            assertEquals(List.of("name"), dao.sqlMapper().get("findWithSettings").namedParameters());
+        }
     }
 
     // QueryInfo: fragmentsContainNamedParameters=true with named SQL -> isNamedQuery=true
@@ -2022,6 +2046,10 @@ public class DaoImplTest extends TestBase {
     // as OFFSET/FETCH requiring ORDER BY: the limit is added only when the condition carries one.
     @Test
     public void testHandleLimit_SkipLimitWithoutOrderBy() throws Exception {
+        // No condition cannot provide ORDER BY either; a best-effort limit must be skipped.
+        assertEquals(null, invokeHandleLimit(null, 1, true));
+        assertTrue(invokeHandleLimit(null, 1, false) instanceof Limit);
+
         // Bare condition without ORDER BY: returned unchanged, no limit added.
         final Condition bare = Filters.eq("id", 1);
         assertSame(bare, invokeHandleLimit(bare, 1, true));

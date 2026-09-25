@@ -46,6 +46,10 @@ import com.landawn.abacus.jdbc.Propagation;
  * joins an existing transaction or starts a new one, {@code REQUIRES_NEW} always starts a new
  * one (suspending any current transaction), {@code MANDATORY} requires an existing transaction,
  * etc.
+ * <p>Transaction handling surrounds method execution inside the cache interceptor. A result served
+ * from a DAO or thread-local cache bypasses execution and therefore does not start, suspend, or
+ * validate a transaction context. In particular, {@code MANDATORY}/{@code NEVER} checks do not run
+ * on cache hits; avoid result caching when those checks must apply to every call.</p>
  *
  * <p>This annotation may only be placed on methods (not on the DAO type). To make every method
  * transactional, mix in a base interface or apply {@code @Transactional} to each method
@@ -127,7 +131,7 @@ public @interface Transactional {
      *   <li>{@link Propagation#NEVER} - Execute non-transactionally, fail if transaction exists</li>
      * </ul>
      *
-     * <p>The two context-demanding policies are enforced at <em>invocation</em> time, before the method
+     * <p>The two context-demanding policies are enforced before an uncached method execution, before the method
      * body runs, and both report an {@link IllegalStateException}: {@link Propagation#MANDATORY} when the
      * calling thread has no active transaction on the DAO's {@code DataSource}, and
      * {@link Propagation#NEVER} when it does. A stream-returning method combined with a propagation other

@@ -24,6 +24,8 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -136,12 +138,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql, final boolean generateKeys) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+    default PreparedQuery prepareQuery(final String sql, final boolean generateKeys)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQuery(dataSource(), sql, generateKeys);
     }
 
@@ -153,13 +157,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnIndexes array of column indexes to return as generated keys
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQuery(final String sql, final int[] generatedKeyColumnIndexes)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQuery(dataSource(), sql, generatedKeyColumnIndexes);
     }
 
@@ -180,13 +185,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnNames array of column names to return as generated keys
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQuery(final String sql, final String[] generatedKeyColumnNames)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQuery(dataSource(), sql, generatedKeyColumnNames);
     }
 
@@ -198,13 +204,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param stmtCreator function to create the PreparedStatement with custom options
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -220,13 +227,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final boolean generateKeys)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generateKeys);
     }
 
@@ -239,13 +247,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final int[] generatedKeyColumnIndexes)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnIndexes);
     }
 
@@ -258,13 +267,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final String[] generatedKeyColumnNames)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnNames);
     }
 
@@ -276,13 +286,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null},
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generateKeys);
     }
 
@@ -294,13 +305,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnIndexes} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnIndexes);
     }
 
@@ -312,13 +324,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnNames} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnNames);
     }
 
@@ -331,13 +344,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code stmtCreator} is {@code null},
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -352,13 +366,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code stmtCreator} is {@code null},
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -382,12 +397,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the stored procedure call string
      * @return a CallableQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
     @NonDBOperation
-    default CallableQuery prepareCallableQuery(final String sql) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+    default CallableQuery prepareCallableQuery(final String sql)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareCallableQuery(dataSource(), sql);
     }
 
@@ -399,13 +416,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param stmtCreator function to create the CallableStatement
      * @return a CallableQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
     @NonDBOperation
     default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -430,14 +448,15 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
      *                                  or an existing row is updated and {@code entity} has a property the loaded
      *                                  entity does not
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
      * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
      * @see #upsert(Object, Condition)
      */
-    default T upsert(final T entity, final Collection<String> matchPropNames)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, CannotGetJdbcConnectionException,
+            UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
@@ -474,13 +493,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
      *                                  and {@code entity} has a property the loaded entity does not
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
      */
-    default T upsert(final T entity, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException,
+            SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 

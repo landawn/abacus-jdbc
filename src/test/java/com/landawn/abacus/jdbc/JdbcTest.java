@@ -71,6 +71,38 @@ import com.landawn.abacus.util.Tuple.Tuple3;
 public class JdbcTest extends TestBase {
 
     @Test
+    public void testStatefulRowCallbacksValidateRequiredResourcesFirst() {
+        final Jdbc.BiParametersSetter<PreparedStatement, Object[]> arraySetter = Jdbc.BiParametersSetter.forArray(List.of("id"), TestEntity.class);
+        final Jdbc.BiParametersSetter<PreparedStatement, List<Object>> listSetter = Jdbc.BiParametersSetter.forList(List.of("id"), TestEntity.class);
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> arraySetter.accept(null, null)).getMessage().contains("stmt"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> listSetter.accept(null, null)).getMessage().contains("stmt"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowExtractor.forType(TestEntity.class).accept(null, null)).getMessage().contains("rs"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowExtractor.builder().build().accept(null, null)).getMessage().contains("rs"));
+    }
+
+    @Test
+    public void testCacheUpdateValidatesMetadataBeforeInvalidatingEntries() {
+        final Method builtInMethod = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.iterator().next();
+        final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> missingReturnType = Tuple.of(builtInMethod, ImmutableList.empty(), null);
+
+        for (final Jdbc.DaoCache cache : List.of(Jdbc.DaoCache.createByMap(), Jdbc.DaoCache.create(10, 0))) {
+            cache.put("method#users#1", "cached", null, null, null);
+            assertTrue(assertThrows(IllegalArgumentException.class, () -> cache.update("method#users#2", 1, null, null, null)).getMessage()
+                    .contains("methodSignature"));
+            assertThrows(IllegalArgumentException.class, () -> cache.update("method#users#2", 0, null, null, missingReturnType));
+            assertEquals("cached", cache.get("method#users#1", null, null, null));
+            assertFalse(cache.put("method#users#null", null, null, null, null));
+            cache.clear();
+        }
+    }
+
+    @Test
+    public void testJdbcGetterMethodReferencesRetainTheirNullReceiverContract() {
+        assertThrows(NullPointerException.class, () -> Jdbc.ColumnGetter.GET_INT.get(null, 1));
+        assertThrows(IllegalArgumentException.class, () -> Jdbc.ColumnGetter.GET_OBJECT.get(null, 1));
+    }
+
+    @Test
     public void testTypedColumnBuildersValidateColumnBeforeType() {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowMapper.builder().getObject(0, null)).getMessage().contains("columnIndex"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowExtractor.builder().getObject(0, null)).getMessage().contains("columnIndex"));
@@ -1900,6 +1932,31 @@ public class JdbcTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> extractor.accept(mockResultSet, shortOutput));
         assertEquals("unchanged", shortOutput[0]);
         assertThrows(IllegalArgumentException.class, () -> extractor.accept(mockResultSet, null));
+    }
+
+    @Test
+    public void testRowExtractorValidatesOutputSizeBeforeResolvingColumnMappings() throws SQLException {
+        final Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class, Arrays.asList("id", null));
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> extractor.accept(mockResultSet, new Object[1]));
+
+        assertTrue(failure.getMessage().contains("output array length"));
+        verifyNoInteractions(mockResultSet);
+    }
+
+    @Test
+    public void testRowExtractorBuilderDoesNotCacheMetadataAfterOutputValidationFails() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(3, 1);
+        when(mockResultSet.getObject(1)).thenReturn("value");
+        final Jdbc.RowExtractor extractor = Jdbc.RowExtractor.builder().build();
+
+        assertThrows(IllegalArgumentException.class, () -> extractor.accept(mockResultSet, new Object[1]));
+        final Object[] output = new Object[1];
+        extractor.accept(mockResultSet, output);
+
+        assertEquals("value", output[0]);
+        verify(mockResultSetMetaData, times(2)).getColumnCount();
     }
 
     @Test

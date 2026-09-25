@@ -1079,11 +1079,12 @@ public class PreparedQueryTest extends TestBase {
 
     @Test
     public void testSetParametersNullArguments() {
-        assertThrows(IllegalArgumentException.class, () -> query.setParameters((int[]) null));
-        assertThrows(IllegalArgumentException.class, () -> query.setParameters((long[]) null));
-        assertThrows(IllegalArgumentException.class, () -> query.setParameters((String[]) null));
-        assertThrows(IllegalArgumentException.class, () -> query.setParameters((Collection<?>) null));
-        assertThrows(IllegalArgumentException.class, () -> query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) null));
+        // Each invalid argument closes its query, so validate each overload on a fresh instance.
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).setParameters((int[]) null));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).setParameters((long[]) null));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).setParameters((String[]) null));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).setParameters((Collection<?>) null));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).setParameters((Jdbc.ParametersSetter<PreparedStatement>) null));
     }
 
     @Test
@@ -1292,9 +1293,9 @@ public class PreparedQueryTest extends TestBase {
 
     @Test
     public void testSetForIndicesInvalidIndices() {
-        assertThrows(IllegalArgumentException.class, () -> query.setNullForIndices(Types.VARCHAR));
-        assertThrows(IllegalArgumentException.class, () -> query.setIntForIndices(123, 0, 1));
-        assertThrows(IllegalArgumentException.class, () -> query.setStringForIndices("test", -1, 1));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).setNullForIndices(Types.VARCHAR));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).setIntForIndices(123, 0, 1));
+        assertThrows(IllegalArgumentException.class, () -> new PreparedQuery(mockStmt).setStringForIndices("test", -1, 1));
     }
 
     @Test
@@ -3175,14 +3176,12 @@ public class PreparedQueryTest extends TestBase {
     public void testOperationsOnClosedQuery() throws SQLException {
         query.close();
 
-        //    assertThrows(IllegalStateException.class, () -> query.setString(1, "test"));
-        //    assertThrows(IllegalStateException.class, () -> query.queryForInt());
-        //    assertThrows(IllegalStateException.class, () -> query.update());
-        //    assertThrows(IllegalStateException.class, () -> query.execute());
-        //    assertThrows(IllegalStateException.class, () -> query.list());
-
-        // no check in set parameters.
-        assertDoesNotThrow(() -> query.setString(1, "test"));
+        // Input binding delegates to the driver; this mock accepts the value after close.
+        assertSame(query, query.setString(1, "test"));
+        assertThrows(IllegalStateException.class, () -> query.queryForInt());
+        assertThrows(IllegalStateException.class, () -> query.update());
+        assertThrows(IllegalStateException.class, () -> query.execute());
+        assertThrows(IllegalStateException.class, () -> query.list());
         assertTrue(query.isClosed);
         verify(mockStmt).setString(1, "test");
     }

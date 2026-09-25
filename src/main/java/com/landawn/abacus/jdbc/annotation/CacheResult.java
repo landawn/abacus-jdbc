@@ -64,8 +64,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * {@code @CacheResult(enabled = false)} carrying out-of-range values is ignored rather than rejected.
  * Note that the built-in {@link com.landawn.abacus.jdbc.Jdbc.DefaultDaoCache} (the default
  * {@link Cache#impl()}) requires both time limits to be <em>positive</em>: a value of {@code 0} passes
- * DAO initialization, but every invocation then executes the query and fails with
- * {@code IllegalArgumentException} when the result is stored.</p>
+ * DAO initialization, but storing an eligible non-null result then fails with
+ * {@code IllegalArgumentException}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -298,7 +298,7 @@ public @interface CacheResult {
      * }
      *
      * // Inherited built-in reads also match the filter and are cached, for example:
-     * //     User user = userDao.get(userId);                       // matches "get.*"
+     * //     User user = userDao.getOrNull(userId);                 // matches "get.*"
      * //     com.landawn.abacus.util.u.Optional<User> first = userDao.findFirst(cond); // matches "find.*"
      * }</pre>
      *

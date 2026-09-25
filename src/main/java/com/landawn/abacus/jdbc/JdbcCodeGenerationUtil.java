@@ -220,8 +220,11 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Template for the Lombok class-level annotations used by generated entity classes. {@code @Data},
-     * {@code @NoArgsConstructor}, and {@code @AllArgsConstructor} are always retained; {@code @Builder}
-     * and {@code @Accessors(chain = true)} are removed unless their corresponding configuration flags are enabled.
+     * and {@code @NoArgsConstructor} are always retained. {@code @AllArgsConstructor} is omitted when
+     * no database fields are generated and the additional body is empty or can be recognized entirely
+     * as fields excluded from that constructor; arbitrary additional Java source retains it.
+     * {@code @Builder} and {@code @Accessors(chain = true)}
+     * are removed unless their corresponding configuration flags are enabled.
      */
     private static final String eccClassAnnos = """
             @Builder
@@ -267,8 +270,8 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the entity class
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code tableName} is {@code null}, blank, or malformed,
-     *         or the derived class or field names are invalid or collide
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code tableName} is {@code null}, blank, or malformed, or the derived class or
+     *         field names are invalid or collide
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
      */
     public static String generateEntityClass(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -293,17 +296,18 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the entity class
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null}, blank, or malformed, or the configuration
-     *             cannot produce valid Java source (for example, names collide, an annotation is unusable,
-     *             or a field is both read-only and non-updatable)
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null}, blank, or malformed, or the
+     *         configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and
+     *         non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
-     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config)
-            throws IllegalArgumentException, UncheckedSQLException, NullPointerException, UncheckedIOException {
+            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
+        checkEntityCodeConfig(config);
 
         try (Connection conn = ds.getConnection()) {
             return generateEntityClassByQuery(conn, tableName, createQueryByTableName(conn, tableName), config);
@@ -327,8 +331,8 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the entity class
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is {@code null}, blank, or malformed,
-     *         or the derived class or field names are invalid or collide
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is {@code null}, blank, or malformed, or the derived class
+     *         or field names are invalid or collide
      * @throws UncheckedSQLException if reading database product metadata, querying rows or metadata, or closing the query's JDBC resources fails
      */
     public static String generateEntityClass(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -351,15 +355,19 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the entity class
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null}, blank, or malformed, or the configuration
-     *             cannot produce valid Java source (for example, names collide, an annotation is unusable,
-     *             or a field is both read-only and non-updatable)
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null}, blank, or malformed, or the
+     *         configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and
+     *         non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedSQLException if reading database product metadata, querying rows or metadata, or closing the query's JDBC resources fails
-     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config)
-            throws IllegalArgumentException, UncheckedSQLException, NullPointerException, UncheckedIOException {
+            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
+        N.checkArgNotNull(conn, cs.conn);
+        N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
+        checkEntityCodeConfig(config);
+
         return generateEntityClassByQuery(conn, tableName, createQueryByTableName(conn, tableName), config);
     }
 
@@ -377,8 +385,8 @@ public final class JdbcCodeGenerationUtil {
      * @param entityName the name of the entity class to generate
      * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or empty, or
-     *             if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
+     *         empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
      */
     public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query)
@@ -405,18 +413,19 @@ public final class JdbcCodeGenerationUtil {
      * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or empty, or
-     *             if the configuration cannot produce valid Java source (for example, generated names are invalid or collide, an annotation is unusable, or a
-     *             field is both read-only and non-updatable)
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
+     *         empty, or if the configuration cannot produce valid Java source (for example, generated names are invalid or collide, an annotation is
+     *         unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or
+     *         {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
-     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query, final EntityCodeConfig config)
-            throws IllegalArgumentException, UncheckedSQLException, NullPointerException, UncheckedIOException {
+            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(entityName, cs.entityName);
         N.checkArgNotEmpty(query, cs.query);
+        checkEntityCodeConfig(config);
 
         try (Connection conn = ds.getConnection()) {
             return generateEntityClassByQuery(conn, entityName, query, config);
@@ -439,8 +448,8 @@ public final class JdbcCodeGenerationUtil {
      * @param entityName the name of the entity class to generate
      * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or empty, or
-     *             if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
+     *         empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
      * @throws UncheckedSQLException if querying rows or metadata, or closing the query's JDBC resources fails
      */
     public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query)
@@ -468,18 +477,19 @@ public final class JdbcCodeGenerationUtil {
      * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or empty, or
-     *             if the configuration cannot produce valid Java source (for example, generated names are invalid or collide, an annotation is unusable, or a
-     *             field is both read-only and non-updatable)
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
+     *         empty, or if the configuration cannot produce valid Java source (for example, generated names are invalid or collide, an annotation is
+     *         unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or
+     *         {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedSQLException if querying rows or metadata, or closing the query's JDBC resources fails
-     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query, final EntityCodeConfig config)
-            throws IllegalArgumentException, UncheckedSQLException, NullPointerException, UncheckedIOException {
+            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(entityName, cs.entityName);
         N.checkArgNotEmpty(query, cs.query);
+        checkEntityCodeConfig(config);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              ResultSet rs = stmt.executeQuery()) {
@@ -492,6 +502,26 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Validates entries in the optional field-mapping and annotation-argument lists.
+     *
+     * @param config the generation configuration; {@code null} uses the default configuration
+     * @throws IllegalArgumentException if a custom field mapping or field-type annotation argument is {@code null}
+     */
+    private static void checkEntityCodeConfig(final EntityCodeConfig config) throws IllegalArgumentException {
+        if (config == null) {
+            return;
+        }
+
+        for (final EntityCodeConfig.FieldMapping mapping : N.nullToEmpty(config.getCustomFieldMappings())) {
+            N.checkArgNotNull(mapping, "config.customFieldMappings must not contain null elements");
+        }
+
+        for (final Tuple2<String, String> argument : N.nullToEmpty(config.getFieldTypeAnnotationArguments())) {
+            N.checkArgNotNull(argument, "config.fieldTypeAnnotationArguments must not contain null elements");
+        }
+    }
+
+    /**
      * Generates an entity class from the column metadata of the given result set.
      * Primary keys are auto-detected from database metadata when no configured id field matches.
      * SQL identifier delimiters are decoded before the lookup; unquoted parts follow the database's identifier case-folding rules.
@@ -500,16 +530,17 @@ public final class JdbcCodeGenerationUtil {
      * @param rs the result set whose column metadata defines the generated fields
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
-     * @throws NullPointerException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
-     * @throws IllegalArgumentException if the configuration cannot produce valid Java source (for example,
-     *             generated names are invalid or collide, an annotation is unusable, or a field is both
-     *             read-only and non-updatable)
-     * @throws UncheckedSQLException if reading {@code rs}'s column metadata fails, or if looking up the
-     *             primary-key metadata through the statement/connection behind {@code rs} fails
+     * @throws IllegalArgumentException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null}
+     *         element, or the configuration cannot produce valid Java source (for example, generated names are invalid or collide, an annotation is
+     *         unusable, or a field is both read-only and non-updatable)
+     * @throws UncheckedSQLException if reading {@code rs}'s column metadata fails, or if looking up the primary-key metadata through the
+     *         statement/connection behind {@code rs} fails
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     static String generateEntityClass(final String entityName, final ResultSet rs, final EntityCodeConfig config)
-            throws NullPointerException, IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
+            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
+        checkEntityCodeConfig(config);
+
         final EntityCodeConfig configToUse = N.defaultIfNull(config, defaultEntityCodeConfig);
 
         final String className = configToUse.getClassName();
@@ -797,6 +828,10 @@ public final class JdbcCodeGenerationUtil {
             }
 
             headPart += LINE_SEPARATOR + lombokImports + LINE_SEPARATOR + eccClassAnnos;
+
+            if (fieldNameList.isEmpty() && hasOnlyFieldsExcludedFromAllArgsConstructor(configToUse.getAdditionalClassBodySource())) {
+                headPart = headPart.replace("import lombok.AllArgsConstructor;\n", "").replace("@AllArgsConstructor\n", "");
+            }
 
             if (isJavaPersistenceTable) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
@@ -1111,6 +1146,7 @@ public final class JdbcCodeGenerationUtil {
     private static String createQueryByTableName(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         return createQueryByTableName(tableName, JdbcUtil.getDBProductInfo(conn));
     }
@@ -1223,12 +1259,15 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     *         This also applies to malformed qualified table names, blank column labels, or a null or blank database product name reported by the
+     *         driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateSelectSql(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         try (Connection conn = ds.getConnection()) {
             return generateSelectSql(conn, tableName);
@@ -1254,13 +1293,15 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no
+     *         columns. This also applies to malformed qualified table names, blank column labels, or a null or blank database product name reported
+     *         by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateSelectSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
@@ -1300,15 +1341,17 @@ public final class JdbcCodeGenerationUtil {
      * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving
-     *             no columns for the SELECT statement.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
+     *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a
+     *         null or blank database product name reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateSelectSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final String whereClause)
             throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         try (Connection conn = ds.getConnection()) {
             return generateSelectSql(conn, tableName, excludedColumnNames, whereClause);
@@ -1336,15 +1379,16 @@ public final class JdbcCodeGenerationUtil {
      * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are excluded
-     *             leaving no columns for the SELECT statement.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
+     *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a
+     *         null or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
             final String whereClause) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
@@ -1387,12 +1431,15 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     *         This also applies to malformed qualified table names, blank column labels, or a null or blank database product name reported by the
+     *         driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateInsertSql(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         try (Connection conn = ds.getConnection()) {
             return generateInsertSql(conn, tableName);
@@ -1418,13 +1465,15 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no
+     *         columns. This also applies to malformed qualified table names, blank column labels, or a null or blank database product name reported
+     *         by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateInsertSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
@@ -1463,15 +1512,17 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the INSERT statement
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with positional parameters for all included columns
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving
-     *             no columns for the INSERT statement.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
+     *         excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a
+     *         null or blank database product name reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames)
             throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         try (Connection conn = ds.getConnection()) {
             return generateInsertSql(conn, tableName, excludedColumnNames);
@@ -1497,9 +1548,9 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the INSERT statement
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with positional parameters for all included columns
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are excluded
-     *             leaving no columns for the INSERT statement.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
+     *         excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a
+     *         null or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateInsertSql(Connection, String)
      * @see #generateInsertSql(DataSource, String, Collection)
@@ -1509,6 +1560,7 @@ public final class JdbcCodeGenerationUtil {
             throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
@@ -1549,14 +1601,16 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns,
-     *             or two column names map to the same (or an invalid) named parameter.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns, or
+     *         two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
+     *         labels, or a null or blank database product name reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateNamedInsertSql(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         try (Connection conn = ds.getConnection()) {
             return generateNamedInsertSql(conn, tableName);
@@ -1582,13 +1636,14 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns,
-     *             or two column names map to the same (or an invalid) named parameter.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     *         or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
+     *         labels, or a null or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
@@ -1629,15 +1684,17 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with named parameters for all included columns
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, all columns are excluded,
-     *             or two included column names map to the same (or an invalid) named parameter.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, all columns are excluded, or
+     *         two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank
+     *         column labels, or a null or blank database product name reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateNamedInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames)
             throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         try (Connection conn = ds.getConnection()) {
             return generateNamedInsertSql(conn, tableName, excludedColumnNames);
@@ -1664,8 +1721,8 @@ public final class JdbcCodeGenerationUtil {
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with named parameters for all included columns
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, all columns are excluded,
-     *             or two included column names map to the same (or an invalid) named parameter.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     *         or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names,
+     *         blank column labels, or a null or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateNamedInsertSql(Connection, String)
      * @see #generateNamedInsertSql(DataSource, String, Collection)
@@ -1675,6 +1732,7 @@ public final class JdbcCodeGenerationUtil {
             throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
@@ -1717,14 +1775,16 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @return an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or the table has no columns for the SET
-     *             clause.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or the table has no columns
+     *         for the SET clause. This also applies to malformed qualified table names, blank column labels, or a null or blank database product name
+     *         reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateUpdateSql(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         try (Connection conn = ds.getConnection()) {
             return generateUpdateSql(conn, tableName);
@@ -1751,14 +1811,15 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @return an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or the table has no columns for the
-     *             SET clause.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or the table has no columns
+     *         for the SET clause. This also applies to malformed qualified table names, blank column labels, or a null or blank database product name
+     *         reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateUpdateSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
         final String query = createQueryByTableName(tableName, dbProductInfo);
@@ -1793,15 +1854,17 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
      *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
      * @return an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if either name is {@code null} or blank, the key column is missing or ambiguous,
-     *             or no columns remain for the SET clause.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
+     *         ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a
+     *         null or blank database product name reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateUpdateSql(final DataSource ds, final String tableName, final String keyColumnName)
             throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
 
         try (Connection conn = ds.getConnection()) {
@@ -1828,15 +1891,16 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
      *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
      * @return an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if either name is {@code null} or blank, the key column is missing or ambiguous,
-     *             or no columns remain for the SET clause.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
+     *         ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a
+     *         null or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName)
             throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
@@ -1888,10 +1952,11 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; may be {@code null} or empty
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank, missing,
-     *             or ambiguous, or no columns remain for the SET clause after exclusions.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
+     *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names,
+     *         blank column labels, or a null or blank database product name reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      * @see #generateUpdateSql(Connection, String, String)
      * @see #generateUpdateSql(Connection, String, Collection, Collection, String)
      * @see #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)
@@ -1900,6 +1965,7 @@ public final class JdbcCodeGenerationUtil {
             final Collection<String> keyColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         if (keyColumnNames != null) {
             for (final String keyColumnName : keyColumnNames) {
                 N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
@@ -1939,9 +2005,9 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; may be {@code null} or empty
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank, missing,
-     *             or ambiguous, or no columns remain for the SET clause after exclusions.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
+     *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names,
+     *         blank column labels, or a null or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateUpdateSql(Connection, String, String)
      * @see #generateUpdateSql(DataSource, String, Collection, Collection, String)
@@ -1951,6 +2017,7 @@ public final class JdbcCodeGenerationUtil {
             final Collection<String> keyColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         if (keyColumnNames != null) {
             for (final String keyColumnName : keyColumnNames) {
                 N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
@@ -2023,14 +2090,16 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns,
-     *             or two column names map to the same (or an invalid) named parameter.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns, or
+     *         two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
+     *         labels, or a null or blank database product name reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateNamedUpdateSql(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         try (Connection conn = ds.getConnection()) {
             return generateNamedUpdateSql(conn, tableName);
@@ -2059,13 +2128,14 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns,
-     *             or two column names map to the same (or an invalid) named parameter.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     *         or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
+     *         labels, or a null or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
 
@@ -2103,15 +2173,17 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
      *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if either name is {@code null} or blank, the key column is missing or ambiguous,
-     *             no columns remain for the SET clause, or generated named parameters are invalid or collide.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
+     *         ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed
+     *         qualified table names, blank column labels, or a null or blank database product name reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      */
     public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final String keyColumnName)
             throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
 
         try (Connection conn = ds.getConnection()) {
@@ -2138,15 +2210,16 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
      *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if either name is {@code null} or blank, the key column is missing or ambiguous,
-     *             no columns remain for the SET clause, or generated named parameters are invalid or collide.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
+     *         ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed
+     *         qualified table names, blank column labels, or a null or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName)
             throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
@@ -2196,10 +2269,11 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; may be {@code null} or empty
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank, missing,
-     *             or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
-     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
+     *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
+     *         malformed qualified table names, blank column labels, or a null or blank database product name reported by the driver.
+     * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
+     *         fails
      * @see #generateNamedUpdateSql(Connection, String, String)
      * @see #generateNamedUpdateSql(Connection, String, Collection, Collection, String)
      * @see #generateUpdateSql(DataSource, String, Collection, Collection, String)
@@ -2208,6 +2282,7 @@ public final class JdbcCodeGenerationUtil {
             final Collection<String> keyColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         if (keyColumnNames != null) {
             for (final String keyColumnName : keyColumnNames) {
                 N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
@@ -2247,9 +2322,9 @@ public final class JdbcCodeGenerationUtil {
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; may be {@code null} or empty
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank, missing,
-     *             or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide.
-     *         This also applies to malformed qualified table names or blank column labels reported by the driver.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
+     *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
+     *         malformed qualified table names, blank column labels, or a null or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateNamedUpdateSql(Connection, String, String)
      * @see #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)
@@ -2259,6 +2334,7 @@ public final class JdbcCodeGenerationUtil {
             final Collection<String> keyColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
+        JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         if (keyColumnNames != null) {
             for (final String keyColumnName : keyColumnNames) {
                 N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
@@ -2334,7 +2410,8 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement derived from the INSERT statement
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the INSERT SQL is null/empty, invalid, or cannot be converted
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
-     * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the database product info
+     * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
+     *         database product info
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql)
@@ -2379,7 +2456,8 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the INSERT SQL is null/empty, invalid, or cannot be converted
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
-     * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the database product info
+     * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
+     *         database product info
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause)
@@ -2766,6 +2844,82 @@ public final class JdbcCodeGenerationUtil {
         }
 
         return result;
+    }
+
+    /**
+     * Conservatively determines whether the additional body contributes no arguments to Lombok's
+     * all-arguments constructor. Only complete, single-line field declarations with an explicit access
+     * modifier are recognized. Each field must be static or final with an initializer. Annotations,
+     * block comments, braces, or unrecognized source retain the existing constructor annotation.
+     *
+     * @param source the additional class body, or {@code null} when no body is supplied
+     * @return {@code true} if the body is blank or consists entirely of recognized constructor-excluded fields
+     */
+    private static boolean hasOnlyFieldsExcludedFromAllArgsConstructor(final String source) {
+        if (Strings.isBlank(source)) {
+            return true;
+        }
+
+        for (final String physicalLine : source.split("\\R")) {
+            final String line = stripLineComment(physicalLine).trim();
+
+            if (line.isEmpty()) {
+                continue;
+            }
+
+            // This is intentionally narrower than Java syntax: uncertain source must not cause a
+            // constructor required by @Builder (for example an annotated field) to be removed.
+            if (!line.endsWith(";") || line.indexOf('@') >= 0 || line.indexOf('{') >= 0 || line.indexOf('}') >= 0 || line.contains("/*")
+                    || line.contains("*/")) {
+                return false;
+            }
+
+            final List<String> declarations = splitJavaFieldDeclarations(line);
+
+            if (declarations.isEmpty()) {
+                return false;
+            }
+
+            for (final String declaration : declarations) {
+                if (!Strings.startsWithAny(declaration, "private ", "protected ", "public ")) {
+                    return false;
+                }
+
+                String fieldDeclaration = declaration.substring(declaration.indexOf(' ') + 1).trim();
+                boolean isStatic = false;
+                boolean isFinal = false;
+
+                while (Strings.startsWithAny(fieldDeclaration, "static ", "final ", "transient ", "volatile ")) {
+                    isStatic |= fieldDeclaration.startsWith("static ");
+                    isFinal |= fieldDeclaration.startsWith("final ");
+                    fieldDeclaration = fieldDeclaration.substring(fieldDeclaration.indexOf(' ') + 1).trim();
+                }
+
+                if (!isStatic && !isFinal) {
+                    return false;
+                }
+
+                try {
+                    for (final Tuple3<String, String, Boolean> field : parseAdditionalFieldDeclaration(fieldDeclaration, true)) {
+                        if (!Strings.isValidJavaIdentifier(field._2)) {
+                            return false;
+                        }
+                    }
+                } catch (final IllegalArgumentException e) {
+                    return false;
+                }
+
+                if (!isStatic) {
+                    for (final String declarator : splitJavaDeclarators(fieldDeclaration)) {
+                        if (stripJavaInitializer(declarator).equals(declarator.trim())) {
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -3171,7 +3325,7 @@ public final class JdbcCodeGenerationUtil {
      *         lower case, or {@code 0} if their case is preserved or the database reports neither
      * @throws SQLException if the database metadata cannot be read
      */
-    private static int getUnquotedIdentifierCase(final Connection conn) throws SQLException {
+    static int getUnquotedIdentifierCase(final Connection conn) throws SQLException {
         final DatabaseMetaData metadata = conn.getMetaData();
 
         return metadata.storesUpperCaseIdentifiers() ? 1 : (metadata.storesLowerCaseIdentifiers() ? -1 : 0);
@@ -3182,7 +3336,7 @@ public final class JdbcCodeGenerationUtil {
      * {@link #renderColumnLabel(String, ProductInfo, int)}.
      *
      * @param columnLabelList the column labels to render
-     * @param dbProductInfo the database product info
+     * @param dbProductInfo the database product info, or {@code null} to use standard double-quote delimiters
      * @param unquotedIdentifierCase the case folding of unquoted identifiers, as returned by {@link #getUnquotedIdentifierCase(Connection)}
      * @return the rendered column labels
      * @throws IllegalArgumentException if any column label is {@code null} or blank.
@@ -3200,12 +3354,12 @@ public final class JdbcCodeGenerationUtil {
      * resolve to a different column.
      *
      * @param columnLabel the column label to render
-     * @param dbProductInfo the database product info
+     * @param dbProductInfo the database product info, or {@code null} to use standard double-quote delimiters
      * @param unquotedIdentifierCase the case folding of unquoted identifiers, as returned by {@link #getUnquotedIdentifierCase(Connection)}
      * @return the rendered column label
      * @throws IllegalArgumentException if {@code columnLabel} is {@code null} or blank.
      */
-    private static String renderColumnLabel(final String columnLabel, final ProductInfo dbProductInfo, final int unquotedIdentifierCase)
+    static String renderColumnLabel(final String columnLabel, final ProductInfo dbProductInfo, final int unquotedIdentifierCase)
             throws IllegalArgumentException {
         final boolean caseWouldBeFolded = columnLabel != null && ((unquotedIdentifierCase > 0 && !columnLabel.equals(columnLabel.toUpperCase(Locale.ROOT)))
                 || (unquotedIdentifierCase < 0 && !columnLabel.equals(columnLabel.toLowerCase(Locale.ROOT))));
@@ -3338,8 +3492,8 @@ public final class JdbcCodeGenerationUtil {
      * @param suppliedStringMember the name of the {@code String} member the generator supplies, or {@code null} if none
      * @param requiredTarget the element type the annotation must be applicable to
      * @param configName the configuration option name, used only in error messages
-     * @throws IllegalArgumentException if the annotation has no canonical name, is not publicly accessible, requires unsupported members,
-     *         lacks the required String member, or does not support the required declaration target
+     * @throws IllegalArgumentException if the annotation has no canonical name, is not publicly accessible, requires unsupported members, lacks the
+     *         required String member, or does not support the required declaration target
      */
     private static void checkGeneratedAnnotationClass(final Class<? extends Annotation> annotationClass, final String suppliedStringMember,
             final ElementType requiredTarget, final String configName) throws IllegalArgumentException {
@@ -3557,6 +3711,7 @@ public final class JdbcCodeGenerationUtil {
         /**
          * List of custom field mappings.
          * Allows overriding default field names and types for specific columns.
+         * A {@code null} list supplies no overrides; null elements are rejected when generation starts.
          */
         private List<FieldMapping> customFieldMappings;
 
@@ -3569,6 +3724,7 @@ public final class JdbcCodeGenerationUtil {
          * {@code Tuple.of("tags", "name = \"List<String>\"")} produces {@code @Type(name = "List<String>")}.
          * Used to generate {@code @Type} annotations for fields whose database types
          * require explicit type mapping.
+         * A {@code null} list supplies no annotations; null elements are rejected when generation starts.
          */
         private List<Tuple2<String, String>> fieldTypeAnnotationArguments;
 
@@ -3626,11 +3782,17 @@ public final class JdbcCodeGenerationUtil {
         /**
          * Additional source code to append to the generated entity class body.
          * Each field declaration should follow standard Java syntax (e.g., {@code "private List<String> tags;"}).
-         * Line comments ({@code //...}) are stripped during field parsing, whether they occupy a whole line
-         * or trail a declaration. Multi-variable declarations (e.g., {@code "private int width, height;"})
-         * are fully parsed: each declared variable is recognized individually and, when {@code copy()}
-         * generation is enabled, receives its own assignment in the generated {@code copy()} method
-         * ({@code static}/{@code final} fields are skipped).
+         * The supplied source is appended unchanged. Field recognition for imports and {@code copy()} is
+         * best effort: it handles complete declarations on one physical line beginning with
+         * {@code private}, {@code protected}, or {@code public}. Line comments ({@code //...}) are ignored
+         * during recognition. Within recognized multi-variable declarations (e.g., {@code "private int width, height;"}),
+         * each variable receives its own {@code copy()} assignment when that method is generated;
+         * {@code static}/{@code final} fields are skipped. Package-private, multiline, and annotated source
+         * is not guaranteed to receive inferred imports or copy assignments.
+         *
+         * <p>When no database fields are generated, {@code @AllArgsConstructor} is omitted only if the
+         * additional body is blank or consists entirely of recognized static or initialized final fields
+         * without annotations or other unrecognized content. Arbitrary additional source retains the annotation.</p>
          *
          * <p>Imports are auto-added only for generic {@code java.util} types used by these fields
          * (e.g. {@code List}, {@code Map}); any other type (such as {@code java.time.LocalDate} or a

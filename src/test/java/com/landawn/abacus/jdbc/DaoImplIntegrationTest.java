@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,13 @@ import com.landawn.abacus.util.stream.Stream;
  */
 @TestInstance(Lifecycle.PER_CLASS)
 public class DaoImplIntegrationTest extends TestBase {
+
+    @Test
+    public void testBatchOperationsRejectNullEntitiesButRetainNullScalarIds() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> dao.batchInsert(Arrays.asList((UserAccount) null)));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchDelete(Arrays.asList((UserAccount) null)));
+        assertEquals(0, dao.batchDeleteByIds(Arrays.asList((Long) null)));
+    }
 
     @Table("user_account")
     public static class UserAccount {
@@ -625,6 +633,7 @@ public class DaoImplIntegrationTest extends TestBase {
             assertTrue(first.getRowId() < second.getRowId());
             assertEquals(first.getRowId(), ids.get(0).getRowId());
             assertEquals(second.getRowId(), ids.get(1).getRowId());
+            assertThrows(IllegalArgumentException.class, () -> generatedKeyDao.batchDeleteByIds(Arrays.asList((GeneratedKeyRowId) null)));
         } finally {
             try (Connection conn = ds.getConnection();
                  Statement st = conn.createStatement()) {
@@ -1527,6 +1536,66 @@ public class DaoImplIntegrationTest extends TestBase {
 
         assertSame(SharedFailureHandler.FAILURE, thrown);
         assertEquals(0, thrown.getSuppressed().length);
+    }
+
+    public static final class RethrowPrimaryHandler implements Jdbc.Handler<CyclicFailureHandlerDao> {
+        @Override
+        public void afterInvoke(final Object result, final CyclicFailureHandlerDao proxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            if ("failWithCleanup".equals(methodSignature._1.getName())) {
+                throw (AssertionError) args[0];
+            }
+        }
+    }
+
+    public static final class DistinctCleanupHandler implements Jdbc.Handler<CyclicFailureHandlerDao> {
+        @Override
+        public void afterInvoke(final Object result, final CyclicFailureHandlerDao proxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            if ("failWithCleanup".equals(methodSignature._1.getName())) {
+                throw (AssertionError) args[1];
+            }
+        }
+    }
+
+    @com.landawn.abacus.jdbc.annotation.Handler(impl = RethrowPrimaryHandler.class)
+    @com.landawn.abacus.jdbc.annotation.Handler(impl = DistinctCleanupHandler.class)
+    public interface CyclicFailureHandlerDao extends CrudDao<UserAccount, Long, CyclicFailureHandlerDao> {
+        default void failWithCleanup(final AssertionError primaryFailure, final AssertionError cleanupFailure) {
+            throw primaryFailure;
+        }
+
+        default void invokeNestedFailure(final AssertionError primaryFailure, final AssertionError cleanupFailure) {
+            failWithCleanup(primaryFailure, cleanupFailure);
+        }
+    }
+
+    @Test
+    public void testHandler_SharedPrimaryFailureDoesNotCreateSuppressionCycle() {
+        final CyclicFailureHandlerDao handlerDao = JdbcUtil.createDao(CyclicFailureHandlerDao.class, ds);
+        final AssertionError primaryFailure = new AssertionError("DAO failure");
+        final AssertionError cleanupFailure = new AssertionError("cleanup failure");
+
+        final AssertionError thrown = assertThrows(AssertionError.class, () -> handlerDao.failWithCleanup(primaryFailure, cleanupFailure));
+
+        assertSame(primaryFailure, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(cleanupFailure, thrown.getSuppressed()[0]);
+        assertEquals(0, cleanupFailure.getSuppressed().length);
+    }
+
+    @Test
+    public void testHandler_NestedSharedPrimaryFailureDoesNotCreateSuppressionCycle() {
+        final CyclicFailureHandlerDao handlerDao = JdbcUtil.createDao(CyclicFailureHandlerDao.class, ds);
+        final AssertionError primaryFailure = new AssertionError("nested DAO failure");
+        final AssertionError cleanupFailure = new AssertionError("nested cleanup failure");
+
+        final AssertionError thrown = assertThrows(AssertionError.class, () -> handlerDao.invokeNestedFailure(primaryFailure, cleanupFailure));
+
+        assertSame(primaryFailure, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(cleanupFailure, thrown.getSuppressed()[0]);
+        assertEquals(0, cleanupFailure.getSuppressed().length);
     }
 
     // =====================================================================================

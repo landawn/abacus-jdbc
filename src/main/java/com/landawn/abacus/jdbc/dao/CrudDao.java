@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.cs;
@@ -106,6 +108,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @return the saved entity (either newly inserted or updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or an existing row is updated and {@code entity}
      *                                  has a property the loaded entity does not
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
@@ -113,8 +116,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set
      *         and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default T upsert(final T entity)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
+            DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
@@ -143,6 +146,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         or the loaded database entity (with non-{@code null} non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
      *                                  and {@code entity} has a property the loaded entity does not
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
@@ -152,8 +156,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @see Filters
      */
     @Override
-    default T upsert(final T entity, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException,
+            SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -191,9 +195,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param entities the collection of entities to upsert
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its match key is being extracted)
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -202,8 +205,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities)
-            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities) throws IllegalArgumentException, CannotGetJdbcConnectionException,
+            UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -225,9 +228,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code batchSize} is not positive, or if the first element of {@code entities} is {@code null}
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its match key is being extracted)
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -236,8 +238,15 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, CannotGetJdbcConnectionException,
+            UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
+        if (N.notEmpty(entities)) {
+            N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
+            for (final T entity : entities) {
+                N.checkArgNotNull(entity, "An element of 'entities' cannot be null");
+            }
+        }
+
         N.checkArgPositive(batchSize, cs.batchSize);
 
         if (N.isEmpty(entities)) {
@@ -245,7 +254,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         }
 
         final T entity = N.firstOrNullIfEmpty(entities);
-        N.checkArgNotNull(entity, "The first element in the specified collection 'entities' cannot be null");
 
         final Class<?> cls = entity.getClass();
         final List<String> idPropNameList = QueryUtil.idPropNames(cls); // guaranteed non-empty for a CRUD entity class.
@@ -269,10 +277,10 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code matchPropNames} is {@code null} or empty,
-     *                                  or, for nonempty input, the first entity is {@code null} or a match property does not exist
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its match key is being extracted)
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
+     *                                  if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty
+     *                                  and a name in {@code matchPropNames} is not a property of the entity class
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -281,8 +289,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames)
-            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws IllegalArgumentException,
+            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, matchPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -313,12 +321,10 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code matchPropNames} is {@code null}/empty,
-     *                                  if {@code batchSize} is not positive,
-     *                                  if the first element of {@code entities} is {@code null},
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
+     *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
      *                                  or if any name in {@code matchPropNames} is not a property of the entity class
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its match key is being extracted)
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -328,7 +334,15 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize)
-            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, IllegalStateException,
+            UnsupportedOperationException {
+        if (N.notEmpty(entities)) {
+            N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
+            for (final T entity : entities) {
+                N.checkArgNotNull(entity, "An element of 'entities' cannot be null");
+            }
+        }
+
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
         N.checkArgPositive(batchSize, cs.batchSize);
 
@@ -337,7 +351,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         }
 
         final T first = N.firstOrNullIfEmpty(entities);
-        N.checkArgNotNull(first, "The first element in the specified collection 'entities' cannot be null");
 
         final List<String> uniquePropNameList = matchPropNames instanceof List ? (List<String>) matchPropNames : new ArrayList<>(matchPropNames);
         final Class<?> cls = first.getClass();

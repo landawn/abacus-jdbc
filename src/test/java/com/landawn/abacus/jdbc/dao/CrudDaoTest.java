@@ -817,7 +817,15 @@ public class CrudDaoTest extends TestBase {
 
         assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullFirst, 2)).getMessage());
         assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullFirst, List.of("name"), 5)).getMessage());
+        assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullFirst, 0)).getMessage());
+        assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullFirst, List.of(), 0)).getMessage());
         assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchRefresh(withNullFirst, 5)).getMessage());
         assertEquals(expected, assertThrows(IllegalArgumentException.class, () -> dao.batchRefresh(withNullFirst, List.of("name"), 5)).getMessage());
+
+        final List<IdAnnotatedEntity> withNullLater = Arrays.asList(new IdAnnotatedEntity(), null);
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullLater, 2));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullLater, List.of("name"), 2));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchRefresh(withNullLater, 2));
+        assertThrows(IllegalArgumentException.class, () -> dao.batchRefresh(withNullLater, List.of("name"), 2));
     }
 }

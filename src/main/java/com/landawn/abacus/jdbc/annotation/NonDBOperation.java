@@ -24,12 +24,13 @@ import java.lang.annotation.Target;
 /**
  * Marks methods in DAO interfaces that should not be treated as database operations.
  * When a method is annotated with {@code @NonDBOperation}, the framework will bypass
- * all database-related processing for that method.
+ * its database-related interceptors for that method. This does not prevent the method body or
+ * nested DAO calls from executing SQL or using the current SQL logging configuration.
  *
  * <p>Methods annotated with {@code @NonDBOperation} will have the following behaviors disabled:</p>
  * <ul>
  *   <li>No {@code Handler} interceptors will be applied</li>
- *   <li>No SQL or performance logging will be performed</li>
+ *   <li>No DAO-scoped SQL logging configuration or whole-method performance logging is added</li>
  *   <li>No {@code @Transactional} annotations will be processed</li>
  *   <li>No result-cache lookup or invalidation will be performed</li>
  * </ul>

@@ -286,11 +286,12 @@ public @interface Query {
      *       {@link com.landawn.abacus.util.u.Optional} when the method has that return type, otherwise the bare value or the return
      *       type's empty/default value when none)</li>
      *   <li>{@link QueryOperation#findOnlyOne} - Returns at most one result (wrapped in an Abacus
-     *       {@link com.landawn.abacus.util.u.Optional} when the method has that return type, otherwise the bare value or {@code null} when none);
+     *       {@link com.landawn.abacus.util.u.Optional} when the method has that return type, otherwise the bare value or the return type's default value when none);
      *       throws {@code DuplicateResultException} if more than one is found</li>
      *   <li>{@link QueryOperation#exists} - Returns boolean indicating if any results exist</li>
      *   <li>{@link QueryOperation#queryForSingle} - Returns a single scalar value</li>
-     *   <li>{@link QueryOperation#queryForUnique} - Returns a unique single value (wrapped in {@code Nullable} when the method return type is {@code Nullable}, otherwise the bare value or {@code null} when none); throws {@code DuplicateResultException} if more than one is found</li>
+     *   <li>{@link QueryOperation#queryForUnique} - Returns at most one scalar value using the declared optional/nullable wrapper,
+     *       or the bare value and its type's default value when no row exists; throws {@code DuplicateResultException} if more than one row is found</li>
      *   <li>{@link QueryOperation#update} - Executes a non-INSERT data-modification statement and returns its row count</li>
      *   <li>{@link QueryOperation#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows</li>
      * </ul>
@@ -457,7 +458,8 @@ public @interface Query {
      *       (or single values/{@code Object[]}/{@code List} rows) whose properties bind to the
      *       named parameters, one element per batch row</li>
      *   <li>An optional second {@code int} parameter overrides {@link #batchSize()} at call time</li>
-     *   <li>No other parameters are supported for batch methods</li>
+     *   <li>No other statement parameters are supported; {@link SqlFragment} and {@link SqlFragmentList}
+     *       parameters may additionally supply SQL text shared by the batch</li>
      *   <li>A {@code null} or empty batch {@code Collection} executes no statement: a batch INSERT
      *       returns an empty list and a batch UPDATE/DELETE reports {@code 0} ({@code false} for a
      *       boolean return type)</li>
@@ -819,7 +821,7 @@ public @interface Query {
      *
      * // Batch processing with optimal fetch size
      * @Query(value = "SELECT * FROM orders WHERE status = 'PENDING'", fetchSize = 500)
-     * List<Order> getPendingOrders() throws SQLException;
+     * List<Order> listPendingOrders() throws SQLException;
      * }</pre>
      *
      * <p>Advanced examples:</p>
@@ -841,7 +843,7 @@ public @interface Query {
      * // Balancing memory and performance for reporting
      * @Query(value = "SELECT date, SUM(amount) as total FROM sales " +
      *               "GROUP BY date ORDER BY date", fetchSize = 100)
-     * List<DailySales> getDailySalesReport() throws SQLException;
+     * List<DailySales> listDailySalesReport() throws SQLException;
      * }</pre>
      *
      * <p>Performance tuning considerations:</p>
@@ -852,7 +854,7 @@ public @interface Query {
      *
      * // For batch processing - larger fetch size for efficiency
      * @Query(value = "SELECT * FROM orders WHERE status = 'NEW'", fetchSize = 2000)
-     * List<Order> getNewOrders() throws SQLException;
+     * List<Order> listNewOrders() throws SQLException;
      *
      * // For streaming large datasets - very large fetch size
      * @Query(value = "SELECT * FROM event_log WHERE date = :date", fetchSize = 10000)

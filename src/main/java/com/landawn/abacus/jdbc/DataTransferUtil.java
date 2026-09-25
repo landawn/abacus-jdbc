@@ -36,12 +36,13 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
@@ -250,15 +251,15 @@ public final class DataTransferUtil {
      * @param targetDataSource the DataSource to obtain database connections from
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws NullPointerException if {@code dataset} is {@code null}.
-     * @throws IllegalArgumentException if {@code targetDataSource} is {@code null}
-     * @throws UncheckedSQLException if connection acquisition fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code dataset} is {@code null}, or {@code targetDataSource} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
+     * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
      */
     public static int importData(final Dataset dataset, final javax.sql.DataSource targetDataSource, final String insertSql)
-            throws NullPointerException, IllegalArgumentException, UncheckedSQLException, SQLException {
-        Objects.requireNonNull(dataset, cs.dataset);
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+        N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
 
         final Connection conn = JdbcUtil.getConnection(targetDataSource);
@@ -291,11 +292,14 @@ public final class DataTransferUtil {
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws NullPointerException if {@code dataset} or {@code conn} is {@code null}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code dataset} or {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
      * @see #importData(Dataset, Collection, Connection, String)
      */
-    public static int importData(final Dataset dataset, final Connection conn, final String insertSql) throws NullPointerException, SQLException {
+    public static int importData(final Dataset dataset, final Connection conn, final String insertSql) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(dataset, cs.dataset);
+        N.checkArgNotNull(conn, cs.conn);
+
         return importData(dataset, dataset.columnNames(), conn, insertSql);
     }
 
@@ -322,12 +326,12 @@ public final class DataTransferUtil {
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; placeholder order must match {@code columnNames}
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws IllegalArgumentException if {@code dataset} or {@code columnNames} is {@code null}, or a selected name is not a dataset column
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code dataset} or {@code columnNames} is {@code null}, or a selected name is not a dataset column, or
+     *         {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
      */
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+            throws IllegalArgumentException, SQLException {
         return importData(dataset, columnNames, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0);
     }
 
@@ -357,14 +361,13 @@ public final class DataTransferUtil {
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} or {@code columnNames} is {@code null}, or {@code batchSize <= 0} or
-     *         {@code batchIntervalInMillis < 0}, or a selected name is not a dataset column
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     *         {@code batchIntervalInMillis < 0}, or a selected name is not a dataset column, or {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql,
-            final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, NullPointerException, SQLException {
+            final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, SQLException {
         return importData(dataset, columnNames, row -> true, conn, insertSql, batchSize, batchIntervalInMillis);
     }
 
@@ -397,21 +400,20 @@ public final class DataTransferUtil {
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code columnNames}, or {@code filter} is {@code null}, or {@code batchSize <= 0}
-     *         or {@code batchIntervalInMillis < 0}, or a selected name is not a dataset column
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     *         or {@code batchIntervalInMillis < 0}, or a selected name is not a dataset column, or {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).filter(filter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Predicate<? super Object[]> filter, final Connection conn,
-            final String insertSql, final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, NullPointerException, SQLException {
+            final String insertSql, final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(columnNames, cs.columnNames);
+        resolveImportColumnIndices(dataset, columnNames);
         N.checkArgNotNull(filter, cs.filter);
-        Objects.requireNonNull(conn, cs.conn);
+        N.checkArgNotNull(conn, cs.conn);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
-        resolveImportColumnIndices(dataset, columnNames);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
             return importData(dataset, columnNames, filter, stmt, batchSize, batchIntervalInMillis);
@@ -443,14 +445,13 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws IllegalArgumentException if {@code dataset} is {@code null}, or
-     *         a type-map key is not a dataset column or its mapped type is {@code null}
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code dataset} is {@code null}, or a type-map key is not a dataset column or its mapped type is
+     *         {@code null}, or {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
      */
     @SuppressWarnings("rawtypes")
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final Map<String, ? extends Type> columnTypeMap)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+            throws IllegalArgumentException, SQLException {
         return importData(dataset, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, columnTypeMap);
     }
 
@@ -483,17 +484,15 @@ public final class DataTransferUtil {
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws IllegalArgumentException if {@code dataset} is {@code null}, or
-     *         {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}, or
-     *         a type-map key is not a dataset column or its mapped type is {@code null}
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code dataset} is {@code null}, or {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}, or a
+     *         type-map key is not a dataset column or its mapped type is {@code null}, or {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @SuppressWarnings("rawtypes")
     @Deprecated
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, NullPointerException, SQLException {
+            final Map<String, ? extends Type> columnTypeMap) throws IllegalArgumentException, SQLException {
         return importData(dataset, row -> true, conn, insertSql, batchSize, batchIntervalInMillis, columnTypeMap);
     }
 
@@ -530,19 +529,19 @@ public final class DataTransferUtil {
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} or {@code filter} is {@code null}, or {@code batchSize <= 0} or
-     *         {@code batchIntervalInMillis < 0}, or a type-map key is not a dataset column or its mapped type is {@code null}
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     *         {@code batchIntervalInMillis < 0}, or a type-map key is not a dataset column or its mapped type is {@code null}, or {@code conn} is
+     *         {@code null}
+     * @throws SQLException if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).filter(filter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @SuppressWarnings("rawtypes")
     @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis, final Map<String, ? extends Type> columnTypeMap)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(filter, cs.filter);
-        Objects.requireNonNull(conn, cs.conn);
+        N.checkArgNotNull(conn, cs.conn);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
@@ -574,13 +573,12 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with placeholders
      * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws IllegalArgumentException if {@code dataset} or {@code parameterSetter} is {@code null}
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code dataset} or {@code parameterSetter} is {@code null}, or {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
+     *         prepared statement fails
      */
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws IllegalArgumentException, SQLException {
         return importData(dataset, conn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0, parameterSetter);
     }
 
@@ -608,15 +606,14 @@ public final class DataTransferUtil {
      * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} or {@code parameterSetter} is {@code null}, or {@code batchSize <= 0} or
-     *         {@code batchIntervalInMillis < 0}
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     *         {@code batchIntervalInMillis < 0}, or {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
+     *         prepared statement fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws IllegalArgumentException, SQLException {
         return importData(dataset, row -> true, conn, insertSql, batchSize, batchIntervalInMillis, parameterSetter);
     }
 
@@ -648,19 +645,18 @@ public final class DataTransferUtil {
      * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code filter}, or {@code parameterSetter} is {@code null}, or
-     *         {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     *         {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}, or {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
+     *         prepared statement fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).filter(filter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static int importData(final Dataset dataset, final Predicate<? super Object[]> filter, final Connection conn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis,
-            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(filter, cs.filter);
-        Objects.requireNonNull(conn, cs.conn);
+        N.checkArgNotNull(conn, cs.conn);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -685,11 +681,13 @@ public final class DataTransferUtil {
      * @param dataset the Dataset containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws NullPointerException if {@code dataset} is {@code null}.
-     * @throws IllegalArgumentException if {@code stmt} is {@code null}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code dataset} is {@code null}, or {@code stmt} is {@code null}
+     * @throws SQLException if binding a row or adding or executing a batch fails
      */
-    public static int importData(final Dataset dataset, final PreparedStatement stmt) throws NullPointerException, IllegalArgumentException, SQLException {
+    public static int importData(final Dataset dataset, final PreparedStatement stmt) throws IllegalArgumentException, SQLException {
+        N.checkArgNotNull(dataset, cs.dataset);
+        N.checkArgNotNull(stmt, cs.stmt);
+
         return importData(dataset, dataset.columnNames(), stmt);
     }
 
@@ -718,7 +716,7 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code columnNames}, or {@code stmt} is {@code null}, or a selected name is not a
      *         dataset column
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row or adding or executing a batch fails
      */
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt)
             throws IllegalArgumentException, SQLException {
@@ -752,7 +750,7 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code columnNames}, or {@code stmt} is {@code null}, or {@code batchSize <= 0} or
      *         {@code batchIntervalInMillis < 0}, or a selected name is not a dataset column
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row or adding or executing a batch fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
@@ -792,7 +790,7 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code columnNames}, {@code filter}, or {@code stmt} is {@code null}, or
      *         {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}, or a selected name is not a dataset column
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row or adding or executing a batch fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columns(columnNames).filter(filter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
@@ -800,11 +798,11 @@ public final class DataTransferUtil {
             final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(columnNames, cs.columnNames);
+        final int[] selectedColumnIndices = resolveImportColumnIndices(dataset, columnNames);
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
-        final int[] selectedColumnIndices = resolveImportColumnIndices(dataset, columnNames);
 
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> parameterSetter = (t, row) -> {
             for (int i = 0; i < selectedColumnIndices.length; i++) {
@@ -889,9 +887,9 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param columnTypeMap a map specifying the types of the columns for type conversion
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws IllegalArgumentException if {@code dataset} or {@code stmt} is {@code null}, or a type-map key is not a dataset column or its
-     *         mapped type is {@code null}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code dataset} or {@code stmt} is {@code null}, or a type-map key is not a dataset column or its mapped
+     *         type is {@code null}
+     * @throws SQLException if binding a row or adding or executing a batch fails
      */
     @SuppressWarnings("rawtypes")
     public static int importData(final Dataset dataset, final PreparedStatement stmt, final Map<String, ? extends Type> columnTypeMap)
@@ -924,7 +922,7 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} or {@code stmt} is {@code null}, or {@code batchSize <= 0} or
      *         {@code batchIntervalInMillis < 0}, or a type-map key is not a dataset column or its mapped type is {@code null}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row or adding or executing a batch fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @SuppressWarnings("rawtypes")
@@ -968,7 +966,7 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code filter}, or {@code stmt} is {@code null}, or {@code batchSize <= 0} or
      *         {@code batchIntervalInMillis < 0}, or a type-map key is not a dataset column or its mapped type is {@code null}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row or adding or executing a batch fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).columnTypes(columnTypeMap).filter(filter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @SuppressWarnings({ "rawtypes", "null" })
@@ -1042,7 +1040,7 @@ public final class DataTransferUtil {
      * @param parameterSetter a BiConsumer to set the parameters of the {@link PreparedQuery} for each row; must not be {@code null}
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code stmt}, or {@code parameterSetter} is {@code null}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      */
     public static int importData(final Dataset dataset, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter) throws IllegalArgumentException, SQLException {
@@ -1074,7 +1072,7 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code stmt}, or {@code parameterSetter} is {@code null}, or {@code batchSize <= 0}
      *         or {@code batchIntervalInMillis < 0}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
@@ -1112,7 +1110,7 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code filter}, {@code stmt}, or {@code parameterSetter} is {@code null}, or
      *         {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      * @deprecated use {@link #importFrom(Dataset)} instead: {@code importFrom(dataset).parameterSetter(parameterSetter).filter(filter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
@@ -1202,15 +1200,17 @@ public final class DataTransferUtil {
      * @param parameterSetter a BiConsumer to map iterator elements to {@link PreparedQuery} parameters; must not be {@code null}
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code iter}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}
-     * @throws UncheckedSQLException if connection acquisition fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
+     * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
+     *         prepared statement fails
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
      */
     public static <T> long importData(final Iterator<? extends T> iter, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(iter, cs.iter);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -1264,9 +1264,9 @@ public final class DataTransferUtil {
      * @param parameterSetter a BiConsumer to map iterator elements to {@link PreparedQuery} parameters; must not be {@code null}
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code iter} or {@code parameterSetter} is {@code null}, or {@code batchSize <= 0} or
-     *         {@code batchIntervalInMillis < 0}
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     *         {@code batchIntervalInMillis < 0}, or {@code conn} is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
+     *         prepared statement fails
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
      * @deprecated use {@link #importFrom(Iterator)} instead: {@code importFrom(iter).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
@@ -1274,9 +1274,9 @@ public final class DataTransferUtil {
     @Deprecated
     public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter)
-            throws IllegalArgumentException, NullPointerException, SQLException {
+            throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(iter, cs.iter);
-        Objects.requireNonNull(conn, cs.conn);
+        N.checkArgNotNull(conn, cs.conn);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -1350,7 +1350,7 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code iter}, {@code stmt}, or {@code parameterSetter} is {@code null}, or {@code batchSize <= 0} or
      *         {@code batchIntervalInMillis < 0}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      * @see LineIterator#of(File)
      * @see LineIterator#of(Reader)
      * @deprecated use {@link #importFrom(Iterator)} instead: {@code importFrom(iter).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
@@ -1376,7 +1376,7 @@ public final class DataTransferUtil {
      * @return the number of rows imported
      * @throws IllegalArgumentException if any of {@code iter}, {@code stmt}, or {@code parameterSetter} is {@code null}, or {@code batchSize <= 0} or
      *         {@code batchIntervalInMillis < 0}
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      */
     private static <T> long importData(final Iterator<? extends T> iter, final Predicate<? super T> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter)
@@ -1453,18 +1453,21 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with parameter placeholders ({@code ?})
      * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values; must not be {@code null}
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws IllegalArgumentException if any of {@code file}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or
-     *         {@code file} is a directory, or a CSV row contains more fields than the header
-     * @throws UncheckedSQLException if connection acquisition fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or an I/O error occurs while reading it
-     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example
-     *         because it contains an unterminated quoted field
+     * @throws IllegalArgumentException if any of {@code file}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or {@code file}
+     *         is a directory, or a CSV row contains more fields than the header
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
+     * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
+     *         prepared statement fails
+     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or reading or closing its file reader
+     *         fails
+     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an
+     *         unterminated quoted field
      */
     public static long importCsv(final File file, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException, ParsingException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UncheckedIOException, ParsingException {
         N.checkArgNotNull(file, cs.file);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -1519,20 +1522,22 @@ public final class DataTransferUtil {
      * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from each CSV row's values; must not be {@code null}
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code file} or {@code parameterSetter} is {@code null}, or {@code batchSize <= 0} or
-     *         {@code batchIntervalInMillis < 0}, or {@code file} is a directory, or a CSV row contains more fields than the header
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or an I/O error occurs while reading it
-     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example
-     *         because it contains an unterminated quoted field
+     *         {@code batchIntervalInMillis < 0}, or {@code file} is a directory, or a CSV row contains more fields than the header, or {@code conn}
+     *         is {@code null}
+     * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
+     *         prepared statement fails
+     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or reading or closing its file reader
+     *         fails
+     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an
+     *         unterminated quoted field
      * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(conn, insertSql)}.
      */
     @Deprecated
     public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
-            throws IllegalArgumentException, NullPointerException, SQLException, UncheckedIOException, ParsingException {
+            throws IllegalArgumentException, SQLException, UncheckedIOException, ParsingException {
         N.checkArgNotNull(file, cs.file);
-        Objects.requireNonNull(conn, cs.conn);
+        N.checkArgNotNull(conn, cs.conn);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -1579,10 +1584,11 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code file}, {@code stmt}, or {@code parameterSetter} is {@code null}, or {@code file} is a
      *         directory, or a CSV row contains more fields than the header
-     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or an I/O error occurs while reading it
-     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example
-     *         because it contains an unterminated quoted field
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or reading or closing its file reader
+     *         fails
+     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an
+     *         unterminated quoted field
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      */
     public static long importCsv(final File file, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
@@ -1629,10 +1635,11 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code file}, {@code stmt}, or {@code parameterSetter} is {@code null}, or {@code batchSize <= 0} or
      *         {@code batchIntervalInMillis < 0}, or {@code file} is a directory, or a CSV row contains more fields than the header
-     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or an I/O error occurs while reading it
-     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example
-     *         because it contains an unterminated quoted field
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or reading or closing its file reader
+     *         fails
+     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an
+     *         unterminated quoted field
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
@@ -1677,12 +1684,13 @@ public final class DataTransferUtil {
      * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code file}, {@code filter}, {@code stmt}, or {@code parameterSetter} is {@code null}, or
-     *         {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}, or {@code file} is a directory, or a CSV row contains more fields
-     *         than the header
-     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or an I/O error occurs while reading it
-     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example
-     *         because it contains an unterminated quoted field
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     *         {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}, or {@code file} is a directory, or a CSV row contains more fields than the
+     *         header
+     * @throws UncheckedIOException if {@code file} cannot be opened for reading (for example it does not exist) or reading or closing its file reader
+     *         fails
+     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an
+     *         unterminated quoted field
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      * @deprecated use {@link #importCsvFrom(File)} instead: {@code importCsvFrom(file).filter(filter).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
@@ -1735,16 +1743,18 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code reader}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or a CSV row
      *         contains more fields than the header
-     * @throws UncheckedSQLException if connection acquisition fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if an I/O error occurs while reading from the reader
-     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example
-     *         because it contains an unterminated quoted field
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
+     * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
+     *         prepared statement fails
+     * @throws UncheckedIOException if reading CSV data from {@code reader} fails
+     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an
+     *         unterminated quoted field
      */
     public static long importCsv(final Reader reader, final javax.sql.DataSource targetDataSource, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException, ParsingException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UncheckedIOException, ParsingException {
         N.checkArgNotNull(reader, cs.reader);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -1788,10 +1798,10 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code reader}, {@code stmt}, or {@code parameterSetter} is {@code null}, or a CSV row contains more
      *         fields than the header
-     * @throws UncheckedIOException if an I/O error occurs while reading from the reader
-     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example
-     *         because it contains an unterminated quoted field
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws UncheckedIOException if reading CSV data from {@code reader} fails
+     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an
+     *         unterminated quoted field
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      */
     public static long importCsv(final Reader reader, final PreparedStatement stmt,
             final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter)
@@ -1832,12 +1842,12 @@ public final class DataTransferUtil {
      * @param batchIntervalInMillis the pause duration in milliseconds between batch executions (must be {@code >= 0})
      * @param parameterSetter a BiConsumer to set {@link PreparedQuery} parameters from CSV row values; must not be {@code null}
      * @return the number of source rows submitted; not the sum of JDBC update counts
-     * @throws IllegalArgumentException if any of {@code reader}, {@code stmt}, or {@code parameterSetter} is {@code null}, or {@code batchSize <= 0} or
-     *         {@code batchIntervalInMillis < 0}, or a CSV row contains more fields than the header
-     * @throws UncheckedIOException if an I/O error occurs while reading from the reader
-     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example
-     *         because it contains an unterminated quoted field
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if any of {@code reader}, {@code stmt}, or {@code parameterSetter} is {@code null}, or {@code batchSize <= 0}
+     *         or {@code batchIntervalInMillis < 0}, or a CSV row contains more fields than the header
+     * @throws UncheckedIOException if reading CSV data from {@code reader} fails
+     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an
+     *         unterminated quoted field
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      * @deprecated use {@link #importCsvFrom(Reader)} instead: {@code importCsvFrom(reader).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
@@ -1904,10 +1914,10 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code reader}, {@code filter}, {@code stmt}, or {@code parameterSetter} is {@code null}, or
      *         {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}, or a CSV row contains more fields than the header
-     * @throws UncheckedIOException if an I/O error occurs while reading from the reader
-     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example
-     *         because it contains an unterminated quoted field
-     * @throws SQLException if preparing the insert, binding a row, executing a batch, or closing owned JDBC resources fails
+     * @throws UncheckedIOException if reading CSV data from {@code reader} fails
+     * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an
+     *         unterminated quoted field
+     * @throws SQLException if binding a row, invoking {@code parameterSetter}, or adding or executing a batch fails
      * @deprecated use {@link #importCsvFrom(Reader)} instead: {@code importCsvFrom(reader).filter(filter).parameterSetter(parameterSetter).batchSize(batchSize).batchInterval(...).to(stmt)}.
      */
     @Deprecated
@@ -2156,15 +2166,18 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the File to write the CSV data to (created if it doesn't exist; an existing file is truncated; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
-     * @throws IllegalArgumentException if {@code sourceDataSource} is {@code null}, or if {@code selectSql} is {@code null} or empty, or is blank or cannot be parsed (for example it mixes parameter styles),
-     *         or if {@code output} is {@code null}
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or an I/O error occurs while writing to it
+     * @throws IllegalArgumentException if {@code sourceDataSource} is {@code null}, or if {@code selectSql} is {@code null} or empty, or is blank or
+     *         cannot be parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a null
+     *         or blank product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
+     *         JDBC resources fails
+     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails
      */
     public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final File output)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UncheckedIOException {
         N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
         N.checkArgNotEmpty(selectSql, cs.selectSql);
         N.checkArgNotNull(output, cs.output);
@@ -2208,15 +2221,16 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the File to write the CSV data to (created if it doesn't exist; an existing file is truncated; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws IllegalArgumentException if {@code selectSql} is {@code null} or empty, or is blank or cannot be parsed (for example it mixes parameter styles), or if
-     *         {@code output} is {@code null}
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code selectSql} is {@code null} or empty, or is blank or cannot be
+     *         parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a null or blank
+     *         product name
+     * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
+     *         JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
-     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or an I/O error occurs while writing to it
+     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails
      */
     public static long exportCsv(final Connection conn, final String selectSql, final File output)
-            throws NullPointerException, IllegalArgumentException, SQLException, UncheckedSQLException, UncheckedIOException {
+            throws IllegalArgumentException, SQLException, UncheckedSQLException, UncheckedIOException {
         return exportCsv(conn, selectSql, null, output);
     }
 
@@ -2250,18 +2264,19 @@ public final class DataTransferUtil {
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (created if it doesn't exist; an existing file is truncated; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws IllegalArgumentException if {@code selectSql} is {@code null} or empty, or is blank or cannot be parsed (for example it mixes parameter styles), or if
-     *         {@code output} is {@code null}, or if any specified column name is not found in the query result
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code selectSql} is {@code null} or empty, or is blank or cannot be
+     *         parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if any specified column name is not found in
+     *         the query result, or if database metadata reports a null or blank product name
+     * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
+     *         JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
-     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or an I/O error occurs while writing to it
+     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails
      * @deprecated use {@link #exportCsvFrom(Connection, String)} instead: {@code exportCsvFrom(conn, selectSql).columns(columnNames).to(output)}.
      */
     @Deprecated
     public static long exportCsv(final Connection conn, final String selectSql, final Collection<String> columnNames, final File output)
-            throws NullPointerException, IllegalArgumentException, SQLException, UncheckedSQLException, UncheckedIOException {
-        Objects.requireNonNull(conn, cs.conn);
+            throws IllegalArgumentException, SQLException, UncheckedSQLException, UncheckedIOException {
+        N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(selectSql, cs.selectSql);
         N.checkArgNotNull(output, cs.output);
 
@@ -2301,13 +2316,11 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to execute (will not be closed by this method)
      * @param output the File to write the CSV data to (created if it doesn't exist; an existing file is truncated; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
-     * @throws NullPointerException if {@code stmt} is {@code null}.
-     * @throws IllegalArgumentException if {@code output} is {@code null}
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or an I/O error occurs while writing to it
+     * @throws IllegalArgumentException if {@code stmt} is {@code null}, or {@code output} is {@code null}
+     * @throws SQLException if executing the supplied statement, reading result-set metadata, advancing the cursor, or extracting a column value fails
+     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails
      */
-    public static long exportCsv(final PreparedStatement stmt, final File output)
-            throws NullPointerException, IllegalArgumentException, SQLException, UncheckedIOException {
+    public static long exportCsv(final PreparedStatement stmt, final File output) throws IllegalArgumentException, SQLException, UncheckedIOException {
         return exportCsv(stmt, null, output);
     }
 
@@ -2339,16 +2352,16 @@ public final class DataTransferUtil {
      * @param columnNames collection of column names to include in export ({@code null} or empty for all columns)
      * @param output the File to write the CSV data to (created if it doesn't exist; an existing file is truncated; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
-     * @throws NullPointerException if {@code stmt} is {@code null}.
-     * @throws IllegalArgumentException if {@code output} is {@code null}, or if any specified column name is not found in the query result
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or an I/O error occurs while writing to it
+     * @throws IllegalArgumentException if {@code stmt} is {@code null}, or {@code output} is {@code null}, or if any specified column name is not
+     *         found in the query result
+     * @throws SQLException if executing the supplied statement, reading result-set metadata, advancing the cursor, or extracting a column value fails
+     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails
      * @deprecated use {@link #exportCsvFrom(PreparedStatement)} instead: {@code exportCsvFrom(stmt).columns(columnNames).to(output)}.
      */
     @Deprecated
     public static long exportCsv(final PreparedStatement stmt, final Collection<String> columnNames, final File output)
-            throws NullPointerException, IllegalArgumentException, SQLException, UncheckedIOException {
-        Objects.requireNonNull(stmt, cs.stmt);
+            throws IllegalArgumentException, SQLException, UncheckedIOException {
+        N.checkArgNotNull(stmt, cs.stmt);
         N.checkArgNotNull(output, cs.output);
 
         ResultSet rs = null;
@@ -2389,8 +2402,8 @@ public final class DataTransferUtil {
      * @param output the File to write the CSV data to (created if it doesn't exist; an existing file is truncated; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or an I/O error occurs while writing to it
+     * @throws SQLException if reading result-set metadata, advancing the cursor, or extracting a column value fails
+     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails
      */
     public static long exportCsv(final ResultSet rs, final File output) throws IllegalArgumentException, SQLException, UncheckedIOException {
         return exportCsv(rs, null, output);
@@ -2426,8 +2439,8 @@ public final class DataTransferUtil {
      * @param output the File to write the CSV data to (created if it doesn't exist; an existing file is truncated; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}, or if any specified column name is not found in the ResultSet
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or an I/O error occurs while writing to it
+     * @throws SQLException if reading result-set metadata, advancing the cursor, or extracting a column value fails
+     * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails
      * @deprecated use {@link #exportCsvFrom(ResultSet)} instead: {@code exportCsvFrom(rs).columns(columnNames).to(output)}.
      */
     @Deprecated
@@ -2477,15 +2490,18 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the total number of rows exported
-     * @throws IllegalArgumentException if {@code sourceDataSource} is {@code null}, or if {@code selectSql} is {@code null} or empty, or is blank or cannot be parsed (for example it mixes parameter styles),
-     *         or if {@code output} is {@code null}
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if an I/O error occurs while writing
+     * @throws IllegalArgumentException if {@code sourceDataSource} is {@code null}, or if {@code selectSql} is {@code null} or empty, or is blank or
+     *         cannot be parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a null
+     *         or blank product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
+     *         JDBC resources fails
+     * @throws UncheckedIOException if writing or flushing CSV data to {@code output} fails
      */
     public static long exportCsv(final javax.sql.DataSource sourceDataSource, final String selectSql, final Writer output)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UncheckedIOException {
         N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
         N.checkArgNotEmpty(selectSql, cs.selectSql);
         N.checkArgNotNull(output, cs.output);
@@ -2531,16 +2547,17 @@ public final class DataTransferUtil {
      * @param selectSql the SQL query to execute for retrieving data; it must not contain bind parameters (named or positional), because no parameters are bound
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the total number of rows exported
-     * @throws NullPointerException if {@code conn} is {@code null}.
-     * @throws IllegalArgumentException if {@code selectSql} is {@code null} or empty, or is blank or cannot be parsed (for example it mixes parameter styles), or if
-     *         {@code output} is {@code null}
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code selectSql} is {@code null} or empty, or is blank or cannot be
+     *         parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a null or blank
+     *         product name
+     * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
+     *         JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
-     * @throws UncheckedIOException if an I/O error occurs while writing
+     * @throws UncheckedIOException if writing or flushing CSV data to {@code output} fails
      */
     public static long exportCsv(final Connection conn, final String selectSql, final Writer output)
-            throws NullPointerException, IllegalArgumentException, SQLException, UncheckedSQLException, UncheckedIOException {
-        Objects.requireNonNull(conn, cs.conn);
+            throws IllegalArgumentException, SQLException, UncheckedSQLException, UncheckedIOException {
+        N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(selectSql, cs.selectSql);
         N.checkArgNotNull(output, cs.output);
 
@@ -2583,8 +2600,8 @@ public final class DataTransferUtil {
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the number of rows exported
      * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if an I/O error occurs while writing
+     * @throws SQLException if reading result-set metadata, advancing the cursor, or extracting a column value fails
+     * @throws UncheckedIOException if writing or flushing CSV data to {@code output} fails
      */
     public static long exportCsv(final ResultSet rs, final Writer output) throws IllegalArgumentException, SQLException, UncheckedIOException {
         return exportCsv(rs, null, output);
@@ -2620,8 +2637,8 @@ public final class DataTransferUtil {
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the number of rows exported
      * @throws IllegalArgumentException if {@code rs} or {@code output} is {@code null}, or if any specified column name is not found in the ResultSet
-     * @throws SQLException if preparing or executing the SELECT, reading result metadata or rows, or closing owned JDBC resources fails
-     * @throws UncheckedIOException if an I/O error occurs while writing
+     * @throws SQLException if reading result-set metadata, advancing the cursor, or extracting a column value fails
+     * @throws UncheckedIOException if writing or flushing CSV data to {@code output} fails
      * @deprecated use {@link #exportCsvFrom(ResultSet)} instead: {@code exportCsvFrom(rs).columns(columnNames).to(output)}.
      */
     @Deprecated
@@ -2783,16 +2800,17 @@ public final class DataTransferUtil {
      * @param targetDataSource the data source to which to copy data
      * @param tableName the name of the table to copy
      * @return the number of rows copied
-     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is
-     *         {@code null}, blank, or malformed
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails
-     *         (for example because the table does not exist in the source database);
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
-     *         (for example because the table does not exist in the target database)
+     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is {@code null},
+     *         blank, or malformed, or if database metadata reports a null or blank product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
+     *         because the table does not exist in the source database); connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for
+     *         example because the table does not exist in the target database)
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String tableName)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return copy(sourceDataSource, targetDataSource, tableName, tableName);
     }
 
@@ -2815,16 +2833,16 @@ public final class DataTransferUtil {
      * @param sourceTableName the name of the table in the source data source
      * @param targetTableName the name of the table in the target data source
      * @return the number of rows copied
-     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is
-     *         {@code null}, blank, or malformed
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails
-     *         (for example because {@code sourceTableName} does not exist);
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
-     *         (for example because {@code targetTableName} does not exist)
+     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is {@code null},
+     *         blank, or malformed, or if database metadata reports a null or blank product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
+     *         because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for
+     *         example because {@code targetTableName} does not exist)
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
-            final String targetTableName) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            final String targetTableName) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -2848,16 +2866,18 @@ public final class DataTransferUtil {
      * @param targetTableName the name of the table in the target data source
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
-     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or
-     *         a table name is {@code null}, blank, or malformed
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or a table
+     *         name is {@code null}, blank, or malformed, or if database metadata reports a null or blank product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyTable(javax.sql.DataSource, String)} instead: {@code copyTable(sourceDataSource, sourceTableName).batchSize(batchSize).to(targetDataSource, targetTableName)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
-            final String targetTableName, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            final String targetTableName, final int batchSize)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
         checkCopyTableName(sourceTableName, cs.sourceTableName);
@@ -2912,16 +2932,20 @@ public final class DataTransferUtil {
      * @param targetTableName the name of the table in the target data source
      * @param columnNames the collection of column names to copy; {@code null} or empty copies all columns
      * @return the number of rows copied
-     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is
-     *         {@code null}, blank, or malformed, or a selected column name is {@code null}, blank, or malformed
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any specified column doesn't exist
+     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is {@code null},
+     *         blank, or malformed, or a selected column name is {@code null}, blank, or malformed, or if database metadata reports a null or blank
+     *         product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any
+     *         specified column doesn't exist
      * @deprecated use {@link #copyTable(javax.sql.DataSource, String)} instead: {@code copyTable(sourceDataSource, sourceTableName).columns(columnNames).to(targetDataSource, targetTableName)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
-            final String targetTableName, final Collection<String> columnNames) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            final String targetTableName, final Collection<String> columnNames)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, columnNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -2948,31 +2972,31 @@ public final class DataTransferUtil {
      * @param columnNames the collection of column names to copy; {@code null} or empty copies all columns
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
-     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or
-     *         a table name is {@code null}, blank, or malformed, or a selected column name is {@code null}, blank, or malformed
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or a table
+     *         name is {@code null}, blank, or malformed, or a selected column name is {@code null}, blank, or malformed, or if database metadata
+     *         reports a null or blank product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyTable(javax.sql.DataSource, String)} instead: {@code copyTable(sourceDataSource, sourceTableName).columns(columnNames).batchSize(batchSize).to(targetDataSource, targetTableName)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName,
             final String targetTableName, final Collection<String> columnNames, final int batchSize)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
         checkCopyTableName(sourceTableName, cs.sourceTableName);
         checkCopyTableName(targetTableName, cs.targetTableName);
+        // Snapshot once so SELECT and INSERT use exactly the same validated column order.
+        final List<String> copiedColumnNames = N.isEmpty(columnNames) ? N.emptyList() : new ArrayList<>(columnNames);
+        checkCopyColumnNames(copiedColumnNames);
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        if (N.isEmpty(columnNames)) {
+        if (copiedColumnNames.isEmpty()) {
             return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, batchSize);
         }
-
-        // Snapshot once so SELECT and INSERT use exactly the same column order even if the
-        // caller supplies a collection whose iterator can change between traversals.
-        final List<String> copiedColumnNames = new ArrayList<>(columnNames);
-        checkCopyColumnNames(copiedColumnNames);
 
         String selectSql = null;
         String insertSql = null;
@@ -3018,13 +3042,16 @@ public final class DataTransferUtil {
      * @param targetDataSource the data source to which to copy data
      * @param insertSql the SQL query to insert data into the target data source (must have matching parameter placeholders)
      * @return the number of rows copied
-     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
-     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or SQL statements are invalid
+     * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or if database metadata reports a
+     *         null or blank product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or SQL
+     *         statements are invalid
      */
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
-            final String insertSql) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            final String insertSql) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -3054,16 +3081,17 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or
-     *         {@code fetchSize < 0}
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     *         {@code fetchSize < 0}, or if database metadata reports a null or blank product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyFrom(javax.sql.DataSource, String)} instead: {@code copyFrom(sourceDataSource, selectSql).fetchSize(fetchSize).batchSize(batchSize).to(targetDataSource, insertSql)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
             final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return copy(sourceDataSource, selectSql, fetchSize, targetDataSource, insertSql, batchSize, 0, supplierOfStmtSetterByRS.get());
     }
 
@@ -3092,16 +3120,18 @@ public final class DataTransferUtil {
      * @param insertSql the SQL query to insert data into the target data source
      * @param parameterSetter a bi-consumer to set parameters on the prepared statement from the result set; must not be {@code null}
      * @return the number of rows copied
-     * @throws IllegalArgumentException if any of {@code sourceDataSource}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws IllegalArgumentException if any of {@code sourceDataSource}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or
+     *         if database metadata reports a null or blank product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyFrom(javax.sql.DataSource, String)} instead: {@code copyFrom(sourceDataSource, selectSql).parameterSetter(parameterSetter).to(targetDataSource, insertSql)}.
      */
     @Deprecated
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource,
             final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return copy(sourceDataSource, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, targetDataSource, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0,
                 parameterSetter);
     }
@@ -3146,9 +3176,11 @@ public final class DataTransferUtil {
      * @param parameterSetter a bi-consumer to set parameters on the prepared statement; must not be {@code null}
      * @return the number of rows copied
      * @throws IllegalArgumentException if any of {@code sourceDataSource}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or
-     *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or {@code fetchSize < 0}
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or {@code fetchSize < 0}, or if database metadata reports a null or blank
+     *         product name
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyFrom(javax.sql.DataSource, String)} instead: {@code copyFrom(sourceDataSource, selectSql).fetchSize(fetchSize).batchSize(batchSize).batchInterval(...).parameterSetter(parameterSetter).to(targetDataSource, insertSql)}.
      */
@@ -3156,7 +3188,7 @@ public final class DataTransferUtil {
     public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize,
             final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(sourceDataSource, cs.sourceDataSource);
         N.checkArgNotNegative(fetchSize, cs.fetchSize);
         N.checkArgNotNull(targetDataSource, cs.targetDataSource);
@@ -3212,8 +3244,8 @@ public final class DataTransferUtil {
      * @param targetConn the connection to the target database
      * @param tableName the name of the table to copy data from and to
      * @return the number of rows copied
-     * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or
-     *         a connection is {@code null}
+     * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata
+     *         reports a null or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      */
@@ -3244,8 +3276,8 @@ public final class DataTransferUtil {
      * @param sourceTableName the name of the source table to copy data from
      * @param targetTableName the name of the target table to copy data to
      * @return the number of rows copied
-     * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or
-     *         a connection is {@code null}
+     * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata
+     *         reports a null or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      */
@@ -3279,9 +3311,8 @@ public final class DataTransferUtil {
      * @param targetTableName the name of the target table to copy data to
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
-     * @throws IllegalArgumentException if {@code batchSize <= 0}, or
-     *         a table name is {@code null}, blank, or malformed, or
-     *         a connection is {@code null}
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, or a table name is {@code null}, blank, or malformed, or a connection is
+     *         {@code null}, or if database metadata reports a null or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).batchSize(batchSize).to(targetConn, targetTableName)}.
@@ -3310,9 +3341,11 @@ public final class DataTransferUtil {
      * ordering taken from executing {@code selectSql} on {@code sourceConn}. This guarantees the
      * INSERT column order matches the SELECT, so positional parameter binding stays aligned even
      * when the two databases store columns in different orders. JDBC labels are literal names;
-     * punctuation and surrounding whitespace in a label are preserved as identifier content.
+     * punctuation, surrounding whitespace, and case that requires quoting in the source database
+     * are preserved as identifier content.
      * @throws IllegalArgumentException if a connection is {@code null}, or a table/column name is {@code null}, blank, or malformed.
-     * @throws SQLException if preparing or executing the source metadata query, reading its labels, or closing its resources fails.
+     * @throws SQLException if preparing or executing the source metadata query, reading its labels or identifier-folding metadata,
+     *         or closing its resources fails.
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      */
     private static String generateInsertSqlFromSelectColumns(final Connection sourceConn, final String selectSql, final Connection targetConn,
@@ -3324,8 +3357,11 @@ public final class DataTransferUtil {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(sourceConn, selectSql + " WHERE 1 > 2");
              ResultSet rs = stmt.executeQuery()) {
             final List<String> sourceColumns = new ArrayList<>();
+            final int unquotedIdentifierCase = JdbcCodeGenerationUtil.getUnquotedIdentifierCase(sourceConn);
+            // Preserve source case sensitivity with standard quotes; the target renderer adapts
+            // the delimiters while ordinary unquoted names retain the target's case-folding rules.
             for (final String columnLabel : JdbcUtil.getColumnLabels(rs)) {
-                sourceColumns.add(SqlIdentifierUtil.isSimpleSqlIdentifier(columnLabel) ? columnLabel : SqlIdentifierUtil.quoteIdentifier(columnLabel, "\""));
+                sourceColumns.add(JdbcCodeGenerationUtil.renderColumnLabel(columnLabel, null, unquotedIdentifierCase));
             }
             return generateInsertSql(targetConn, targetTableName, sourceColumns);
         }
@@ -3356,11 +3392,11 @@ public final class DataTransferUtil {
      * @param targetTableName the name of the target table to copy data to
      * @param columnNames the collection of column names to be copied; {@code null} or empty copies all columns
      * @return the number of rows copied
-     * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or
-     *         a selected column name is {@code null}, blank, or malformed, or
-     *         a connection is {@code null}
+     * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or a selected column name is {@code null}, blank, or
+     *         malformed, or a connection is {@code null}, or if database metadata reports a null or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
-     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any specified column doesn't exist
+     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any
+     *         specified column doesn't exist
      * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).columns(columnNames).to(targetConn, targetTableName)}.
      */
     @Deprecated
@@ -3396,10 +3432,8 @@ public final class DataTransferUtil {
      * @param columnNames the collection of column names to be copied; {@code null} or empty copies all columns
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @return the number of rows copied
-     * @throws IllegalArgumentException if {@code batchSize <= 0}, or
-     *         a table name is {@code null}, blank, or malformed, or
-     *         a selected column name is {@code null}, blank, or malformed, or
-     *         a connection is {@code null}
+     * @throws IllegalArgumentException if {@code batchSize <= 0}, or a table name is {@code null}, blank, or malformed, or a selected column name is
+     *         {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata reports a null or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).columns(columnNames).batchSize(batchSize).to(targetConn, targetTableName)}.
@@ -3411,16 +3445,14 @@ public final class DataTransferUtil {
         N.checkArgNotNull(targetConn, cs.targetConn);
         checkCopyTableName(sourceTableName, cs.sourceTableName);
         checkCopyTableName(targetTableName, cs.targetTableName);
+        // Snapshot once so SELECT and INSERT use exactly the same validated column order.
+        final List<String> copiedColumnNames = N.isEmpty(columnNames) ? N.emptyList() : new ArrayList<>(columnNames);
+        checkCopyColumnNames(copiedColumnNames);
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        if (N.isEmpty(columnNames)) {
+        if (copiedColumnNames.isEmpty()) {
             return copy(sourceConn, targetConn, sourceTableName, targetTableName, batchSize);
         }
-
-        // Snapshot once so SELECT and INSERT use exactly the same column order even if the
-        // caller supplies a collection whose iterator can change between traversals.
-        final List<String> copiedColumnNames = new ArrayList<>(columnNames);
-        checkCopyColumnNames(copiedColumnNames);
 
         final String selectSql = generateSelectSql(sourceConn, sourceTableName, copiedColumnNames);
         final String insertSql = generateInsertSql(targetConn, targetTableName, copiedColumnNames);
@@ -3568,12 +3600,13 @@ public final class DataTransferUtil {
      * @param targetConn the connection to the target database
      * @param insertSql the SQL query to insert data into the target database
      * @return the number of rows copied
-     * @throws NullPointerException if {@code sourceConn} or {@code targetConn} is {@code null}.
+     * @throws IllegalArgumentException if {@code sourceConn} or {@code targetConn} is {@code null}, or database metadata reports a null or blank
+     *         product name
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
      */
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql)
-            throws NullPointerException, SQLException, UncheckedSQLException {
+            throws IllegalArgumentException, SQLException, UncheckedSQLException {
         return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -3607,16 +3640,15 @@ public final class DataTransferUtil {
      * @param insertSql the SQL query to insert data into the target database
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @return the number of rows copied
-     * @throws NullPointerException if {@code sourceConn} or {@code targetConn} is {@code null}.
-     * @throws IllegalArgumentException if {@code batchSize <= 0}, or
-     *         {@code fetchSize < 0}
+     * @throws IllegalArgumentException if {@code sourceConn} or {@code targetConn} is {@code null}, or {@code batchSize <= 0}, or
+     *         {@code fetchSize < 0}, or if database metadata reports a null or blank product name
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
      * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).fetchSize(fetchSize).batchSize(batchSize).to(targetConn, insertSql)}.
      */
     @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
-            final int batchSize) throws NullPointerException, IllegalArgumentException, SQLException, UncheckedSQLException {
+            final int batchSize) throws IllegalArgumentException, SQLException, UncheckedSQLException {
         return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, 0, supplierOfStmtSetterByRS.get());
     }
 
@@ -3646,8 +3678,8 @@ public final class DataTransferUtil {
      * @param insertSql the SQL query to insert data into the target database
      * @param parameterSetter the custom statement setter to set the parameters of the prepared statement; must not be {@code null}
      * @return the number of rows copied
-     * @throws NullPointerException if {@code sourceConn} or {@code targetConn} is {@code null}.
-     * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}
+     * @throws IllegalArgumentException if {@code sourceConn} or {@code targetConn} is {@code null}, or {@code parameterSetter} is {@code null}, or if
+     *         database metadata reports a null or blank product name
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
      * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).parameterSetter(parameterSetter).to(targetConn, insertSql)}.
@@ -3655,7 +3687,7 @@ public final class DataTransferUtil {
     @Deprecated
     public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql,
             final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)
-            throws NullPointerException, IllegalArgumentException, SQLException, UncheckedSQLException {
+            throws IllegalArgumentException, SQLException, UncheckedSQLException {
         return copy(sourceConn, selectSql, JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, targetConn, insertSql, JdbcUtil.DEFAULT_BATCH_SIZE, 0,
                 parameterSetter);
     }
@@ -3703,11 +3735,9 @@ public final class DataTransferUtil {
      * @param batchIntervalInMillis the interval in milliseconds between each batch (0 for no delay; must be {@code >= 0})
      * @param parameterSetter the custom statement setter to set the parameters of the prepared statement; must not be {@code null}
      * @return the number of rows copied
-     * @throws NullPointerException if {@code sourceConn} or {@code targetConn} is {@code null}.
-     * @throws IllegalArgumentException if {@code parameterSetter} is {@code null}, or
-     *         {@code batchSize <= 0}, or
-     *         {@code batchIntervalInMillis < 0}, or
-     *         {@code fetchSize < 0}
+     * @throws IllegalArgumentException if {@code sourceConn} or {@code targetConn} is {@code null}, or {@code parameterSetter} is {@code null}, or
+     *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or {@code fetchSize < 0}, or if database metadata reports a null or blank
+     *         product name
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
      * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).fetchSize(fetchSize).batchSize(batchSize).batchInterval(...).parameterSetter(parameterSetter).to(targetConn, insertSql)}.
@@ -3716,10 +3746,10 @@ public final class DataTransferUtil {
     public static long copy(final Connection sourceConn, final String selectSql, final int fetchSize, final Connection targetConn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis,
             final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter)
-            throws NullPointerException, IllegalArgumentException, SQLException, UncheckedSQLException {
-        Objects.requireNonNull(sourceConn, cs.sourceConn);
+            throws IllegalArgumentException, SQLException, UncheckedSQLException {
+        N.checkArgNotNull(sourceConn, cs.sourceConn);
         N.checkArgNotNegative(fetchSize, cs.fetchSize);
-        Objects.requireNonNull(targetConn, cs.targetConn);
+        N.checkArgNotNull(targetConn, cs.targetConn);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
@@ -3777,7 +3807,8 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if any of {@code selectStmt}, {@code insertStmt}, or {@code parameterSetter} is {@code null}, or
      *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}
-     * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
+     * @throws SQLException if executing {@code selectStmt}, advancing its result set, invoking {@code parameterSetter}, or adding or executing an
+     *         insert batch fails
      * @deprecated use {@link #copyFrom(PreparedStatement)} instead: {@code copyFrom(selectStmt).batchSize(batchSize).batchInterval(...).parameterSetter(parameterSetter).to(insertStmt)}.
      */
     @Deprecated
@@ -3884,7 +3915,8 @@ public final class DataTransferUtil {
      * @param conn the connection used to determine the database product
      * @param stmt the statement to configure
      * @param fetchSize the fetch size hint; must not be negative
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or the database reports a blank product name, or {@code fetchSize} is negative.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or the database reports a blank product name, or {@code fetchSize} is
+     *         negative.
      * @throws SQLException if the JDBC driver rejects the requested statement operation
      * @throws UncheckedSQLException if the database product metadata lookup fails.
      */
@@ -3929,7 +3961,9 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * <p>The returned setter propagates {@link SQLException} from result-set metadata, the column getter,
-     * or parameter binding when it is invoked.</p>
+     * or parameter binding when it is invoked. It rejects a null statement or result set with
+     * {@link IllegalArgumentException} before reading metadata or binding parameters. Binding at least
+     * one column through a closed query throws {@link IllegalStateException}.</p>
      *
      * @param columnGetter the ColumnGetter to apply to each column index in every row
      * @return a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions
@@ -3946,8 +3980,20 @@ public final class DataTransferUtil {
         return new Throwables.BiConsumer<>() {
             private int columnCount = -1;
 
+            /**
+             * Binds the current result-set row to the supplied query.
+             *
+             * @param stmt the query whose parameters receive the column values
+             * @param rs the result set positioned on the row to bind
+             * @throws IllegalArgumentException if {@code stmt} or {@code rs} is {@code null}
+             * @throws SQLException if reading metadata or column values, or binding parameters, fails
+             * @throws IllegalStateException if {@code stmt} is closed and the result set has at least one column to bind
+             */
             @Override
-            public void accept(final PreparedQuery stmt, final ResultSet rs) throws SQLException {
+            public void accept(final PreparedQuery stmt, final ResultSet rs) throws IllegalArgumentException, SQLException, IllegalStateException {
+                N.checkArgNotNull(stmt, cs.stmt);
+                N.checkArgNotNull(rs, cs.rs);
+
                 if (columnCount < 0) {
                     columnCount = JdbcUtil.getColumnCount(rs);
                 }
@@ -4145,15 +4191,15 @@ public final class DataTransferUtil {
          * @param targetDataSource the DataSource to obtain a database connection from
          * @param insertSql the SQL insert statement with placeholders
          * @return the number of source rows submitted; not the sum of JDBC update counts
-         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, {@code batchSize <= 0}, a configured column
-         *         or column-type key is not a column of the dataset, or a mapped type is {@code null}, or
-         *         if {@code targetDataSource} is {@code null}
-         * @throws UncheckedSQLException if connection acquisition fails;
-         *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, {@code batchSize <= 0}, a configured column or
+         *         column-type key is not a column of the dataset, or a mapped type is {@code null}, or if {@code targetDataSource} is {@code null}
+         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
+         * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
+         *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          */
         public int to(final javax.sql.DataSource targetDataSource, final String insertSql)
-                throws IllegalArgumentException, UncheckedSQLException, SQLException {
+                throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
             validateConfiguration();
 
             N.checkArgNotNull(targetDataSource, cs.targetDataSource);
@@ -4173,14 +4219,13 @@ public final class DataTransferUtil {
          * @param conn the Connection to the database
          * @param insertSql the SQL insert statement with placeholders
          * @return the number of source rows submitted; not the sum of JDBC update counts
-         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, {@code batchSize <= 0}, a configured column
-         *         or column-type key is not a column of the dataset, or a mapped type is {@code null}
-         * @throws NullPointerException if {@code conn} is {@code null}
+         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, {@code batchSize <= 0}, a configured column or
+         *         column-type key is not a column of the dataset, or a mapped type is {@code null}, or {@code conn} is {@code null}
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          */
-        public int to(final Connection conn, final String insertSql) throws IllegalArgumentException, NullPointerException, SQLException {
+        public int to(final Connection conn, final String insertSql) throws IllegalArgumentException, SQLException {
             validateConfiguration();
-            Objects.requireNonNull(conn, cs.conn);
+            N.checkArgNotNull(conn, cs.conn);
 
             try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
                 return to(stmt);
@@ -4192,9 +4237,8 @@ public final class DataTransferUtil {
          *
          * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
          * @return the number of source rows submitted; not the sum of JDBC update counts
-         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, {@code batchSize <= 0}, a configured column
-         *         or column-type key is not a column of the dataset, or a mapped type is {@code null}, or
-         *         if {@code stmt} is {@code null}
+         * @throws IllegalArgumentException if more than one value-mapping strategy is configured, {@code batchSize <= 0}, a configured column or
+         *         column-type key is not a column of the dataset, or a mapped type is {@code null}, or if {@code stmt} is {@code null}
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          */
         public int to(final PreparedStatement stmt) throws IllegalArgumentException, SQLException {
@@ -4215,9 +4259,9 @@ public final class DataTransferUtil {
         /**
          * Validates the builder configuration before a terminal {@code to(...)} runs.
          *
-         * @throws IllegalArgumentException if more than one value-mapping strategy ({@code columns},
-         *         {@code columnTypes}, {@code parameterSetter}) is configured, or {@code batchSize <= 0},
-         *         or {@code batchIntervalInMillis} is negative
+         * @throws IllegalArgumentException if more than one value-mapping strategy ({@code columns}, {@code columnTypes}, {@code parameterSetter})
+         *         is configured, {@code batchSize <= 0}, {@code batchIntervalInMillis < 0}, a selected column or type-map key is absent from the
+         *         dataset, or a mapped type is {@code null}
          */
         private void validateConfiguration() throws IllegalArgumentException {
             int configuredStrategies = 0;
@@ -4447,19 +4491,20 @@ public final class DataTransferUtil {
          * @param targetDataSource the DataSource to obtain a database connection from
          * @param insertSql the SQL insert statement with placeholders
          * @return the number of source rows submitted; not the sum of JDBC update counts
-         * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file)
-         *         configured; normally guaranteed by the factory methods
+         * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file) configured; normally guaranteed
+         *         by the factory methods
          * @throws IllegalArgumentException if {@code parameterSetter} is not configured or {@code batchSize <= 0}, or if {@code targetDataSource} is
          *         {@code null}, or the CSV file source is a directory, or a CSV row contains more fields than the header
-         * @throws UncheckedSQLException if connection acquisition fails;
-         *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
+         * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
+         *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          * @throws UncheckedIOException if the CSV file source cannot be opened for reading, or an I/O error occurs reading the file/reader
-         * @throws ParsingException if, for a CSV source, the current {@link CsvUtil} parser cannot parse the header or a data row,
-         *         for example because it contains an unterminated quoted field
+         * @throws ParsingException if, for a CSV source, the current {@link CsvUtil} parser cannot parse the header or a data row, for example
+         *         because it contains an unterminated quoted field
          */
-        public long to(final javax.sql.DataSource targetDataSource, final String insertSql)
-                throws IllegalStateException, IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException, ParsingException {
+        public long to(final javax.sql.DataSource targetDataSource, final String insertSql) throws IllegalStateException, IllegalArgumentException,
+                CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UncheckedIOException, ParsingException {
             validateConfiguration();
 
             N.checkArgNotNull(targetDataSource, cs.targetDataSource);
@@ -4479,20 +4524,19 @@ public final class DataTransferUtil {
          * @param conn the Connection to the database
          * @param insertSql the SQL insert statement with placeholders
          * @return the number of source rows submitted; not the sum of JDBC update counts
-         * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file)
-         *         configured; normally guaranteed by the factory methods
+         * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file) configured; normally guaranteed
+         *         by the factory methods
          * @throws IllegalArgumentException if {@code parameterSetter} is not configured or {@code batchSize <= 0}, or the CSV file source is a
-         *         directory, or a CSV row contains more fields than the header
-         * @throws NullPointerException if {@code conn} is {@code null}
+         *         directory, or a CSV row contains more fields than the header, or {@code conn} is {@code null}
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          * @throws UncheckedIOException if the CSV file source cannot be opened for reading, or an I/O error occurs reading the file/reader
-         * @throws ParsingException if, for a CSV source, the current {@link CsvUtil} parser cannot parse the header or a data row,
-         *         for example because it contains an unterminated quoted field
+         * @throws ParsingException if, for a CSV source, the current {@link CsvUtil} parser cannot parse the header or a data row, for example
+         *         because it contains an unterminated quoted field
          */
         public long to(final Connection conn, final String insertSql)
-                throws IllegalStateException, IllegalArgumentException, NullPointerException, SQLException, UncheckedIOException, ParsingException {
+                throws IllegalStateException, IllegalArgumentException, SQLException, UncheckedIOException, ParsingException {
             validateConfiguration();
-            Objects.requireNonNull(conn, cs.conn);
+            N.checkArgNotNull(conn, cs.conn);
 
             try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
                 return to(stmt);
@@ -4505,14 +4549,14 @@ public final class DataTransferUtil {
          *
          * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
          * @return the number of source rows submitted; not the sum of JDBC update counts
-         * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file)
-         *         configured; normally guaranteed by the factory methods
+         * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file) configured; normally guaranteed
+         *         by the factory methods
          * @throws IllegalArgumentException if {@code parameterSetter} is not configured or {@code batchSize <= 0}, or if {@code stmt} is
          *         {@code null}, or the CSV file source is a directory, or a CSV row contains more fields than the header
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          * @throws UncheckedIOException if the CSV file source cannot be opened for reading, or an I/O error occurs reading the file/reader
-         * @throws ParsingException if, for a CSV source, the current {@link CsvUtil} parser cannot parse the header or a data row,
-         *         for example because it contains an unterminated quoted field
+         * @throws ParsingException if, for a CSV source, the current {@link CsvUtil} parser cannot parse the header or a data row, for example
+         *         because it contains an unterminated quoted field
          */
         public long to(final PreparedStatement stmt)
                 throws IllegalStateException, IllegalArgumentException, SQLException, UncheckedIOException, ParsingException {
@@ -4538,8 +4582,8 @@ public final class DataTransferUtil {
          * Validates the builder configuration before a terminal {@code to(...)} runs.
          *
          * @throws IllegalStateException if not exactly one row source ({@code iter}, {@code reader} or {@code file}) is set
-         * @throws IllegalArgumentException if {@code parameterSetter} is not configured, {@code batchSize <= 0},
-         *         or {@code batchIntervalInMillis} is negative
+         * @throws IllegalArgumentException if {@code parameterSetter} is not configured, {@code batchSize <= 0}, or {@code batchIntervalInMillis} is
+         *         negative
          */
         private void validateConfiguration() throws IllegalStateException, IllegalArgumentException {
             int configuredSources = 0;
@@ -4574,7 +4618,7 @@ public final class DataTransferUtil {
          * @param setter the setter binding each parsed {@code String[]} row to the statement parameters
          * @return the number of rows imported
          * @throws IllegalArgumentException if the parameter setter is missing, or a CSV row contains more fields than the header
-         * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
+         * @throws SQLException if binding a CSV row, invoking {@code setter}, or adding or executing a batch fails
          * @throws UncheckedIOException if an I/O error occurs while reading
          * @throws ParsingException if the current {@link CsvUtil} parser cannot parse the header or a data row
          */
@@ -4761,16 +4805,20 @@ public final class DataTransferUtil {
          *
          * @param output the file to write to; created if it doesn't exist, truncated if it does, and its parent directory must already exist
          * @return the number of rows exported
-         * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection,
-         *         PreparedStatement or ResultSet) configured; normally guaranteed by the factory methods
-         * @throws IllegalArgumentException if {@code output} is {@code null}, the configured SQL is empty, blank, or cannot be parsed (for example
-         *         it mixes parameter styles), or a configured column name is not present in the query result
-         * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using
-         *         a DataSource or Connection; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+         * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection, PreparedStatement or
+         *         ResultSet) configured; normally guaranteed by the factory methods
+         * @throws IllegalArgumentException if {@code output} is {@code null}, the configured SQL is empty, blank, or cannot be parsed (for example it
+         *         mixes parameter styles), or a configured column name is not present in the query result, or if database metadata reports a null or
+         *         blank product name
+         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
+         * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using a DataSource or Connection;
+         *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
-         * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or an I/O error occurs while writing to it
+         * @throws UncheckedIOException if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer
+         *         fails
          */
-        public long to(final File output) throws IllegalStateException, IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException {
+        public long to(final File output) throws IllegalStateException, IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException,
+                SQLException, UncheckedIOException {
             assertSingleSource();
             N.checkArgNotNull(output, cs.output);
 
@@ -4782,16 +4830,19 @@ public final class DataTransferUtil {
          *
          * @param output the writer to write to
          * @return the number of rows exported
-         * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection,
-         *         PreparedStatement or ResultSet) configured; normally guaranteed by the factory methods
-         * @throws IllegalArgumentException if {@code output} is {@code null}, the configured SQL is empty, blank, or cannot be parsed (for example
-         *         it mixes parameter styles), or a configured column name is not present in the query result
-         * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using
-         *         a DataSource or Connection; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+         * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection, PreparedStatement or
+         *         ResultSet) configured; normally guaranteed by the factory methods
+         * @throws IllegalArgumentException if {@code output} is {@code null}, the configured SQL is empty, blank, or cannot be parsed (for example it
+         *         mixes parameter styles), or a configured column name is not present in the query result, or if database metadata reports a null or
+         *         blank product name
+         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
+         * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using a DataSource or Connection;
+         *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
-         * @throws UncheckedIOException if an I/O error occurs while writing
+         * @throws UncheckedIOException if writing or flushing CSV data to {@code output} fails
          */
-        public long to(final Writer output) throws IllegalStateException, IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException {
+        public long to(final Writer output) throws IllegalStateException, IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException,
+                SQLException, UncheckedIOException {
             assertSingleSource();
             N.checkArgNotNull(output, cs.output);
 
@@ -4804,16 +4855,17 @@ public final class DataTransferUtil {
          *
          * @param exporter writes the result set rows to the CSV target
          * @return the number of rows exported
-         * @throws IllegalStateException if not exactly one query source ({@code dataSource}, {@code conn},
-         *         {@code stmt} or {@code rs}) is configured
-         * @throws IllegalArgumentException if the configured SQL is empty, blank, or cannot be parsed, or the exporter requests a missing column.
-         * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using
-         *         a DataSource or Connection; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+         * @throws IllegalStateException if not exactly one query source ({@code dataSource}, {@code conn}, {@code stmt} or {@code rs}) is configured
+         * @throws IllegalArgumentException if the configured SQL is empty, blank, or cannot be parsed, or the exporter requests a missing column, or
+         *         if database metadata reports a null or blank product name
+         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
+         * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using a DataSource or Connection;
+         *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          * @throws UncheckedIOException if the exporter cannot write the CSV output.
          */
-        private long export(final ResultSetExporter exporter)
-                throws IllegalStateException, IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException {
+        private long export(final ResultSetExporter exporter) throws IllegalStateException, IllegalArgumentException, CannotGetJdbcConnectionException,
+                UncheckedSQLException, SQLException, UncheckedIOException {
             assertSingleSource();
 
             ParsedSql sql = null;
@@ -4886,7 +4938,7 @@ public final class DataTransferUtil {
          * @param sql the parsed {@link #selectSql}
          * @param exporter writes the result set rows to the CSV target
          * @return the number of rows exported
-         * @throws IllegalArgumentException if the exporter requests a missing column.
+         * @throws IllegalArgumentException if the exporter requests a missing column, or if database metadata reports a null or blank product name
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          * @throws UncheckedSQLException if the database product metadata lookup fails.
          * @throws UncheckedIOException if the exporter cannot write the CSV output.
@@ -5016,6 +5068,9 @@ public final class DataTransferUtil {
      * <p>The returned {@link CopyTableFromDataSource} lets you configure {@code columnNames} and
      * {@code batchSize}, then run the copy with {@link CopyTableFromDataSource#to(javax.sql.DataSource, String)}.</p>
      *
+     * <p>When copying all columns, their source order and any case-sensitive spelling requiring
+     * identifier quotes are preserved in the generated target INSERT.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Copy the whole table to a backup table
@@ -5046,6 +5101,9 @@ public final class DataTransferUtil {
     /**
      * Creates a fluent builder for copying a whole table (or selected columns) from a source {@link Connection}
      * to a target table on another {@link Connection}, generating the SELECT and INSERT SQL from the table schema.
+     *
+     * <p>When copying all columns, their source order and any case-sensitive spelling requiring
+     * identifier quotes are preserved in the generated target INSERT.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5179,13 +5237,15 @@ public final class DataTransferUtil {
          * @param targetDataSource the data source to write to
          * @param insertSql the SQL insert statement with placeholders matching the selected columns
          * @return the number of rows copied
-         * @throws IllegalArgumentException if {@code targetDataSource} is {@code null}, {@code fetchSize < 0}, or {@code batchSize <= 0}
-         * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-         *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+         * @throws IllegalArgumentException if {@code targetDataSource} is {@code null}, {@code fetchSize < 0}, or {@code batchSize <= 0}, or if
+         *         database metadata reports a null or blank product name
+         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
+         * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+         *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          */
         public long to(final javax.sql.DataSource targetDataSource, final String insertSql)
-                throws IllegalArgumentException, UncheckedSQLException, SQLException {
+                throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
             return copy(sourceDataSource, selectSql, fetchSize, targetDataSource, insertSql, batchSize, batchIntervalInMillis,
                     N.defaultIfNull(parameterSetter, supplierOfStmtSetterByRS.get()));
         }
@@ -5300,13 +5360,12 @@ public final class DataTransferUtil {
          * @param targetConn the connection to write to
          * @param insertSql the SQL insert statement with placeholders matching the selected columns
          * @return the number of rows copied
-         * @throws IllegalArgumentException if {@code fetchSize < 0} or {@code batchSize <= 0}
-         * @throws NullPointerException if {@code targetConn} is {@code null}.
+         * @throws IllegalArgumentException if {@code fetchSize < 0} or {@code batchSize <= 0}, or if database metadata reports a null or blank
+         *         product name, or {@code targetConn} is {@code null}
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          * @throws UncheckedSQLException if the database product metadata lookup fails.
          */
-        public long to(final Connection targetConn, final String insertSql)
-                throws IllegalArgumentException, NullPointerException, SQLException, UncheckedSQLException {
+        public long to(final Connection targetConn, final String insertSql) throws IllegalArgumentException, SQLException, UncheckedSQLException {
             return copy(sourceConn, selectSql, fetchSize, targetConn, insertSql, batchSize, batchIntervalInMillis,
                     N.defaultIfNull(parameterSetter, supplierOfStmtSetterByRS.get()));
         }
@@ -5478,14 +5537,15 @@ public final class DataTransferUtil {
          * @param targetDataSource the data source to write to
          * @param targetTableName the name of the target table
          * @return the number of rows copied
-         * @throws IllegalArgumentException if {@code targetDataSource} is {@code null}, {@code batchSize <= 0},
-         *         or a table/selected column name is {@code null}, blank, or malformed
-         * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails;
-         *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+         * @throws IllegalArgumentException if {@code targetDataSource} is {@code null}, {@code batchSize <= 0}, or a table/selected column name is
+         *         {@code null}, blank, or malformed, or if database metadata reports a null or blank product name
+         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
+         * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
+         *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          */
         public long to(final javax.sql.DataSource targetDataSource, final String targetTableName)
-                throws IllegalArgumentException, UncheckedSQLException, SQLException {
+                throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
             return N.isEmpty(columnNames) ? copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, batchSize)
                     : copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, columnNames, batchSize);
         }
@@ -5561,8 +5621,8 @@ public final class DataTransferUtil {
          * @param targetConn the connection to write to
          * @param targetTableName the name of the target table
          * @return the number of rows copied
-         * @throws IllegalArgumentException if {@code targetConn} is {@code null}, {@code batchSize <= 0},
-         *         or a table/selected column name is {@code null}, blank, or malformed
+         * @throws IllegalArgumentException if {@code targetConn} is {@code null}, {@code batchSize <= 0}, or a table/selected column name is
+         *         {@code null}, blank, or malformed, or if database metadata reports a null or blank product name
          * @throws UncheckedSQLException if database product or table metadata lookup fails.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          */

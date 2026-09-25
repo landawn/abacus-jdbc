@@ -1122,10 +1122,7 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         }
     }
 
-    // Regression: loadJoinEntitiesIfAbsent(Collection, String, Collection) derives the entity class
-    // from the first element of the collection; a null first element must be rejected with a
-    // meaningful IllegalArgumentException instead of surfacing as a bare NullPointerException.
-    // Mirrors the checked twin's contract (see JoinEntityHelperTest).
+    // Validate every entity before looking up a property or invoking a getter on an earlier entity.
     @Test
     @Tag("2025")
     public void testloadJoinEntitiesIfAbsent_CollectionEntity_NullFirstElement_ThrowsIae() {
@@ -1136,6 +1133,20 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
 
         IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "orders", null));
         assertTrue(iae.getMessage().contains("first element"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "", null)).getMessage().contains("first element"));
+
+        entities.remove(0);
+        TestEntity first = Mockito.spy(entities.get(0));
+        entities.set(0, first);
+        entities.add(null);
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "", null)).getMessage().contains("entities"));
+        assertTrue(
+                assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "missing", null)).getMessage().contains("entities"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "orders", null)).getMessage().contains("entities"));
+        Mockito.verify(first, Mockito.never()).getOrders();
+
+        dao.loadJoinEntitiesIfAbsent((Collection<TestEntity>) null, "orders", null);
+        dao.loadJoinEntitiesIfAbsent(List.<TestEntity> of(), "orders", null);
 
         Mockito.verify(dao, Mockito.never())
                 .loadJoinEntities(ArgumentMatchers.<Collection<TestEntity>> any(), ArgumentMatchers.anyString(), ArgumentMatchers.any());

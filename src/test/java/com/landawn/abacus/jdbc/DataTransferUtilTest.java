@@ -57,6 +57,35 @@ import com.landawn.abacus.util.Throwables;
 
 public class DataTransferUtilTest extends TestBase {
 
+    @Test
+    public void testSelectedColumnsAreValidatedBeforeLaterImportArguments() {
+        final Dataset dataset = Dataset.rows(List.of("id"), new Object[][] { { 1 } });
+        final Connection unusedConnection = mock(Connection.class);
+        final PreparedStatement unusedStatement = mock(PreparedStatement.class);
+
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importData(dataset, List.of("missing"), null, unusedConnection, "INSERT INTO users VALUES (?)", 0, 0))
+                        .getMessage().contains("missing"));
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importData(dataset, List.of("missing"), null, unusedStatement, 0, 0)).getMessage().contains("missing"));
+        verifyNoInteractions(unusedConnection, unusedStatement);
+    }
+
+    @Test
+    public void testCopyColumnsAreValidatedBeforeBatchSizeAndDatabaseAccess() {
+        final Connection source = mock(Connection.class);
+        final Connection target = mock(Connection.class);
+        final DataSource sourceDataSource = mock(DataSource.class);
+        final DataSource targetDataSource = mock(DataSource.class);
+
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(source, target, "users", "users", List.of("schema.id"), 0)).getMessage().contains("columnName"));
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(sourceDataSource, targetDataSource, "users", "users", List.of("schema.id"), 0))
+                        .getMessage().contains("columnName"));
+        verifyNoInteractions(source, target, sourceDataSource, targetDataSource);
+    }
+
     // TODO: The remaining DataTransferUtil importData overload matrix shares the same batching core. Add focused coverage for
     // still-uncovered delegating overloads when a reusable file/stream fixture set is available.
 
@@ -1040,6 +1069,7 @@ public class DataTransferUtilTest extends TestBase {
 
     @Test
     public void testImportDataWithZeroBatchSize() {
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         assertThrows(IllegalArgumentException.class, () -> {
             DataTransferUtil.importData(mockDataset, Arrays.asList("col1"), mockConnection, "INSERT INTO test VALUES (?)", 0, 0);
         });
@@ -1047,6 +1077,7 @@ public class DataTransferUtilTest extends TestBase {
 
     @Test
     public void testImportDataWithNegativeBatchInterval() {
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         assertThrows(IllegalArgumentException.class, () -> {
             DataTransferUtil.importData(mockDataset, Arrays.asList("col1"), mockConnection, "INSERT INTO test VALUES (?)", 1, -1);
         });
@@ -1086,6 +1117,7 @@ public class DataTransferUtilTest extends TestBase {
 
     @Test
     public void testImportDataWithNullFilter() {
+        when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         List<String> selectColumnNames = Arrays.asList("col1");
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
 

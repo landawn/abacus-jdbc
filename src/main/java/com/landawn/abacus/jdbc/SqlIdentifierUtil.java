@@ -63,10 +63,12 @@ final class SqlIdentifierUtil {
      * @param identifier the decoded (undelimited) identifier text
      * @param quote the quote string to wrap with
      * @return the delimited identifier
-     * @throws NullPointerException if {@code identifier} or {@code quote} is {@code null}.
-     * @throws IllegalArgumentException if {@code quote} is empty.
+     * @throws IllegalArgumentException if {@code identifier} is {@code null}, or {@code quote} is {@code null} or empty.
      */
-    static String quoteIdentifier(final String identifier, final String quote) throws NullPointerException, IllegalArgumentException {
+    static String quoteIdentifier(final String identifier, final String quote) throws IllegalArgumentException {
+        N.checkArgNotNull(identifier, cs.identifier);
+        N.checkArgNotEmpty(quote, cs.quote);
+
         // Escape any embedded quote character by doubling it, then wrap, so identifiers containing
         // the active quote char produce valid SQL instead of unbalanced/injectable output.
         return Strings.wrap(identifier.replace(quote, quote + quote), quote);

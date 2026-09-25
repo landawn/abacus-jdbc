@@ -82,6 +82,217 @@ import com.landawn.abacus.util.stream.Stream;
 public class JdbcUtilTest extends TestBase {
 
     @Test
+    public void testStatementPreparationClosesStatementsAfterBindingErrors() throws SQLException {
+        for (final boolean callable : List.of(false, true)) {
+            for (final boolean batch : List.of(false, true)) {
+                final Connection conn = mock(Connection.class);
+                final CallableStatement stmt = mock(CallableStatement.class);
+                final AssertionError failure = new AssertionError("binding failed");
+                when(conn.prepareStatement(anyString())).thenReturn(stmt);
+                when(conn.prepareCall(anyString())).thenReturn(stmt);
+                doThrow(failure).when(stmt).setInt(1, 1);
+
+                assertSame(failure, assertThrows(AssertionError.class, () -> {
+                    if (callable) {
+                        if (batch) {
+                            JdbcUtil.prepareBatchCall(conn, "{call proc(?)}", List.of(1));
+                        } else {
+                            JdbcUtil.prepareCall(conn, "{call proc(?)}", 1);
+                        }
+                    } else if (batch) {
+                        JdbcUtil.prepareBatchStmt(conn, "SELECT ?", List.of(1));
+                    } else {
+                        JdbcUtil.prepareStmt(conn, "SELECT ?", 1);
+                    }
+                }));
+                verify(stmt).close();
+                verify(conn, never()).close();
+            }
+        }
+    }
+
+    @Test
+    public void testBatchPreparationPreservesFailureWhenClosingAlsoFails() throws SQLException {
+        final AssertionError failure = new AssertionError("addBatch failed");
+        final AssertionError closeFailure = new AssertionError("close failed");
+        doThrow(failure).when(mockPreparedStatement).addBatch();
+        doThrow(closeFailure).when(mockPreparedStatement).close();
+
+        assertSame(failure, assertThrows(AssertionError.class,
+                () -> JdbcUtil.prepareBatchStmt(mockConnection, "SELECT ?", List.of(1))));
+        assertArrayEquals(new Throwable[] { closeFailure }, failure.getSuppressed());
+        verify(mockPreparedStatement).close();
+    }
+
+    @Test
+    public void testPreparationPreservesBindingFailureIdentityDuringCleanup() throws SQLException {
+        final List<Supplier<Throwable>> failureFactories = List.of(() -> new SQLException("binding failed"),
+                () -> new IllegalStateException("binding failed"), () -> new AssertionError("binding failed"));
+
+        for (final boolean callable : List.of(false, true)) {
+            for (final boolean batch : List.of(false, true)) {
+                for (final Supplier<Throwable> failureFactory : failureFactories) {
+                    for (int cleanupKind = 0; cleanupKind < 4; cleanupKind++) {
+                        final Connection conn = mock(Connection.class);
+                        final CallableStatement stmt = mock(CallableStatement.class);
+                        final Throwable failure = failureFactory.get();
+                        final Throwable closeFailure = switch (cleanupKind) {
+                            case 0 -> new SQLException("close failed");
+                            case 1 -> new IllegalStateException("close failed");
+                            case 2 -> new AssertionError("close failed");
+                            default -> failure;
+                        };
+                        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+                        when(conn.prepareCall(anyString())).thenReturn(stmt);
+                        doThrow(failure).when(stmt).setInt(1, 1);
+                        doThrow(closeFailure).when(stmt).close();
+
+                        assertSame(failure, assertThrows(failure.getClass(), () -> {
+                            if (callable) {
+                                if (batch) {
+                                    JdbcUtil.prepareBatchCall(conn, "{call proc(?)}", List.of(1));
+                                } else {
+                                    JdbcUtil.prepareCall(conn, "{call proc(?)}", 1);
+                                }
+                            } else if (batch) {
+                                JdbcUtil.prepareBatchStmt(conn, "SELECT ?", List.of(1));
+                            } else {
+                                JdbcUtil.prepareStmt(conn, "SELECT ?", 1);
+                            }
+                        }));
+                        assertArrayEquals(closeFailure == failure ? new Throwable[0] : new Throwable[] { closeFailure }, failure.getSuppressed());
+                        verify(stmt).close();
+                        verify(conn, never()).close();
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testExtractionHonorsOwnershipWhenDateTypeDetectionThrowsError() throws SQLException {
+        final AssertionError failure = new AssertionError("driver linkage failed");
+        final ResultSet owned = mock(ResultSet.class);
+        final ResultSet borrowed = mock(ResultSet.class);
+        when(owned.getStatement()).thenThrow(failure);
+        when(borrowed.getStatement()).thenThrow(failure);
+
+        assertSame(failure, assertThrows(AssertionError.class, () -> JdbcUtil.extractData(owned, true)));
+        verify(owned).close();
+        assertSame(failure, assertThrows(AssertionError.class, () -> JdbcUtil.extractData(borrowed, false)));
+        verify(borrowed, never()).close();
+    }
+
+    @Test
+    public void testExtractionPreservesDateDetectionFailureWhenClosingAlsoFails() throws SQLException {
+        for (final boolean sameFailure : List.of(false, true)) {
+            final AssertionError failure = new AssertionError("date-type detection failed");
+            final AssertionError closeFailure = sameFailure ? failure : new AssertionError("result set close failed");
+            final ResultSet rs = mock(ResultSet.class);
+            when(rs.getStatement()).thenThrow(failure);
+            doThrow(closeFailure).when(rs).close();
+
+            assertSame(failure, assertThrows(AssertionError.class, () -> JdbcUtil.extractData(rs, true)));
+            assertArrayEquals(sameFailure ? new Throwable[0] : new Throwable[] { closeFailure }, failure.getSuppressed());
+            verify(rs).close();
+        }
+    }
+
+    @Test
+    public void testExtractionPreservesSqlFailureWhenClosingThrowsError() throws SQLException {
+        final SQLException failure = new SQLException("column metadata failed");
+        final AssertionError closeFailure = new AssertionError("result set close failed");
+        final ResultSet rs = mock(ResultSet.class);
+        when(rs.getMetaData()).thenThrow(failure);
+        doThrow(closeFailure).when(rs).close();
+
+        assertSame(failure, assertThrows(SQLException.class, () -> JdbcUtil.extractData(rs, true)));
+        assertArrayEquals(new Throwable[] { closeFailure }, failure.getSuppressed());
+        verify(rs).close();
+    }
+
+    @Test
+    public void testSuccessfulExtractionRetainsQuietCloseSemantics() throws SQLException {
+        for (final Exception closeFailure : List.of(new SQLException("SQL close failure"), new IllegalStateException("runtime close failure"))) {
+            final ResultSet rs = mock(ResultSet.class);
+            when(rs.getMetaData()).thenReturn(mock(ResultSetMetaData.class));
+            doThrow(closeFailure).when(rs).close();
+
+            assertEquals(0, assertDoesNotThrow(() -> JdbcUtil.extractData(rs, true)).size());
+            verify(rs).close();
+        }
+
+        final ResultSet rs = mock(ResultSet.class);
+        final AssertionError closeFailure = new AssertionError("close error");
+        when(rs.getMetaData()).thenReturn(mock(ResultSetMetaData.class));
+        doThrow(closeFailure).when(rs).close();
+
+        assertSame(closeFailure, assertThrows(AssertionError.class, () -> JdbcUtil.extractData(rs, true)));
+        verify(rs).close();
+    }
+
+    @Test
+    public void testColumnHelpersRejectNullResourcesInSignatureOrder() {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnCount(null));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnLabels(null));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnLabel(null, 1));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnIndex((ResultSet) null, "id"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnIndex((ResultSetMetaData) null, "id"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnValue(null, 1));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnValue(null, "id"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getAllColumnValues(null, 1));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getAllColumnValues(null, "id"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnValue(null, 1, null)).getMessage().contains("rs"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnValue(null, "id", null)).getMessage().contains("rs"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnValue(mockResultSet, 1, null)).getMessage().contains("targetClass"));
+        verifyNoInteractions(mockResultSet);
+    }
+
+    @Test
+    public void testColumnHelpersPreserveNullValuesAndSkipNoOps() throws SQLException {
+        assertEquals(0, JdbcUtil.skip(null, 0));
+        assertEquals(0L, JdbcUtil.skip(null, -1L));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.skip(null, 1));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.skip(null, 1L));
+        when(mockResultSet.getMetaData()).thenReturn(mockResultSetMetaData);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSetMetaData.getColumnName(1)).thenReturn("id");
+        assertEquals(-1, JdbcUtil.getColumnIndex(mockResultSet, null));
+        assertEquals(-1, JdbcUtil.getColumnIndex(mockResultSetMetaData, null));
+        assertNull(JdbcUtil.getColumnValue(mockResultSet, 1));
+    }
+
+    @Test
+    public void testOutParametersRejectNullEntriesBeforeReadingTheStatement() throws SQLException {
+        final CallableStatement stmt = mock(CallableStatement.class);
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getOutParameters(stmt, Arrays.asList(OutParam.of(1, Types.INTEGER), null)));
+        assertTrue(JdbcUtil.getOutParameters(stmt, null).getOutParamValues().isEmpty());
+        assertTrue(JdbcUtil.getOutParameters(stmt, List.of()).getOutParamValues().isEmpty());
+        verifyNoInteractions(stmt);
+    }
+
+    @Test
+    public void testGeneratedIdCallbacksValidateOnlyEntitiesThatTheyUse() {
+        final var withId = JdbcUtil.<Long> getIdGeneratorGetterSetter(CrudDao.class, IdedEntity.class,
+                com.landawn.abacus.util.NamingPolicy.values()[0], Long.class);
+        assertThrows(IllegalArgumentException.class, () -> withId._2.apply(null));
+        assertThrows(IllegalArgumentException.class, () -> withId._3.accept(1L, null));
+        final var withoutId = JdbcUtil.<Long> getIdGeneratorGetterSetter(CrudDao.class, SubAddress.class,
+                com.landawn.abacus.util.NamingPolicy.values()[0], Long.class);
+        assertNull(withoutId._2.apply(null));
+        assertDoesNotThrow(() -> withoutId._3.accept(null, null));
+    }
+
+    @Test
+    public void testHikariPoolSizesAreValidatedBeforePoolCreation() {
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.createHikariDataSource("jdbc:unsupported:test", null, null, -1, 0)).getMessage().contains("minIdle"));
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.createHikariDataSource("jdbc:unsupported:test", null, null, 0, 0)).getMessage().contains("maxPoolSize"));
+    }
+
+    @Test
     public void testExtractionOverloadsValidateParametersInSignatureOrder() {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(null, (Jdbc.RowFilter) null)).getMessage().contains("rs"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.extractData(null, (Jdbc.RowExtractor) null)).getMessage().contains("rs"));

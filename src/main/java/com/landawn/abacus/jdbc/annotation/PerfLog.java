@@ -40,6 +40,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>The corresponding global performance-logging switch on {@link JdbcUtil} and the logger's
  * INFO level must also be enabled. A stream-returning method is timed only until it returns the
  * stream; this does not include later traversal by its caller.</p>
+ * <p>A result-cache hit bypasses the method execution and its performance-logging scope; no
+ * whole-method timing is added for that cached return.</p>
  *
  * <p><b>Lookup precedence:</b> a method-level {@code @PerfLog} overrides a type-level one. When
  * neither is present, SQL execution follows the current global/thread-local performance-logging

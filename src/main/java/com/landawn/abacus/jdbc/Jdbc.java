@@ -254,8 +254,8 @@ public final class Jdbc {
          * It maps array elements to prepared statement parameters based on a list of field names,
          * inferring the SQL type from the corresponding property in the provided {@code entityClass}.
          *
-         * <p>When invoked, the returned setter throws {@link IllegalArgumentException} if the parameter
-         * array is {@code null}, its length differs from the field count, or a field name does not
+         * <p>When invoked, the returned setter throws {@link IllegalArgumentException} if the statement
+         * or parameter array is {@code null}, the array length differs from the field count, or a field name does not
          * resolve to a property of {@code entityClass}.</p>
          *
          * <p>
@@ -296,8 +296,16 @@ public final class Jdbc {
                 @SuppressWarnings("rawtypes")
                 private Type[] fieldTypes = null;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws IllegalArgumentException if {@code stmt} or {@code params} is {@code null}, the parameter count differs from the
+                 *         configured field count, or a configured field has no bean property.
+                 * @throws SQLException if binding a value to {@code stmt} fails.
+                 */
                 @Override
                 public void accept(final PreparedStatement stmt, final T[] params) throws IllegalArgumentException, SQLException {
+                    N.checkArgNotNull(stmt, cs.stmt);
                     N.checkArgNotNull(params, cs.params);
                     N.checkArgument(params.length == len, "The parameter array length (%s) must match the field count (%s)", params.length, len);
 
@@ -332,8 +340,8 @@ public final class Jdbc {
          * It maps list elements to prepared statement parameters based on a list of field names,
          * inferring the SQL type from the corresponding property in the provided {@code entityClass}.
          *
-         * <p>When invoked, the returned setter throws {@link IllegalArgumentException} if the parameter
-         * list is {@code null}, its size differs from the field count, or a field name does not
+         * <p>When invoked, the returned setter throws {@link IllegalArgumentException} if the statement
+         * or parameter list is {@code null}, the list size differs from the field count, or a field name does not
          * resolve to a property of {@code entityClass}.</p>
          *
          * <p>
@@ -374,8 +382,16 @@ public final class Jdbc {
                 @SuppressWarnings("rawtypes")
                 private Type[] fieldTypes = null;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws IllegalArgumentException if {@code stmt} or {@code params} is {@code null}, the parameter count differs from the
+                 *         configured field count, or a configured field has no bean property.
+                 * @throws SQLException if binding a value to {@code stmt} fails.
+                 */
                 @Override
                 public void accept(final PreparedStatement stmt, final List<T> params) throws IllegalArgumentException, SQLException {
+                    N.checkArgNotNull(stmt, cs.stmt);
                     N.checkArgNotNull(params, cs.params);
                     N.checkArgument(params.size() == len, "The parameter list size (%s) must match the field count (%s)", params.size(), len);
 
@@ -2155,6 +2171,12 @@ public final class Jdbc {
 
                 private Type<?>[] columnTypes = null;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws SQLException if reading result-set metadata or a requested column value fails.
+                 * @throws IllegalArgumentException if the configured entity class has no bean properties or has conflicting or invalid property metadata.
+                 */
                 @Override
                 public DisposableObjArray apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
                     if (disposable == null) {
@@ -2552,6 +2574,12 @@ public final class Jdbc {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
 
+                    /**
+                     * {@inheritDoc}
+                     *
+                     * @throws SQLException if reading result-set metadata or a requested column value fails.
+                     * @throws IllegalArgumentException if a configured column index exceeds the result set's column count.
+                     */
                     @Override
                     public Object[] apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
                         if (rsColumnGetters == null) {
@@ -2626,6 +2654,12 @@ public final class Jdbc {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
 
+                    /**
+                     * {@inheritDoc}
+                     *
+                     * @throws SQLException if reading result-set metadata or a requested column value fails.
+                     * @throws IllegalArgumentException if a configured column index exceeds the result set's column count.
+                     */
                     @Override
                     public C apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
                         if (rsColumnGetters == null) {
@@ -2696,6 +2730,12 @@ public final class Jdbc {
                     private List<String> columnLabels = null;
                     private int rsColumnCount = -1;
 
+                    /**
+                     * {@inheritDoc}
+                     *
+                     * @throws SQLException if reading result-set metadata or a requested column value fails.
+                     * @throws IllegalArgumentException if a configured column index exceeds the result set's column count.
+                     */
                     @Override
                     public Map<String, Object> apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
                         if (rsColumnGetters == null) {
@@ -2753,6 +2793,13 @@ public final class Jdbc {
                     private Object[] outputRow = null;
                     private DisposableObjArray output;
 
+                    /**
+                     * {@inheritDoc}
+                     *
+                     * @throws SQLException if reading result-set metadata or a requested column value fails, or the configured finisher
+                     *         throws an SQL exception.
+                     * @throws IllegalArgumentException if a configured column index exceeds the result set's column count.
+                     */
                     @Override
                     public R apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
                         if (rsColumnGetters == null) {
@@ -2812,6 +2859,13 @@ public final class Jdbc {
                     private Object[] outputRow = null;
                     private DisposableObjArray output;
 
+                    /**
+                     * {@inheritDoc}
+                     *
+                     * @throws SQLException if reading result-set metadata or a requested column value fails, or the configured finisher
+                     *         throws an SQL exception.
+                     * @throws IllegalArgumentException if a configured column index exceeds the result set's column count.
+                     */
                     @Override
                     public R apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
                         if (rsColumnGetters == null) {
@@ -3084,7 +3138,7 @@ public final class Jdbc {
          * @param <T> target type
          * @param targetClass the class to map rows to
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata
          */
         @SequentialOnly
         @Stateful
@@ -3110,7 +3164,7 @@ public final class Jdbc {
          * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are silently skipped;
          * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column (only relevant for bean targets).
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata
          */
         @SequentialOnly
         @Stateful
@@ -3145,8 +3199,8 @@ public final class Jdbc {
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping
          * @param columnNameConverter a function to transform column names before matching them to properties
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code targetClass} is {@code null}, or if a non-trivial
-         *         {@code columnNameFilter}/{@code columnNameConverter} is supplied together with a
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata, or if a
+         *         non-trivial {@code columnNameFilter}/{@code columnNameConverter} is supplied together with a
          *         single-column scalar {@code targetClass} (which does not support filtering or conversion).
          */
         @SequentialOnly
@@ -3184,8 +3238,8 @@ public final class Jdbc {
          * if {@code false}, an {@code IllegalArgumentException} is thrown by the returned mapper whenever
          * initialization encounters an unmatched column (only relevant for bean targets).
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code targetClass} is {@code null}, or if a non-trivial
-         *         {@code columnNameFilter}/{@code columnNameConverter} is supplied together with a
+         * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata, or if a
+         *         non-trivial {@code columnNameFilter}/{@code columnNameConverter} is supplied together with a
          *         single-column scalar {@code targetClass} (which does not support filtering or conversion).
          */
         @SequentialOnly
@@ -3274,8 +3328,15 @@ public final class Jdbc {
                     return new BiRowMapper<>() {
                         private String[] columnLabels = null;
 
+                        /**
+                         * {@inheritDoc}
+                         *
+                         * @throws IllegalArgumentException if the target collection class has no supported construction path.
+                         * @throws RuntimeException if constructing the target collection fails.
+                         * @throws SQLException if reading result-set metadata or a requested column value fails.
+                         */
                         @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
                             final int columnCount = columnLabelList.size();
 
                             if (columnLabels == null) {
@@ -3313,8 +3374,15 @@ public final class Jdbc {
                         private String[] columnLabels = null;
                         private int columnCount = -1;
 
+                        /**
+                         * {@inheritDoc}
+                         *
+                         * @throws IllegalArgumentException if the target map class has no supported construction path.
+                         * @throws RuntimeException if constructing the target map fails.
+                         * @throws SQLException if reading result-set metadata or a requested column value fails.
+                         */
                         @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
                             if (columnLabels == null) {
                                 columnCount = columnLabelList.size();
                                 final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
@@ -3337,8 +3405,15 @@ public final class Jdbc {
                         private String[] columnLabels = null;
                         private int columnCount = -1;
 
+                        /**
+                         * {@inheritDoc}
+                         *
+                         * @throws IllegalArgumentException if the target map class has no supported construction path.
+                         * @throws RuntimeException if constructing the target map fails.
+                         * @throws SQLException if reading result-set metadata or a requested column value fails.
+                         */
                         @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
                             if (columnLabels == null) {
                                 columnCount = columnLabelList.size();
                                 final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
@@ -3378,6 +3453,13 @@ public final class Jdbc {
                     private Type<?>[] columnTypes = null;
                     private int columnCount = -1;
 
+                    /**
+                     * {@inheritDoc}
+                     *
+                     * @throws IllegalArgumentException if an included column has no matching bean property and unmatched columns are not ignored, or the
+                     *         bean property metadata is invalid.
+                     * @throws SQLException if reading result-set metadata or a requested column value fails.
+                     */
                     @Override
                     public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
                         if (columnLabels == null) {
@@ -3484,6 +3566,12 @@ public final class Jdbc {
                     private final Type<? extends T> targetType = N.typeOf(targetClass);
                     private int columnCount = -1;
 
+                    /**
+                     * {@inheritDoc}
+                     *
+                     * @throws IllegalArgumentException if {@code columnLabelList} does not contain exactly one column for the scalar target type.
+                     * @throws SQLException if reading result-set metadata or a requested column value fails.
+                     */
                     @Override
                     public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
                         if (columnCount != 1 && (columnCount = columnLabelList.size()) != 1) {
@@ -3524,8 +3612,8 @@ public final class Jdbc {
          * @param entityClass the class to map rows to
          * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, or if {@code prefixAndPropNameMap} is
-         *         non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, its bean property metadata is invalid, or if
+         *         {@code prefixAndPropNameMap} is non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
          *         {@link #to(Class, boolean)}, which also accepts array/{@code List}/{@code Map}/scalar targets)
          */
         @SequentialOnly
@@ -3552,8 +3640,8 @@ public final class Jdbc {
          * @param ignoreUnmatchedColumns if {@code true}, columns without a matching property are silently skipped;
          * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column
          * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
-         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, or if {@code prefixAndPropNameMap} is
-         *         non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
+         * @throws IllegalArgumentException if {@code entityClass} is {@code null}, its bean property metadata is invalid, or if
+         *         {@code prefixAndPropNameMap} is non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
          *         {@link #to(Class, boolean)}, which also accepts array/{@code List}/{@code Map}/scalar targets)
          */
         @SequentialOnly
@@ -3576,6 +3664,13 @@ public final class Jdbc {
                 private Type<?>[] columnTypes = null;
                 private int columnCount = -1;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws IllegalArgumentException if an included column has no matching bean property and unmatched columns are not ignored, or the bean
+                 *         property metadata is invalid.
+                 * @throws SQLException if reading result-set metadata or a requested column value fails.
+                 */
                 @Override
                 public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
 
@@ -3749,8 +3844,14 @@ public final class Jdbc {
             return new BiRowMapper<>() {
                 private Object[] outputValuesForRowExtractor = null;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws IllegalArgumentException if the configured row extractor rejects the output array or its configured column mappings.
+                 * @throws SQLException if the configured row extractor or a JDBC column read fails.
+                 */
                 @Override
-                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
                     final int columnCount = columnLabels.size();
 
                     if (outputValuesForRowExtractor == null) {
@@ -3892,8 +3993,14 @@ public final class Jdbc {
             return new BiRowMapper<>() {
                 private Object[] outputValuesForRowExtractor = null;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws IllegalArgumentException if the configured row extractor rejects the output array or its configured column mappings.
+                 * @throws SQLException if the configured row extractor or a JDBC column read fails.
+                 */
                 @Override
-                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
                     final int columnCount = columnLabels.size();
 
                     if (outputValuesForRowExtractor == null) {
@@ -3953,8 +4060,14 @@ public final class Jdbc {
                 private Object[] outputValuesForRowExtractor = null;
                 private String[] keyNames = null;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws IllegalArgumentException if the configured row extractor rejects the output array or its configured column mappings.
+                 * @throws SQLException if the configured row extractor or a JDBC column read fails.
+                 */
                 @Override
-                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
                     final int columnCount = columnLabels.size();
 
                     if (outputValuesForRowExtractor == null) {
@@ -4156,8 +4269,14 @@ public final class Jdbc {
 
                 private Type<?>[] columnTypes = null;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws IllegalArgumentException if the configured entity class has no bean properties or has conflicting or invalid property metadata.
+                 * @throws SQLException if reading result-set metadata or a requested column value fails.
+                 */
                 @Override
-                public DisposableObjArray apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                public DisposableObjArray apply(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
                     if (disposable == null) {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
@@ -4561,7 +4680,7 @@ public final class Jdbc {
              * @param <T> target type
              * @param targetClass the class to map rows to
              * @return a new stateful {@code BiRowMapper<T>}
-             * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+             * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata
              */
             @SequentialOnly
             @Stateful
@@ -4586,7 +4705,7 @@ public final class Jdbc {
              * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property are silently skipped;
              * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column (for bean target classes)
              * @return a new stateful {@code BiRowMapper<T>}
-             * @throws IllegalArgumentException if {@code targetClass} is {@code null}
+             * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata
              */
             @SequentialOnly
             @Stateful
@@ -4602,8 +4721,14 @@ public final class Jdbc {
                         private ColumnGetter<?>[] rsColumnGetters = null;
                         private int rsColumnCount = -1;
 
+                        /**
+                         * {@inheritDoc}
+                         *
+                         * @throws IllegalArgumentException if a configured column name is absent from {@code columnLabelList}.
+                         * @throws SQLException if reading result-set metadata or a requested column value fails.
+                         */
                         @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
                                 rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
@@ -4629,8 +4754,16 @@ public final class Jdbc {
                         private ColumnGetter<?>[] rsColumnGetters = null;
                         private int rsColumnCount = -1;
 
+                        /**
+                         * {@inheritDoc}
+                         *
+                         * @throws IllegalArgumentException if a configured column name is absent from {@code columnLabelList}, or the target collection
+                         *         has no supported construction path.
+                         * @throws RuntimeException if constructing the target collection fails.
+                         * @throws SQLException if reading result-set metadata or a requested column value fails.
+                         */
                         @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
                                 rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
@@ -4652,8 +4785,16 @@ public final class Jdbc {
                         private int rsColumnCount = -1;
                         private String[] columnLabels = null;
 
+                        /**
+                         * {@inheritDoc}
+                         *
+                         * @throws IllegalArgumentException if a configured column name is absent from {@code columnLabelList}, or the target map has no
+                         *         supported construction path.
+                         * @throws RuntimeException if constructing the target map fails.
+                         * @throws SQLException if reading result-set metadata or a requested column value fails.
+                         */
                         @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
 
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
@@ -4683,8 +4824,15 @@ public final class Jdbc {
                         private String[] columnLabels = null;
                         private PropInfo[] propInfos;
 
+                        /**
+                         * {@inheritDoc}
+                         *
+                         * @throws IllegalArgumentException if a configured column name is absent, or a result column has no bean property and unmatched
+                         *         columns are not ignored.
+                         * @throws SQLException if reading result-set metadata or a requested column value fails.
+                         */
                         @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
                             if (rsColumnGetters == null) {
                                 rsColumnCount = columnLabelList.size();
                                 final ColumnGetter<?>[] columnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
@@ -4745,8 +4893,15 @@ public final class Jdbc {
                         private int rsColumnCount = -1;
                         private ColumnGetter<?>[] rsColumnGetters = null;
 
+                        /**
+                         * {@inheritDoc}
+                         *
+                         * @throws IllegalArgumentException if {@code columnLabelList} does not contain exactly one column, or a configured column name is
+                         *         absent.
+                         * @throws SQLException if reading result-set metadata or a requested column value fails.
+                         */
                         @Override
-                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
+                        public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
                             if (rsColumnCount != 1 && (rsColumnCount = columnLabelList.size()) != 1) {
                                 throw new IllegalArgumentException(
                                         "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
@@ -4959,8 +5114,14 @@ public final class Jdbc {
 
                 private Type<?>[] columnTypes = null;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws SQLException if reading result-set metadata or a requested column value fails.
+                 * @throws IllegalArgumentException if the configured entity class has no bean properties or has conflicting or invalid property metadata.
+                 */
                 @Override
-                public void accept(final ResultSet rs) throws SQLException {
+                public void accept(final ResultSet rs) throws SQLException, IllegalArgumentException {
                     if (disposable == null) {
                         final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
 
@@ -5168,8 +5329,14 @@ public final class Jdbc {
 
                 private Type<?>[] columnTypes = null;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws IllegalArgumentException if the configured entity class has no bean properties or has conflicting or invalid property metadata.
+                 * @throws SQLException if reading result-set metadata or a requested column value fails.
+                 */
                 @Override
-                public void accept(final ResultSet rs, final List<String> columnLabels) throws SQLException {
+                public void accept(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
                     if (disposable == null) {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
@@ -5467,7 +5634,7 @@ public final class Jdbc {
          *
          * @param rs the {@code ResultSet} positioned at a valid row; must not be {@code null}
          * @param outputRow the array to be populated with data from the current row; must not be {@code null}
-         * @throws IllegalArgumentException if a built-in extractor receives a null or undersized output array,
+         * @throws IllegalArgumentException if a built-in extractor receives a null result set or a null or undersized output array,
          *         or a builder-configured column index exceeds the result set's column count
          * @throws SQLException if reading the current row's column values, or the result set metadata needed to map them, fails.
          */
@@ -5484,7 +5651,8 @@ public final class Jdbc {
          *
          * @param entityClassForFetch the entity class whose properties guide the type mapping.
          * @return a new stateful {@code RowExtractor}.
-         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null} or is not a bean class with getter/setter methods.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null}, is not a bean class with getter/setter methods,
+         *         or has conflicting aliases or invalid property metadata.
          */
         @SequentialOnly
         @Stateful
@@ -5502,7 +5670,8 @@ public final class Jdbc {
          * @param entityClassForFetch the entity class for type mapping.
          * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code RowExtractor}.
-         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null} or is not a bean class with getter/setter methods.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null}, is not a bean class with getter/setter methods,
+         *         or has conflicting aliases or invalid property metadata.
          */
         @SequentialOnly
         @Stateful
@@ -5520,7 +5689,8 @@ public final class Jdbc {
          * @param entityClassForFetch the entity class for type mapping.
          * @param columnLabels the explicit list of column labels to use for mapping.
          * @return a new stateful {@code RowExtractor}.
-         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null} or is not a bean class with getter/setter methods.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null}, is not a bean class with getter/setter methods,
+         *         or has conflicting aliases or invalid property metadata.
          */
         @SequentialOnly
         @Stateful
@@ -5538,7 +5708,7 @@ public final class Jdbc {
          *
          * <p>The returned extractor writes column values into positions {@code 0..columnCount-1} of the
          * {@code outputRow} passed to {@code accept}, so that array must be at least as long as the number of
-         * mapped columns. A {@code null} or undersized output array is rejected with
+         * mapped columns. A {@code null} result set or a {@code null} or undersized output array is rejected with
          * {@link IllegalArgumentException} before any values are written.</p>
          *
          * <p>Non-empty {@code columnLabels} and {@code prefixAndPropNameMap} inputs are defensively copied when
@@ -5548,7 +5718,8 @@ public final class Jdbc {
          * @param columnLabels an optional list of column labels to use for mapping. If {@code null} or empty, they are discovered from the {@code ResultSet}.
          * @param prefixAndPropNameMap an optional map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @return a new stateful {@code RowExtractor}.
-         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null} or is not a bean class with getter/setter methods.
+         * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null}, is not a bean class with getter/setter methods,
+         *         or has conflicting aliases or invalid property metadata.
          */
         @SequentialOnly
         @Stateful
@@ -5564,14 +5735,28 @@ public final class Jdbc {
                 private Type<?>[] columnTypes = null;
                 private int columnCount = -1;
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws IllegalArgumentException if {@code rs} or {@code outputRow} is {@code null}, or {@code outputRow} is shorter than
+                 *         the configured or actual column count.
+                 * @throws SQLException if reading result-set metadata or a requested column value fails.
+                 */
                 @Override
-                public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
+                public void accept(final ResultSet rs, final Object[] outputRow) throws IllegalArgumentException, SQLException {
+                    N.checkArgNotNull(rs, cs.rs);
                     N.checkArgNotNull(outputRow, cs.outputRow);
+
+                    final List<String> columnLabelList = columnTypes == null
+                            ? (configuredColumnLabels == null ? JdbcUtil.getColumnLabels(rs) : configuredColumnLabels)
+                            : null;
+                    final int requiredColumnCount = columnTypes == null ? columnLabelList.size() : columnCount;
+                    N.checkArgument(outputRow.length >= requiredColumnCount, "The output array length (%s) must be at least the column count (%s)",
+                            outputRow.length, requiredColumnCount);
 
                     if (columnTypes == null) {
                         final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClassForFetch);
-                        final List<String> columnLabelList = configuredColumnLabels == null ? JdbcUtil.getColumnLabels(rs) : configuredColumnLabels;
-                        columnCount = columnLabelList.size();
+                        columnCount = requiredColumnCount;
                         final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
 
                         // Resolve into a local array and publish it only once every column is mapped: 'columnTypes != null'
@@ -5641,9 +5826,6 @@ public final class Jdbc {
 
                         columnTypes = resolvedColumnTypes;
                     }
-
-                    N.checkArgument(outputRow.length >= columnCount, "The output array length (%s) must be at least the column count (%s)", outputRow.length,
-                            columnCount);
 
                     for (int i = 0; i < columnCount; i++) {
                         outputRow[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
@@ -5925,7 +6107,7 @@ public final class Jdbc {
              * parallel streams.</p>
              *
              * <p>Note: the returned extractor's {@code accept} method throws an {@link IllegalArgumentException}
-             * if the supplied output array is {@code null} or shorter than the result set's column count,
+             * if the supplied result set or output array is {@code null}, the output array is shorter than the result set's column count,
              * or a configured column index exceeds that count. SQL errors occur when {@code accept} reads
              * the metadata or column values, rather than when this builder method is called.</p>
              *
@@ -5940,17 +6122,26 @@ public final class Jdbc {
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
 
+                    /**
+                     * {@inheritDoc}
+                     *
+                     * @throws IllegalArgumentException if {@code rs} or {@code outputRow} is {@code null}, {@code outputRow} is shorter than the
+                     *         result set's column count, or a configured column index exceeds that count.
+                     * @throws SQLException if reading result-set metadata or a requested column value fails.
+                     */
                     @Override
-                    public void accept(final ResultSet rs, final Object[] outputRow) throws SQLException {
+                    public void accept(final ResultSet rs, final Object[] outputRow) throws IllegalArgumentException, SQLException {
+                        N.checkArgNotNull(rs, cs.rs);
                         N.checkArgNotNull(outputRow, cs.outputRow);
 
+                        final int requiredColumnCount = rsColumnGetters == null ? rs.getMetaData().getColumnCount() : rsColumnCount;
+                        N.checkArgument(outputRow.length >= requiredColumnCount, "The output array length (%s) must be at least the column count (%s)",
+                                outputRow.length, requiredColumnCount);
+
                         if (rsColumnGetters == null) {
-                            rsColumnCount = rs.getMetaData().getColumnCount();
+                            rsColumnCount = requiredColumnCount;
                             rsColumnGetters = initColumnGetter(rsColumnCount);
                         }
-
-                        N.checkArgument(outputRow.length >= rsColumnCount, "The output array length (%s) must be at least the column count (%s)",
-                                outputRow.length, rsColumnCount);
 
                         for (int i = 0; i < rsColumnCount; i++) {
                             outputRow[i] = rsColumnGetters[i].get(rs, i + 1);
@@ -5962,9 +6153,9 @@ public final class Jdbc {
                      *
                      * @param columnCount the number of result columns
                      * @return the getter for each result column
-                     * @throws IllegalArgumentException if a configured index exceeds {@code columnCount}
+                     * @throws IllegalArgumentException if a configured column index exceeds {@code columnCount}.
                      */
-                    private ColumnGetter<?>[] initColumnGetter(final int columnCount) { //NOSONAR
+                    private ColumnGetter<?>[] initColumnGetter(final int columnCount) throws IllegalArgumentException { //NOSONAR
                         final ColumnGetter<?>[] columnGetters = new ColumnGetter<?>[columnCount];
                         final ColumnGetter<?> defaultColumnGetter = configuredColumnGetters.get(0);
 
@@ -6124,9 +6315,11 @@ public final class Jdbc {
          * @param rs the {@code ResultSet} to extract from.
          * @param columnIndex the 1-based index of the column.
          * @return the extracted value of type {@code V}.
+         * @throws IllegalArgumentException if {@link #GET_OBJECT} receives a {@code null} result set.
+         * @throws NullPointerException if a predefined getter that directly delegates to {@link ResultSet} receives a {@code null} result set.
          * @throws SQLException if reading the value of column {@code columnIndex} in the current row fails, e.g. the index is invalid or the value cannot be converted.
          */
-        V get(ResultSet rs, int columnIndex) throws SQLException;
+        V get(ResultSet rs, int columnIndex) throws IllegalArgumentException, NullPointerException, SQLException;
 
         /**
          * Returns a cached (or newly created) {@code ColumnGetter} for the specified class type.
@@ -7263,8 +7456,14 @@ public final class Jdbc {
             N.checkArgNotNull(beforeInvokeAction, cs.beforeInvokeAction);
 
             return new Handler<>() {
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws RuntimeException if the configured invocation action throws an exception.
+                 */
                 @Override
-                public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature)
+                        throws RuntimeException {
                     beforeInvokeAction.accept(targetObject, args, methodSignature);
                 }
             };
@@ -7295,9 +7494,14 @@ public final class Jdbc {
             N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction);
 
             return new Handler<>() {
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws RuntimeException if the configured invocation action throws an exception.
+                 */
                 @Override
                 public void afterInvoke(final Object result, final T targetObject, final Object[] args,
-                        final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                        final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws RuntimeException {
 
                     afterInvokeAction.accept(result, targetObject, args, methodSignature);
                 }
@@ -7334,14 +7538,25 @@ public final class Jdbc {
             N.checkArgNotNull(afterInvokeAction, cs.afterInvokeAction);
 
             return new Handler<>() {
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws E if the configured invocation action throws an exception.
+                 */
                 @Override
-                public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                public void beforeInvoke(final T targetObject, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature)
+                        throws E {
                     beforeInvokeAction.accept(targetObject, args, methodSignature);
                 }
 
+                /**
+                 * {@inheritDoc}
+                 *
+                 * @throws E if the configured invocation action throws an exception.
+                 */
                 @Override
                 public void afterInvoke(final Object result, final T targetObject, final Object[] args,
-                        final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                        final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws E {
 
                     afterInvokeAction.accept(result, targetObject, args, methodSignature);
                 }
@@ -7694,8 +7909,8 @@ public final class Jdbc {
          * @param daoProxy the DAO proxy instance (unused).
          * @param args the method arguments (unused).
          * @param methodSignature a tuple containing method metadata; its method and return type decide the zero-row-count short-circuit.
-         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
-         * @throws NullPointerException if {@code methodSignature} is {@code null}, or its return type is null for a built-in update method.
+         * @throws IllegalArgumentException if {@code defaultCacheKey} or {@code methodSignature} is {@code null}, or the return type
+         *         in {@code methodSignature} is {@code null} for a built-in update method.
          * @throws ClassCastException if a built-in numeric update method supplies a non-null result that is not a {@code Number}.
          * @throws IllegalStateException if invalidation is required and the backing pool has been closed during JVM shutdown.
          */
@@ -7703,12 +7918,15 @@ public final class Jdbc {
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature)
-                throws IllegalArgumentException, NullPointerException, ClassCastException, IllegalStateException {
+                throws IllegalArgumentException, ClassCastException, IllegalStateException {
             N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
+            N.checkArgNotNull(methodSignature, cs.methodSignature);
 
             final Method method = methodSignature._1;
 
             if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+                N.checkArgNotNull(methodSignature._3, "methodSignature must specify the return type of a built-in update method");
+
                 if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
                     return;
                 }
@@ -7839,8 +8057,8 @@ public final class Jdbc {
          * No action is taken for built-in update operations that report zero affected rows (an
          * {@code int}/{@code long} result of {@code 0}).
          *
-         * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
-         * @throws NullPointerException if {@code methodSignature} is {@code null}, or its return type is null for a built-in update method.
+         * @throws IllegalArgumentException if {@code defaultCacheKey} or {@code methodSignature} is {@code null}, or the return type
+         *         in {@code methodSignature} is {@code null} for a built-in update method.
          * @throws ClassCastException if a built-in numeric update method supplies a non-null result that is not a {@code Number}.
          * @throws UnsupportedOperationException if invalidation is required and the backing map does not support removal.
          */
@@ -7848,12 +8066,15 @@ public final class Jdbc {
         @SuppressWarnings("unused")
         public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
                 final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature)
-                throws IllegalArgumentException, NullPointerException, ClassCastException, UnsupportedOperationException {
+                throws IllegalArgumentException, ClassCastException, UnsupportedOperationException {
             N.checkArgNotNull(defaultCacheKey, cs.defaultCacheKey);
+            N.checkArgNotNull(methodSignature, cs.methodSignature);
 
             final Method method = methodSignature._1;
 
             if (JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.contains(method)) {
+                N.checkArgNotNull(methodSignature._3, "methodSignature must specify the return type of a built-in update method");
+
                 if ((methodSignature._3.equals(int.class) || methodSignature._3.equals(long.class)) && (result != null && ((Number) result).longValue() == 0)) {
                     return;
                 }

@@ -191,7 +191,8 @@ public @interface DaoConfig {
      * <p>This applies to the built-in join methods provided by {@code JoinEntityHelper}
      * (for example, {@code loadJoinEntities}, {@code loadAllJoinEntities}, and the
      * {@code findFirst(...)} overloads that accept join-entity arguments), which are only available
-     * on a DAO that also extends {@code JoinEntityHelper}/{@code CrudJoinEntityHelper}.
+     * on a DAO that also extends {@code JoinEntityHelper}/{@code CrudJoinEntityHelper} or one of their
+     * read-only or unchecked counterparts.
      * It does not affect user-written SQL in {@link Query @Query} methods.</p>
      *
      * <p><b>Usage Examples:</b></p>

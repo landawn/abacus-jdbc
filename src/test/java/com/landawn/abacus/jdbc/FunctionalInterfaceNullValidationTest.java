@@ -167,7 +167,7 @@ public class FunctionalInterfaceNullValidationTest extends TestBase {
         } else if (Executor.class.isAssignableFrom(type)) {
             return (Executor) Runnable::run;
         } else if (Dataset.class.isAssignableFrom(type)) {
-            return mock(RowDataset.class);
+            return Dataset.rows(List.of("value"), new Object[0][]);
         } else if (type.isEnum()) {
             return type.getEnumConstants()[0];
         } else {

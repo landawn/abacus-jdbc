@@ -19,6 +19,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -53,10 +55,12 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    default int update(final String propName, final Object propValue, final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
+    default int update(final String propName, final Object propValue, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         N.checkArgNotEmpty(propName, cs.propName);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -81,10 +85,12 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final Map<String, Object> updateProps, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
+    int update(final Map<String, Object> updateProps, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Updates all records matching the condition using all updatable properties from the entity.
@@ -109,10 +115,11 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or if the entity class has no updatable property
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    default int update(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
+    default int update(final T entity, final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -146,9 +153,11 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
      *                                  or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
+    int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
 }

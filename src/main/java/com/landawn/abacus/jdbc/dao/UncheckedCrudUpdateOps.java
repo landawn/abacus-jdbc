@@ -19,6 +19,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -55,10 +57,11 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @return the number of rows updated (typically 1 if successful, 0 if not found); also 0, without executing any
      *         statement, if the entity class has no updatable non-ID property
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final T entity) throws IllegalArgumentException, UncheckedSQLException;
+    int update(final T entity) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Updates only the specified properties of the entity in the database.
@@ -80,10 +83,12 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param propNamesToUpdate the property names to update (must not be {@code null} or empty)
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToUpdate} is {@code null} or empty
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final T entity, final Collection<String> propNamesToUpdate) throws IllegalArgumentException, UncheckedSQLException;
+    int update(final T entity, final Collection<String> propNamesToUpdate)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Updates a single property of the entity identified by ID.
@@ -103,10 +108,12 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    default int update(final String propName, final Object propValue, final ID id) throws IllegalArgumentException, UncheckedSQLException {
+    default int update(final String propName, final Object propValue, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         N.checkArgNotEmpty(propName, cs.propName);
         N.checkArgNotNull(id, cs.id);
 
@@ -133,10 +140,11 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
-    int update(final Map<String, Object> updateProps, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    int update(final Map<String, Object> updateProps, final ID id) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Batch updates multiple entities using the default batch size
@@ -157,12 +165,16 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @return the total number of rows updated
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
+     * @throws IllegalArgumentException if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      */
     @Override
-    default int batchUpdate(final Collection<? extends T> entities) throws IllegalStateException, UncheckedSQLException, ArithmeticException {
+    default int batchUpdate(final Collection<? extends T> entities)
+            throws IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException, IllegalArgumentException {
         return batchUpdate(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -181,16 +193,19 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param batchSize the number of entities to process in each batch
      * @return the total number of rows updated; 0, without executing any statement, if {@code entities} is {@code null}
      *         or empty or the entity class has no updatable non-ID property
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code batchSize} is not positive,
+     *         if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     int batchUpdate(final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException;
 
     /**
      * Batch updates only the specified properties of multiple entities using the default batch size
@@ -210,16 +225,19 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities to update
      * @param propNamesToUpdate the property names to update for each entity (must not be {@code null} or empty)
      * @return the total number of rows updated
-     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty,
+     *         if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     default int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
         return batchUpdate(entities, propNamesToUpdate, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -240,15 +258,18 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param propNamesToUpdate the property names to update for each entity (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch
      * @return the total number of rows updated
-     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code propNamesToUpdate} is {@code null} or empty, or if {@code batchSize} is not positive,
+     *         if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
     int batchUpdate(final Collection<? extends T> entities, final Collection<String> propNamesToUpdate, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException;
 
 }

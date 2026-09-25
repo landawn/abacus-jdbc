@@ -40,6 +40,7 @@ import java.util.Map;
 
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
+import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Throwables;
 
 /**
@@ -119,8 +120,7 @@ final class ResultSetProxy implements ResultSet {
     private Map<String, Throwables.Function<ResultSet, Object, SQLException>> columnGettersByLabel;
 
     /**
-     * The wrapped {@link ResultSet} to which every operation is delegated. Not validated at
-     * construction time; a {@code null} delegate fails on the first delegated operation.
+     * The non-null wrapped {@link ResultSet} to which every operation is delegated.
      */
     private final ResultSet delegate;
 
@@ -129,14 +129,13 @@ final class ResultSetProxy implements ResultSet {
      * The proxy will enhance the performance of {@code getObject()} calls through caching
      * while transparently delegating all other operations to the underlying ResultSet.
      *
-     * <p>No null-check is performed here; passing a {@code null} delegate results in a
-     * {@link NullPointerException} on the first delegated operation. Use {@link #wrap(ResultSet)}
-     * for null-safe construction.</p>
+     * <p>Use {@link #wrap(ResultSet)} when a {@code null} input should produce a {@code null} wrapper.</p>
      *
      * @param delegate the ResultSet to be wrapped, must not be {@code null}
+     * @throws IllegalArgumentException if {@code delegate} is {@code null}
      */
-    ResultSetProxy(ResultSet delegate) {
-        this.delegate = delegate;
+    ResultSetProxy(ResultSet delegate) throws IllegalArgumentException {
+        this.delegate = N.checkArgNotNull(delegate, cs.delegate);
     }
 
     /**
@@ -189,7 +188,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying ResultSet.
      *
      * @return {@code true} if the new current row is valid; {@code false} if there are no more rows
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code next} on the wrapped result set or this method is called on a closed
+     *         result set
      */
     @Override
     public boolean next() throws SQLException {
@@ -200,7 +200,7 @@ final class ResultSetProxy implements ResultSet {
      * Releases this ResultSet object's database and JDBC resources immediately.
      * Delegates to the underlying ResultSet.
      *
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if the driver fails while executing {@code close} on the wrapped result set
      */
     @Override
     public void close() throws SQLException {
@@ -215,7 +215,8 @@ final class ResultSetProxy implements ResultSet {
      * {@link ResultSet}.</p>
      *
      * @return {@code true} if the last column value read was SQL NULL and {@code false} otherwise
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code wasNull} on the wrapped result set or this method is called on a closed
+     *         result set
      */
     @Override
     public boolean wasNull() throws SQLException {
@@ -228,7 +229,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getString} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public String getString(int columnIndex) throws SQLException {
@@ -241,7 +243,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code false}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getBoolean} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public boolean getBoolean(int columnIndex) throws SQLException {
@@ -254,7 +257,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getByte} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public byte getByte(int columnIndex) throws SQLException {
@@ -267,7 +271,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getShort} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public short getShort(int columnIndex) throws SQLException {
@@ -280,7 +285,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getInt} on the wrapped result set
+     *         or this method is called on a closed result set
      */
     @Override
     public int getInt(int columnIndex) throws SQLException {
@@ -293,7 +299,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getLong} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public long getLong(int columnIndex) throws SQLException {
@@ -306,7 +313,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getFloat} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public float getFloat(int columnIndex) throws SQLException {
@@ -319,7 +327,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getDouble} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public double getDouble(int columnIndex) throws SQLException {
@@ -334,7 +343,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param scale the number of digits to the right of the decimal point
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getBigDecimal} on the wrapped
+     *         result set or this method is called on a closed result set
      * @deprecated Deprecated in the JDBC API since JDK 1.2; use {@link #getBigDecimal(int)} instead.
      */
     @Deprecated(since = "1.2")
@@ -349,7 +359,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getBytes} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public byte[] getBytes(int columnIndex) throws SQLException {
@@ -362,7 +373,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getDate} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Date getDate(int columnIndex) throws SQLException {
@@ -375,7 +387,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getTime} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Time getTime(int columnIndex) throws SQLException {
@@ -388,7 +401,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getTimestamp} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public Timestamp getTimestamp(int columnIndex) throws SQLException {
@@ -401,7 +415,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return a Java input stream that delivers the column value as a stream of one-byte ASCII characters; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getAsciiStream} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public InputStream getAsciiStream(int columnIndex) throws SQLException {
@@ -414,7 +429,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return a Java input stream that delivers the column value as a stream of two-byte Unicode characters; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getUnicodeStream} on the wrapped
+     *         result set or this method is called on a closed result set
      * @deprecated Deprecated in the JDBC API since JDK 1.2; use {@link #getCharacterStream(int)} instead.
      */
     @Deprecated(since = "1.2")
@@ -429,7 +445,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return a Java input stream that delivers the column value as a stream of uninterpreted bytes; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getBinaryStream} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public InputStream getBinaryStream(int columnIndex) throws SQLException {
@@ -442,7 +459,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getString} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public String getString(String columnLabel) throws SQLException {
@@ -455,7 +473,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code false}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getBoolean} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public boolean getBoolean(String columnLabel) throws SQLException {
@@ -468,7 +487,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getByte} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public byte getByte(String columnLabel) throws SQLException {
@@ -481,7 +501,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getShort} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public short getShort(String columnLabel) throws SQLException {
@@ -494,7 +515,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getInt} on the wrapped result set
+     *         or this method is called on a closed result set
      */
     @Override
     public int getInt(String columnLabel) throws SQLException {
@@ -507,7 +529,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getLong} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public long getLong(String columnLabel) throws SQLException {
@@ -520,7 +543,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getFloat} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public float getFloat(String columnLabel) throws SQLException {
@@ -533,7 +557,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code 0}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getDouble} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public double getDouble(String columnLabel) throws SQLException {
@@ -548,7 +573,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param scale the number of digits to the right of the decimal point
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getBigDecimal} on the wrapped
+     *         result set or this method is called on a closed result set
      * @deprecated Deprecated in the JDBC API since JDK 1.2; use {@link #getBigDecimal(String)} instead.
      */
     @Deprecated(since = "1.2")
@@ -563,7 +589,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getBytes} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public byte[] getBytes(String columnLabel) throws SQLException {
@@ -576,7 +603,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getDate} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Date getDate(String columnLabel) throws SQLException {
@@ -589,7 +617,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getTime} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Time getTime(String columnLabel) throws SQLException {
@@ -602,7 +631,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getTimestamp} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public Timestamp getTimestamp(String columnLabel) throws SQLException {
@@ -615,7 +645,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return a Java input stream that delivers the column value as a stream of one-byte ASCII characters; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getAsciiStream} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public InputStream getAsciiStream(String columnLabel) throws SQLException {
@@ -628,7 +659,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return a Java input stream that delivers the column value as a stream of two-byte Unicode characters; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getUnicodeStream} on the wrapped
+     *         result set or this method is called on a closed result set
      * @deprecated Deprecated in the JDBC API since JDK 1.2; use {@link #getCharacterStream(String)} instead.
      */
     @Deprecated(since = "1.2")
@@ -643,7 +675,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return a Java input stream that delivers the column value as a stream of uninterpreted bytes; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getBinaryStream} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public InputStream getBinaryStream(String columnLabel) throws SQLException {
@@ -656,7 +689,8 @@ final class ResultSetProxy implements ResultSet {
      * that this method returns. Delegates to the underlying {@link ResultSet}.
      *
      * @return the first {@link SQLWarning} object reported or {@code null} if there are none
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getWarnings} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public SQLWarning getWarnings() throws SQLException {
@@ -668,7 +702,8 @@ final class ResultSetProxy implements ResultSet {
      * {@link #getWarnings} returns {@code null} until a new warning is reported for this ResultSet object.
      * Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code clearWarnings} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public void clearWarnings() throws SQLException {
@@ -679,7 +714,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves the name of the SQL cursor used by this ResultSet object. Delegates to the underlying {@link ResultSet}.
      *
      * @return the SQL name for this ResultSet object's cursor
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getCursorName} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public String getCursorName() throws SQLException {
@@ -691,7 +727,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @return the description of this ResultSet object's columns
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getMetaData} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public ResultSetMetaData getMetaData() throws SQLException {
@@ -716,10 +753,10 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if reading this result set's metadata fails; if converting an
-     *         Oracle date/timestamp value or materializing a returned {@link Blob} or {@link Clob} fails, including when
-     *         the LOB is longer than {@link Integer#MAX_VALUE}; if a database access error occurs or this method is called
-     *         on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if reading this result set's metadata fails; if converting an Oracle
+     *         date/timestamp value or materializing a returned {@link Blob} or {@link Clob} fails, including when the LOB is longer than {@link
+     *         Integer#MAX_VALUE}; if the driver fails while executing {@code getObject} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public Object getObject(int columnIndex) throws SQLException {
@@ -828,9 +865,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is {@code null} or is not valid; if reading this result set's metadata fails;
-     *         if converting an Oracle date/timestamp value or materializing a returned {@link Blob} or {@link Clob} fails,
-     *         including when the LOB is longer than {@link Integer#MAX_VALUE}; if a database access error occurs or this
+     * @throws SQLException if the {@code columnLabel} is {@code null} or is not valid; if reading this result set's metadata fails; if
+     *         converting an Oracle date/timestamp value or materializing a returned {@link Blob} or {@link Clob} fails, including when the LOB
+     *         is longer than {@link Integer#MAX_VALUE}; if the driver fails while executing {@code getObject} on the wrapped result set or this
      *         method is called on a closed result set
      */
     @Override
@@ -924,7 +961,9 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param type the {@link Class} representing the Java data type to convert the designated column to
      * @return an instance of {@code type} holding the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if conversion is not supported, type is {@code null} or another error occurs; if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if {@code type} is {@code null} or the driver cannot convert the column value to {@code type}; if the {@code
+     *         columnIndex} is not valid; if the driver fails while executing {@code getObject} on the wrapped result set or this method is
+     *         called on a closed result set
      */
     @Override
     public <T> T getObject(int columnIndex, Class<T> type) throws SQLException {
@@ -939,7 +978,9 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param type the {@link Class} representing the Java data type to convert the designated column to
      * @return an instance of {@code type} holding the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if conversion is not supported, type is {@code null} or another error occurs; if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if {@code type} is {@code null} or the driver cannot convert the column value to {@code type}; if the {@code
+     *         columnLabel} is not valid; if the driver fails while executing {@code getObject} on the wrapped result set or this method is
+     *         called on a closed result set
      */
     @Override
     public <T> T getObject(String columnLabel, Class<T> type) throws SQLException {
@@ -951,7 +992,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column index of the given column label
-     * @throws SQLException if the ResultSet object does not contain a column labeled columnLabel, a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the ResultSet object does not contain a column labeled {@code columnLabel}, the driver fails while executing
+     *         {@code findColumn} on the wrapped result set or this method is called on a closed result set
      */
     @Override
     public int findColumn(String columnLabel) throws SQLException {
@@ -964,7 +1006,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return a {@link Reader} that delivers the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getCharacterStream} on the
+     *         wrapped result set or this method is called on a closed result set
      */
     @Override
     public Reader getCharacterStream(int columnIndex) throws SQLException {
@@ -977,7 +1020,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return a {@link Reader} that delivers the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getCharacterStream} on the
+     *         wrapped result set or this method is called on a closed result set
      */
     @Override
     public Reader getCharacterStream(String columnLabel) throws SQLException {
@@ -990,7 +1034,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value (full precision); if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getBigDecimal} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public BigDecimal getBigDecimal(int columnIndex) throws SQLException {
@@ -1003,7 +1048,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value (full precision); if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getBigDecimal} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public BigDecimal getBigDecimal(String columnLabel) throws SQLException {
@@ -1015,7 +1061,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the cursor is before the first row; {@code false} if the cursor is at any other position or the result set contains no rows
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code isBeforeFirst} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public boolean isBeforeFirst() throws SQLException {
@@ -1027,7 +1074,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the cursor is after the last row; {@code false} if the cursor is at any other position or the result set contains no rows
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code isAfterLast} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public boolean isAfterLast() throws SQLException {
@@ -1039,7 +1087,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the cursor is on the first row; {@code false} otherwise
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code isFirst} on the wrapped result set or this method is called on a closed
+     *         result set
      */
     @Override
     public boolean isFirst() throws SQLException {
@@ -1051,7 +1100,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the cursor is on the last row; {@code false} otherwise
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code isLast} on the wrapped result set or this method is called on a closed
+     *         result set
      */
     @Override
     public boolean isLast() throws SQLException {
@@ -1062,7 +1112,8 @@ final class ResultSetProxy implements ResultSet {
      * Moves the cursor to the front of this ResultSet object, just before the first row.
      * Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the result set type is {@code TYPE_FORWARD_ONLY}
+     * @throws SQLException if the driver fails while executing {@code beforeFirst} on the wrapped result set; this method is called on a closed
+     *         result set or the result set type is {@code TYPE_FORWARD_ONLY}
      */
     @Override
     public void beforeFirst() throws SQLException {
@@ -1073,7 +1124,8 @@ final class ResultSetProxy implements ResultSet {
      * Moves the cursor to the end of this ResultSet object, just after the last row.
      * Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the result set type is {@code TYPE_FORWARD_ONLY}
+     * @throws SQLException if the driver fails while executing {@code afterLast} on the wrapped result set; this method is called on a closed
+     *         result set or the result set type is {@code TYPE_FORWARD_ONLY}
      */
     @Override
     public void afterLast() throws SQLException {
@@ -1085,7 +1137,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the cursor is on a valid row; {@code false} if there are no rows in the result set
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the result set type is {@code TYPE_FORWARD_ONLY}
+     * @throws SQLException if the driver fails while executing {@code first} on the wrapped result set; this method is called on a closed result
+     *         set or the result set type is {@code TYPE_FORWARD_ONLY}
      */
     @Override
     public boolean first() throws SQLException {
@@ -1097,7 +1150,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the cursor is on a valid row; {@code false} if there are no rows in the result set
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the result set type is {@code TYPE_FORWARD_ONLY}
+     * @throws SQLException if the driver fails while executing {@code last} on the wrapped result set; this method is called on a closed result
+     *         set or the result set type is {@code TYPE_FORWARD_ONLY}
      */
     @Override
     public boolean last() throws SQLException {
@@ -1109,7 +1163,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @return the current row number; {@code 0} if there is no current row
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getRow} on the wrapped result set or this method is called on a closed
+     *         result set
      */
     @Override
     public int getRow() throws SQLException {
@@ -1122,7 +1177,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param row the number of the row to which the cursor should move. A positive number indicates the row number counting from the beginning of the result set; a negative number indicates the row number counting from the end of the result set; zero indicates a position before the first row
      * @return {@code true} if the cursor is moved to a position in this ResultSet object; {@code false} if the cursor is before the first row or after the last row
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the result set type is {@code TYPE_FORWARD_ONLY}
+     * @throws SQLException if the driver fails while executing {@code absolute} on the wrapped result set; this method is called on a closed
+     *         result set or the result set type is {@code TYPE_FORWARD_ONLY}
      */
     @Override
     public boolean absolute(int row) throws SQLException {
@@ -1135,7 +1191,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param rows an {@code int} specifying the number of rows to move from the current row; a positive number moves the cursor forward; a negative number moves the cursor backward
      * @return {@code true} if the cursor is on a row; {@code false} otherwise
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set; there is no current row or the result set type is {@code TYPE_FORWARD_ONLY}
+     * @throws SQLException if the driver fails while executing {@code relative} on the wrapped result set; this method is called on a closed
+     *         result set; there is no current row or the result set type is {@code TYPE_FORWARD_ONLY}
      */
     @Override
     public boolean relative(int rows) throws SQLException {
@@ -1147,7 +1204,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the cursor is now positioned on a valid row; {@code false} if the cursor is positioned before the first row
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the result set type is {@code TYPE_FORWARD_ONLY}
+     * @throws SQLException if the driver fails while executing {@code previous} on the wrapped result set; this method is called on a closed
+     *         result set or the result set type is {@code TYPE_FORWARD_ONLY}
      */
     @Override
     public boolean previous() throws SQLException {
@@ -1159,7 +1217,8 @@ final class ResultSetProxy implements ResultSet {
      * Delegates to the underlying {@link ResultSet}.
      *
      * @param direction an {@code int} specifying the suggested fetch direction; one of {@code ResultSet.FETCH_FORWARD}, {@code ResultSet.FETCH_REVERSE}, or {@code ResultSet.FETCH_UNKNOWN}
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the result set type is {@code TYPE_FORWARD_ONLY} and the fetch direction is not {@code FETCH_FORWARD}
+     * @throws SQLException if the driver fails while executing {@code setFetchDirection} on the wrapped result set; this method is called on a
+     *         closed result set or the result set type is {@code TYPE_FORWARD_ONLY} and the fetch {@code direction} is not {@code FETCH_FORWARD}
      */
     @Override
     public void setFetchDirection(int direction) throws SQLException {
@@ -1170,7 +1229,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves the fetch direction for this ResultSet object. Delegates to the underlying {@link ResultSet}.
      *
      * @return the current fetch direction for this ResultSet object
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getFetchDirection} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public int getFetchDirection() throws SQLException {
@@ -1182,7 +1242,8 @@ final class ResultSetProxy implements ResultSet {
      * when more rows are needed for this ResultSet object. Delegates to the underlying {@link ResultSet}.
      *
      * @param rows the number of rows to fetch
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the condition {@code rows >= 0} is not satisfied
+     * @throws SQLException if the driver fails while executing {@code setFetchSize} on the wrapped result set; this method is called on a closed
+     *         result set or the condition {@code rows >= 0} is not satisfied
      */
     @Override
     public void setFetchSize(int rows) throws SQLException {
@@ -1193,7 +1254,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves the fetch size for this ResultSet object. Delegates to the underlying {@link ResultSet}.
      *
      * @return the current fetch size for this ResultSet object
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getFetchSize} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public int getFetchSize() throws SQLException {
@@ -1204,7 +1266,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves the type of this ResultSet object. Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code ResultSet.TYPE_FORWARD_ONLY}, {@code ResultSet.TYPE_SCROLL_INSENSITIVE}, or {@code ResultSet.TYPE_SCROLL_SENSITIVE}
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getType} on the wrapped result set or this method is called on a closed
+     *         result set
      */
     @Override
     public int getType() throws SQLException {
@@ -1215,7 +1278,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves the concurrency mode of this ResultSet object. Delegates to the underlying {@link ResultSet}.
      *
      * @return the concurrency type, either {@code ResultSet.CONCUR_READ_ONLY} or {@code ResultSet.CONCUR_UPDATABLE}
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getConcurrency} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public int getConcurrency() throws SQLException {
@@ -1226,7 +1290,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves whether the current row has been updated. Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the current row is detected to have been visibly updated by the owner or another transaction
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code rowUpdated} on the wrapped result set or this method is called on a closed
+     *         result set
      */
     @Override
     public boolean rowUpdated() throws SQLException {
@@ -1237,7 +1302,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves whether the current row has had an insertion. Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the current row is detected to have been inserted
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code rowInserted} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public boolean rowInserted() throws SQLException {
@@ -1248,7 +1314,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves whether a row has been deleted. Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if the current row is detected to have been deleted by the owner or another transaction
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code rowDeleted} on the wrapped result set or this method is called on a closed
+     *         result set
      */
     @Override
     public boolean rowDeleted() throws SQLException {
@@ -1261,7 +1328,8 @@ final class ResultSetProxy implements ResultSet {
      * is called. Delegates to the underlying {@link ResultSet}.
      *
      * @param columnIndex the first column is 1, the second is 2, ...
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateNull} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateNull(int columnIndex) throws SQLException {
@@ -1274,7 +1342,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateBoolean} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBoolean(int columnIndex, boolean x) throws SQLException {
@@ -1287,7 +1356,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateByte} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateByte(int columnIndex, byte x) throws SQLException {
@@ -1300,7 +1370,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateShort} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateShort(int columnIndex, short x) throws SQLException {
@@ -1313,7 +1384,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateInt} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateInt(int columnIndex, int x) throws SQLException {
@@ -1326,7 +1398,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateLong} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateLong(int columnIndex, long x) throws SQLException {
@@ -1339,7 +1412,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateFloat} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateFloat(int columnIndex, float x) throws SQLException {
@@ -1352,7 +1426,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateDouble} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateDouble(int columnIndex, double x) throws SQLException {
@@ -1365,7 +1440,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateBigDecimal} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBigDecimal(int columnIndex, BigDecimal x) throws SQLException {
@@ -1378,7 +1454,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateString} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateString(int columnIndex, String x) throws SQLException {
@@ -1391,7 +1468,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateBytes} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBytes(int columnIndex, byte[] x) throws SQLException {
@@ -1404,7 +1482,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateDate} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateDate(int columnIndex, Date x) throws SQLException {
@@ -1417,7 +1496,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateTime} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateTime(int columnIndex, Time x) throws SQLException {
@@ -1430,7 +1510,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateTimestamp} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateTimestamp(int columnIndex, Timestamp x) throws SQLException {
@@ -1445,7 +1526,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateAsciiStream} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x, int length) throws SQLException {
@@ -1460,7 +1542,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateBinaryStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x, int length) throws SQLException {
@@ -1475,7 +1558,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateCharacterStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateCharacterStream(int columnIndex, Reader x, int length) throws SQLException {
@@ -1490,7 +1574,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
      * @param scaleOrLength for an object of {@code java.math.BigDecimal}, this is the number of digits after the decimal point; for Java Object types {@code InputStream} and {@code Reader}, this is the length of the data in the stream or reader; for all other types, this value will be ignored
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateObject} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateObject(int columnIndex, Object x, int scaleOrLength) throws SQLException {
@@ -1503,7 +1588,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateObject} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateObject(int columnIndex, Object x) throws SQLException {
@@ -1519,7 +1605,8 @@ final class ResultSetProxy implements ResultSet {
      * @param x the new column value
      * @param targetSqlType the SQL type to be sent to the database
      * @param scaleOrLength for an object of {@code java.math.BigDecimal}, this is the number of digits after the decimal point; for Java Object types {@code InputStream} and {@code Reader}, this is the length of the data in the stream or reader; for all other types, this value will be ignored
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateObject} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateObject(int columnIndex, Object x, java.sql.SQLType targetSqlType, int scaleOrLength) throws SQLException {
@@ -1534,7 +1621,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
      * @param targetSqlType the SQL type to be sent to the database
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateObject} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateObject(int columnIndex, Object x, java.sql.SQLType targetSqlType) throws SQLException {
@@ -1546,7 +1634,8 @@ final class ResultSetProxy implements ResultSet {
      * {@link #updateRow} or {@link #insertRow} is called. Delegates to the underlying {@link ResultSet}.
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateNull} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateNull(String columnLabel) throws SQLException {
@@ -1559,7 +1648,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateBoolean} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBoolean(String columnLabel, boolean x) throws SQLException {
@@ -1572,7 +1662,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateByte} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateByte(String columnLabel, byte x) throws SQLException {
@@ -1585,7 +1676,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateShort} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateShort(String columnLabel, short x) throws SQLException {
@@ -1598,7 +1690,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateInt} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateInt(String columnLabel, int x) throws SQLException {
@@ -1611,7 +1704,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateLong} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateLong(String columnLabel, long x) throws SQLException {
@@ -1624,7 +1718,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateFloat} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateFloat(String columnLabel, float x) throws SQLException {
@@ -1637,7 +1732,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateDouble} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateDouble(String columnLabel, double x) throws SQLException {
@@ -1650,7 +1746,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateBigDecimal} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBigDecimal(String columnLabel, BigDecimal x) throws SQLException {
@@ -1663,7 +1760,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateString} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateString(String columnLabel, String x) throws SQLException {
@@ -1676,7 +1774,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateBytes} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBytes(String columnLabel, byte[] x) throws SQLException {
@@ -1689,7 +1788,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateDate} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateDate(String columnLabel, Date x) throws SQLException {
@@ -1702,7 +1802,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateTime} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateTime(String columnLabel, Time x) throws SQLException {
@@ -1715,7 +1816,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateTimestamp} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateTimestamp(String columnLabel, Timestamp x) throws SQLException {
@@ -1730,7 +1832,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateAsciiStream} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x, int length) throws SQLException {
@@ -1745,7 +1848,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateBinaryStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x, int length) throws SQLException {
@@ -1760,7 +1864,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param reader the {@link Reader} object containing the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateCharacterStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader, int length) throws SQLException {
@@ -1775,7 +1880,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
      * @param scaleOrLength for an object of {@code java.math.BigDecimal}, this is the number of digits after the decimal point; for Java Object types {@code InputStream} and {@code Reader}, this is the length of the data in the stream or reader; for all other types, this value will be ignored
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateObject} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateObject(String columnLabel, Object x, int scaleOrLength) throws SQLException {
@@ -1788,7 +1894,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateObject} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateObject(String columnLabel, Object x) throws SQLException {
@@ -1804,7 +1911,8 @@ final class ResultSetProxy implements ResultSet {
      * @param x the new column value
      * @param targetSqlType the SQL type to be sent to the database
      * @param scaleOrLength for an object of {@code java.math.BigDecimal}, this is the number of digits after the decimal point; for Java Object types {@code InputStream} and {@code Reader}, this is the length of the data in the stream or reader; for all other types, this value will be ignored
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateObject} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateObject(String columnLabel, Object x, java.sql.SQLType targetSqlType, int scaleOrLength) throws SQLException {
@@ -1819,7 +1927,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
      * @param targetSqlType the SQL type to be sent to the database
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateObject} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateObject(String columnLabel, Object x, java.sql.SQLType targetSqlType) throws SQLException {
@@ -1830,7 +1939,9 @@ final class ResultSetProxy implements ResultSet {
      * Inserts the contents of the insert row into this ResultSet object and into the database.
      * The cursor must be on the insert row when this method is called. Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs; this method is called when the cursor is not on the insert row; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code insertRow} on the wrapped result set; this method is called when the
+     *         cursor is not on the insert row; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed
+     *         result set
      */
     @Override
     public void insertRow() throws SQLException {
@@ -1841,7 +1952,8 @@ final class ResultSetProxy implements ResultSet {
      * Updates the underlying database with the new contents of the current row of this ResultSet object.
      * This method cannot be called when the cursor is on the insert row. Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY}; this method is called when the cursor is on the insert row or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code updateRow} on the wrapped result set; the result set concurrency is {@code
+     *         CONCUR_READ_ONLY}; this method is called when the cursor is on the insert row or this method is called on a closed result set
      */
     @Override
     public void updateRow() throws SQLException {
@@ -1852,7 +1964,8 @@ final class ResultSetProxy implements ResultSet {
      * Deletes the current row from this ResultSet object and from the underlying database.
      * This method cannot be called when the cursor is on the insert row. Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY}; this method is called when the cursor is on the insert row or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code deleteRow} on the wrapped result set; the result set concurrency is {@code
+     *         CONCUR_READ_ONLY}; this method is called when the cursor is on the insert row or this method is called on a closed result set
      */
     @Override
     public void deleteRow() throws SQLException {
@@ -1863,7 +1976,8 @@ final class ResultSetProxy implements ResultSet {
      * Refreshes the current row with its most recent value in the database. This method cannot be called
      * when the cursor is on the insert row. Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set; the result set type is {@code TYPE_FORWARD_ONLY} or this method is called when the cursor is on the insert row
+     * @throws SQLException if the driver fails while executing {@code refreshRow} on the wrapped result set; this method is called on a closed
+     *         result set; the result set type is {@code TYPE_FORWARD_ONLY} or this method is called when the cursor is on the insert row
      */
     @Override
     public void refreshRow() throws SQLException {
@@ -1874,7 +1988,9 @@ final class ResultSetProxy implements ResultSet {
      * Cancels the updates made to the current row in this ResultSet object. This method may be called
      * after calling an updater method but before calling {@link #updateRow}. Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set; the result set concurrency is {@code CONCUR_READ_ONLY} or if this method is called when the cursor is on the insert row
+     * @throws SQLException if the driver fails while executing {@code cancelRowUpdates} on the wrapped result set; this method is called on a
+     *         closed result set; the result set concurrency is {@code CONCUR_READ_ONLY} or if this method is called when the cursor is on the
+     *         insert row
      */
     @Override
     public void cancelRowUpdates() throws SQLException {
@@ -1885,7 +2001,8 @@ final class ResultSetProxy implements ResultSet {
      * Moves the cursor to the insert row. The current cursor position is remembered while the cursor is
      * positioned on the insert row. Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the result set concurrency is {@code CONCUR_READ_ONLY}
+     * @throws SQLException if the driver fails while executing {@code moveToInsertRow} on the wrapped result set; this method is called on a
+     *         closed result set or the result set concurrency is {@code CONCUR_READ_ONLY}
      */
     @Override
     public void moveToInsertRow() throws SQLException {
@@ -1896,7 +2013,8 @@ final class ResultSetProxy implements ResultSet {
      * Moves the cursor to the remembered cursor position, usually the current row. This method has no
      * effect if the cursor is not on the insert row. Delegates to the underlying {@link ResultSet}.
      *
-     * @throws SQLException if a database access error occurs; this method is called on a closed result set or the result set concurrency is {@code CONCUR_READ_ONLY}
+     * @throws SQLException if the driver fails while executing {@code moveToCurrentRow} on the wrapped result set; this method is called on a
+     *         closed result set or the result set concurrency is {@code CONCUR_READ_ONLY}
      */
     @Override
     public void moveToCurrentRow() throws SQLException {
@@ -1907,7 +2025,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves the {@link Statement} object that produced this ResultSet object. Delegates to the underlying {@link ResultSet}.
      *
      * @return the {@code Statement} object that produced this ResultSet object or {@code null} if the result set was produced some other way
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getStatement} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public Statement getStatement() throws SQLException {
@@ -1921,7 +2040,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param map a {@code java.util.Map} object that contains the mapping from SQL type names to classes in the Java programming language
      * @return an {@code Object} in the Java programming language representing the SQL value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getObject} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Object getObject(int columnIndex, Map<String, Class<?>> map) throws SQLException {
@@ -1934,7 +2054,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return a {@link Ref} object representing an SQL REF value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getRef} on the wrapped result set
+     *         or this method is called on a closed result set
      */
     @Override
     public Ref getRef(int columnIndex) throws SQLException {
@@ -1947,7 +2068,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return a {@link Blob} object representing the SQL BLOB value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getBlob} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Blob getBlob(int columnIndex) throws SQLException {
@@ -1960,7 +2082,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return a {@link Clob} object representing the SQL CLOB value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getClob} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Clob getClob(int columnIndex) throws SQLException {
@@ -1973,7 +2096,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return an {@link Array} object representing the SQL ARRAY value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getArray} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Array getArray(int columnIndex) throws SQLException {
@@ -1987,7 +2111,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param map a {@code java.util.Map} object that contains the mapping from SQL type names to classes in the Java programming language
      * @return an {@code Object} in the Java programming language representing the SQL value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getObject} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Object getObject(String columnLabel, Map<String, Class<?>> map) throws SQLException {
@@ -2000,7 +2125,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return a {@link Ref} object representing an SQL REF value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getRef} on the wrapped result set
+     *         or this method is called on a closed result set
      */
     @Override
     public Ref getRef(String columnLabel) throws SQLException {
@@ -2013,7 +2139,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return a {@link Blob} object representing the SQL BLOB value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getBlob} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Blob getBlob(String columnLabel) throws SQLException {
@@ -2026,7 +2153,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return a {@link Clob} object representing the SQL CLOB value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getClob} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Clob getClob(String columnLabel) throws SQLException {
@@ -2039,7 +2167,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return an {@link Array} object representing the SQL ARRAY value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getArray} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Array getArray(String columnLabel) throws SQLException {
@@ -2054,7 +2183,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param cal the {@code java.util.Calendar} object to use in constructing the date
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getDate} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Date getDate(int columnIndex, Calendar cal) throws SQLException {
@@ -2069,7 +2199,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param cal the {@code java.util.Calendar} object to use in constructing the date
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getDate} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Date getDate(String columnLabel, Calendar cal) throws SQLException {
@@ -2084,7 +2215,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param cal the {@code java.util.Calendar} object to use in constructing the time
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getTime} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Time getTime(int columnIndex, Calendar cal) throws SQLException {
@@ -2099,7 +2231,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param cal the {@code java.util.Calendar} object to use in constructing the time
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getTime} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public Time getTime(String columnLabel, Calendar cal) throws SQLException {
@@ -2114,7 +2247,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param cal the {@code java.util.Calendar} object to use in constructing the timestamp
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getTimestamp} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public Timestamp getTimestamp(int columnIndex, Calendar cal) throws SQLException {
@@ -2129,7 +2263,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param cal the {@code java.util.Calendar} object to use in constructing the timestamp
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getTimestamp} on the wrapped
+     *         result set or this method is called on a closed result set
      */
     @Override
     public Timestamp getTimestamp(String columnLabel, Calendar cal) throws SQLException {
@@ -2142,7 +2277,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value as a {@link URL} object; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; this method is called on a closed result set or if a URL is malformed
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getURL} on the wrapped result
+     *         set; this method is called on a closed result set or if a URL is malformed
      */
     @Override
     public URL getURL(int columnIndex) throws SQLException {
@@ -2155,7 +2291,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value as a {@link URL} object; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; this method is called on a closed result set or if a URL is malformed
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getURL} on the wrapped result
+     *         set; this method is called on a closed result set or if a URL is malformed
      */
     @Override
     public URL getURL(String columnLabel) throws SQLException {
@@ -2168,7 +2305,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateRef} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateRef(int columnIndex, Ref x) throws SQLException {
@@ -2181,7 +2319,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateRef} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateRef(String columnLabel, Ref x) throws SQLException {
@@ -2194,7 +2333,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateBlob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBlob(int columnIndex, Blob x) throws SQLException {
@@ -2207,7 +2347,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateBlob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBlob(String columnLabel, Blob x) throws SQLException {
@@ -2220,7 +2361,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateClob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateClob(int columnIndex, Clob x) throws SQLException {
@@ -2233,7 +2375,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateClob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateClob(String columnLabel, Clob x) throws SQLException {
@@ -2246,7 +2389,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateArray} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateArray(int columnIndex, Array x) throws SQLException {
@@ -2259,7 +2403,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateArray} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateArray(String columnLabel, Array x) throws SQLException {
@@ -2272,7 +2417,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value as a {@link RowId} object; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getRowId} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public RowId getRowId(int columnIndex) throws SQLException {
@@ -2285,7 +2431,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value as a {@link RowId} object; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getRowId} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public RowId getRowId(String columnLabel) throws SQLException {
@@ -2298,7 +2445,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateRowId} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateRowId(int columnIndex, RowId x) throws SQLException {
@@ -2311,7 +2459,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateRowId} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateRowId(String columnLabel, RowId x) throws SQLException {
@@ -2322,7 +2471,8 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves the holdability of this ResultSet object. Delegates to the underlying {@link ResultSet}.
      *
      * @return either {@code ResultSet.HOLD_CURSORS_OVER_COMMIT} or {@code ResultSet.CLOSE_CURSORS_AT_COMMIT}
-     * @throws SQLException if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the driver fails while executing {@code getHoldability} on the wrapped result set or this method is called on a
+     *         closed result set
      */
     @Override
     public int getHoldability() throws SQLException {
@@ -2333,7 +2483,7 @@ final class ResultSetProxy implements ResultSet {
      * Retrieves whether this ResultSet object has been closed. Delegates to the underlying {@link ResultSet}.
      *
      * @return {@code true} if this ResultSet object is closed; {@code false} if it is still open
-     * @throws SQLException if a database access error occurs
+     * @throws SQLException if the driver fails while executing {@code isClosed} on the wrapped result set
      */
     @Override
     public boolean isClosed() throws SQLException {
@@ -2347,7 +2497,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param nString the new column value
-     * @throws SQLException if the columnIndex is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNString} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this
+     *         method is called on a closed result set
      */
     @Override
     public void updateNString(int columnIndex, String nString) throws SQLException {
@@ -2361,7 +2513,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param nString the new column value
-     * @throws SQLException if the columnLabel is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNString} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this
+     *         method is called on a closed result set
      */
     @Override
     public void updateNString(String columnLabel, String nString) throws SQLException {
@@ -2374,7 +2528,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param nClob the new column value
-     * @throws SQLException if the columnIndex is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNClob} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this
+     *         method is called on a closed result set
      */
     @Override
     public void updateNClob(int columnIndex, NClob nClob) throws SQLException {
@@ -2387,7 +2543,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param nClob the new column value
-     * @throws SQLException if the columnLabel is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNClob} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this
+     *         method is called on a closed result set
      */
     @Override
     public void updateNClob(String columnLabel, NClob nClob) throws SQLException {
@@ -2400,7 +2558,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return an {@link NClob} object representing the SQL NCLOB value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if the driver does not support national character sets; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code getNClob} on the wrapped result set or this method is called on a closed result set
      */
     @Override
     public NClob getNClob(int columnIndex) throws SQLException {
@@ -2413,7 +2572,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return an {@link NClob} object representing the SQL NCLOB value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if the driver does not support national character sets; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code getNClob} on the wrapped result set or this method is called on a closed result set
      */
     @Override
     public NClob getNClob(String columnLabel) throws SQLException {
@@ -2426,7 +2586,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return a {@link SQLXML} object that maps an SQL XML value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getSQLXML} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public SQLXML getSQLXML(int columnIndex) throws SQLException {
@@ -2439,7 +2600,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return a {@link SQLXML} object that maps an SQL XML value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getSQLXML} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public SQLXML getSQLXML(String columnLabel) throws SQLException {
@@ -2452,9 +2614,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param xmlObject the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; this method is called on a closed result set;
-     *         a writer or output stream obtained from the {@link SQLXML} object has not been closed; an error occurs processing the XML value;
-     *         or the result set concurrency is {@code CONCUR_READ_ONLY}
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateSQLXML} on the wrapped
+     *         result set; this method is called on a closed result set; a writer or output stream obtained from the {@link SQLXML} object has
+     *         not been closed; an error occurs processing the XML value; or the result set concurrency is {@code CONCUR_READ_ONLY}
      */
     @Override
     public void updateSQLXML(int columnIndex, SQLXML xmlObject) throws SQLException {
@@ -2467,9 +2629,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param xmlObject the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; this method is called on a closed result set;
-     *         a writer or output stream obtained from the {@link SQLXML} object has not been closed; an error occurs processing the XML value;
-     *         or the result set concurrency is {@code CONCUR_READ_ONLY}
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateSQLXML} on the wrapped
+     *         result set; this method is called on a closed result set; a writer or output stream obtained from the {@link SQLXML} object has
+     *         not been closed; an error occurs processing the XML value; or the result set concurrency is {@code CONCUR_READ_ONLY}
      */
     @Override
     public void updateSQLXML(String columnLabel, SQLXML xmlObject) throws SQLException {
@@ -2482,7 +2644,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getNString} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public String getNString(int columnIndex) throws SQLException {
@@ -2495,7 +2658,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getNString} on the wrapped result
+     *         set or this method is called on a closed result set
      */
     @Override
     public String getNString(String columnLabel) throws SQLException {
@@ -2508,7 +2672,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @return a {@link Reader} that delivers the column value; if the value is SQL NULL, the value returned is {@code null} in the Java programming language
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code getNCharacterStream} on the
+     *         wrapped result set or this method is called on a closed result set
      */
     @Override
     public Reader getNCharacterStream(int columnIndex) throws SQLException {
@@ -2521,7 +2686,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return a {@link Reader} that delivers the column value; if the value is SQL NULL, the value returned is {@code null} in the Java programming language
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code getNCharacterStream} on the
+     *         wrapped result set or this method is called on a closed result set
      */
     @Override
     public Reader getNCharacterStream(String columnLabel) throws SQLException {
@@ -2536,7 +2702,9 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnIndex is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNCharacterStream} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY}
+     *         or this method is called on a closed result set
      */
     @Override
     public void updateNCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
@@ -2551,7 +2719,9 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param reader the {@link Reader} object containing the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnLabel is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNCharacterStream} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY}
+     *         or this method is called on a closed result set
      */
     @Override
     public void updateNCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
@@ -2566,7 +2736,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateAsciiStream} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x, long length) throws SQLException {
@@ -2581,7 +2752,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateBinaryStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x, long length) throws SQLException {
@@ -2596,7 +2768,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateCharacterStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateCharacterStream(int columnIndex, Reader x, long length) throws SQLException {
@@ -2611,7 +2784,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateAsciiStream} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x, long length) throws SQLException {
@@ -2626,7 +2800,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateBinaryStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x, long length) throws SQLException {
@@ -2641,7 +2816,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param reader the {@link Reader} object containing the new column value
      * @param length the length of the stream
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateCharacterStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader, long length) throws SQLException {
@@ -2656,7 +2832,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param inputStream an object that contains the data to set the parameter value to
      * @param length the number of bytes in the parameter data
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateBlob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBlob(int columnIndex, InputStream inputStream, long length) throws SQLException {
@@ -2671,7 +2848,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param inputStream an object that contains the data to set the parameter value to
      * @param length the number of bytes in the parameter data
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateBlob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBlob(String columnLabel, InputStream inputStream, long length) throws SQLException {
@@ -2686,7 +2864,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param reader an object that contains the data to set the parameter value to
      * @param length the number of characters in the parameter data
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateClob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateClob(int columnIndex, Reader reader, long length) throws SQLException {
@@ -2701,7 +2880,8 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param reader an object that contains the data to set the parameter value to
      * @param length the number of characters in the parameter data
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateClob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateClob(String columnLabel, Reader reader, long length) throws SQLException {
@@ -2716,7 +2896,9 @@ final class ResultSetProxy implements ResultSet {
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param reader an object that contains the data to set the parameter value to
      * @param length the number of characters in the parameter data
-     * @throws SQLException if the columnIndex is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNClob} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this
+     *         method is called on a closed result set
      */
     @Override
     public void updateNClob(int columnIndex, Reader reader, long length) throws SQLException {
@@ -2731,7 +2913,9 @@ final class ResultSetProxy implements ResultSet {
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param reader an object that contains the data to set the parameter value to
      * @param length the number of characters in the parameter data
-     * @throws SQLException if the columnLabel is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNClob} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this
+     *         method is called on a closed result set
      */
     @Override
     public void updateNClob(String columnLabel, Reader reader, long length) throws SQLException {
@@ -2746,7 +2930,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNCharacterStream} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY}
+     *         or this method is called on a closed result set
      */
     @Override
     public void updateNCharacterStream(int columnIndex, Reader x) throws SQLException {
@@ -2761,7 +2947,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param reader the {@link Reader} object containing the new column value
-     * @throws SQLException if the columnLabel is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNCharacterStream} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY}
+     *         or this method is called on a closed result set
      */
     @Override
     public void updateNCharacterStream(String columnLabel, Reader reader) throws SQLException {
@@ -2774,7 +2962,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateAsciiStream} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateAsciiStream(int columnIndex, InputStream x) throws SQLException {
@@ -2787,7 +2976,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateBinaryStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBinaryStream(int columnIndex, InputStream x) throws SQLException {
@@ -2800,7 +2990,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param x the new column value
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateCharacterStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateCharacterStream(int columnIndex, Reader x) throws SQLException {
@@ -2813,7 +3004,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateAsciiStream} on the wrapped
+     *         result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateAsciiStream(String columnLabel, InputStream x) throws SQLException {
@@ -2826,7 +3018,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param x the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateBinaryStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBinaryStream(String columnLabel, InputStream x) throws SQLException {
@@ -2839,7 +3032,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param reader the {@link Reader} object containing the new column value
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateCharacterStream} on the
+     *         wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateCharacterStream(String columnLabel, Reader reader) throws SQLException {
@@ -2852,7 +3046,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param inputStream an object that contains the data to set the parameter value to
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateBlob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBlob(int columnIndex, InputStream inputStream) throws SQLException {
@@ -2865,7 +3060,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param inputStream an object that contains the data to set the parameter value to
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateBlob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateBlob(String columnLabel, InputStream inputStream) throws SQLException {
@@ -2878,7 +3074,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param reader an object that contains the data to set the parameter value to
-     * @throws SQLException if the columnIndex is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver fails while executing {@code updateClob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateClob(int columnIndex, Reader reader) throws SQLException {
@@ -2891,7 +3088,8 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param reader an object that contains the data to set the parameter value to
-     * @throws SQLException if the columnLabel is not valid; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver fails while executing {@code updateClob} on the wrapped result
+     *         set; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
      */
     @Override
     public void updateClob(String columnLabel, Reader reader) throws SQLException {
@@ -2905,7 +3103,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnIndex the first column is 1, the second is 2, ...
      * @param reader an object that contains the data to set the parameter value to
-     * @throws SQLException if the columnIndex is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnIndex} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNClob} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this
+     *         method is called on a closed result set
      */
     @Override
     public void updateNClob(int columnIndex, Reader reader) throws SQLException {
@@ -2919,7 +3119,9 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @param reader an object that contains the data to set the parameter value to
-     * @throws SQLException if the columnLabel is not valid; if the driver does not support national character sets; if a database access error occurs; the result set concurrency is {@code CONCUR_READ_ONLY} or this method is called on a closed result set
+     * @throws SQLException if the {@code columnLabel} is not valid; if the driver does not support national character sets; if the driver fails
+     *         while executing {@code updateNClob} on the wrapped result set; the result set concurrency is {@code CONCUR_READ_ONLY} or this
+     *         method is called on a closed result set
      */
     @Override
     public void updateNClob(String columnLabel, Reader reader) throws SQLException {

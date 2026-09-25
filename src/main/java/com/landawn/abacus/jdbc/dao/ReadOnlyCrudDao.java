@@ -39,7 +39,7 @@ import com.landawn.abacus.annotation.Beta;
  *   <li>{@code get(ID)} / {@code getOrNull(ID)} - Retrieve entity by ID (returns {@code Optional} or {@code null})</li>
  *   <li>{@code list(Condition)} - Query multiple records matching a condition</li>
  *   <li>{@code findFirst(Condition)} - Find the first record matching a condition</li>
- *   <li>{@code findOnlyOne(Condition)} - Find exactly one record (throws if multiple found)</li>
+ *   <li>{@code findOnlyOne(Condition)} - Find at most one record (throws if multiple found)</li>
  *   <li>{@code count(Condition)} - Count records matching a condition</li>
  *   <li>{@code exists(Condition)} - Check if any records match a condition</li>
  *   <li>{@code queryForBoolean/Int/Long/String(propName, ID)} - Query single column value by ID</li>

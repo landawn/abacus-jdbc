@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -92,6 +93,59 @@ public class DataTransferUtilIntegrationTest extends TestBase {
             assertEquals(3, copied);
         }
         assertEquals(3, count("copy_tgt"));
+    }
+
+    @Test
+    public void testCopy_AllColumnsPreservesCaseSensitiveColumnNames() throws SQLException {
+        try (Connection source = ds.getConnection();
+             Connection target = ds.getConnection();
+             Statement stmt = source.createStatement()) {
+            stmt.execute("CREATE TABLE copy_case_src (\"MixedCase\" INT, \"lowercase\" INT, ordinary INT)");
+            stmt.execute("CREATE TABLE copy_case_tgt (ordinary INT, \"lowercase\" INT, \"MixedCase\" INT)");
+            try {
+                stmt.execute("INSERT INTO copy_case_src VALUES (11, 22, 33)");
+                assertEquals(1, DataTransferUtil.copyTable(source, "copy_case_src").to(target, "copy_case_tgt"));
+                assertEquals(1, DataTransferUtil.copyTable(ds, "copy_case_src").to(ds, "copy_case_tgt"));
+                try (ResultSet rows = stmt.executeQuery("SELECT \"MixedCase\", \"lowercase\", ordinary FROM copy_case_tgt")) {
+                    for (int i = 0; i < 2; i++) {
+                        assertTrue(rows.next());
+                        assertEquals(11, rows.getInt(1));
+                        assertEquals(22, rows.getInt(2));
+                        assertEquals(33, rows.getInt(3));
+                    }
+                    assertFalse(rows.next());
+                }
+            } finally {
+                stmt.execute("DROP TABLE copy_case_src");
+                stmt.execute("DROP TABLE copy_case_tgt");
+            }
+        }
+    }
+
+    @Test
+    public void testCopy_AllColumnsBetweenOppositeIdentifierFoldingRules() throws SQLException {
+        for (final boolean sourceUsesLowerCase : new boolean[] { false, true }) {
+            final String sourceOptions = sourceUsesLowerCase ? ";DATABASE_TO_LOWER=TRUE" : "";
+            final String targetOptions = sourceUsesLowerCase ? "" : ";DATABASE_TO_LOWER=TRUE";
+            try (Connection source = DriverManager.getConnection("jdbc:h2:mem:copy_fold_source" + sourceOptions);
+                 Connection target = DriverManager.getConnection("jdbc:h2:mem:copy_fold_target" + targetOptions);
+                 Statement sourceStatement = source.createStatement();
+                 Statement targetStatement = target.createStatement()) {
+                sourceStatement.execute("CREATE TABLE copy_fold_src (id INT, \"MixedCase\" INT)");
+                targetStatement.execute("CREATE TABLE copy_fold_tgt (\"MixedCase\" INT, id INT)");
+                sourceStatement.execute("INSERT INTO copy_fold_src VALUES (11, 22)");
+
+                // Ordinary names must follow the target's folding rules while quoted names keep their case.
+                assertEquals(1, DataTransferUtil.copyTable(source, "copy_fold_src").to(target, "copy_fold_tgt"));
+
+                try (ResultSet rows = targetStatement.executeQuery("SELECT id, \"MixedCase\" FROM copy_fold_tgt")) {
+                    assertTrue(rows.next());
+                    assertEquals(11, rows.getInt(1));
+                    assertEquals(22, rows.getInt(2));
+                    assertFalse(rows.next());
+                }
+            }
+        }
     }
 
     @Test

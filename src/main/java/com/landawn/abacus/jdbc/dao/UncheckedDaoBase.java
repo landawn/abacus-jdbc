@@ -17,6 +17,8 @@ package com.landawn.abacus.jdbc.dao;
 
 import java.util.Collection;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.NamedQuery;
@@ -47,12 +49,15 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
+    default PreparedQuery prepareQuery(final String sql)
+            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareQuery(sql));
     }
 
@@ -60,12 +65,13 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
+    default PreparedQuery prepareQuery(final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return prepareQuery(null, cond);
     }
 
@@ -73,12 +79,14 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
+    PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * {@inheritDoc}
@@ -86,12 +94,15 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final String sql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
+    default PreparedQuery prepareQueryForLargeResult(final String sql)
+            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareQueryForLargeResult(sql));
     }
 
@@ -99,12 +110,14 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
+    default PreparedQuery prepareQueryForLargeResult(final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return prepareQueryForLargeResult(null, cond);
     }
 
@@ -112,13 +125,15 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> prepareQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult));
     }
 
@@ -129,12 +144,15 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final String namedSql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final String namedSql)
+            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareNamedQuery(namedSql));
     }
 
@@ -145,12 +163,15 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final ParsedSql namedSql)
+            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareNamedQuery(namedSql));
     }
 
@@ -158,12 +179,13 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
+    default NamedQuery prepareNamedQuery(final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return prepareNamedQuery(null, cond);
     }
 
@@ -171,12 +193,14 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
+    NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * {@inheritDoc}
@@ -185,13 +209,15 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQueryForLargeResult(final String namedSql)
-            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareNamedQueryForLargeResult(namedSql));
     }
 
@@ -202,13 +228,15 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedSql)
-            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> DaoBase.super.prepareNamedQueryForLargeResult(namedSql));
     }
 
@@ -216,12 +244,14 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return prepareNamedQueryForLargeResult(null, cond);
     }
 
@@ -229,13 +259,15 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return DaoUtil.uncheckedSql(() -> prepareNamedQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult));
     }
 }

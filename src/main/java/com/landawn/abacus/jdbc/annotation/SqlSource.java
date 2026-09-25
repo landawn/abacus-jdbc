@@ -35,6 +35,9 @@ import java.lang.annotation.Target;
  *   <li>You want SQL to be edited by people who do not touch Java code.</li>
  *   <li>You want to maintain database-specific variants of the same query in one place.</li>
  * </ul>
+ * <p>Each entry retains its parsed named parameters and statement attributes. Mapper attributes for
+ * timeout, fetch size, and batch size override the corresponding {@link Query} settings; an optional
+ * batch-size method argument still takes precedence at invocation time.</p>
  *
  * <p>If the resolved id list contains an entry that is also declared by a {@link SqlScript}
  * field on the DAO type, DAO initialization fails with {@code IllegalArgumentException} — every

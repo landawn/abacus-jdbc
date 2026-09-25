@@ -18,6 +18,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -33,6 +34,35 @@ import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.function.Function;
 
 public class DaoUtilTest extends TestBase {
+
+    @Test
+    public void testPublicDaoInspectionRejectsNullArguments() {
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.isCacheable(null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.isCrudReadOps(null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.isCrudJoinEntityReadOps(null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.isJoinEntityReadOps(null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.isUncheckedReadOps(null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.isDaoOperationDeclaringClass(null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.isCrudDaoOperationDeclaringClass(null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.isJoinEntityHelperDeclaringClass(null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.generateId(null));
+        assertEquals(null, DaoUtil.getDeclaredIdExtractor(null));
+    }
+
+    @Test
+    public void testUncheckedSql_TranslatesSqlAcquisitionCauseButRetainsConnectionStateFailure() {
+        final SQLException sqlFailure = new SQLException("connection unavailable");
+        final CannotGetJdbcConnectionException springSqlFailure = new CannotGetJdbcConnectionException("connection unavailable", sqlFailure);
+        final UncheckedSQLException translated = assertThrows(UncheckedSQLException.class, () -> DaoUtil.uncheckedSql(() -> {
+            throw springSqlFailure;
+        }));
+        assertSame(sqlFailure, translated.getCause());
+
+        final CannotGetJdbcConnectionException stateFailure = new CannotGetJdbcConnectionException("no connection", new IllegalStateException("null connection"));
+        assertSame(stateFailure, assertThrows(CannotGetJdbcConnectionException.class, () -> DaoUtil.uncheckedSql(() -> {
+            throw stateFailure;
+        })));
+    }
 
     interface TestCrudJoinDao extends CrudDao<Object, Long, TestCrudJoinDao>, CrudJoinEntityHelper<Object, Long, TestCrudJoinDao> {
     }

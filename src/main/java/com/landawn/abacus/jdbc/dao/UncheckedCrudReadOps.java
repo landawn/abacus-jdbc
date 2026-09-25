@@ -19,6 +19,8 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -67,12 +69,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return an {@code OptionalBoolean} holding the selected value when a record matches the id (present, holding the primitive default {@code false} when the value is SQL {@code null}), or an empty {@code OptionalBoolean} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForBoolean()
      */
     @Override
-    OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    OptionalBoolean queryForBoolean(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalChar} describing the value of a single property for the entity with the specified ID.
@@ -92,12 +96,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return an {@code OptionalChar} holding the selected value when a record matches the id (present, holding the primitive default {@code (char) 0} when the value is SQL {@code null}), or an empty {@code OptionalChar} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForChar()
      */
     @Override
-    OptionalChar queryForChar(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    OptionalChar queryForChar(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalByte} describing the value of a single property for the entity with the specified ID.
@@ -117,12 +123,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return an {@code OptionalByte} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalByte} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForByte()
      */
     @Override
-    OptionalByte queryForByte(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    OptionalByte queryForByte(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalShort} describing the value of a single property for the entity with the specified ID.
@@ -142,12 +150,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return an {@code OptionalShort} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalShort} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForShort()
      */
     @Override
-    OptionalShort queryForShort(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    OptionalShort queryForShort(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalInt} describing the value of a single property for the entity with the specified ID.
@@ -167,12 +177,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return an {@code OptionalInt} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalInt} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForInt()
      */
     @Override
-    OptionalInt queryForInt(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    OptionalInt queryForInt(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalLong} describing the value of a single property for the entity with the specified ID.
@@ -192,12 +204,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return an {@code OptionalLong} holding the selected value when a record matches the id (present, holding the primitive default {@code 0L} when the value is SQL {@code null}), or an empty {@code OptionalLong} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForLong()
      */
     @Override
-    OptionalLong queryForLong(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    OptionalLong queryForLong(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalFloat} describing the value of a single property for the entity with the specified ID.
@@ -217,12 +231,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return an {@code OptionalFloat} holding the selected value when a record matches the id (present, holding the primitive default {@code 0f} when the value is SQL {@code null}), or an empty {@code OptionalFloat} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForFloat()
      */
     @Override
-    OptionalFloat queryForFloat(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    OptionalFloat queryForFloat(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns an {@code OptionalDouble} describing the value of a single property for the entity with the specified ID.
@@ -242,12 +258,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return an {@code OptionalDouble} holding the selected value when a record matches the id (present, holding the primitive default {@code 0d} when the value is SQL {@code null}), or an empty {@code OptionalDouble} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForDouble()
      */
     @Override
-    OptionalDouble queryForDouble(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    OptionalDouble queryForDouble(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<String>} describing the value of a single property for the entity with the specified ID.
@@ -265,12 +283,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return a {@code Nullable} containing the String value, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForString()
      */
     @Override
-    Nullable<String> queryForString(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    Nullable<String> queryForString(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<java.sql.Date>} describing the value of a single property for the entity with the specified ID.
@@ -288,12 +308,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return a {@code Nullable} containing the Date value, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForDate()
      */
     @Override
-    Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<java.sql.Time>} describing the value of a single property for the entity with the specified ID.
@@ -311,12 +333,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return a {@code Nullable} containing the Time value, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForTime()
      */
     @Override
-    Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<java.sql.Timestamp>} describing the value of a single property for the entity with the specified ID.
@@ -334,12 +358,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return a {@code Nullable} containing the Timestamp value, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForTimestamp()
      */
     @Override
-    Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<byte[]>} describing the value of a single property for the entity with the specified ID.
@@ -358,12 +384,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID
      * @return a {@code Nullable} containing the byte array value, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForBytes()
      */
     @Override
-    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    Nullable<byte[]> queryForBytes(final String singleSelectPropName, final ID id)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns a {@code Nullable<V>} describing the value of a single property for the entity with the specified ID,
@@ -384,13 +412,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return a {@code Nullable} containing the converted value (which holds {@code null} when the value is SQL {@code null}),
      *         or {@code Nullable.empty()} if no record matches the {@code id}
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#queryForSingleValue(Class)
      */
     @Override
     <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, UncheckedSQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Returns an {@code Optional} describing the non-null value of a single property for the entity with the specified ID.
@@ -411,6 +440,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return an {@code Optional} containing the converted non-null value when a record matches the {@code id}, or an
      *         empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws NullPointerException if a record is found but the value converted to {@code targetValueType}
@@ -419,7 +449,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      */
     @Override
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, UncheckedSQLException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, NullPointerException;
 
     /**
      * Returns an {@code Optional} describing the non-null value mapped by the row mapper for the entity with the specified ID.
@@ -439,6 +469,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param rowMapper the function to map the result set row
      * @return an {@code Optional} containing the mapped value if a record matches the {@code id}, otherwise empty
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the matched record
@@ -448,7 +479,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     @Beta
     @Override
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, NullPointerException;
 
     /**
      * Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.
@@ -467,6 +498,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return a {@code Nullable} containing the unique result value (which holds {@code null} when the value is SQL {@code null}),
      *         or {@code Nullable.empty()} if no record matches the {@code id}
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
@@ -474,7 +506,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      */
     @Override
     <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException;
 
     /**
      * Returns an {@code Optional} describing the unique non-null value of a single property for the entity with the specified ID.
@@ -496,6 +528,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return an {@code Optional} containing the converted non-null value when exactly one record matches the {@code id},
      *         or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
@@ -505,7 +538,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      */
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Returns an {@code Optional} describing the unique non-null value mapped by the row mapper for the entity with the specified ID.
@@ -526,6 +559,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param rowMapper the function to map the result set row
      * @return an {@code Optional} containing the unique mapped value if a record matches the {@code id}, otherwise empty
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails, or a supplied JDBC callback throws {@link SQLException}
      * @throws DuplicateResultException if more than one record matches the given {@code id}
@@ -536,7 +570,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     @Beta
     @Override
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final ID id, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, NullPointerException;
 
     /**
      * Retrieves the entity with the specified ID.
@@ -551,12 +585,13 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return an {@code Optional} containing the entity if found, otherwise empty
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Override
-    default Optional<T> get(final ID id) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException {
+    default Optional<T> get(final ID id) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException {
         return Optional.ofNullable(getOrNull(id));
     }
 
@@ -575,13 +610,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return an {@code Optional} containing the entity with selected properties if found, otherwise empty
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Override
     default Optional<T> get(final ID id, final Collection<String> selectPropNames)
-            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException {
         return Optional.ofNullable(getOrNull(id, selectPropNames));
     }
 
@@ -601,12 +637,13 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return the entity if found, otherwise {@code null}
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Override
-    T getOrNull(final ID id) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException;
+    T getOrNull(final ID id) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException;
 
     /**
      * Retrieves the entity with the specified ID, selecting only the specified properties.
@@ -626,12 +663,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return the entity with selected properties if found, otherwise {@code null}
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      */
     @Override
-    T getOrNull(final ID id, final Collection<String> selectPropNames) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException;
+    T getOrNull(final ID id, final Collection<String> selectPropNames)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException;
 
     /**
      * Gets multiple entities by their IDs in batch using the default batch size ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
@@ -648,12 +687,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Override
-    default List<T> batchGet(final Collection<? extends ID> ids) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException {
+    default List<T> batchGet(final Collection<? extends ID> ids)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException {
         return batchGet(ids, null);
     }
 
@@ -674,13 +715,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final int batchSize)
-            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException {
         return batchGet(ids, null, batchSize);
     }
 
@@ -703,13 +745,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames)
-            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException {
         return batchGet(ids, selectPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -734,13 +777,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      */
     @Override
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> selectPropNames, final int batchSize)
-            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException {
         try {
             return CrudReadOps.super.batchGet(ids, selectPropNames, batchSize);
         } catch (final SQLException e) {
@@ -765,12 +809,13 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID to check
      * @return {@code true} if the entity exists, {@code false} otherwise
      * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#exists()
      */
     @Override
-    boolean exists(final ID id) throws IllegalArgumentException, UncheckedSQLException;
+    boolean exists(final ID id) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Checks if an entity with the specified ID does not exist in the database.
@@ -787,13 +832,14 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param id the entity ID to check
      * @return {@code true} if the entity does not exist, {@code false} if it exists
      * @throws IllegalArgumentException if {@code id} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @see AbstractQuery#notExists()
      */
     @Beta
     @Override
-    default boolean notExists(final ID id) throws IllegalArgumentException, UncheckedSQLException {
+    default boolean notExists(final ID id) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException {
         return !exists(id);
     }
 
@@ -815,13 +861,15 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws ArithmeticException if the total count across all ID batches exceeds the range of an {@code int}
      */
     @Beta
     @Override
-    default int count(final Collection<? extends ID> ids) throws IllegalArgumentException, UncheckedSQLException, ArithmeticException {
+    default int count(final Collection<? extends ID> ids)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
         try {
             return CrudReadOps.super.count(ids);
         } catch (final SQLException e) {
@@ -849,6 +897,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return {@code true} if the entity was found and refreshed, {@code false} if not found
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or the entity's single ID value is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if more than one record matches the entity's id
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
@@ -857,7 +906,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      */
     @Beta
     @Override
-    default boolean refresh(final T entity) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+    default boolean refresh(final T entity)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         try {
             return CrudReadOps.super.refresh(entity);
         } catch (final SQLException e) {
@@ -883,6 +933,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty,
      *                                  or the entity's single ID value is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if more than one record matches the entity's id
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
@@ -892,7 +943,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     @Beta
     @Override
     default boolean refresh(final T entity, final Collection<String> propNamesToRefresh)
-            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         try {
             return CrudReadOps.super.refresh(entity, propNamesToRefresh);
         } catch (final SQLException e) {
@@ -914,9 +965,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param entities the collection of entities to refresh
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its id is being extracted)
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
@@ -926,7 +976,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     @Beta
     @Override
     default int batchRefresh(final Collection<? extends T> entities)
-            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return batchRefresh(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -945,9 +995,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param batchSize the size of each batch
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null}, or {@code batchSize} is not positive
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its id is being extracted)
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or {@code batchSize} is not positive
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
@@ -957,7 +1006,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     @Beta
     @Override
     default int batchRefresh(final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         try {
             return CrudReadOps.super.batchRefresh(entities, batchSize);
         } catch (final SQLException e) {
@@ -980,10 +1029,9 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param propNamesToRefresh the properties to refresh for each entity
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null},
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  or {@code propNamesToRefresh} is {@code null} or empty
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its id is being extracted)
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
@@ -993,7 +1041,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     @Beta
     @Override
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh)
-            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         return batchRefresh(entities, propNamesToRefresh, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -1022,10 +1070,9 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param batchSize the size of each batch
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
-     * @throws IllegalArgumentException if the first element of a nonempty {@code entities} collection is {@code null},
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  or {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive
-     * @throws NullPointerException if an element of {@code entities} after the first is {@code null} (only the first element
-     *                              is checked; a later {@code null} fails while its id is being extracted)
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a matching database row is found but the entity cannot be written to in
@@ -1035,7 +1082,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     @Beta
     @Override
     default int batchRefresh(final Collection<? extends T> entities, final Collection<String> propNamesToRefresh, final int batchSize)
-            throws IllegalArgumentException, NullPointerException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         try {
             return CrudReadOps.super.batchRefresh(entities, propNamesToRefresh, batchSize);
         } catch (final SQLException e) {

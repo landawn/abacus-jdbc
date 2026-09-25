@@ -11,10 +11,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -29,10 +31,12 @@ import java.util.Arrays;
 import java.util.List;
 
 import javax.sql.DataSource;
+import javax.tools.ToolProvider;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -46,6 +50,78 @@ import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.function.QuadFunction;
 
 public class JdbcCodeGenerationUtilTest extends TestBase {
+
+    @Test
+    public void testGeneratedClassCompilesWhenEveryColumnIsExcluded(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("EmptyEntity")
+                .excludedFields(List.of("id", "created_at", "status"))
+                .generateBuilder(true)
+                .generateCopyMethod(true)
+                .build();
+        final Path source = directory.resolve("EmptyEntity.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+
+        for (final String additionalFields : List.of("", "private static final long version = 1L;", "private final String note = \"fixed\";",
+                "private String note;", "String note;", "@Deprecated private String note;",
+                "@lombok.Builder.Default private final String note = \"fixed\";",
+                "@lombok.Builder.Default\nprivate final String note = \"fixed\";", "private String\n    note;",
+                "private static int first; private final String note = \"fixed\", other = \"second\"; // recognized fields")) {
+            config.setAdditionalClassBodySource(additionalFields);
+            Files.writeString(source, JdbcCodeGenerationUtil.generateEntityClass("empty_entity", resultSet, config), StandardCharsets.UTF_8);
+            diagnostics.reset();
+            final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
+                    System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d",
+                    directory.toString(), source.toString());
+            assertEquals(0, exitCode, diagnostics.toString(StandardCharsets.UTF_8));
+        }
+    }
+
+    @Test
+    public void testNullConfigurationEntriesAreRejectedBeforeDatabaseAccess() {
+        final DataSource unusedSource = Mockito.mock(DataSource.class);
+        final Connection unusedConnection = Mockito.mock(Connection.class);
+        final ResultSet unusedResultSet = Mockito.mock(ResultSet.class);
+        final List<JdbcCodeGenerationUtil.EntityCodeConfig> configurations = List.of(
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().customFieldMappings(Arrays.asList((FieldMapping) null)).build(),
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().fieldTypeAnnotationArguments(Arrays.asList((Tuple.Tuple2<String, String>) null)).build());
+
+        for (final JdbcCodeGenerationUtil.EntityCodeConfig config : configurations) {
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedSource, "users", config));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedConnection, "users", config));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(unusedSource, "Users", "SELECT 1", config));
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(unusedConnection, "Users", "SELECT 1", config));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("Users", unusedResultSet, config));
+        }
+
+        Mockito.verifyNoInteractions(unusedSource, unusedConnection, unusedResultSet);
+    }
+
+    @Test
+    public void testNullOptionalConfigurationListsStillMeanNoOverrides() {
+        final JdbcCodeGenerationUtil.EntityCodeConfig emptyConfig = JdbcCodeGenerationUtil.EntityCodeConfig.builder().build();
+        final JdbcCodeGenerationUtil.EntityCodeConfig nullLists = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .customFieldMappings(null).fieldTypeAnnotationArguments(null).build();
+
+        assertEquals(JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, emptyConfig),
+                JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, nullLists));
+    }
+
+    @Test
+    public void testMalformedTableNamesAreRejectedBeforeDatabaseAccess() {
+        final DataSource unusedSource = Mockito.mock(DataSource.class);
+        final Connection unusedConnection = Mockito.mock(Connection.class);
+        for (final String tableName : List.of("schema..users", "\"users")) {
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedSource, tableName));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateSelectSql(unusedSource, tableName));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateInsertSql(unusedSource, tableName));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(unusedSource, tableName));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, tableName, "id"));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, tableName, "id"));
+        }
+        Mockito.verifyNoInteractions(unusedSource, unusedConnection);
+    }
 
     @Test
     public void testInvalidTableIsRejectedBeforeConnectionMetadata() {

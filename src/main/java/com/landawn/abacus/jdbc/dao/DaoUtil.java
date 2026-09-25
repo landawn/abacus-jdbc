@@ -96,9 +96,11 @@ public final class DaoUtil {
      * @return {@code true} if {@code daoInterface} extends {@link NonUpdateDao} or {@link ReadOnlyDao}
      *         (and therefore cannot perform update/delete operations that would invalidate cached rows);
      *         otherwise {@code false}.
-     * @throws NullPointerException if {@code daoInterface} is {@code null}
+     * @throws IllegalArgumentException if {@code daoInterface} is {@code null}
      */
-    public static boolean isCacheable(final Class<?> daoInterface) throws NullPointerException {
+    public static boolean isCacheable(final Class<?> daoInterface) throws IllegalArgumentException {
+        N.checkArgNotNull(daoInterface, cs.daoInterface);
+
         return NonUpdateDao.class.isAssignableFrom(daoInterface) || ReadOnlyDao.class.isAssignableFrom(daoInterface);
     }
 
@@ -107,9 +109,11 @@ public final class DaoUtil {
      *
      * @param daoInterface the DAO interface to inspect.
      * @return {@code true} if {@code daoInterface} extends {@link CrudReadOps}; otherwise {@code false}.
-     * @throws NullPointerException if {@code daoInterface} is {@code null}
+     * @throws IllegalArgumentException if {@code daoInterface} is {@code null}
      */
-    public static boolean isCrudReadOps(final Class<?> daoInterface) throws NullPointerException {
+    public static boolean isCrudReadOps(final Class<?> daoInterface) throws IllegalArgumentException {
+        N.checkArgNotNull(daoInterface, cs.daoInterface);
+
         return CrudReadOps.class.isAssignableFrom(daoInterface);
     }
 
@@ -130,9 +134,11 @@ public final class DaoUtil {
      *
      * @param daoInterface the DAO interface to inspect.
      * @return {@code true} if {@code daoInterface} extends {@link CrudJoinEntityReadOps}; otherwise {@code false}.
-     * @throws NullPointerException if {@code daoInterface} is {@code null}
+     * @throws IllegalArgumentException if {@code daoInterface} is {@code null}
      */
-    public static boolean isCrudJoinEntityReadOps(final Class<?> daoInterface) throws NullPointerException {
+    public static boolean isCrudJoinEntityReadOps(final Class<?> daoInterface) throws IllegalArgumentException {
+        N.checkArgNotNull(daoInterface, cs.daoInterface);
+
         return CrudJoinEntityReadOps.class.isAssignableFrom(daoInterface);
     }
 
@@ -141,9 +147,11 @@ public final class DaoUtil {
      *
      * @param daoInterface the DAO interface to inspect.
      * @return {@code true} if {@code daoInterface} extends {@link JoinEntityReadOps}; otherwise {@code false}.
-     * @throws NullPointerException if {@code daoInterface} is {@code null}
+     * @throws IllegalArgumentException if {@code daoInterface} is {@code null}
      */
-    public static boolean isJoinEntityReadOps(final Class<?> daoInterface) throws NullPointerException {
+    public static boolean isJoinEntityReadOps(final Class<?> daoInterface) throws IllegalArgumentException {
+        N.checkArgNotNull(daoInterface, cs.daoInterface);
+
         return JoinEntityReadOps.class.isAssignableFrom(daoInterface);
     }
 
@@ -152,9 +160,11 @@ public final class DaoUtil {
      *
      * @param daoInterface the DAO interface to inspect.
      * @return {@code true} if {@code daoInterface} extends {@link UncheckedReadOps}; otherwise {@code false}.
-     * @throws NullPointerException if {@code daoInterface} is {@code null}
+     * @throws IllegalArgumentException if {@code daoInterface} is {@code null}
      */
-    public static boolean isUncheckedReadOps(final Class<?> daoInterface) throws NullPointerException {
+    public static boolean isUncheckedReadOps(final Class<?> daoInterface) throws IllegalArgumentException {
+        N.checkArgNotNull(daoInterface, cs.daoInterface);
+
         return UncheckedReadOps.class.isAssignableFrom(daoInterface);
     }
 
@@ -163,9 +173,11 @@ public final class DaoUtil {
      *
      * @param declaringClass the declaring class of a DAO method.
      * @return {@code true} if methods declared by {@code declaringClass} are base DAO operations; otherwise {@code false}.
-     * @throws NullPointerException if {@code declaringClass} is {@code null}
+     * @throws IllegalArgumentException if {@code declaringClass} is {@code null}
      */
-    public static boolean isDaoOperationDeclaringClass(final Class<?> declaringClass) throws NullPointerException {
+    public static boolean isDaoOperationDeclaringClass(final Class<?> declaringClass) throws IllegalArgumentException {
+        N.checkArgNotNull(declaringClass, cs.declaringClass);
+
         return declaringClass.equals(Dao.class) || declaringClass.equals(UncheckedDao.class) || declaringClass.equals(ReadOps.class)
                 || declaringClass.equals(InsertOps.class) || declaringClass.equals(UpdateOps.class) || declaringClass.equals(DeleteOps.class)
                 || declaringClass.equals(UncheckedReadOps.class) || declaringClass.equals(UncheckedInsertOps.class)
@@ -178,9 +190,11 @@ public final class DaoUtil {
      *
      * @param declaringClass the declaring class of a DAO method.
      * @return {@code true} if methods declared by {@code declaringClass} are CRUD DAO operations; otherwise {@code false}.
-     * @throws NullPointerException if {@code declaringClass} is {@code null}
+     * @throws IllegalArgumentException if {@code declaringClass} is {@code null}
      */
-    public static boolean isCrudDaoOperationDeclaringClass(final Class<?> declaringClass) throws NullPointerException {
+    public static boolean isCrudDaoOperationDeclaringClass(final Class<?> declaringClass) throws IllegalArgumentException {
+        N.checkArgNotNull(declaringClass, cs.declaringClass);
+
         return declaringClass.equals(CrudDao.class) || declaringClass.equals(UncheckedCrudDao.class) || declaringClass.equals(CrudReadOps.class)
                 || declaringClass.equals(CrudInsertOps.class) || declaringClass.equals(CrudUpdateOps.class) || declaringClass.equals(CrudDeleteOps.class)
                 || declaringClass.equals(UncheckedCrudReadOps.class) || declaringClass.equals(UncheckedCrudInsertOps.class)
@@ -192,9 +206,11 @@ public final class DaoUtil {
      *
      * @param declaringClass the declaring class of a DAO method.
      * @return {@code true} if methods declared by {@code declaringClass} are join-entity helper operations; otherwise {@code false}.
-     * @throws NullPointerException if {@code declaringClass} is {@code null}
+     * @throws IllegalArgumentException if {@code declaringClass} is {@code null}
      */
-    public static boolean isJoinEntityHelperDeclaringClass(final Class<?> declaringClass) throws NullPointerException {
+    public static boolean isJoinEntityHelperDeclaringClass(final Class<?> declaringClass) throws IllegalArgumentException {
+        N.checkArgNotNull(declaringClass, cs.declaringClass);
+
         return declaringClass.equals(JoinEntityReadOps.class) || declaringClass.equals(JoinEntityDeleteOps.class)
                 || declaringClass.equals(UncheckedJoinEntityReadOps.class) || declaringClass.equals(UncheckedJoinEntityDeleteOps.class)
                 || declaringClass.equals(JoinEntityHelper.class) || declaringClass.equals(UncheckedJoinEntityHelper.class);
@@ -211,13 +227,15 @@ public final class DaoUtil {
      *
      * @param dao the DAO used to generate the identifier; must implement {@link CrudInsertOps}.
      * @return the generated identifier.
-     * @throws ClassCastException if {@code dao} is not {@code null} and does not implement {@link CrudInsertOps}.
-     * @throws NullPointerException if {@code dao} is {@code null}
+     * @throws IllegalArgumentException if {@code dao} is {@code null}
+     * @throws ClassCastException if {@code dao} does not implement {@link CrudInsertOps}.
      * @throws UnsupportedOperationException if {@code dao} does not override {@link CrudInsertOps#generateId()}.
      * @throws SQLException if the DAO's overriding ID generator fails while accessing the database.
      */
     @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
-    public static Object generateId(final DaoBase dao) throws ClassCastException, NullPointerException, UnsupportedOperationException, SQLException {
+    public static Object generateId(final DaoBase dao) throws IllegalArgumentException, ClassCastException, UnsupportedOperationException, SQLException {
+        N.checkArgNotNull(dao, cs.dao);
+
         return ((CrudInsertOps) dao).generateId();
     }
 
@@ -871,7 +889,7 @@ public final class DaoUtil {
      * @param futures the list of futures to complete. Must not be {@code null}.
      * @throws NullPointerException if {@code futures} is {@code null} or contains a {@code null} future
      * @throws UncheckedSQLException if the first failed future has a SQL-related exception
-     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for a future to complete
+     * @throws UncheckedInterruptedException if the first collected failure is an interruption while waiting for a future or executing its action
      */
     static void uncheckedComplete(final List<ContinuableFuture<Void>> futures)
             throws NullPointerException, UncheckedSQLException, UncheckedInterruptedException {
@@ -918,7 +936,7 @@ public final class DaoUtil {
      * @return the sum of all integer results from the futures
      * @throws NullPointerException if {@code futures} is {@code null}, contains a {@code null} future, or a successful future returns {@code null}
      * @throws UncheckedSQLException if the first failed future has a SQL-related exception
-     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for a future to complete
+     * @throws UncheckedInterruptedException if the first collected failure is an interruption while waiting for a future or executing its action
      * @throws ArithmeticException if no future failed and the sum overflows an {@code int}.
      */
     static int uncheckedCompleteSum(final List<ContinuableFuture<Integer>> futures)
@@ -969,7 +987,7 @@ public final class DaoUtil {
      * @param futures the list of futures to complete. Must not be {@code null}.
      * @throws NullPointerException if {@code futures} is {@code null} or contains a {@code null} future
      * @throws SQLException if the first failed future has a SQL-related exception
-     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for a future to complete
+     * @throws UncheckedInterruptedException if the first collected failure is an interruption while waiting for a future or executing its action
      */
     static void complete(final List<ContinuableFuture<Void>> futures) throws NullPointerException, SQLException, UncheckedInterruptedException {
         Exception firstException = null;
@@ -1015,7 +1033,7 @@ public final class DaoUtil {
      * @return the sum of all integer results from the futures
      * @throws NullPointerException if {@code futures} is {@code null}, contains a {@code null} future, or a successful future returns {@code null}
      * @throws SQLException if the first failed future has a SQL-related exception
-     * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for a future to complete
+     * @throws UncheckedInterruptedException if the first collected failure is an interruption while waiting for a future or executing its action
      * @throws ArithmeticException if no future failed and the sum overflows an {@code int}.
      */
     static int completeSum(final List<ContinuableFuture<Integer>> futures)

@@ -20,6 +20,8 @@ import java.util.Collection;
 import java.util.function.Consumer;
 import java.util.List;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.LazyEvaluation;
 import com.landawn.abacus.exception.DuplicateResultException;
@@ -86,11 +88,12 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the condition to check
      * @return {@code true} if at least one matching record exists
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#exists()
      */
-    boolean exists(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    boolean exists(final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Convenience method equivalent to the negation of {@link #exists(Condition)}.
@@ -105,12 +108,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the condition to check
      * @return {@code true} if no matching records exist
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see #exists(Condition)
      */
     @Beta
-    default boolean notExists(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+    default boolean notExists(final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         return !exists(cond);
     }
 
@@ -129,10 +133,11 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the condition for counting
      * @return the number of matching records, or {@code 0} if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    int count(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    int count(final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Finds the first record that matches the specified condition.
@@ -148,10 +153,11 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the first matching entity, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    Optional<T> findFirst(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    Optional<T> findFirst(final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Finds the first record matching the condition and maps it using the provided mapper.
@@ -170,6 +176,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the function to map the result row
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -177,7 +184,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Finds the first record matching the condition and maps it using a bi-function mapper.
@@ -188,6 +195,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the bi-function to map the result row
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -195,7 +203,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Finds the first record matching the condition, selecting only the specified properties.
@@ -214,10 +222,12 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the first matching entity, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    Optional<T> findFirst(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Finds the first record with the specified properties and maps the result.
@@ -229,6 +239,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -236,7 +247,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Finds the first record with the specified properties using a bi-function mapper.
@@ -248,6 +259,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the bi-function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -255,11 +267,11 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findFirst(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
-     * Finds exactly one record matching the condition, throwing an exception if multiple are found.
-     * Use this when you expect exactly zero or one result.
+     * Finds at most one record matching the condition, throwing an exception if multiple are found.
+     * Use this when you expect zero or one result.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -271,14 +283,16 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the single matching entity, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      */
-    Optional<T> findOnlyOne(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException;
+    Optional<T> findOnlyOne(final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException;
 
     /**
-     * Finds exactly one record and maps it, throwing an exception if multiple are found.
+     * Finds at most one record and maps it, throwing an exception if multiple are found.
      * Ensures uniqueness while allowing custom result transformation.
      *
      * @param <R> the result type after applying the mapping function
@@ -286,6 +300,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -293,11 +308,11 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException,
+            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
-     * Finds exactly one record using a bi-function mapper, throwing an exception if multiple are found.
+     * Finds at most one record using a bi-function mapper, throwing an exception if multiple are found.
      * The mapper receives both the ResultSet and column labels.
      *
      * @param <R> the result type after applying the mapping function
@@ -305,6 +320,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the bi-function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -312,11 +328,11 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @throws NullPointerException if {@code rowMapper} returns {@code null} for the single matched record
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
-    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
+    <R> Optional<R> findOnlyOne(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException,
+            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
 
     /**
-     * Finds exactly one record with the specified properties, throwing an exception if multiple are found.
+     * Finds at most one record with the specified properties, throwing an exception if multiple are found.
      * Combines property selection with uniqueness constraint.
      *
      * @param selectPropNames the properties to select, {@code null} for all
@@ -324,15 +340,16 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the single matching entity, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      */
     Optional<T> findOnlyOne(final Collection<String> selectPropNames, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException;
 
     /**
-     * Finds exactly one record with the specified properties and maps it.
+     * Finds at most one record with the specified properties and maps it.
      * Ensures both property selection and uniqueness with custom mapping.
      *
      * @param <R> the result type after applying the mapping function
@@ -341,6 +358,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -349,10 +367,11 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException,
+            NullPointerException;
 
     /**
-     * Finds exactly one record with the specified properties using a bi-function mapper.
+     * Finds at most one record with the specified properties using a bi-function mapper.
      * Maximum flexibility with property selection, uniqueness, and custom mapping.
      *
      * @param <R> the result type after applying the mapping function
@@ -361,6 +380,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper the bi-function to map the result
      * @return an {@code Optional} containing the mapped result, or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -369,7 +389,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                              (a {@code null} mapping result is not collapsed to an empty {@code Optional})
      */
     <R> Optional<R> findOnlyOne(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException,
+            NullPointerException;
 
     /**
      * Queries the value of a single boolean column for the first record matching the condition.
@@ -390,12 +411,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code false}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code false}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBoolean()
      */
     OptionalBoolean queryForBoolean(final String singleSelectPropName, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single char column for the first record matching the condition.
@@ -416,11 +438,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code (char) 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code (char) 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForChar()
      */
-    OptionalChar queryForChar(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    OptionalChar queryForChar(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single byte column for the first record matching the condition.
@@ -438,11 +462,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForByte()
      */
-    OptionalByte queryForByte(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    OptionalByte queryForByte(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single short column for the first record matching the condition.
@@ -460,11 +486,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForShort()
      */
-    OptionalShort queryForShort(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    OptionalShort queryForShort(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single int column for the first record matching the condition.
@@ -483,11 +511,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForInt()
      */
-    OptionalInt queryForInt(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    OptionalInt queryForInt(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single long column for the first record matching the condition.
@@ -505,11 +535,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForLong()
      */
-    OptionalLong queryForLong(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    OptionalLong queryForLong(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single float column for the first record matching the condition.
@@ -527,11 +559,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0f}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0f}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForFloat()
      */
-    OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    OptionalFloat queryForFloat(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single double column for the first record matching the condition.
@@ -549,11 +583,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         value is returned as <i>present</i> holding the primitive default {@code 0d}; use
      *         {@link #queryForSingleValue(String, Condition, Class)} to distinguish SQL {@code NULL} from a real {@code 0d}.
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDouble()
      */
-    OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    OptionalDouble queryForDouble(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single String column for the first record matching the condition.
@@ -571,12 +607,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForString()
      */
     Nullable<String> queryForString(final String singleSelectPropName, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single {@code java.sql.Date} column for the first record matching the condition.
@@ -593,12 +630,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDate()
      */
     Nullable<java.sql.Date> queryForDate(final String singleSelectPropName, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single {@code java.sql.Time} column for the first record matching the condition.
@@ -615,12 +653,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTime()
      */
     Nullable<java.sql.Time> queryForTime(final String singleSelectPropName, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single {@code java.sql.Timestamp} column for the first record matching the condition.
@@ -637,12 +676,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTimestamp()
      */
     Nullable<java.sql.Timestamp> queryForTimestamp(final String singleSelectPropName, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries the value of a single byte-array column for the first record matching the condition.
@@ -659,12 +699,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBytes()
      */
     Nullable<byte[]> queryForBytes(final String singleSelectPropName, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries a single value of the specified type from one column for the first record matching the condition.
@@ -689,12 +730,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when at least one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForSingleValue(Class)
      */
     <V> Nullable<V> queryForSingleValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Queries a single non-null value of the specified type from one column for the first record matching the condition.
@@ -719,6 +761,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the converted non-null value when a record matches, or an empty
      *         {@code Optional} if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws NullPointerException if a record is found but the value converted to {@code targetValueType}
@@ -726,7 +769,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @see AbstractQuery#queryForSingleNonNull(Class)
      */
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Queries a single non-null value from one column for the first record matching the condition, mapping it with a custom row mapper.
@@ -749,6 +792,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the mapped value, or an empty {@code Optional} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -758,7 +802,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      */
     @Beta
     <V> Optional<V> queryForSingleNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, NullPointerException;
 
     /**
      * Queries a unique single value of the specified type from one column, throwing if more than one record matches.
@@ -783,13 +827,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *         SQL {@code NULL}) when exactly one record matches, or an empty {@code Nullable} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      * @see AbstractQuery#queryForUniqueValue(Class)
      */
     <V> Nullable<V> queryForUniqueValue(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException;
 
     /**
      * Queries a unique non-null single value of the specified type from one column, throwing if more than one record matches.
@@ -814,6 +859,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the converted non-null value when a record matches, or an empty
      *         {@code Optional} if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code targetValueType} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
@@ -822,7 +868,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @see AbstractQuery#queryForUniqueNonNull(Class)
      */
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Class<? extends V> targetValueType)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException,
+            NullPointerException;
 
     /**
      * Queries a unique non-null value from one column using a custom row mapper, throwing if more than one record matches.
@@ -847,6 +894,7 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return an {@code Optional} containing the unique mapped value, or an empty {@code Optional} if no record
      *         matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -857,7 +905,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      */
     @Beta
     <V> Optional<V> queryForUniqueNonNull(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends V> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, NullPointerException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException,
+            NullPointerException;
 
     /**
      * Executes a query and returns the results as a Dataset.
@@ -873,10 +922,11 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a {@code Dataset} containing the query results; never {@code null} (an empty {@code Dataset} is
      *         returned when no record matches)
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    Dataset query(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    Dataset query(final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Executes a query for specific columns and returns results as a Dataset.
@@ -887,10 +937,12 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a {@code Dataset} containing the query results; never {@code null} (an empty {@code Dataset} is
      *         returned when no record matches)
      * @throws IllegalArgumentException if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    Dataset query(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    Dataset query(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Executes a query and processes results with a custom result extractor.
@@ -916,13 +968,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                        {@code ResultSet} and must not save or hold a reference to it after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     <R> R query(final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UnsupportedOperationException;
 
     /**
      * Executes a query for specific columns with a custom result extractor.
@@ -935,13 +988,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                        {@code ResultSet} and must not save or hold a reference to it after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.ResultExtractor<? extends R> resultExtractor)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UnsupportedOperationException;
 
     /**
      * Executes a query with a bi-function result extractor.
@@ -954,13 +1008,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                        after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     <R> R query(final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UnsupportedOperationException;
 
     /**
      * Executes a query for specific columns with a bi-function result extractor.
@@ -974,13 +1029,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      *                        after returning
      * @return the result produced by {@code resultExtractor} (may be {@code null} if the extractor returns {@code null})
      * @throws IllegalArgumentException if {@code cond} or {@code resultExtractor} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link java.sql.ResultSet}
      */
     <R> R query(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiResultExtractor<? extends R> resultExtractor)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, UnsupportedOperationException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UnsupportedOperationException;
 
     /**
      * Returns a list of all entities matching the specified condition.
@@ -998,10 +1054,11 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a list of matching entities, or an empty list if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    List<T> list(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    List<T> list(final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of results mapped by the provided row mapper.
@@ -1020,11 +1077,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map each row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of results mapped by a bi-function row mapper.
@@ -1035,11 +1094,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper bi-function to map each row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    <R> List<R> list(final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a filtered list of results mapped by the row mapper.
@@ -1060,12 +1121,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map filtered rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a filtered list using bi-function filter and mapper.
@@ -1077,12 +1139,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper bi-function to map filtered rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of entities with only the specified properties populated.
@@ -1101,10 +1164,12 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a list of partially loaded entities, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
-    List<T> list(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    List<T> list(final Collection<String> selectPropNames, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of selected properties mapped by the row mapper.
@@ -1116,12 +1181,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map each row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of selected properties mapped by a bi-function mapper.
@@ -1133,12 +1199,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper bi-function to map each row
      * @return a list of mapped results, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a filtered list of selected properties mapped by the row mapper.
@@ -1151,12 +1218,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map filtered rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a filtered list with bi-function filter and mapper for selected properties.
@@ -1169,12 +1237,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper bi-function to map filtered rows
      * @return a list of filtered and mapped results, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     <R> List<R> list(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter,
-            final Jdbc.BiRowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            final Jdbc.BiRowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Returns a list of values from a single property/column.
@@ -1190,11 +1260,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @return a list of property values, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @SuppressWarnings("deprecation")
-    default <R> List<R> list(final String singleSelectPropName, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+    default <R> List<R> list(final String singleSelectPropName, final Condition cond)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -1223,12 +1295,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowMapper function to map the property value
      * @return a list of mapped values, or an empty list if no record matches the condition
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond} or {@code rowMapper} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowMapper<? extends R> rowMapper)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
         N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowMapper, cs.rowMapper);
@@ -1248,12 +1321,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @return a list of filtered and mapped values, or an empty list if no record matches or passes the filter
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code cond}, {@code rowFilter}, or {@code rowMapper} is
      *                                  {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     default <R> List<R> list(final String singleSelectPropName, final Condition cond, final Jdbc.RowFilter rowFilter,
-            final Jdbc.RowMapper<? extends R> rowMapper) throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            final Jdbc.RowMapper<? extends R> rowMapper)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(singleSelectPropName, cs.singleSelectPropName);
         N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowFilter, cs.rowFilter);
@@ -1706,11 +1781,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer consumer to process each row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    void forEach(final Condition cond, final Jdbc.RowConsumer rowConsumer)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over results with a bi-consumer receiving ResultSet and column labels.
@@ -1719,11 +1796,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer bi-consumer to process each row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
-    void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer) throws IllegalArgumentException, UncheckedSQLException, SQLException;
+    void forEach(final Condition cond, final Jdbc.BiRowConsumer rowConsumer)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over filtered results, processing only rows that pass the filter.
@@ -1733,12 +1812,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter predicate to filter rows
      * @param rowConsumer consumer for filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     void forEach(final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over filtered results with bi-function filter and consumer.
@@ -1748,12 +1828,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter bi-predicate to filter rows
      * @param rowConsumer bi-consumer for filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     void forEach(final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over selected properties, applying the consumer to each row.
@@ -1763,12 +1844,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer consumer to process each row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowConsumer rowConsumer)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over selected properties with a bi-consumer.
@@ -1778,12 +1860,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer bi-consumer to process each row
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowConsumer rowConsumer)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over filtered results of selected properties.
@@ -1794,12 +1877,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter predicate to filter rows
      * @param rowConsumer consumer for filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.RowFilter rowFilter, final Jdbc.RowConsumer rowConsumer)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over filtered results of selected properties with a bi-function filter and consumer.
@@ -1810,12 +1894,13 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param rowFilter bi-predicate to filter rows
      * @param rowConsumer bi-consumer for filtered rows
      * @throws IllegalArgumentException if {@code cond}, {@code rowFilter}, or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
      */
     void forEach(final Collection<String> selectPropNames, final Condition cond, final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowConsumer rowConsumer)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
 
     /**
      * Iterates over results using a disposable object array consumer.
@@ -1844,13 +1929,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer consumer that receives reusable row array
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Collection<String> selectPropNames, final Condition cond, final Consumer<DisposableObjArray> rowConsumer)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 
@@ -1869,13 +1955,14 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * @param cond the search condition
      * @param rowConsumer consumer that receives reusable row array
      * @throws IllegalArgumentException if {@code cond} or {@code rowConsumer} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      */
     @SuppressWarnings("deprecation")
     @Beta
     default void foreach(final Condition cond, final Consumer<DisposableObjArray> rowConsumer)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(cond, cs.cond);
         N.checkArgNotNull(rowConsumer, cs.rowConsumer);
 

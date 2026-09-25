@@ -144,6 +144,9 @@ public @interface Handler {
      *       this handler's {@code beforeInvoke()} completed normally, including when a later
      *       handler's {@code beforeInvoke()} fails.</li>
      * </ol>
+     * <p>When the invocation or a {@code beforeInvoke()} call fails, that failure remains primary
+     * while distinct {@code afterInvoke()} failures are attached as suppressed exceptions. Rethrowing
+     * that same primary failure from a handler does not add it to a suppression chain.</p>
      *
      * <p>Example handler implementation:</p>
      * <pre>{@code

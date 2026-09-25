@@ -17,6 +17,8 @@ package com.landawn.abacus.jdbc.dao;
 
 import java.util.Collection;
 
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
+
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -48,10 +50,11 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param entity the entity to insert
      * @throws IllegalArgumentException if {@code entity} is {@code null}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
-    void save(final T entity) throws IllegalArgumentException, UncheckedSQLException;
+    void save(final T entity) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Saves (inserts) the specified entity with only the specified properties.
@@ -66,10 +69,12 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entity the entity to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
-    void save(final T entity, final Collection<String> propNamesToSave) throws IllegalArgumentException, UncheckedSQLException;
+    void save(final T entity, final Collection<String> propNamesToSave)
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Saves (inserts) the entity using a custom named INSERT SQL statement.
@@ -88,10 +93,11 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if {@code entity} has no property for a named parameter in {@code namedInsertSql}
      *                                  other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement fails
      */
     @Override
-    void save(final String namedInsertSql, final T entity) throws IllegalArgumentException, UncheckedSQLException;
+    void save(final String namedInsertSql, final T entity) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Batch saves (inserts) multiple entities using the default batch size.
@@ -109,12 +115,16 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entities the collection of entities to insert
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an INSERT statement fails
      * @see #batchSave(Collection, int)
+     * @throws IllegalArgumentException if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      */
     @Override
-    default void batchSave(final Collection<? extends T> entities) throws IllegalStateException, UncheckedSQLException {
+    default void batchSave(final Collection<? extends T> entities)
+            throws IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalArgumentException {
         batchSave(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -131,14 +141,18 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param entities the collection of entities to insert
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @throws IllegalArgumentException if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code batchSize} is not positive,
+     *         if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an INSERT statement fails
      */
     @Override
-    void batchSave(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException;
+    void batchSave(final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Batch saves entities with only the specified properties using default batch size.
@@ -152,15 +166,18 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *
      * @param entities the collection of entities to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
-     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty
+     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty,
+     *         if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an INSERT statement fails
      */
     @Override
     default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException {
         batchSave(entities, propNamesToSave, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -178,15 +195,18 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param propNamesToSave the property names to include (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code propNamesToSave} is {@code null} or empty, or if {@code batchSize} is not positive,
+     *         if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an INSERT statement fails
      */
     @Override
     void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException;
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
     /**
      * Batch saves entities using a custom named INSERT SQL with default batch size.
@@ -204,16 +224,19 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty,
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if an element of {@code entities} has no property for a named parameter in
-     *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
+     *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
+     *         if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an INSERT statement fails
      */
     @Beta
     @Override
     default void batchSave(final String namedInsertSql, final Collection<? extends T> entities)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException {
         batchSave(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -235,15 +258,18 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive,
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if an element of {@code entities} has no property for a named parameter in
-     *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
+     *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
+     *         if a batch row is {@code null} and the SQL has other than one parameter,
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
      *         the internally required transaction scope
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an INSERT statement fails
      */
     @Beta
     @Override
     void batchSave(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException;
+            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException;
 
 }

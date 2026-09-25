@@ -60,6 +60,10 @@ public final class cs { // NOSONAR
      */
     public static final String action = "action";
     /**
+     * Parameter name for the callback that adds the current parameters to a batch.
+     */
+    public static final String addBatchAction = "addBatchAction";
+    /**
      * Parameter name for actions to be executed after method invocation.
      */
     public static final String afterInvokeAction = "afterInvokeAction";
@@ -128,9 +132,21 @@ public final class cs { // NOSONAR
      */
     public static final String daoInterface = "daoInterface";
     /**
+     * Parameter name for a data access object instance.
+     */
+    public static final String dao = "dao";
+    /**
+     * Parameter name for the class declaring a DAO method.
+     */
+    public static final String declaringClass = "declaringClass";
+    /**
      * Parameter name for default column value extraction functions.
      */
     public static final String defaultColumnGetter = "defaultColumnGetter";
+    /**
+     * Parameter name for the JDBC result set delegated to by a proxy.
+     */
+    public static final String delegate = "delegate";
     /**
      * Parameter name for downstream collectors or operations in stream processing.
      */
@@ -147,6 +163,14 @@ public final class cs { // NOSONAR
      * Parameter name for entity objects representing database records or domain models.
      */
     public static final String entity = "entity";
+    /**
+     * Parameter name for a collection of entities.
+     */
+    public static final String entities = "entities";
+    /**
+     * Parameter name for an entity's named identifier values.
+     */
+    public static final String entityId = "entityId";
     /**
      * Parameter name for Class objects representing entity types.
      */
@@ -184,6 +208,18 @@ public final class cs { // NOSONAR
      */
     public static final String idExtractor = "idExtractor";
     /**
+     * Parameter name for joined entities grouped by their key values.
+     */
+    public static final String groupedPropEntities = "groupedPropEntities";
+    /**
+     * Parameter name for entities assigned to a joined property.
+     */
+    public static final String joinPropEntities = "joinPropEntities";
+    /**
+     * Parameter name for a decoded SQL identifier.
+     */
+    public static final String identifier = "identifier";
+    /**
      * Parameter name for the single property name used to identify entities to merge.
      */
     public static final String idPropNameForMerge = "idPropNameForMerge";
@@ -208,9 +244,21 @@ public final class cs { // NOSONAR
      */
     public static final String localThreadCache = "localThreadCache";
     /**
+     * Parameter name for the maximum number of connections in a pool.
+     */
+    public static final String maxPoolSize = "maxPoolSize";
+    /**
      * Parameter name for binary functions that merge duplicate values in map operations.
      */
     public static final String mergeFunction = "mergeFunction";
+    /**
+     * Parameter name for the method signature identifying a DAO cache operation.
+     */
+    public static final String methodSignature = "methodSignature";
+    /**
+     * Parameter name for the minimum number of idle connections in a pool.
+     */
+    public static final String minIdle = "minIdle";
     /**
      * Parameter name for suppliers that create multimap instances for collecting grouped values.
      */
@@ -319,6 +367,10 @@ public final class cs { // NOSONAR
      * Parameter name for ResultSet objects in query processing.
      */
     public static final String rs = "rs";
+    /**
+     * Parameter name for JDBC result-set metadata.
+     */
+    public static final String rsmd = "rsmd";
     /**
      * Parameter name for SQL query strings.
      */
@@ -475,6 +527,10 @@ public final class cs { // NOSONAR
      * Parameter name for SQL query strings used by paging/streaming helpers.
      */
     public static final String query = "query";
+    /**
+     * Parameter name for the quote string surrounding an SQL identifier.
+     */
+    public static final String quote = "quote";
     /**
      * Parameter name for the page size used in paginated query execution.
      */

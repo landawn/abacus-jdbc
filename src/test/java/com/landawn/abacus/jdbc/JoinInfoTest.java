@@ -17,6 +17,7 @@
 package com.landawn.abacus.jdbc;
 
 import static com.landawn.abacus.query.Dsl.PSC;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -199,6 +200,26 @@ public class JoinInfoTest extends TestBase {
 
         assertThrows(IllegalArgumentException.class, () -> directJoin.batchSelectSqlPlan(PSC)._1.apply(null, 0));
         assertThrows(IllegalArgumentException.class, () -> manyToManyJoin.batchSelectSqlPlan(PSC)._1.apply(null, -1));
+        assertThrows(IllegalArgumentException.class, () -> directJoin.batchSelectSqlPlan(PSC)._1.apply(null, null));
+        assertThrows(IllegalArgumentException.class, () -> manyToManyJoin.batchSelectSqlPlan(PSC)._1.apply(null, null));
+    }
+
+    @Test
+    public void testJoinAssignmentRejectsInvalidNullsAndRetainsEmptyInputs() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        final UserEntity user = new UserEntity();
+
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.setJoinPropEntities(null, List.of()));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.setJoinPropEntities(null, Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.setJoinPropEntities(List.of(user), (Map<Object, List<Object>>) null));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.setJoinPropEntities(Arrays.asList((UserEntity) null), Map.of()));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.setJoinPropEntities(List.of(user), Arrays.asList((OrderEntity) null)));
+
+        assertDoesNotThrow(() -> joinInfo.setJoinPropEntities(List.of(), (Map<Object, List<Object>>) null));
+        assertDoesNotThrow(() -> joinInfo.setJoinPropEntities(List.of(user), (Collection<?>) null));
+        assertTrue(user.getOrders().isEmpty());
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.batchSelectSqlPlan(PSC)._2.accept(null, null));
+        assertDoesNotThrow(() -> joinInfo.batchSelectSqlPlan(PSC)._2.accept(null, List.of()));
     }
 
     // Test PAC SqlBuilder also works

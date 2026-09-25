@@ -2216,7 +2216,7 @@ final class DaoImpl {
         if (count <= 0) {
             return cond;
         } else if (cond == null) {
-            return Filters.limit(count);
+            return skipLimitWithoutOrderBy ? null : Filters.limit(count);
         } else if (cond instanceof final Limit limit) {
             return limit;
         } else if (cond instanceof final Criteria criteria) {
@@ -2561,13 +2561,17 @@ final class DaoImpl {
      *
      * <p>In addition to method-level annotations, the method also processes type-level configuration:</p>
      * <ul>
-     *   <li>{@code @SqlSource} annotations to load external SQL mapper files</li>
+     *   <li>{@code @SqlSource} annotations to load external SQL mapper files, retaining each statement's
+     *       timeout, fetch-size, and batch-size attributes</li>
      *   <li>{@code @SqlScript} annotated fields for embedded SQL definitions</li>
      *   <li>{@code @DaoConfig} for configuration options like {@code addLimitForSingleQuery}</li>
      *   <li>{@code @Handler} and {@code @Handlers} for custom method handlers</li>
      *   <li>{@code @PerfLog} for performance logging of DAO method invocations</li>
      *   <li>{@code @SqlLogEnabled} for SQL statement logging control</li>
      * </ul>
+     * <p>If a DAO invocation or a handler fails, the first failure remains primary and distinct
+     * handler cleanup failures are suppressed. A handler that rethrows the primary failure does
+     * not add it to the cleanup failures, avoiding circular suppression chains.</p>
      *
      * @param <TD> the DAO interface type, must extend {@link DaoBase}
      * @param daoInterface the DAO interface class to create a proxy for; must be an interface
@@ -2672,7 +2676,7 @@ final class DaoImpl {
                             throw new IllegalArgumentException("Duplicated sql keys: " + key + " defined in SqlMapper for Dao class: " + daoClassName);
                         }
 
-                        newSqlMapper.add(key, it.get(key));
+                        newSqlMapper.add(key, it.get(key), it.attributes(key));
                     }
                 });
 
@@ -2945,6 +2949,8 @@ final class DaoImpl {
 
         final Jdbc.BiParametersSetter<NamedQuery, Object> idParamSetter = isOneId ? (pq, id) -> pq.setObject(oneIdPropName, id, idPropInfo.dbType)
                 : (isEntityId ? (pq, id) -> {
+                    N.checkArgNotNull(id, cs.id);
+
                     final EntityId entityId = (EntityId) id;
                     PropInfo propInfo = null;
 
@@ -2957,6 +2963,8 @@ final class DaoImpl {
                         throw new IllegalStateException("ID class " + idClass + " is not a bean class and cannot be used for composite ID");
                     }
 
+                    N.checkArgNotNull(id, cs.id);
+
                     PropInfo propInfo = null;
 
                     for (final String idName : idPropNameList) {
@@ -2965,9 +2973,10 @@ final class DaoImpl {
                     }
                 });
 
-        final Jdbc.BiParametersSetter<NamedQuery, Object> idParamSetterByEntity = isOneId
-                ? (pq, entity) -> pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType)
-                : (pq, entity) -> pq.settParameters(entity, objParamsSetter);
+        final Jdbc.BiParametersSetter<NamedQuery, Object> idParamSetterByEntity = isOneId ? (pq, entity) -> {
+            N.checkArgNotNull(entity, cs.entity);
+            pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType);
+        } : (pq, entity) -> pq.settParameters(entity, objParamsSetter);
 
         CacheResult tmpDaoClassCacheResultAnno = null;
         RefreshCache tmpDaoClassRefreshCacheAnno = null;
@@ -5703,6 +5712,16 @@ final class DaoImpl {
                                             private int columnCount = 0;
                                             private List<String> selectCls = null;
 
+                                            /**
+                                             * Reads the junction-table key and maps the remaining columns to the joined entity.
+                                             *
+                                             * @param rs the result set positioned on the row to map
+                                             * @param cls the selected column labels, ending with the junction-table key column
+                                             * @return the typed source join key and the mapped joined entity
+                                             * @throws SQLException if reading the join key or the joined entity's columns fails
+                                             * @throws IllegalArgumentException if the selected columns cannot be mapped to the joined entity type
+                                             * @throws UnsupportedOperationException if mapping requires writing a read-only entity property
+                                             */
                                             @Override
                                             public Pair<Object, Object> apply(final ResultSet rs, final List<String> cls)
                                                     throws SQLException, IllegalArgumentException, UnsupportedOperationException {
@@ -7248,7 +7267,9 @@ final class DaoImpl {
                                                 executedHandlerIndexes[i]);
                                     }
 
-                                    if (afterInvokeFailure == null) {
+                                    if (t == failure) {
+                                        // This failure is already propagated; suppressing it on a cleanup failure would create a cycle.
+                                    } else if (afterInvokeFailure == null) {
                                         afterInvokeFailure = t;
                                     } else {
                                         if (afterInvokeFailure != t) {
@@ -7316,7 +7337,9 @@ final class DaoImpl {
                                             daoLogger.warn(t, "Dao handler afterInvoke failed(method={}, handlerIndex={})", fullClassMethodName, i);
                                         }
 
-                                        if (afterInvokeFailure == null) {
+                                        if (t == failure) {
+                                            // This failure is already propagated; suppressing it on a cleanup failure would create a cycle.
+                                        } else if (afterInvokeFailure == null) {
                                             afterInvokeFailure = t;
                                         } else {
                                             if (afterInvokeFailure != t) {
@@ -7576,15 +7599,14 @@ final class DaoImpl {
      * @param joinInfo the join metadata of the {@code @JoinedBy} property being populated
      * @param entities the source entities whose join property is replaced
      * @param groupedPropEntities the loaded joined entities, grouped by join key
-     * @throws NullPointerException if {@code entities} contains a {@code null} element, whose join key cannot be read
-     * @throws IllegalArgumentException if a join key is null/default when disallowed by the DAO configuration,
+     * @throws IllegalArgumentException if a source entity is {@code null}, or a join key is null/default when disallowed by the DAO configuration,
      *                                  or a map-valued join has multiple matching rows, or the join property's
      *                                  collection or map type cannot be constructed
      * @throws UnsupportedOperationException if the {@code @JoinedBy} join property is read-only, so the matched join
      *                                  entities cannot be stored back onto the source entity
      */
     private static void replaceLoadedJoinPropEntities(final JoinInfo joinInfo, final Collection<?> entities,
-            final Map<Object, List<Object>> groupedPropEntities) throws NullPointerException, IllegalArgumentException, UnsupportedOperationException {
+            final Map<Object, List<Object>> groupedPropEntities) throws IllegalArgumentException, UnsupportedOperationException {
         final Map<Object, List<Object>> completeGroups = new HashMap<>(groupedPropEntities);
 
         for (final Object entity : entities) {
