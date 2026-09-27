@@ -1852,8 +1852,8 @@ public final class JdbcUtil {
      * Skips a specified number of rows in a {@link ResultSet}, supporting a {@code long} count.
      * This method efficiently moves the cursor forward. It attempts to use {@link ResultSet#absolute(int)}
      * for scrollable result sets and falls back to manual {@link ResultSet#next()} iteration when the
-     * skip count exceeds {@link Integer#MAX_VALUE}, when adding it to the current row would overflow,
-     * or when the driver does not support {@code absolute()}.
+     * result set is {@link ResultSet#TYPE_FORWARD_ONLY}, when the skip count exceeds {@link Integer#MAX_VALUE},
+     * when adding it to the current row would overflow, or when the driver does not support {@code absolute()}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1910,7 +1910,10 @@ public final class JdbcUtil {
 
             long skipped = 0;
 
-            if ((rowsToSkip > Integer.MAX_VALUE) || (rowsToSkip > Integer.MAX_VALUE - currentRow)
+            // absolute()/last() are only defined for scrollable result sets. Some drivers (e.g. H2) let absolute()
+            // overshoot a forward-only cursor to after-last and only throw on the subsequent last(), which would
+            // consume the remaining rows while reporting 0 skipped, so iterate forward-only result sets manually.
+            if ((rowsToSkip > Integer.MAX_VALUE) || (rowsToSkip > Integer.MAX_VALUE - currentRow) || isForwardOnly(rs)
                     || (resultSetClassNotSupportAbsolute.size() > 0 && resultSetClassNotSupportAbsolute.contains(rs.getClass()))) {
                 while (rowsToSkip-- > 0L && rs.next()) {
                     skipped++;
@@ -1965,6 +1968,18 @@ public final class JdbcUtil {
             }
 
             return skipped;
+        }
+    }
+
+    /**
+     * Returns {@code true} if the result set reports {@link ResultSet#TYPE_FORWARD_ONLY}; a driver that cannot
+     * report its type is treated as scrollable so that {@link ResultSet#absolute(int)} is still attempted.
+     */
+    private static boolean isForwardOnly(final ResultSet rs) {
+        try {
+            return rs.getType() == ResultSet.TYPE_FORWARD_ONLY;
+        } catch (final SQLException e) {
+            return false;
         }
     }
 
