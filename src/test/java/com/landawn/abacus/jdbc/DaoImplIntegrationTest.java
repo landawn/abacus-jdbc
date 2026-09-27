@@ -1824,4 +1824,40 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(firstId, mergedDao.queryForUniqueMergedFirst().get().getId());
     }
 
+    public interface LocalCacheProbeDao extends CrudDao<UserAccount, Long, LocalCacheProbeDao> {
+        // "find" prefix makes this a query method for the thread-local DAO cache; a Stream result must never be cached.
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        Stream<UserAccount> findStreamByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln);
+    }
+
+    // Regression (thread-local DAO cache scope):
+    // 1. a query method returning a Stream was cached like any other result, so cloning the live stream for the
+    //    cache failed (ParsingException with JSON serialization) or handed a consumed stream to the next caller;
+    // 2. built-in generic methods such as list(Condition) declare List<T>, whose element type resolves to Object,
+    //    so a JSON-serialized cache hit came back as a List of HashMaps (ClassCastException in the caller).
+    @Test
+    public void testLocalThreadCache_StreamNotCachedAndBuiltInListKeepsEntityType() throws SQLException {
+        final LocalCacheProbeDao probeDao = JdbcUtil.createDao(LocalCacheProbeDao.class, ds);
+        dao.insert(newUser("LC1", "LocalCache", 1));
+        dao.insert(newUser("LC2", "LocalCache", 2));
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
+            try (Stream<UserAccount> first = probeDao.findStreamByLastName("LocalCache")) {
+                assertEquals(2L, first.count());
+            }
+
+            try (Stream<UserAccount> second = probeDao.findStreamByLastName("LocalCache")) {
+                assertEquals(2L, second.count());
+            }
+
+            final List<UserAccount> firstList = probeDao.list(Filters.eq("lastName", "LocalCache"));
+            final List<UserAccount> cachedList = probeDao.list(Filters.eq("lastName", "LocalCache"));
+
+            assertEquals(2, firstList.size());
+            assertEquals(2, cachedList.size());
+            assertEquals(UserAccount.class, ((List<?>) cachedList).get(0).getClass());
+            assertEquals("LC1", cachedList.get(0).getFirstName());
+            assertEquals("LC2", cachedList.get(1).getFirstName());
+        }
+    }
 }
