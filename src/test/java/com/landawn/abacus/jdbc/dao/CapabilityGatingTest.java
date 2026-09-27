@@ -192,6 +192,52 @@ public class CapabilityGatingTest extends TestBase {
     }
 
     @Test
+    public void testRestrictedVariantsOmitEveryMutatingCapability() {
+        // The restricted DAOs gate mutation by type composition, so every mutating capability must be absent
+        // from each restricted root, and each Unchecked twin must mirror its checked counterpart exactly.
+        for (final Class<?> nonUpdate : new Class<?>[] { NonUpdateDao.class, NonUpdateCrudDao.class, UncheckedNonUpdateDao.class,
+                UncheckedNonUpdateCrudDao.class }) {
+            assertTrue(ReadOps.class.isAssignableFrom(nonUpdate), nonUpdate.getSimpleName());
+            assertTrue(InsertOps.class.isAssignableFrom(nonUpdate), nonUpdate.getSimpleName());
+            assertFalse(UpdateOps.class.isAssignableFrom(nonUpdate), nonUpdate.getSimpleName());
+            assertFalse(DeleteOps.class.isAssignableFrom(nonUpdate), nonUpdate.getSimpleName());
+            assertFalse(Dao.class.isAssignableFrom(nonUpdate), nonUpdate.getSimpleName());
+        }
+
+        for (final Class<?> readOnly : new Class<?>[] { ReadOnlyDao.class, ReadOnlyCrudDao.class, UncheckedReadOnlyDao.class,
+                UncheckedReadOnlyCrudDao.class }) {
+            assertTrue(ReadOps.class.isAssignableFrom(readOnly), readOnly.getSimpleName());
+            assertFalse(InsertOps.class.isAssignableFrom(readOnly), readOnly.getSimpleName());
+            assertFalse(UpdateOps.class.isAssignableFrom(readOnly), readOnly.getSimpleName());
+            assertFalse(DeleteOps.class.isAssignableFrom(readOnly), readOnly.getSimpleName());
+            assertFalse(NonUpdateDao.class.isAssignableFrom(readOnly), readOnly.getSimpleName());
+        }
+
+        // Unchecked twins carry the unchecked read/insert capabilities their checked counterparts declare checked.
+        assertTrue(UncheckedReadOps.class.isAssignableFrom(UncheckedNonUpdateDao.class));
+        assertTrue(UncheckedInsertOps.class.isAssignableFrom(UncheckedNonUpdateDao.class));
+        assertTrue(UncheckedCrudReadOps.class.isAssignableFrom(UncheckedNonUpdateCrudDao.class));
+        assertTrue(UncheckedCrudInsertOps.class.isAssignableFrom(UncheckedNonUpdateCrudDao.class));
+        assertFalse(UncheckedCrudUpdateOps.class.isAssignableFrom(UncheckedNonUpdateCrudDao.class));
+        assertFalse(UncheckedCrudDeleteOps.class.isAssignableFrom(UncheckedNonUpdateCrudDao.class));
+        assertTrue(UncheckedReadOps.class.isAssignableFrom(UncheckedReadOnlyDao.class));
+        assertTrue(UncheckedCrudReadOps.class.isAssignableFrom(UncheckedReadOnlyCrudDao.class));
+        assertFalse(UncheckedCrudInsertOps.class.isAssignableFrom(UncheckedReadOnlyCrudDao.class));
+
+        // Read-only join helpers keep the load side only; the delete side is absent from the type.
+        for (final Class<?> helper : new Class<?>[] { ReadOnlyJoinEntityHelper.class, ReadOnlyCrudJoinEntityHelper.class,
+                UncheckedReadOnlyJoinEntityHelper.class, UncheckedReadOnlyCrudJoinEntityHelper.class }) {
+            assertTrue(JoinEntityReadOps.class.isAssignableFrom(helper), helper.getSimpleName());
+            assertFalse(JoinEntityDeleteOps.class.isAssignableFrom(helper), helper.getSimpleName());
+        }
+
+        assertTrue(UncheckedJoinEntityReadOps.class.isAssignableFrom(UncheckedReadOnlyJoinEntityHelper.class));
+        assertTrue(UncheckedCrudJoinEntityReadOps.class.isAssignableFrom(UncheckedReadOnlyCrudJoinEntityHelper.class));
+        assertTrue(UncheckedJoinEntityReadOps.class.isAssignableFrom(UncheckedJoinEntityHelper.class));
+        assertTrue(UncheckedJoinEntityDeleteOps.class.isAssignableFrom(UncheckedJoinEntityHelper.class));
+    }
+
+    @Test
     public void testGeneratedIdHooksBelongToInsertCapability() throws NoSuchMethodException {
         assertNotNull(CrudInsertOps.class.getDeclaredMethod("idExtractor"));
         assertNotNull(CrudInsertOps.class.getDeclaredMethod("generateId"));
