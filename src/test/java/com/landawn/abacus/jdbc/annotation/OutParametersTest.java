@@ -62,4 +62,15 @@ public class OutParametersTest extends TestBase {
         Method[] methods = OutParameters.class.getDeclaredMethods();
         assertEquals(1, methods.length, "OutParameters should have exactly 1 element: value");
     }
+
+    @Test
+    public void testOutParameters_ContainerIsCompatibleWithRepeatableOutParameter() {
+        // JLS 9.6.3: the container must be retained at least as long as, be applicable to every target of,
+        // and be @Documented whenever the repeatable annotation is; otherwise repeated @OutParameter fails to compile.
+        assertEquals(OutParameters.class, OutParameter.class.getAnnotation(java.lang.annotation.Repeatable.class).value());
+        assertEquals(OutParameter.class.getAnnotation(Retention.class).value(), OutParameters.class.getAnnotation(Retention.class).value());
+        java.util.List<ElementType> containerTargets = java.util.Arrays.asList(OutParameters.class.getAnnotation(Target.class).value());
+        assertTrue(containerTargets.containsAll(java.util.Arrays.asList(OutParameter.class.getAnnotation(Target.class).value())));
+        assertNotNull(OutParameters.class.getAnnotation(java.lang.annotation.Documented.class));
+    }
 }
