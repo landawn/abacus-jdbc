@@ -1339,7 +1339,7 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the SELECT statement
      * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
-     * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
+     * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword); ignored when {@code null} or blank
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
      *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a
@@ -1377,7 +1377,7 @@ public final class JdbcCodeGenerationUtil {
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the SELECT statement
      * @param excludedColumnNames a collection of column names to exclude from the SELECT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
-     * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword)
+     * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword); ignored when {@code null} or blank
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
      *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a
@@ -1407,7 +1407,7 @@ public final class JdbcCodeGenerationUtil {
             checkColumnLabels(columnLabelList, tableName);
 
             return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ", "SELECT ", " FROM "
-                    + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + (Strings.isEmpty(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
+                    + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + (Strings.isBlank(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1950,7 +1950,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
-     * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; may be {@code null} or empty
+     * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names,
@@ -2003,7 +2003,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
-     * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; may be {@code null} or empty
+     * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names,
@@ -2048,7 +2048,7 @@ public final class JdbcCodeGenerationUtil {
 
             String whereSection = "";
 
-            if (N.notEmpty(resolvedKeyColumnNames) || Strings.isNotEmpty(whereClause)) {
+            if (N.notEmpty(resolvedKeyColumnNames) || Strings.isNotBlank(whereClause)) {
                 whereSection = " WHERE ";
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
@@ -2056,7 +2056,7 @@ public final class JdbcCodeGenerationUtil {
                             .map(c -> renderColumnLabel(c, dbProductInfo, unquotedIdentifierCase) + " = ?")
                             .join(" AND ");
 
-                    if (Strings.isNotEmpty(whereClause)) {
+                    if (Strings.isNotBlank(whereClause)) {
                         whereSection += " AND (" + whereClause + ")";
                     }
                 } else {
@@ -2267,7 +2267,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
-     * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; may be {@code null} or empty
+     * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
@@ -2320,7 +2320,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @param excludedColumnNames a collection of column names to exclude from the SET clause. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty
      * @param keyColumnNames column names to use in the WHERE clause, in metadata or unambiguous camel-case form; may be {@code null} or empty
-     * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; may be {@code null} or empty
+     * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
@@ -2366,7 +2366,7 @@ public final class JdbcCodeGenerationUtil {
 
             String whereSection = "";
 
-            if (N.notEmpty(resolvedKeyColumnNames) || Strings.isNotEmpty(whereClause)) {
+            if (N.notEmpty(resolvedKeyColumnNames) || Strings.isNotBlank(whereClause)) {
                 whereSection = " WHERE ";
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
@@ -2374,7 +2374,7 @@ public final class JdbcCodeGenerationUtil {
                             .map(c -> renderColumnLabel(c, dbProductInfo, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(c))
                             .join(" AND ");
 
-                    if (Strings.isNotEmpty(whereClause)) {
+                    if (Strings.isNotBlank(whereClause)) {
                         whereSection += " AND (" + whereClause + ")";
                     }
                 } else {
@@ -2439,7 +2439,7 @@ public final class JdbcCodeGenerationUtil {
      *       and PostgreSQL dollar-quoted strings while locating commas and parentheses.</li>
      *   <li>Multi-row value tuples and trailing clauses are rejected rather than silently discarded. A single trailing
      *       semicolon is accepted.</li>
-     *   <li>The WHERE clause is appended only when {@code whereClause} is non-empty.</li>
+     *   <li>The WHERE clause is appended only when {@code whereClause} is not {@code null} or blank.</li>
      *   <li>All parsing and SQL assembly failures are converted to {@link IllegalArgumentException}.</li>
      * </ul>
      *
@@ -2452,7 +2452,7 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source used to resolve database-specific behavior
      * @param insertSql the INSERT SQL statement to convert
-     * @param whereClause the WHERE clause to append (without the {@code WHERE} keyword). May be null/empty.
+     * @param whereClause the WHERE clause to append (without the {@code WHERE} keyword). Ignored when {@code null} or blank.
      * @return an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the INSERT SQL is null/empty, invalid, or cannot be converted
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
@@ -2561,7 +2561,7 @@ public final class JdbcCodeGenerationUtil {
                 sb.append(" = ").append(values.get(i));
             }
 
-            if (Strings.isNotEmpty(whereClause)) {
+            if (Strings.isNotBlank(whereClause)) {
                 sb.append(" WHERE ");
                 sb.append(whereClause);
             }

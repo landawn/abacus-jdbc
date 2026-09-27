@@ -51,4 +51,15 @@ public class HandlersTest extends TestBase {
     public void testIsAnnotation() {
         assertTrue(Handlers.class.isAnnotation());
     }
+
+    @Test
+    public void testContainerIsCompatibleWithRepeatableHandler() {
+        // JLS 9.6.3: the container must be retained at least as long as, be applicable to every target of,
+        // and be @Documented whenever the repeatable annotation is; otherwise repeated @Handler fails to compile.
+        assertEquals(Handlers.class, Handler.class.getAnnotation(java.lang.annotation.Repeatable.class).value());
+        assertEquals(Handler.class.getAnnotation(Retention.class).value(), Handlers.class.getAnnotation(Retention.class).value());
+        Set<ElementType> containerTargets = new HashSet<>(Arrays.asList(Handlers.class.getAnnotation(Target.class).value()));
+        assertTrue(containerTargets.containsAll(Arrays.asList(Handler.class.getAnnotation(Target.class).value())));
+        assertNotNull(Handlers.class.getAnnotation(java.lang.annotation.Documented.class));
+    }
 }

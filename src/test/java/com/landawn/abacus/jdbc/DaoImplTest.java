@@ -303,6 +303,16 @@ public class DaoImplTest extends TestBase {
         com.landawn.abacus.util.Tuple.Tuple2<List<TestEntity>, Jdbc.OutParamResult> queryTuple() throws SQLException;
     }
 
+    interface NonProcedureTuple2ListDao extends Dao<TestEntity, NonProcedureTuple2ListDao> {
+        @Query(value = "select * from test", op = QueryOperation.list)
+        com.landawn.abacus.util.Tuple.Tuple2<List<TestEntity>, Jdbc.OutParamResult> listTuple() throws SQLException;
+    }
+
+    interface NonProcedureTuple2DefaultDao extends Dao<TestEntity, NonProcedureTuple2DefaultDao> {
+        @Query("select * from test")
+        com.landawn.abacus.util.Tuple.Tuple2<List<TestEntity>, Jdbc.OutParamResult> findTuple() throws SQLException;
+    }
+
     @SqlSource
     interface DefaultSqlSourceDao extends Dao<TestEntity, DefaultSqlSourceDao> {
         @Query("select * from test")
@@ -835,6 +845,21 @@ public class DaoImplTest extends TestBase {
                 () -> JdbcUtil.createDao(NonProcedureTuple2QueryDao.class, dataSource));
 
         assertTrue(thrown.getMessage().contains("not supported by the specified queryOperation"));
+    }
+
+    // Regression: the same Tuple2-on-a-non-procedure gap existed for op = QueryOperation.list and for the DEFAULT
+    // operation. isListQuery deliberately treats a Tuple2 return as non-list (procedure dispatch), so the method
+    // silently fell through to the single-value dispatch (queryForSingleValue(Tuple2.class)) and failed only at
+    // execution. Every non-procedure Tuple2 return must be rejected at creation time.
+    @Test
+    void testNonProcedureTuple2ReturnRejectedAtCreationForListAndDefaultOperations() throws SQLException {
+        final UnsupportedOperationException listThrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(NonProcedureTuple2ListDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertTrue(listThrown.getMessage().contains("procedure=true"));
+
+        final UnsupportedOperationException defaultThrown = assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(NonProcedureTuple2DefaultDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertTrue(defaultThrown.getMessage().contains("procedure=true"));
     }
 
     @Test
@@ -2219,5 +2244,49 @@ public class DaoImplTest extends TestBase {
 
         assertSame(RollbackMaskDao.PRIMARY_FAILURE, thrown);
         assertEquals(1, thrown.getSuppressed().length);
+    }
+
+    interface UncheckedConditionPrepareDao extends com.landawn.abacus.jdbc.dao.UncheckedDao<TestEntity, UncheckedConditionPrepareDao> {
+    }
+
+    interface ObjectEntityDao extends Dao<Object, ObjectEntityDao> {
+    }
+
+    // Object is not a bean class, so it is (and always was) rejected as the entity type; the rejection message used to
+    // claim "must be: Object.class or entity class ... Can't be: class java.lang.Object", contradicting itself.
+    @Test
+    public void testCreateDaoRejectsObjectEntityTypeWithConsistentMessage() throws SQLException {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> DaoImpl.createDao(ObjectEntityDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        assertTrue(thrown.getMessage().contains("entity class with getter/setter methods"));
+        assertFalse(thrown.getMessage().contains("Object.class"));
+    }
+
+    // Regression: the generated prepareQuery/prepareNamedQuery(Collection, Condition) bodies bind the condition
+    // parameters themselves, outside the SQLException-wrapping applied to the other generated methods. On an
+    // Unchecked DAO (whose declaration carries no 'throws SQLException') a binding failure therefore escaped the
+    // proxy as UndeclaredThrowableException instead of the documented UncheckedSQLException.
+    @Test
+    public void testUncheckedDaoPrepareQueryByConditionWrapsBindingFailureAsUncheckedSQLException() throws SQLException {
+        final DataSource ds = mockDataSourceForDaoCreation();
+        final Connection conn = ds.getConnection();
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        final SQLException bindingFailure = new SQLException("bind failed");
+        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+        Mockito.doThrow(bindingFailure).when(stmt).setObject(Mockito.anyInt(), Mockito.any());
+        Mockito.doThrow(bindingFailure).when(stmt).setString(Mockito.anyInt(), Mockito.any());
+        Mockito.doThrow(bindingFailure).when(stmt).setLong(Mockito.anyInt(), Mockito.anyLong());
+        Mockito.doThrow(bindingFailure).when(stmt).setInt(Mockito.anyInt(), Mockito.anyInt());
+
+        final UncheckedConditionPrepareDao dao = DaoImpl.createDao(UncheckedConditionPrepareDao.class, null, ds, PSC, null, null, null);
+
+        final com.landawn.abacus.exception.UncheckedSQLException thrown = assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                () -> dao.prepareQuery(List.of("id", "name"), Filters.eq("name", "x")));
+        assertSame(bindingFailure, thrown.getCause());
+
+        final com.landawn.abacus.exception.UncheckedSQLException namedThrown = assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                () -> dao.prepareNamedQuery(List.of("id", "name"), Filters.eq("name", "x")));
+        assertSame(bindingFailure, namedThrown.getCause());
     }
 }

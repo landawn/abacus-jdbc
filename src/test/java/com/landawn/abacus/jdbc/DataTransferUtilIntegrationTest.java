@@ -29,6 +29,7 @@ import org.junit.jupiter.api.TestInstance.Lifecycle;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.Dataset;
+import com.landawn.abacus.util.Throwables;
 
 /**
  * End-to-end integration coverage for {@link DataTransferUtil} table-to-table {@code copy} and CSV
@@ -772,4 +773,27 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         assertEquals("Alice", copyTgtName(1));
     }
 
+    // newResultSetParameterSetter: the setter does not detect a closed query itself; binding through a query whose
+    // statement was closed surfaces as the driver's SQLException (not IllegalStateException), as its Javadoc states.
+    @Test
+    public void testResultSetParameterSetter_ClosedQueryFailsWithSQLExceptionOnFirstBind() throws SQLException {
+        final Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil
+                .newResultSetParameterSetter((rs, columnIndex) -> rs.getObject(columnIndex));
+
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement();
+             ResultSet rs = st.executeQuery("SELECT id, name, amount FROM copy_src WHERE id = 1")) {
+            assertTrue(rs.next());
+
+            final PreparedStatement insertStmt = conn.prepareStatement(COPY_INSERT_SQL);
+            final PreparedQuery closedQuery = new PreparedQuery(insertStmt);
+            closedQuery.close();
+            assertTrue(insertStmt.isClosed());
+
+            final Throwable failure = assertThrows(SQLException.class, () -> setter.accept(closedQuery, rs));
+            assertFalse(failure instanceof IllegalStateException);
+        }
+
+        assertEquals(0, count("copy_tgt"));
+    }
 }

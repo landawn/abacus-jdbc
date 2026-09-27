@@ -3986,6 +3986,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * named parameters in the SQL are ignored. Named parameters that are absent from the map are
      * left untouched — they keep any previously bound value or remain unbound — so several calls
      * can bind disjoint subsets; every parameter must be bound before the query is executed.
+     * If any binding fails, this query is closed because its parameters may have been only partially set.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4000,7 +4001,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameters a map containing parameter names (without the ':' prefix) as keys and their values
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameters} is {@code null}
-     * @throws SQLException if binding one of the mapped values to the underlying {@code PreparedStatement} fails
+     * @throws SQLException if binding one of the mapped values to the underlying {@code PreparedStatement} fails; this query is closed before
+     *         the exception is rethrown
      */
     public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
@@ -4030,7 +4032,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param entityId the EntityId containing parameter values; may be {@code null} only when this query has no parameters
      * @throws IllegalArgumentException if {@code entityId} is {@code null} and this query contains at least one parameter;
      *         this query is closed before the exception is thrown
-     * @throws SQLException if binding one of the {@code entityId} values to the underlying {@code PreparedStatement} fails
+     * @throws SQLException if binding one of the {@code entityId} values to the underlying {@code PreparedStatement} fails; this query is
+     *         closed before the exception is rethrown
      */
     void setParameters(final EntityId entityId) throws IllegalArgumentException, SQLException {
         if (parameterCount > 0) {
@@ -4063,6 +4066,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li><b>Single value</b>: Used only if the query has exactly one parameter placeholder
      *     (a single named parameter appearing exactly once)</li>
      * </ul>
+     *
+     * <p>If {@code parameters} is rejected or any binding fails, this query is closed because its parameters may
+     * have been only partially set.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4170,6 +4176,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * to every occurrence of the named parameter in the SQL. Named parameters in the SQL that are
      * not listed in {@code parameterNamesToSet} are left unchanged: previously bound values are
      * retained, and parameters that remain unbound must be bound separately before execution.
+     * If an argument is rejected or any binding fails, this query is closed because its parameters may have
+     * been only partially set.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4316,7 +4324,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * </ul>
      *
      * <p>All elements are interpreted in the same way as the first element (see {@link #addBatchParameters(Iterator)}).
-     * If {@code batchParameters} is empty, this is a no-op and no batch is added.
+     * If {@code batchParameters} is empty, this is a no-op and no batch is added. If a row is rejected or binding
+     * or queuing a row fails, this query is closed because its batch may have been only partially queued.
      *
      * <p>After adding batch parameters, call {@link #batchUpdate()} or {@link #batchInsert()} to execute the batch.
      *
@@ -4398,7 +4407,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * For bean elements, a named parameter without a matching property is only tolerated for the reserved
      * system date/time names ({@code now}, {@code sysTime}, {@code sysDate}) — such parameters keep whatever
      * value was previously bound (or stay unbound); any other missing property causes an
-     * {@link IllegalArgumentException}.
+     * {@link IllegalArgumentException}. If a row is rejected or binding or queuing a row fails, this query is
+     * closed because its batch may have been only partially queued.
      *
      * <p>After adding batch parameters, call {@link #batchUpdate()} or {@link #batchInsert()} to execute the batch.
      *

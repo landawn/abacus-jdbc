@@ -821,7 +821,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * // All users now have their payment methods loaded
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, no join entities are loaded
      * @param joinEntityPropName the property name of the join entities to load
      * @throws IllegalArgumentException if {@code joinEntityPropName} is {@code null} or empty, or if the {@code joinEntityPropName} does not exist or is not
      *                                  properly annotated with {@code @JoinedBy},
@@ -1671,8 +1671,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load.
      *                            If {@code null} or empty, this method returns immediately
-     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
-     *                                  annotated with {@code @JoinedBy},
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist, or names a property
+     *                                  that is currently {@code null} and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
@@ -1707,8 +1707,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
-     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
-     *                                  annotated with {@code @JoinedBy},
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist, or names a property
+     *                                  that is currently {@code null} and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
@@ -1751,7 +1751,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any of the
-     *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
+     *                                  {@code joinEntityPropNames} does not exist,
+     *                                  or names a property that is currently {@code null} and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
@@ -1795,7 +1796,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                 If {@code null} or empty, this method returns immediately
      * @param joinEntityPropNames the property names of the join entities to load.
      *                            If {@code null} or empty, this method returns immediately
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist,
+     *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans
@@ -1829,7 +1831,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entities the collection of entities for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
-     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
+     * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist,
+     *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
@@ -1873,7 +1876,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
-     *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
+     *                                  {@code joinEntityPropNames} does not exist,
+     *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task

@@ -6719,12 +6719,9 @@ public final class Jdbc {
             public static <T> RowMapper<T> get(final Type<? extends T> type) throws IllegalArgumentException {
                 N.checkArgNotNull(type, cs.type);
 
-                RowMapper<T> rowMapper = rowMapperPool.get(type);
-
-                if (rowMapper == null) {
-                    rowMapper = rs -> type.get(rs, 1);
-                    rowMapperPool.put(type, rowMapper);
-                }
+                // computeIfAbsent (as in ColumnGetter.forType) keeps the documented "one shared mapper per Type" guarantee
+                // under concurrent first access; a get-then-put race could publish two different instances for the same Type.
+                final RowMapper<T> rowMapper = rowMapperPool.computeIfAbsent(type, k -> (RowMapper<T>) rs -> type.get(rs, 1));
 
                 return rowMapper;
             }

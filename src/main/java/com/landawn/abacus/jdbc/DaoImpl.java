@@ -921,7 +921,8 @@ final class DaoImpl {
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
      * @return a function executing a prepared query and returning the mapped result
      * @throws UnsupportedOperationException if the return type is not supported by the declared
-     *         {@link QueryOperation}, or a required generic element type cannot be resolved
+     *         {@link QueryOperation}, if a {@code Tuple2} return type is declared on a non-procedure query, or a
+     *         required generic element type cannot be resolved
      * @throws IllegalArgumentException if {@code mappedByKey} does not identify a property of the result entity class
      */
     @SuppressWarnings("rawtypes")
@@ -949,6 +950,13 @@ final class DaoImpl {
                         && (Jdbc.ResultExtractor.class.isAssignableFrom(lastParamType) || Jdbc.BiResultExtractor.class.isAssignableFrom(lastParamType)))))) {
             throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
                     + " is not supported by the specified queryOperation: " + queryOperation);
+        }
+
+        // The same applies to every other operation (list, DEFAULT, ...): Tuple2 results are only produced on the
+        // procedure path, so on a plain query the method would fall through to the single-value dispatch.
+        if (Tuple2.class.isAssignableFrom(returnType) && !isProcedure) {
+            throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                    + " is only supported by @Query methods with procedure=true, not supported by the specified queryOperation: " + queryOperation);
         }
 
         if ((queryOperation == QueryOperation.findFirst || queryOperation == QueryOperation.findOnlyOne) && Nullable.class.isAssignableFrom(returnType)) {
@@ -2193,7 +2201,8 @@ final class DaoImpl {
 
     /**
      * Applies a row-count limit to a condition, returning the condition to use. A non-positive {@code count} leaves
-     * the condition unchanged, and an existing limit (standalone or inside a {@code Criteria}) is always preserved.
+     * the condition unchanged, and an existing limit (standalone, inside a {@code Criteria}, or spelled out in a
+     * {@code SqlExpression} literal containing {@code LIMIT}/{@code OFFSET}/{@code FETCH}) is always preserved.
      * Otherwise a limit of {@code count} is added; when {@code skipLimitWithoutOrderBy} is {@code true} the limit is
      * dropped instead if the resulting condition has no {@code ORDER BY} (for dialects that cannot render a limit
      * without one).
@@ -2201,7 +2210,8 @@ final class DaoImpl {
      * @param cond the condition to limit, or {@code null}
      * @param count the maximum row count; non-positive means no framework-added limit
      * @param skipLimitWithoutOrderBy {@code true} to skip adding a limit when there is no {@code ORDER BY}
-     * @return the condition with the limit applied as described
+     * @return the condition with the limit applied as described; {@code null} only when {@code cond} is {@code null}
+     *         and no limit is added
      * @throws IllegalArgumentException if {@code count} is positive and {@code cond} is rejected by
      *         {@link Criteria.Builder#add(Condition)}
      */
@@ -2315,6 +2325,76 @@ final class DaoImpl {
         }
 
         return keyExtractor;
+    }
+
+    /**
+     * Returns {@code declaredType} when it is resolved to something more specific than {@code Object}; otherwise the
+     * type of the runtime class shared by all non-{@code null} elements of {@code elements}, falling back to
+     * {@code declaredType} (possibly {@code null}) when the elements have no single common class.
+     *
+     * @param declaredType the declared element type, or {@code null} if unknown
+     * @param elements the runtime elements to inspect
+     * @return the type to deserialize the elements as, or {@code null} if none could be determined
+     */
+    private static com.landawn.abacus.type.Type<?> resolvedOrRuntimeType(final com.landawn.abacus.type.Type<?> declaredType, final Iterable<?> elements) {
+        if (declaredType != null && !Object.class.equals(declaredType.javaType())) {
+            return declaredType;
+        }
+
+        final Class<?> elementClass = uniformElementClass(elements);
+
+        return elementClass == null ? declaredType : N.typeOf(elementClass);
+    }
+
+    /**
+     * Returns the runtime class shared by all non-{@code null} elements of {@code elements}, or {@code null} if there
+     * is no non-{@code null} element or the non-{@code null} elements are of different classes.
+     *
+     * @param elements the elements to inspect
+     * @return the common runtime class of the non-{@code null} elements, or {@code null}
+     */
+    private static Class<?> uniformElementClass(final Iterable<?> elements) {
+        Class<?> elementClass = null;
+
+        for (final Object element : elements) {
+            if (element == null) {
+                continue;
+            }
+
+            if (elementClass == null) {
+                elementClass = element.getClass();
+            } else if (elementClass != element.getClass()) {
+                return null;
+            }
+        }
+
+        return elementClass;
+    }
+
+    /**
+     * Returns {@code call} unchanged when {@code method} declares {@link SQLException} (or a supertype of it);
+     * otherwise returns a wrapper that rethrows any {@link SQLException} raised by {@code call} as
+     * {@link UncheckedSQLException}, so a checked failure never escapes the proxy as
+     * {@link java.lang.reflect.UndeclaredThrowableException}.
+     *
+     * @param method the DAO method whose {@code throws} clause decides whether wrapping is needed
+     * @param call the invoker to guard
+     * @return {@code call} itself, or a wrapper converting {@link SQLException} to {@link UncheckedSQLException}
+     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static Throwables.BiFunction<DaoBase, Object[], ?, Throwable> wrapUndeclaredSQLException(final Method method,
+            final Throwables.BiFunction<DaoBase, Object[], ?, SQLException> call) {
+        if (Stream.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class))) {
+            return (Throwables.BiFunction) call;
+        }
+
+        return (proxy, args) -> {
+            try {
+                return call.apply(proxy, args);
+            } catch (final SQLException e) {
+                throw new UncheckedSQLException(e);
+            }
+        };
     }
 
     /**
@@ -2757,8 +2837,7 @@ final class DaoImpl {
         if (N.notEmpty(typeArguments)) {
             if ((typeArguments.length >= 1 && typeArguments[0] instanceof Class) && !Beans.isBeanClass((Class) typeArguments[0])) {
                 throw new IllegalArgumentException(
-                        "Entity Type parameter of Dao interface must be: Object.class or entity class with getter/setter methods. Can't be: "
-                                + typeArguments[0]);
+                        "Entity Type parameter of Dao interface must be an entity class with getter/setter methods. Can't be: " + typeArguments[0]);
             }
 
             if (DaoUtil.isJoinEntityReadOps(daoInterface) && (typeArguments.length >= 1 && typeArguments[0] instanceof Class)
@@ -3223,24 +3302,26 @@ final class DaoImpl {
                 call = (proxy, args) -> newSqlMapper;
             } else if (methodName.equals("prepareQuery") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                     && Condition.class.isAssignableFrom(paramTypes[1])) {
-                call = (proxy, args) -> {
+                // Binding the condition parameters can fail with a checked SQLException; on an Unchecked DAO this
+                // method declares none, so it must be wrapped or it escapes the proxy as UndeclaredThrowableException.
+                call = wrapUndeclaredSQLException(method, (proxy, args) -> {
                     final Collection<String> selectPropNames = (Collection<String>) args[0];
                     final Condition cond = N.checkArgNotNull((Condition) args[1], cs.cond);
                     final Condition limitedCond = handleLimit(cond, -1, false);
                     final SP sp = selectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                     return proxy.prepareQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter);
-                };
+                });
             } else if (methodName.equals("prepareNamedQuery") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                     && Condition.class.isAssignableFrom(paramTypes[1])) {
-                call = (proxy, args) -> {
+                call = wrapUndeclaredSQLException(method, (proxy, args) -> {
                     final Collection<String> selectPropNames = (Collection<String>) args[0];
                     final Condition cond = N.checkArgNotNull((Condition) args[1], cs.cond);
                     final Condition limitedCond = handleLimit(cond, -1, false);
                     final SP sp = namedSelectSqlBuilderFunc.apply(selectPropNames, limitedCond).build();
 
                     return proxy.prepareNamedQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter);
-                };
+                });
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType);
                 final boolean throwsSQLException = Stream.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class));
@@ -6995,6 +7076,10 @@ final class DaoImpl {
 
                 final boolean isQueryMethod = JdbcUtil.IS_QUERY_METHOD.test(method);
                 final boolean isUpdateMethod = JdbcUtil.IS_UPDATE_METHOD.test(method);
+                // Live or single-use results (streams, iterators) and void can't be cached by the local thread cache
+                // either: cloning them for the cache fails (or consumes the stream) and a cached stream can't be re-read.
+                final boolean isLocalThreadCacheableQueryMethod = isQueryMethod
+                        && Stream.of(notCacheableTypes).noneMatch(it -> it.isAssignableFrom(returnType));
                 final boolean isAnnotatedCacheResult = cacheResultAnno != null && cacheResultAnno.enabled();
                 final boolean isAnnotatedRefreshResult = refreshResultAnno != null && refreshResultAnno.enabled();
                 final Jdbc.DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isAnnotatedRefreshResult ? daoCache : null;
@@ -7074,19 +7159,40 @@ final class DaoImpl {
 
                             final String json = jsonParser.serialize(r);
 
-                            if (declaredReturnType != null) {
-                                if (r instanceof Collection && declaredReturnType.isCollection()) {
-                                    return jsonParser.deserialize(json,
-                                            com.landawn.abacus.parser.JsonDeserConfig.create().setElementType(declaredReturnType.elementType()), r.getClass());
-                                } else if (r instanceof Map && declaredReturnType.isMap()) {
-                                    return jsonParser.deserialize(json,
-                                            com.landawn.abacus.parser.JsonDeserConfig.create()
-                                                    .setMapKeyType(declaredReturnType.parameterTypes().get(0))
-                                                    .setMapValueType(declaredReturnType.parameterTypes().get(1)),
+                            // Built-in DAO methods declare generic returns such as List<T> whose type variables resolve
+                            // to Object only, so an unresolved element (or key/value) type is derived from the runtime
+                            // result instead of collapsing the cached beans into Maps.
+                            if (r instanceof final Collection<?> c) {
+                                final com.landawn.abacus.type.Type<?> elementType = resolvedOrRuntimeType(
+                                        declaredReturnType != null && declaredReturnType.isCollection() ? declaredReturnType.elementType() : null, c);
+
+                                if (elementType != null) {
+                                    return jsonParser.deserialize(json, com.landawn.abacus.parser.JsonDeserConfig.create().setElementType(elementType),
                                             r.getClass());
-                                } else if (declaredReturnType.javaType().isAssignableFrom(r.getClass())) {
-                                    return jsonParser.deserialize(json, declaredReturnType);
                                 }
+                            } else if (r instanceof final Map<?, ?> m) {
+                                final boolean isDeclaredMap = declaredReturnType != null && declaredReturnType.isMap()
+                                        && N.size(declaredReturnType.parameterTypes()) == 2;
+                                final com.landawn.abacus.type.Type<?> keyType = resolvedOrRuntimeType(
+                                        isDeclaredMap ? declaredReturnType.parameterTypes().get(0) : null, m.keySet());
+                                final com.landawn.abacus.type.Type<?> valueType = resolvedOrRuntimeType(
+                                        isDeclaredMap ? declaredReturnType.parameterTypes().get(1) : null, m.values());
+
+                                if (keyType != null || valueType != null) {
+                                    final com.landawn.abacus.parser.JsonDeserConfig config = com.landawn.abacus.parser.JsonDeserConfig.create();
+
+                                    if (keyType != null) {
+                                        config.setMapKeyType(keyType);
+                                    }
+
+                                    if (valueType != null) {
+                                        config.setMapValueType(valueType);
+                                    }
+
+                                    return jsonParser.deserialize(json, config, r.getClass());
+                                }
+                            } else if (declaredReturnType != null && declaredReturnType.javaType().isAssignableFrom(r.getClass())) {
+                                return jsonParser.deserialize(json, declaredReturnType);
                             }
 
                             return jsonParser.deserialize(json, r.getClass());
@@ -7097,7 +7203,7 @@ final class DaoImpl {
 
                     call = (proxy, args) -> {
                         final Jdbc.DaoCache localThreadCache = JdbcUtil.localThreadCache_TL.get();
-                        final boolean isLocalThreadCacheEnabled = isQueryMethod && localThreadCache != null;
+                        final boolean isLocalThreadCacheEnabled = isLocalThreadCacheableQueryMethod && localThreadCache != null;
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
                         final String cacheKey = isAnnotatedCacheResult || isAnnotatedRefreshResult || isLocalThreadCacheEnabled

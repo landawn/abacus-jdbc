@@ -1704,7 +1704,7 @@ public final class DataTransferUtil {
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
 
-        try (Reader reader = IOUtil.newFileReader(file)) {
+        try (Reader reader = newCsvFileReader(file)) {
             return importCsv(reader, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
@@ -1995,6 +1995,25 @@ public final class DataTransferUtil {
         }
 
         return result;
+    }
+
+    /**
+     * Opens a CSV file for import, reporting an open failure with the {@link UncheckedIOException} type declared by the
+     * {@code importCsv} methods.
+     *
+     * @param file the CSV file to open
+     * @return a reader over the file, to be closed by the caller
+     * @throws IllegalArgumentException if {@code file} is a directory
+     * @throws UncheckedIOException if {@code file} cannot be opened for reading, for example because it does not exist
+     */
+    private static Reader newCsvFileReader(final File file) throws IllegalArgumentException, UncheckedIOException {
+        try {
+            return IOUtil.newFileReader(file);
+        } catch (final com.landawn.abacus.exception.UncheckedIOException e) {
+            // IOUtil throws abacus-common's UncheckedIOException, which does not extend java.io.UncheckedIOException,
+            // so translate it to the type documented (and used for read failures) by the importCsv methods.
+            throw new UncheckedIOException(e.getCause());
+        }
     }
 
     /**
@@ -3962,8 +3981,9 @@ public final class DataTransferUtil {
      *
      * <p>The returned setter propagates {@link SQLException} from result-set metadata, the column getter,
      * or parameter binding when it is invoked. It rejects a null statement or result set with
-     * {@link IllegalArgumentException} before reading metadata or binding parameters. Binding at least
-     * one column through a closed query throws {@link IllegalStateException}.</p>
+     * {@link IllegalArgumentException} before reading metadata or binding parameters. Binding through a query
+     * whose underlying statement has been closed is not detected by the setter itself; the driver reports it as
+     * a {@link SQLException} when the first column is bound.</p>
      *
      * @param columnGetter the ColumnGetter to apply to each column index in every row
      * @return a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions
@@ -3986,11 +4006,10 @@ public final class DataTransferUtil {
              * @param stmt the query whose parameters receive the column values
              * @param rs the result set positioned on the row to bind
              * @throws IllegalArgumentException if {@code stmt} or {@code rs} is {@code null}
-             * @throws SQLException if reading metadata or column values, or binding parameters, fails
-             * @throws IllegalStateException if {@code stmt} is closed and the result set has at least one column to bind
+             * @throws SQLException if reading metadata or column values, or binding parameters (including through a closed statement), fails
              */
             @Override
-            public void accept(final PreparedQuery stmt, final ResultSet rs) throws IllegalArgumentException, SQLException, IllegalStateException {
+            public void accept(final PreparedQuery stmt, final ResultSet rs) throws IllegalArgumentException, SQLException {
                 N.checkArgNotNull(stmt, cs.stmt);
                 N.checkArgNotNull(rs, cs.rs);
 
@@ -4568,7 +4587,7 @@ public final class DataTransferUtil {
             if (iter != null) {
                 return importData(iter, filter, stmt, batchSize, batchIntervalInMillis, setter);
             } else if (file != null) {
-                try (Reader r = IOUtil.newFileReader(file)) {
+                try (Reader r = newCsvFileReader(file)) {
                     return importFromCsv(r, stmt, setter);
                 } catch (final IOException e) {
                     throw new UncheckedIOException(e);

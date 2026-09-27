@@ -2096,6 +2096,41 @@ public class JdbcTest extends TestBase {
         assertEquals(42, intMapper.apply(mockResultSet));
     }
 
+    // ColumnOne.get(Type) documents that repeated calls with the same Type return the same RowMapper instance;
+    // that must also hold when the first access to a Type happens concurrently (pool insert is atomic).
+    @Test
+    public void testColumnOneGetByTypeReturnsSingleInstanceUnderConcurrentFirstAccess() throws Exception {
+        final String[] freshTypeNames = { "List<Integer>", "Set<Long>", "Map<String, Integer>", "List<Double>", "Set<Short>", "Map<Long, String>" };
+        final int threadCount = 8;
+        final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(threadCount);
+
+        try {
+            for (final String typeName : freshTypeNames) {
+                final com.landawn.abacus.type.Type<?> type = N.typeOf(typeName);
+                final java.util.concurrent.CyclicBarrier barrier = new java.util.concurrent.CyclicBarrier(threadCount);
+                final List<java.util.concurrent.Future<Jdbc.RowMapper<Object>>> futures = new ArrayList<>(threadCount);
+
+                for (int i = 0; i < threadCount; i++) {
+                    futures.add(executor.submit(() -> {
+                        barrier.await(10, java.util.concurrent.TimeUnit.SECONDS);
+                        return Jdbc.Columns.ColumnOne.get(type);
+                    }));
+                }
+
+                final Jdbc.RowMapper<Object> first = futures.get(0).get(10, java.util.concurrent.TimeUnit.SECONDS);
+                assertNotNull(first);
+
+                for (final java.util.concurrent.Future<Jdbc.RowMapper<Object>> future : futures) {
+                    assertSame(first, future.get(10, java.util.concurrent.TimeUnit.SECONDS));
+                }
+
+                assertSame(first, Jdbc.Columns.ColumnOne.get(type));
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     @Test
     public void testColumnOneReadJson() throws SQLException {
         when(mockResultSet.getString(1)).thenReturn("{\"id\":1,\"name\":\"John\",\"age\":25}");

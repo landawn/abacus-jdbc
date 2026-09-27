@@ -585,6 +585,12 @@ public @interface Query {
      * would not be bound. Set this to {@code true} when a replaced fragment itself contains named
      * parameters, so the framework parses the merged SQL and binds them as well.</p>
      *
+     * <p>Enabling this flag makes the method a named query even when the static SQL declares no named
+     * parameter of its own, so its statement parameters follow the named-binding rules of {@link Bind}
+     * and the bound names are verified against the SQL only after the fragments have been expanded. The
+     * static SQL must not rely on positional placeholders: if it declares parameters but none of them is
+     * named (only {@code ?} markers), DAO initialization fails with {@code IllegalArgumentException}.</p>
+     *
      * <p>Basic examples:</p>
      * <pre>{@code
      * // Finding records with dynamic conditions containing named parameters

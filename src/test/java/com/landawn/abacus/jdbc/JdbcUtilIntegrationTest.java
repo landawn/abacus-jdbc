@@ -1052,4 +1052,112 @@ public class JdbcUtilIntegrationTest extends TestBase {
             assertEquals(2, merged.size());
         }
     }
+
+    // ---- Row iterator advance()/count() on a real forward-only H2 cursor ----
+
+    // advance(n) skips exactly n elements (including an already-fetched, unconsumed row) even when the
+    // driver rejects ResultSet.absolute() and JdbcUtil.skip falls back to next()-iteration; count() then
+    // drains the remaining rows and the iterator remembers exhaustion.
+    @Test
+    public void testIterate_AdvanceAndCount_OnForwardOnlyResultSet() throws SQLException {
+        for (int i = 1; i <= 5; i++) {
+            insertWidget("adv", i);
+        }
+
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT qty FROM widget WHERE name = 'adv' ORDER BY qty")) {
+            final ObjIteratorEx<Integer> iter = JdbcUtil.iterate(rs, (Jdbc.RowMapper<Integer>) r -> r.getInt(1), null);
+
+            iter.advance(2);
+            assertEquals(3, iter.next());
+            assertTrue(iter.hasNext());   // row 4 fetched but not consumed
+            iter.advance(1);   // consumes row 4 only
+            assertEquals(5, iter.next());
+            assertFalse(iter.hasNext());
+            assertEquals(0, iter.count());
+        }
+
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT qty FROM widget WHERE name = 'adv' ORDER BY qty")) {
+            final ObjIteratorEx<Integer> iter = JdbcUtil.iterate(rs, (Jdbc.BiRowMapper<Integer>) (r, labels) -> r.getInt(1), null);
+
+            assertTrue(iter.hasNext());
+            iter.advance(3);   // the fetched row plus two more
+            assertEquals(2, iter.count());
+            assertFalse(iter.hasNext());
+            assertThrows(java.util.NoSuchElementException.class, iter::next);
+        }
+
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT qty FROM widget WHERE name = 'adv' ORDER BY qty")) {
+            assertEquals(List.of(4, 5), JdbcUtil.stream(rs, (Jdbc.RowMapper<Integer>) r -> r.getInt(1)).skip(3).toList());
+        }
+    }
+
+    // ---- streamAllResultSets / iterateAllResultSets on a statement whose only result is an update count ----
+
+    @Test
+    public void testStreamAllResultSets_UpdateCountOnly_IsEmpty() throws SQLException {
+        insertWidget("upd", 1);
+
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement()) {
+            assertFalse(stmt.execute("UPDATE widget SET qty = qty + 1 WHERE name = 'upd'"));
+
+            // streamAllResultSets always claims a first result set; the iterator must recover when the
+            // driver returns null for it instead of ending traversal with an exception.
+            assertEquals(0, JdbcUtil.streamAllResultSets(stmt).count());
+
+            final ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(stmt, true);
+            assertFalse(iter.hasNext());
+            assertThrows(java.util.NoSuchElementException.class, iter::next);
+            iter.closeResource();
+        }
+
+        assertEquals(2, JdbcUtil.prepareQuery(ds, "SELECT qty FROM widget WHERE name = ?").setString(1, "upd").queryForInt().orElse(-1));
+    }
+
+    // Closing an unconsumed streamAllResultSets stream releases the statement's pending result set.
+    @Test
+    public void testStreamAllResultSets_CloseWithoutConsuming_ClosesPendingResultSet() throws SQLException {
+        insertWidget("pend", 1);
+
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement()) {
+            assertTrue(stmt.execute("SELECT qty FROM widget WHERE name = 'pend'"));
+            final ResultSet pending = stmt.getResultSet();
+            assertNotNull(pending);
+
+            try (com.landawn.abacus.util.stream.Stream<Dataset> unused = JdbcUtil.streamAllResultSets(stmt)) {
+                // closed without a terminal operation
+            }
+
+            assertTrue(pending.isClosed());
+        }
+    }
+
+    // ---- queryByPage with a named-parameter SQL binds through a NamedQuery ----
+
+    @Test
+    public void testQueryByPage_NamedParameters() throws SQLException {
+        for (int i = 1; i <= 5; i++) {
+            insertWidget("np", i);
+        }
+
+        final List<Dataset> pages = JdbcUtil.queryByPage(ds, "SELECT id, qty FROM widget WHERE name = :name AND id > :id ORDER BY id LIMIT 2", 2,
+                (q, prev) -> {
+                    long lastId = 0L;
+                    if (prev != null && !prev.isEmpty()) {
+                        lastId = ((Number) prev.get(prev.size() - 1, 0)).longValue();
+                    }
+                    ((NamedQuery) q).setString("name", "np").setLong("id", lastId);
+                }).toList();
+
+        assertEquals(3, pages.size());
+        assertEquals(5, pages.stream().mapToInt(Dataset::size).sum());
+        assertEquals(1, pages.get(2).size());
+    }
 }
