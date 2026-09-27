@@ -11585,8 +11585,8 @@ public final class JdbcUtil {
      * {@link Boolean} {@code false}, or otherwise {@link N#equals(Object, Object) equals} the
      * {@link N#defaultValueOf default value} of its runtime class. {@link BigDecimal} and
      * {@link BigInteger} values are compared exactly, without converting them to floating point.
-     * Reference types (such as {@link String} or any collection) are only considered default when
-     * {@code null}; an empty {@code String} or empty collection is <em>not</em> default.
+     * Reference types (such as {@link String}, {@link Character}, or any collection) are only considered default when
+     * {@code null}; an empty {@code String}, an empty collection, or a {@code '\0'} character is <em>not</em> default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -14079,8 +14079,8 @@ public final class JdbcUtil {
      * <pre>{@code
      * try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
      *     // DAO operations here will use the cache
-     *     userDao.findById(1L);   // First call hits database
-     *     userDao.findById(1L);   // Second call uses cache
+     *     userDao.get(1L);   // First call hits database
+     *     userDao.get(1L);   // Second call uses cache
      * }
      * }</pre>
      *
