@@ -6154,8 +6154,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * @return A list of {@code Dataset} objects, one for each ResultSet returned by the query
      * @throws IllegalStateException if this query is closed
-     * @throws SQLException if executing the statement, retrieving any of its result sets, or reading one into a {@code Dataset} fails; also if
-     *         closing a consumed result set fails
+     * @throws SQLException if executing the statement, retrieving any of its result sets, or reading one into a {@code Dataset} fails, or
+     *         draining the remaining results (when this query is kept open) fails
      * @see #queryAllResultSets(ResultExtractor)
      * @see #streamAllResultSets()
      */
@@ -7707,8 +7707,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code targetType} is null; also if a returned row has an unmapped bean column or a scalar target has
      *         other than one column
-     * @throws SQLException if executing the statement, retrieving any of its result sets, or reading their column labels or row values fails;
-     *         also if closing a consumed result set fails
+     * @throws SQLException if executing the statement, retrieving any of its result sets, or reading their column labels or row values fails,
+     *         or draining the remaining results (when this query is kept open) fails
      * @see #listAllResultSets(Jdbc.RowMapper)
      */
     public <T> List<List<T>> listAllResultSets(final Class<? extends T> targetType) throws IllegalStateException, IllegalArgumentException, SQLException {
