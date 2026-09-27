@@ -2231,6 +2231,41 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(sql.contains("WHERE status = 'OPEN'"));
     }
 
+    // A whitespace-only whereClause used to be appended verbatim, producing unparseable SQL such as
+    // "UPDATE order_history SET ... WHERE   ". It is now treated like null/empty and omitted.
+    @Test
+    public void testGenerateSelectSql_BlankWhereClauseIsOmitted() {
+        assertEquals("SELECT id, created_at, status FROM order_history",
+                JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", null, "   "));
+        assertEquals("SELECT id, created_at, status FROM order_history",
+                JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", null, "\t\n"));
+    }
+
+    @Test
+    public void testGenerateUpdateSql_BlankWhereClauseIsOmitted() {
+        assertEquals("UPDATE order_history SET id = ?, created_at = ?, status = ?",
+                JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, null, "   "));
+        assertEquals("UPDATE order_history SET created_at = ?, status = ? WHERE id = ?",
+                JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("id"), " \t "));
+    }
+
+    @Test
+    public void testGenerateNamedUpdateSql_BlankWhereClauseIsOmitted() {
+        assertEquals("UPDATE order_history SET id = :id, created_at = :createdAt, status = :status",
+                JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", null, null, "   "));
+        assertEquals("UPDATE order_history SET created_at = :createdAt, status = :status WHERE id = :id",
+                JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", null, List.of("id"), " \t "));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_BlankWhereClauseIsOmitted() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertEquals("UPDATE order_history SET status = 'CLOSED'",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(status) VALUES ('CLOSED')", "   "));
+    }
+
     @Test
     public void testGenerateUpdateSql_AllColumnsExcludedFromSet_Throws() throws SQLException {
         assertThrows(IllegalArgumentException.class,
