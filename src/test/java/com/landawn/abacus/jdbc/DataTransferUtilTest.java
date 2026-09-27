@@ -1883,4 +1883,29 @@ public class DataTransferUtilTest extends TestBase {
 
         verify(mockDataSource, never()).getConnection();
     }
+
+    // A CSV file that cannot be opened is reported with the java.io.UncheckedIOException the importCsv methods declare (IOUtil's
+    // own UncheckedIOException is not a java.io.UncheckedIOException), for both the positional overload and the builder, and
+    // the caller's statement is left untouched. A directory is still rejected as an illegal argument.
+    @Test
+    public void testImportCsvFromMissingFile_ThrowsDeclaredUncheckedIOExceptionWithoutTouchingStatement() throws IOException {
+        final File missing = File.createTempFile("missing", ".csv");
+        assertTrue(missing.delete());
+        final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
+
+        final java.io.UncheckedIOException positional = assertThrows(java.io.UncheckedIOException.class,
+                () -> DataTransferUtil.importCsv(missing, mockPreparedStatement, stmtSetter));
+        assertTrue(positional.getCause() instanceof java.io.FileNotFoundException, String.valueOf(positional.getCause()));
+
+        final java.io.UncheckedIOException builder = assertThrows(java.io.UncheckedIOException.class,
+                () -> DataTransferUtil.importCsvFrom(missing).parameterSetter(stmtSetter).to(mockPreparedStatement));
+        assertTrue(builder.getCause() instanceof java.io.FileNotFoundException, String.valueOf(builder.getCause()));
+
+        final File directory = missing.getParentFile();
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importCsv(directory, mockPreparedStatement, stmtSetter));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importCsvFrom(directory).parameterSetter(stmtSetter).to(mockPreparedStatement));
+
+        verifyNoInteractions(mockPreparedStatement);
+    }
 }
