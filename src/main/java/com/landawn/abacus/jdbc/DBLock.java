@@ -88,6 +88,12 @@ import com.landawn.abacus.util.Strings;
  * Hosts using the same lock table must keep their clocks synchronized; significant skew can make
  * one host consider another host's actively refreshed lease expired.</p>
  *
+ * <p>A row can also be reclaimed after one minute without a successful refresh, even when
+ * {@code liveTime} is longer. A stalled holder receives no notification when its lease is lost;
+ * after expiry or stale-row cleanup, another caller can acquire the target while the original
+ * caller is still running. Critical operations that must reject a former holder need an
+ * application-level ownership check or fencing mechanism.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Initialize DBLock with a DataSource and a table name
@@ -790,10 +796,10 @@ public final class DBLock implements AutoCloseable {
      * instance has no additional effect. It is declared {@code synchronized} so concurrent
      * close attempts are serialized.</p>
      *
-     * <p>Nothing is thrown out of this method: a failure to stop the refresh task or to delete a lock row
-     * is logged and swallowed, and calling it on an already closed instance does not raise
+     * <p>Exceptions raised while stopping the refresh task or deleting a lock row are logged and
+     * swallowed; errors are not caught. Calling this method on an already closed instance does not raise
      * {@link IllegalStateException}. Cancelling the refresh task does not wait for a refresh run that is
-     * already in flight; such a run is interrupted and may overlap the lock release that follows, which is harmless
+     * already in flight; interruption is requested and the run may overlap the lock release that follows, which is harmless
      * because a refresh only updates rows that still exist.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -825,8 +831,10 @@ public final class DBLock implements AutoCloseable {
 
         // Cancel the scheduled refresh task first to prevent interference during lock release
         if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
             try {
+                // Cancellation can fail too; still release the held rows below because close()
+                // has already marked this instance closed and cannot retry cleanup on a later call.
+                scheduledFuture.cancel(true);
                 scheduledFuture.get();
             } catch (final InterruptedException e) {
                 // Preserve interrupt flag so callers up the stack can detect cancellation.

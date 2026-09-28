@@ -22,16 +22,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Controls whether query results should be fetched based on the entity class properties.
- * This annotation may only be applied to methods whose return type is {@code Dataset}.
+ * Controls whether column values of a {@code Dataset} result are read using the property types of the DAO's
+ * entity class. This annotation may only be applied to methods whose return type is {@code Dataset}.
  *
- * <p>When enabled (default), only columns that correspond to properties in the entity class
- * will be retained in the returned {@code Dataset}. This keeps the result shape aligned with the
- * entity and avoids materializing unrelated columns; it does not rewrite the SQL projection or
- * prevent the database/driver from returning those columns.</p>
+ * <p>When enabled (default), each column whose label matches an entity property (directly, through the
+ * entity's column-name mapping, or through a {@link PrefixFieldMapping @PrefixFieldMapping} prefix) is read
+ * with that property's type, for example as an {@code enum}, {@code LocalDate} or custom type instead of the
+ * driver's default Java object. Columns without a matching property are still returned and are read with the
+ * default column-value mapping. The SQL text is never rewritten, and every column keeps its SQL column label.</p>
  *
- * <p>When disabled, all columns from the query result will be fetched, regardless of whether
- * they have corresponding properties in the entity class.</p>
+ * <p>When disabled, every column is read with the default column-value mapping, and
+ * {@link PrefixFieldMapping @PrefixFieldMapping} is not supported.</p>
  *
  * <p>A method-level {@code @FetchColumnByEntityClass} always takes precedence over the DAO-level
  * default configured through {@link DaoConfig#fetchColumnByEntityClassForDatasetQuery()}; when no
@@ -41,27 +42,27 @@ import java.lang.annotation.Target;
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
- *     // Only fetch columns that match User class properties
+ *     // Read user columns with the User property types
  *     @Query("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
  *     @FetchColumnByEntityClass(true)  // This is default, can be omitted
  *     Dataset queryUsersWithDepartment() throws SQLException;
  *
- *     // Fetch all columns from the query, including department_name
+ *     // Read every column with the default column-value mapping
  *     @Query("SELECT u.*, d.department_name FROM users u JOIN departments d ON u.dept_id = d.id")
  *     @FetchColumnByEntityClass(false)
  *     Dataset queryAllUserData() throws SQLException;
  *
  *     // Assuming User class has properties: id, name, email, deptId
- *     // First method returns: id, name, email, deptId (department_name is excluded)
- *     // Second method returns: id, name, email, deptId, department_name
+ *     // Both methods return the SQL column labels: id, name, email, dept_id, department_name.
+ *     // The first reads id, name, email and dept_id with the User property types;
+ *     // department_name has no matching property and uses the default mapping.
  * }
  * }</pre>
  *
  * <p>This annotation is particularly useful when:</p>
  * <ul>
- *   <li>Working with complex joins that return extra columns</li>
- *   <li>You need to fetch calculated columns or aggregations not in the entity</li>
- *   <li>Keeping the returned {@code Dataset} limited to entity-mapped columns</li>
+ *   <li>Entity properties use types that the default mapping does not produce (enums, {@code java.time} types, custom types)</li>
+ *   <li>Prefixed join columns should resolve to nested properties through {@link PrefixFieldMapping @PrefixFieldMapping}</li>
  * </ul>
  *
  * <p>Note: This annotation may only be applied to methods whose return type is {@code Dataset}.
@@ -76,21 +77,22 @@ import java.lang.annotation.Target;
 public @interface FetchColumnByEntityClass {
 
     /**
-     * Specifies whether to fetch only columns that match entity class properties.
+     * Specifies whether column values are read using the property types of the entity class.
      *
      * <p>When {@code true} (default):</p>
      * <ul>
-     *   <li>Only columns with matching properties in the entity class are fetched</li>
-     *   <li>Avoids materializing unrelated columns in the returned {@code Dataset}</li>
-     *   <li>Results in a cleaner {@code Dataset} with only relevant columns</li>
+     *   <li>Columns that match entity properties are read with those properties' types</li>
+     *   <li>Columns without a matching property are still returned, read with the default mapping</li>
+     *   <li>{@link PrefixFieldMapping @PrefixFieldMapping} can resolve prefixed column labels to nested properties</li>
      * </ul>
      *
      * <p>When {@code false}:</p>
      * <ul>
-     *   <li>All columns from the query result are fetched</li>
-     *   <li>Useful when you need additional calculated or joined columns</li>
-     *   <li>May include columns that don't map to entity properties</li>
+     *   <li>Every column is read with the default column-value mapping</li>
+     *   <li>{@link PrefixFieldMapping @PrefixFieldMapping} is not supported</li>
      * </ul>
+     *
+     * <p>In both cases the {@code Dataset} contains every column produced by the SQL, under its SQL column label.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -104,11 +106,12 @@ public @interface FetchColumnByEntityClass {
      *
      * // DAO method
      * @Query("SELECT id, name, email, COUNT(*) as login_count FROM users GROUP BY id, name, email")
-     * @FetchColumnByEntityClass(false)  // Need to fetch login_count
+     * @FetchColumnByEntityClass(false)  // Use the default column-value mapping for every column
      * Dataset getUserLoginStats() throws SQLException;
      * }</pre>
      *
-     * @return {@code true} to fetch only entity columns, {@code false} to fetch all columns; defaults to
+     * @return {@code true} to read entity-mapped columns with the entity property types, {@code false} to use the
+     *         default column-value mapping for every column; defaults to
      *         {@code true}, and a value declared here overrides the DAO-level
      *         {@link DaoConfig#fetchColumnByEntityClassForDatasetQuery()} default
      */

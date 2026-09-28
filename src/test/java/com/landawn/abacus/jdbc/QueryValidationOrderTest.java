@@ -22,10 +22,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.query.ParsedSql;
 
+@Tag("2025")
 class QueryValidationOrderTest {
 
     public static final class Entity {

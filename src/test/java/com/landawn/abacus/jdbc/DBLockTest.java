@@ -465,6 +465,21 @@ public class DBLockTest extends TestBase {
         assertEquals(0, targetCodePool(fixture.lock).size());
     }
 
+    @Test
+    public void testCloseReleasesLocksWhenRefreshCancellationFails() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 1);
+        assertNotNull(fixture.lock.tryLock("cancel-failure", 60_000, 0));
+        when(fixture.scheduledFuture.cancel(true)).thenThrow(new SecurityException("interrupt denied"));
+
+        assertDoesNotThrow(fixture.lock::close);
+
+        verify(fixture.connection).prepareStatement(UNLOCK_SQL);
+        verify(fixture.scheduledFuture, never()).get();
+        assertTrue(targetCodePool(fixture.lock).isEmpty());
+        assertDoesNotThrow(fixture.lock::close);
+        verify(fixture.scheduledFuture).cancel(true);
+    }
+
     // Close: unlockSQL throws during close loop, covering L654-L656
     @Test
     public void testClose_UnlockThrowsExceptionDuringClose() throws Exception {

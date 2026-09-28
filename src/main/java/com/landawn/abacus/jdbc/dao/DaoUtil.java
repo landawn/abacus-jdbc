@@ -392,7 +392,7 @@ public final class DaoUtil {
     /**
      * Builds a condition matching any supplied value for one property while preserving SQL
      * {@code NULL} equality semantics. A plain {@code IN (..., NULL)} predicate never matches a
-     * null column, so a null value is expressed as a separate {@link Filters#isNull(String)} branch.
+     * {@code null} column, so a {@code null} value is expressed as a separate {@link Filters#isNull(String)} branch.
      *
      * @param propName the property to match
      * @param values the non-empty values to match
@@ -664,7 +664,7 @@ public final class DaoUtil {
      * @param sourceSelectPropNames the source property names to select.
      * @param joinEntityClass the join entity class whose required source property names are included.
      * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
-     *         names added; null or empty selections are returned unchanged because they select all default properties.
+     *         names added; {@code null} or empty selections are returned unchanged because they select all default properties.
      * @throws NullPointerException if {@code dao} is {@code null} and {@code sourceSelectPropNames} is not empty
      * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid, or a requested join entity class is {@code null}
      * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
@@ -702,7 +702,7 @@ public final class DaoUtil {
      * @param sourceSelectPropNames the source property names to select.
      * @param joinEntityClasses the join entity classes whose required source property names are included.
      * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
-     *         names added; returned unchanged if the selection is null or empty (all default properties),
+     *         names added; returned unchanged if the selection is {@code null} or empty (all default properties),
      *         or {@code joinEntityClasses} is empty.
      * @throws NullPointerException if {@code dao} is {@code null}, {@code sourceSelectPropNames} is not empty and {@code joinEntityClasses}
      *                              is not empty
@@ -732,7 +732,7 @@ public final class DaoUtil {
      * @param dao the join-entity DAO whose join metadata is used.
      * @param sourceSelectPropNames the source property names to select.
      * @return {@code sourceSelectPropNames} (possibly unchanged) with all required source join property
-     *         names added; null or empty selections are returned unchanged because they select all default properties.
+     *         names added; {@code null} or empty selections are returned unchanged because they select all default properties.
      * @throws NullPointerException if {@code dao} is {@code null} and {@code sourceSelectPropNames} is not empty
      * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid
      * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans

@@ -201,6 +201,12 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
     public interface CJUserDao extends Dao<CJUser, CJUserDao>, JoinEntityHelper<CJUser, CJUserDao> {
     }
 
+    public interface ReadOnlyDJOrderDao extends ReadOnlyDao<DJOrder, ReadOnlyDJOrderDao> {
+    }
+
+    public interface NonUpdateCJOrderDao extends NonUpdateDao<CJOrder, NonUpdateCJOrderDao> {
+    }
+
     /** Same-thread executor so the explicit-executor overloads run deterministically. */
     private static final Executor DIRECT_EXECUTOR = Runnable::run;
 
@@ -293,6 +299,61 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
         final CJUser u = new CJUser();
         u.setId(id);
         return u;
+    }
+
+    /**
+     * Opens a separate pool on the same in-memory database. Join-DAO resolution is cached per DataSource identity in a
+     * static pool, so a fresh DataSource guarantees that no earlier test has already cached a DAO for these join
+     * targets: the join load below must resolve the read-only or non-update DAO, which the delete must then skip.
+     */
+    private static DataSource isolatedDataSource() {
+        return JdbcUtil.createHikariDataSource("jdbc:h2:mem:deletable_join_it;DB_CLOSE_DELAY=-1", "sa", "");
+    }
+
+    @Test
+    public void testJoinDeleteDoesNotReuseReadOnlyDaoCachedByJoinLoad() throws Exception {
+        final DataSource isolatedDs = isolatedDataSource();
+
+        try {
+            final ReadOnlyDJOrderDao orders = JdbcUtil.createDao(ReadOnlyDJOrderDao.class, isolatedDs);
+            final DJUserDao userDao = JdbcUtil.createDao(DJUserDao.class, isolatedDs);
+            seedDjUser(1, "First", 2);
+            seedDjUser(2, "Second", 1);
+            final DJUser first = djUser(1);
+            final DJUser second = djUser(2);
+
+            userDao.loadJoinEntities(first, "orders");
+            assertEquals(2, first.getOrders().size());
+            assertEquals(2, userDao.deleteJoinEntities(first, "orders"));
+            assertEquals(1, userDao.deleteJoinEntities(List.of(first, second), "orders"));
+            assertEquals(0, orders.count(Filters.gt("id", 0)));
+            assertThrows(UnsupportedOperationException.class, () -> orders.prepareQuery("DELETE FROM dj_order"));
+        } finally {
+            ((AutoCloseable) isolatedDs).close();
+        }
+    }
+
+    @Test
+    public void testJoinDeleteDoesNotReuseNonUpdateDaoCachedByJoinLoad() throws Exception {
+        final DataSource isolatedDs = isolatedDataSource();
+
+        try {
+            final NonUpdateCJOrderDao orders = JdbcUtil.createDao(NonUpdateCJOrderDao.class, isolatedDs);
+            final CJUserDao userDao = JdbcUtil.createDao(CJUserDao.class, isolatedDs);
+            seedCjUser(1, "First", 2);
+            seedCjUser(2, "Second", 1);
+            final CJUser first = cjUser(1);
+            final CJUser second = cjUser(2);
+
+            userDao.loadJoinEntities(first, "orders");
+            assertEquals(2, first.getOrders().size());
+            assertEquals(2, userDao.deleteJoinEntities(first, "orders"));
+            assertEquals(1, userDao.deleteJoinEntities(List.of(first, second), "orders"));
+            assertEquals(0, orders.count(Filters.gt("id", 0)));
+            assertThrows(UnsupportedOperationException.class, () -> orders.prepareQuery("DELETE FROM cj_order"));
+        } finally {
+            ((AutoCloseable) isolatedDs).close();
+        }
     }
 
     // =====================================================================

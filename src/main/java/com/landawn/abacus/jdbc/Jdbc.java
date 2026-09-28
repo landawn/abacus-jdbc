@@ -475,6 +475,11 @@ public final class Jdbc {
      * should process all required data within the method and not attempt to return or store the
      * {@code ResultSet} itself.</p>
      *
+     * <p>The extractor itself does not take ownership of the result set. Calling an extractor's
+     * {@code apply} method directly leaves closing the result set to the caller. Extractor factories
+     * that accept a mapper or filter retain that same callback, so any restrictions on its reuse
+     * or concurrent use also apply to the resulting extractor.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ResultExtractor<List<String>> extractor = rs -> {
@@ -1165,8 +1170,12 @@ public final class Jdbc {
 
         /**
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}
-         * with custom field name mapping for nested objects. This is useful for JOIN queries
-         * where column names might have prefixes.
+         * using nested bean properties to determine the column value types. Prefix mappings
+         * resolve those properties for JOIN queries; the dataset retains the original column labels.
+         *
+         * <p>A fresh row extractor is created for each result set, so this extractor can be reused
+         * across different column layouts. The supplied map is read on each invocation; changes
+         * made before a later invocation affect that invocation's property resolution.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -1281,6 +1290,10 @@ public final class Jdbc {
      * <p><b>Important Note:</b> Like {@code ResultExtractor}, the {@code ResultSet} passed to
      * the {@code apply} method will typically be closed automatically after the method returns.
      * Do not attempt to return or store the {@code ResultSet} itself.</p>
+     *
+     * <p>A direct call to {@code apply} does not close the result set; its caller retains ownership.
+     * Factories accepting mapper or filter instances retain those callbacks, including their
+     * state and any restrictions on reuse or concurrent use.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2500,7 +2513,10 @@ public final class Jdbc {
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * // Get a string from column 1 and convert it to uppercase.
-             * builder.get(1, (rs, idx) -> rs.getString(idx).toUpperCase());
+             * builder.get(1, (rs, idx) -> {
+             *     String text = rs.getString(idx);
+             *     return text == null ? null : text.toUpperCase(Locale.ROOT);
+             * });
              * }</pre>
              *
              * @param columnIndex the 1-based index of the column
@@ -3190,7 +3206,7 @@ public final class Jdbc {
          * BiRowMapper<User> mapper = BiRowMapper.to(
          * User.class,
          * colName -> !colName.startsWith("temp_"),  // Filter out temporary columns
-         * String::toLowerCase                       // Convert column names to lowercase before matching
+         * colName -> colName.toLowerCase(Locale.ROOT) // Convert column names independently of the default locale
          * );
          * }</pre>
          *
@@ -5634,7 +5650,7 @@ public final class Jdbc {
          *
          * @param rs the {@code ResultSet} positioned at a valid row; must not be {@code null}
          * @param outputRow the array to be populated with data from the current row; must not be {@code null}
-         * @throws IllegalArgumentException if a built-in extractor receives a null result set or a null or undersized output array,
+         * @throws IllegalArgumentException if a built-in extractor receives a {@code null} result set or a {@code null} or undersized output array,
          *         or a builder-configured column index exceeds the result set's column count
          * @throws SQLException if reading the current row's column values, or the result set metadata needed to map them, fails.
          */
@@ -5848,7 +5864,7 @@ public final class Jdbc {
          * Creates a {@link RowExtractorBuilder} with a specified default {@code ColumnGetter}. This provides
          * a fluent API to construct a custom {@code RowExtractor}.
          *
-         * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns; must not be null.
+         * @param defaultColumnGetter the default {@code ColumnGetter} to use for unconfigured columns; must not be {@code null}.
          * @return a new {@code RowExtractorBuilder}.
          * @throws IllegalArgumentException if {@code defaultColumnGetter} is {@code null}.
          */
@@ -6077,7 +6093,10 @@ public final class Jdbc {
              * // Apply a custom transformation to column 2 (uppercase its String value).
              * RowExtractor extractor = RowExtractor.builder()
              *     .getInt(1)
-             *     .get(2, (rs, columnIndex) -> rs.getString(columnIndex).toUpperCase())
+             *     .get(2, (rs, columnIndex) -> {
+             *         String text = rs.getString(columnIndex);
+             *         return text == null ? null : text.toUpperCase(Locale.ROOT);
+             *     })
              *     .build();
              * }</pre>
              *
@@ -6186,7 +6205,7 @@ public final class Jdbc {
      * or the {@link #forType(Class)} / {@link #forType(Type)} factory methods.</p>
      *
      * <p>The primitive getters, such as {@link #GET_INT} and {@link #GET_BOOLEAN}, return the JDBC
-     * default value ({@code 0} or {@code false}) for SQL {@code NULL}. To preserve null, use a
+     * default value ({@code 0} or {@code false}) for SQL {@code NULL}. To preserve {@code null}, use a
      * wrapper-type getter such as {@code ColumnGetter.forType(Integer.class)}.</p>
      *
      * <p><b>Naming note:</b> the value-fetching method is {@link #get(ResultSet, int)} (this interface's
@@ -6203,7 +6222,10 @@ public final class Jdbc {
      * ColumnGetter<LocalDate> dateGetter = ColumnGetter.forType(LocalDate.class);
      *
      * // Custom lambda getter
-     * ColumnGetter<String> upperCaseGetter = (rs, idx) -> rs.getString(idx).toUpperCase();
+     * ColumnGetter<String> upperCaseGetter = (rs, idx) -> {
+     *     String text = rs.getString(idx);
+     *     return text == null ? null : text.toUpperCase(Locale.ROOT);
+     * };
      * }</pre>
      *
      * @param <V> extracted value type
@@ -6280,12 +6302,16 @@ public final class Jdbc {
         ColumnGetter<byte[]> GET_BYTES = ResultSet::getBytes;
 
         /**
-         * Predefined getter for {@code InputStream} values.
+         * Predefined getter for {@code InputStream} values. Consume and close the stream while the
+         * current row is available, before another column is read or the cursor advances. This getter
+         * does not materialize the stream, so it should not be returned from a materializing query.
          */
         ColumnGetter<InputStream> GET_BINARY_STREAM = ResultSet::getBinaryStream;
 
         /**
-         * Predefined getter for {@code Reader} values.
+         * Predefined getter for {@code Reader} values. Consume and close the reader while the current
+         * row is available, before another column is read or the cursor advances. This getter does not
+         * materialize the reader, so it should not be returned from a materializing query.
          */
         ColumnGetter<Reader> GET_CHARACTER_STREAM = ResultSet::getCharacterStream;
 
@@ -6402,16 +6428,16 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Extract a single integer value (e.g., count, max, sum)
-         * com.landawn.abacus.util.u.Optional<Integer> count = preparedQuery.findOnlyOne(ColumnOne.GET_INT);
+         * com.landawn.abacus.util.u.Optional<Integer> count = countQuery.findOnlyOne(ColumnOne.GET_INT);
          *
          * // Extract a single string value
-         * com.landawn.abacus.util.u.Optional<String> name = preparedQuery.findOnlyOne(ColumnOne.GET_STRING);
+         * com.landawn.abacus.util.u.Optional<String> name = nameQuery.findOnlyOne(ColumnOne.GET_STRING);
          *
          * // Use a type-based mapper for custom types
          * RowMapper<LocalDate> mapper = ColumnOne.get(LocalDate.class);
          *
          * // Set a single parameter by type (settParameters accepts a setter over the query itself)
-         * preparedQuery.settParameters(userId, ColumnOne.SET_INT);
+         * updateQuery.settParameters(userId, ColumnOne.SET_INT);
          * }</pre>
          *
          * @see ColumnGetter
@@ -6486,11 +6512,17 @@ public final class Jdbc {
 
             /**
              * A {@code RowMapper} for getting an {@code InputStream} from the first column.
+             * Consume and close the stream while the current row remains available, before another
+             * column is read or the cursor advances. Do not use it to return streams from materializing
+             * methods such as {@code list} or {@code findFirst}, which close the result set.
              */
             public static final RowMapper<InputStream> GET_BINARY_STREAM = rs -> rs.getBinaryStream(1);
 
             /**
              * A {@code RowMapper} for getting a {@code Reader} from the first column.
+             * Consume and close the reader while the current row remains available, before another
+             * column is read or the cursor advances. Do not use it to return readers from materializing
+             * methods such as {@code list} or {@code findFirst}, which close the result set.
              */
             public static final RowMapper<Reader> GET_CHARACTER_STREAM = rs -> rs.getCharacterStream(1);
 
@@ -6721,6 +6753,7 @@ public final class Jdbc {
 
                 // computeIfAbsent (as in ColumnGetter.forType) keeps the documented "one shared mapper per Type" guarantee
                 // under concurrent first access; a get-then-put race could publish two different instances for the same Type.
+                // The pool never evicts, so the guarantee holds for the lifetime of the class.
                 final RowMapper<T> rowMapper = rowMapperPool.computeIfAbsent(type, k -> (RowMapper<T>) rs -> type.get(rs, 1));
 
                 return rowMapper;
@@ -6847,7 +6880,8 @@ public final class Jdbc {
      * performs no validation, so prefer {@link #of(int, int)} or {@link #of(String, int)} for descriptors
      * that do not require a scale or database-specific type name.</p>
      *
-     * <p><b>SQL metadata:</b> {@link #sqlType()} is a constant from {@link Types} and must match the type
+     * <p><b>SQL metadata:</b> {@link #sqlType()} is a JDBC SQL type code, including vendor-specific codes,
+     * and must match the type
      * used during registration. {@link #scale()} corresponds to the scale-bearing
      * {@code registerOutParameter} overloads for numeric values. {@link #typeName()} corresponds to the
      * type-name overloads used for user-defined or database-specific SQL types.</p>
@@ -6859,6 +6893,12 @@ public final class Jdbc {
      *
      * OutParam status = OutParam.of("status", Types.VARCHAR);
      * stmt.registerOutParameter(status.parameterName(), status.sqlType());
+     *
+     * stmt.execute();
+     * // Consume all results before reading output parameters.
+     * while (stmt.getMoreResults() || stmt.getUpdateCount() != -1) {
+     *     // Discard results that are not needed by this example.
+     * }
      *
      * OutParamResult values = JdbcUtil.getOutParameters(stmt, List.of(count, status));
      * Integer rowCount = values.getOutParamValue(2);

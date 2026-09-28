@@ -41,7 +41,9 @@ public enum CacheSerialization {
      * <p>The copy is rebuilt as the value's runtime class, using the element, key/value or wrapped types
      * declared by the DAO method's generic return type (for example {@code List<User>},
      * {@code Map<Long, User>} or {@code u.Optional<User>}). If the declared return type cannot be resolved
-     * (for example, it uses a type variable), only the runtime class is used and generic type arguments are lost.</p>
+     * (for example, it uses a type variable), collection elements and map keys/values use their common runtime
+     * class when all non-null values have the same class. Otherwise the unresolved types fall back to the
+     * serializer's defaults; nested generic type arguments cannot be recovered from runtime classes alone.</p>
      */
     JSON
 }

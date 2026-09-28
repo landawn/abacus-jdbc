@@ -208,7 +208,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
 
     /**
      * Creates a PreparedQuery optimized for queries that return large result sets.
-     * This configures the statement to use cursor-based fetching for better memory efficiency.
+     * Sets forward-fetch and fetch-size hints; actual buffering and cursor use depend on the JDBC driver.
      *
      * @param sql the SQL query string
      * @return a PreparedQuery configured for large results
@@ -229,7 +229,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
 
     /**
      * Creates a SELECT query optimized for large result sets based on the specified condition.
-     * All columns will be selected with cursor-based fetching enabled.
+     * All columns will be selected with forward-fetch and fetch-size hints.
      *
      * @param cond the condition appended to the generated SELECT statement
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
@@ -249,7 +249,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
 
     /**
      * Creates a SELECT query for specific columns optimized for large result sets.
-     * Combines column selection with cursor-based fetching for memory-efficient processing.
+     * Combines column selection with forward-fetch and fetch-size hints.
      *
      * @param selectPropNames the property names to select, or {@code null} to select all
      * @param cond the condition appended to the generated SELECT statement
@@ -358,7 +358,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
 
     /**
      * Creates a NamedQuery optimized for large result sets.
-     * Configures the query to use cursor-based fetching for memory efficiency.
+     * Sets forward-fetch and fetch-size hints; actual buffering and cursor use depend on the JDBC driver.
      *
      * @param namedSql the named SQL query string
      * @return a NamedQuery configured for large results
@@ -399,7 +399,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
 
     /**
      * Creates a named SELECT query optimized for large result sets based on condition.
-     * All columns will be selected with cursor-based fetching.
+     * All columns will be selected with forward-fetch and fetch-size hints.
      *
      * @param cond the condition appended to the generated SELECT statement
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
@@ -418,7 +418,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
 
     /**
      * Creates a named SELECT query for specific columns optimized for large result sets.
-     * Combines column selection with cursor-based fetching and named parameters.
+     * Combines column selection with forward-fetch and fetch-size hints and named parameters.
      *
      * @param selectPropNames the property names to select, or {@code null} to select all
      * @param cond the condition appended to the generated SELECT statement

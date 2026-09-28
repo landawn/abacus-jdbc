@@ -44,7 +44,9 @@ import com.landawn.abacus.util.RegExUtil;
  * and {@link #queryTimeoutSeconds()}. The method's return type still participates in the final execution
  * strategy: for example, with {@link QueryOperation#DEFAULT} a
  * {@link com.landawn.abacus.util.stream.Stream} return type triggers lazy streaming while a
- * {@link com.landawn.abacus.util.u.Optional} return type triggers "find first" semantics.</p>
+ * {@link com.landawn.abacus.util.u.Optional} return type normally triggers "find first" semantics.
+ * Method-name prefixes such as {@code findOnlyOne}, {@code selectOnlyOne}, and {@code queryForUnique}
+ * instead require at most one result and reject duplicates.</p>
  *
  * <p>INSERT statements use the generated-key path regardless of {@link #op()}. A non-batch INSERT
  * method may return {@code void}, the DAO ID type (or a supertype capable of holding that ID), or
@@ -448,7 +450,7 @@ public @interface Query {
      *       {@code boolean}/{@code Boolean} or {@code void} — positive affected-row counts are summed
      *       across all batch rows (a per-row {@code int[]} result is not supported). JDBC sentinel
      *       values such as {@link java.sql.Statement#SUCCESS_NO_INFO} do not contribute to the sum;
-     *       a boolean result reports whether that sum is positive, so it can be false even when
+     *       a boolean result reports whether that sum is positive, so it can be {@code false} even when
      *       the driver reports successful execution without row counts.</li>
      * </ul>
      *

@@ -111,8 +111,9 @@ import com.landawn.abacus.util.stream.Stream;
  * {@code queryForInt}, {@code queryForLong}, {@code findFirst}, {@code findOnlyOne},
  * {@code list}, {@code execute}, and similar), regardless of whether the call completes
  * normally or throws an exception. To keep the statement open, invoke
- * {@code closeAfterExecution(false)}. If {@code closeAfterExecution(false)} is not called,
- * there is no need to place the {@code AbstractQuery} instance in a try-with-resources block for closure.</p>
+ * {@code closeAfterExecution(false)}. A try-with-resources block is still recommended when binding
+ * parameters before execution: a binding failure can prevent the execution method from being reached,
+ * and individual JDBC setters do not generally close the query when they fail.</p>
  *
  * <p>The {@code stream(...)}/{@code streamAllResultSets(...)} and {@code callAsync}/{@code runAsync} families are
  * exceptions to the close-immediately rule. A stream retains its JDBC resources until it is closed and therefore
@@ -290,6 +291,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p>Set to {@code false} if you want to reuse the statement for multiple executions,
      * but ensure you manually close it when done.</p>
+     *
+     * <p>This flag controls automatic statement closing, not parameter retention. For ordinary prepared
+     * statements, non-batch execution clears the bound parameters, so bind all required parameters
+     * again before the next execution. Callable statements retain their parameters between executions
+     * to preserve OUT-parameter registrations. Result sets consumed by materializing operations are
+     * closed even when this flag is {@code false}; streams must still be closed by their caller.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3911,7 +3918,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                        An empty collection adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query has already been closed
-     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or a collection/array batch contains a null row
+     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or a collection/array batch contains a {@code null} row
      * @throws SQLException if clearing the bound parameters, binding a row's values, or adding a row to the batch fails
      *         (for example, because a row has more values than the SQL statement has parameter markers); this query
      *         is closed before the exception is rethrown
@@ -3985,7 +3992,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                        An empty iterator adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query has already been closed
-     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or a collection/array batch contains a null row
+     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or a collection/array batch contains a {@code null} row
      * @throws SQLException if clearing the bound parameters, binding a row's values, or adding a row to the batch fails
      *         (for example, because a row has more values than the SQL statement has parameter markers); this query
      *         is closed before the exception is rethrown
@@ -5461,7 +5468,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Empty vs. present semantics:</b> {@code Nullable.empty()} is returned <i>only</i> when the
      * query produces no rows. Otherwise the returned {@code Nullable} holds the value produced by
      * {@link Type#of(Class)} for the requested class, including a possible Java {@code null}.
-     * SQL {@code NULL} handling depends on that type handler: wrapper types preserve null, while
+     * SQL {@code NULL} handling depends on that type handler: wrapper types preserve {@code null}, while
      * primitive types such as {@code int.class} use their primitive default value. Use a wrapper
      * type to distinguish "row matched but value is null" from a non-null value.</p>
      *
@@ -5581,7 +5588,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query produces no rows. Otherwise the returned {@code Optional} holds the value produced by
      * the supplied type handler. A Java {@code null} result causes {@link NullPointerException}; the
      * handler determines how SQL {@code NULL} is represented. Use {@link #queryForSingleValue(Type)}
-     * when the handler can return null.</p>
+     * when the handler can return {@code null}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5627,7 +5634,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query produces no rows. If exactly one row is found, the returned {@code Nullable} is
      * <i>present</i> and holds the converted value, including a possible Java {@code null}. As with
      * {@link #queryForSingleValue(Class)}, the requested type's handler determines how SQL {@code NULL}
-     * is represented; use a wrapper type to preserve null. If two or more rows are found,
+     * is represented; use a wrapper type to preserve {@code null}. If two or more rows are found,
      * {@link DuplicateResultException} is thrown instead of returning a result.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -7795,8 +7802,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Lists all the ResultSets that match the specified row filter and maps them using the provided row mapper.
-     * Allows filtering rows across all ResultSets before mapping.
+     * Lists the matching rows from every ResultSet using the specified row filter and row mapper.
+     * Each ResultSet contributes one inner list, including an empty list when no rows pass the filter.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7906,8 +7913,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Lists all the ResultSets that match the specified BiRowFilter and maps them using the provided BiRowMapper.
+     * Lists the matching rows from every ResultSet using the specified BiRowFilter and BiRowMapper.
      * Both filter and mapper receive ResultSet and column labels for maximum flexibility.
+     * Each ResultSet contributes one inner list, including an empty list when no rows pass the filter.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9642,8 +9650,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Iterates over each row that matches the filter and applies the given RowConsumer.
      *
      * <p>This method combines filtering and processing, only applying the consumer to
-     * rows that satisfy the filter condition. This is more efficient than filtering
-     * after retrieval for large result sets.</p>
+     * rows that satisfy the filter condition. Filtering runs in Java after each row is fetched;
+     * it does not reduce the number of rows retrieved from the database.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9816,7 +9824,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes the underlying prepared statement as a query and returns the resulting
      * {@code ResultSet}.
      *
-     * <p>This protected helper is used internally by all read-side methods (e.g. {@code list},
+     * <p>This protected helper is used internally by read methods that consume a single {@code ResultSet} (e.g. {@code list},
      * {@code stream}, {@code findFirst}, {@code queryForXxx}). When the user has not explicitly
      * set a fetch direction via {@link #setFetchDirection(FetchDirection)}, this method sets the
      * statement's fetch direction to {@link ResultSet#FETCH_FORWARD} before delegating to
@@ -9930,7 +9938,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param entityClass the class used to determine proper types for column value retrieval. Must not be {@code null}.
      * @param rowConsumer the consumer to apply to each row's DisposableObjArray. Must not be {@code null}.
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code entityClass} or {@code rowConsumer} is null, or if the query returns at least one row and
+     * @throws IllegalArgumentException if {@code entityClass} or {@code rowConsumer} is {@code null}, or if the query returns at least one row and
      *         {@code entityClass} is not a bean class (it has no property getter/setter method or public field)
      * @throws SQLException if executing the query or reading the result set fails; also if closing a consumed result set fails
      * @see RowConsumer#forDisposableObjArray(Class, Consumer)
@@ -10505,8 +10513,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes a batch of UPDATE/INSERT/DELETE statements and returns an array of update counts.
      *
      * <p>This method executes all commands in the current batch and returns an array
-     * containing one element for each command, indicating the number of rows affected
-     * by that command.</p>
+     * containing one element for each command: its affected-row count, or
+     * {@link java.sql.Statement#SUCCESS_NO_INFO} when it succeeded without a known count.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10518,12 +10526,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .batchUpdate();
      *
      * for (int i = 0; i < results.length; i++) {
-     *     System.out.println("Update " + i + " affected " + results[i] + " rows");
+     *     System.out.println("Update " + i + ": " + (results[i] == Statement.SUCCESS_NO_INFO
+     *             ? "succeeded; row count unavailable" : results[i] + " rows affected"));
      * }
      * }</pre>
      *
      * @return An array of update counts containing one element for each command in the batch.
      *         The elements are ordered according to the order in which commands were added to the batch.
+     *         An element can be {@link java.sql.Statement#SUCCESS_NO_INFO} when the driver cannot report its count.
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if executing the batch fails, including when any command in the batch fails
      * @see #largeBatchUpdate()
@@ -10703,11 +10713,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .largeBatchUpdate();
      *
      * for (int i = 0; i < results.length; i++) {
-     *     System.out.println("Batch " + i + " updated " + results[i] + " rows");
+     *     System.out.println("Batch " + i + ": " + (results[i] == Statement.SUCCESS_NO_INFO
+     *             ? "succeeded; row count unavailable" : results[i] + " rows affected"));
      * }
      * }</pre>
      *
-     * @return An array containing the number of rows affected by each update in the batch as long values
+     * @return An array containing each command's affected-row count as a long value, or
+     *         {@link java.sql.Statement#SUCCESS_NO_INFO} when the driver cannot report its count, in batch order
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if executing the batch fails, including when any command in the batch fails
      * @throws UnsupportedOperationException if the JDBC driver does not implement
@@ -10992,11 +11004,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method allows asynchronous execution of database operations using the default
      * executor. The query instance will remain open until the asynchronous operation completes.</p>
      *
-     * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
-     * is completed by another thread. Ensure proper resource management and avoid keeping
-     * connections open longer than necessary. The action must return a materialized value;
-     * do not return a JDBC-backed lazy {@link Stream}, because this query is closed when the
-     * asynchronous action itself completes.</p>
+     * <p><b>Note:</b> Keep the connection open until {@code sqlAction} completes. The query is
+     * automatically closed when the action completes unless {@code closeAfterExecution(false)}
+     * is configured. With automatic closing enabled, return a materialized value rather than
+     * a JDBC-backed lazy {@link Stream}, which would depend on the closed query.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11044,11 +11055,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method allows asynchronous execution of database operations using a specified
      * executor. This is useful when you want to control the thread pool used for database operations.</p>
      *
-     * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
-     * is completed by another thread. Ensure the executor has appropriate thread pool settings
-     * to avoid resource exhaustion. The action must return a materialized value; do not return
-     * a JDBC-backed lazy {@link Stream}, because this query is closed when the asynchronous
-     * action itself completes.</p>
+     * <p><b>Note:</b> Keep the connection open until {@code sqlAction} completes. The supplied
+     * executor determines where the action runs and may execute it on the calling thread.
+     * The query is automatically closed when the action completes unless
+     * {@code closeAfterExecution(false)} is configured. With automatic closing enabled, return
+     * a materialized value rather than a JDBC-backed lazy {@link Stream}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11104,8 +11115,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * don't return a value (void operations). Useful for INSERT, UPDATE, DELETE operations
      * where you only care about completion, not the result.</p>
      *
-     * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
-     * is completed by another thread.</p>
+     * <p><b>Note:</b> Keep the connection open until {@code sqlAction} completes. The query is
+     * automatically closed when the action completes unless {@code closeAfterExecution(false)}
+     * is configured.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11158,8 +11170,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is similar to {@link #runAsync(Throwables.Consumer)} but allows specification of
      * a custom executor for the asynchronous operation.</p>
      *
-     * <p><b>Note:</b> The opened Connection and Statement will be held until the sqlAction
-     * is completed by another thread.</p>
+     * <p><b>Note:</b> Keep the connection open until {@code sqlAction} completes. The supplied
+     * executor determines where the action runs and may execute it on the calling thread.
+     * The query is automatically closed when the action completes unless
+     * {@code closeAfterExecution(false)} is configured.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

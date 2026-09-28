@@ -33,6 +33,7 @@ import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
@@ -946,8 +947,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
     /**
      * Refreshes specific properties of the given entity from the database.
      * Only the specified properties will be reloaded and copied into {@code entity} in place;
-     * other properties are left untouched. The ID property of {@code entity} is used to locate
-     * the database record.
+     * other properties are left untouched. The ID properties of {@code entity} locate the database
+     * record, including when the DAO declares a separate bean or record type for a composite ID.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -983,7 +984,10 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         final ID id = DaoUtil.extractId(entity, idPropNameList, entityInfo);
         final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
-        final T dbEntity = getOrNull(id, selectPropNames);
+        // Composite IDs extracted here are Seid values, while the DAO may declare a bean or record
+        // ID type. Query the ID properties directly instead of passing a Seid to that type's getters.
+        final T dbEntity = idPropNameList.size() == 1 ? getOrNull(id, selectPropNames)
+                : findOnlyOne(selectPropNames, Filters.idToCond((EntityId) id)).orElseNull();
 
         if (dbEntity == null) {
             return false;

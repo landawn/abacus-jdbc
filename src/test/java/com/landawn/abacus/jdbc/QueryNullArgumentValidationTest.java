@@ -14,11 +14,13 @@ import static org.mockito.Mockito.when;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.EntityId;
 
+@Tag("2025")
 class QueryNullArgumentValidationTest {
 
     @Test

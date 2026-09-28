@@ -1259,7 +1259,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
-     *         This also applies to malformed qualified table names, blank column labels, or a null or blank database product name reported by the
+     *         This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the
      *         driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
@@ -1294,7 +1294,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
      * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no
-     *         columns. This also applies to malformed qualified table names, blank column labels, or a null or blank database product name reported
+     *         columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported
      *         by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
@@ -1343,7 +1343,7 @@ public final class JdbcCodeGenerationUtil {
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
      *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a
-     *         null or blank database product name reported by the driver.
+     *         {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1381,7 +1381,7 @@ public final class JdbcCodeGenerationUtil {
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
      *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a
-     *         null or blank database product name reported by the driver.
+     *         {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
@@ -1431,7 +1431,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
-     *         This also applies to malformed qualified table names, blank column labels, or a null or blank database product name reported by the
+     *         This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the
      *         driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
@@ -1466,7 +1466,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
      * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no
-     *         columns. This also applies to malformed qualified table names, blank column labels, or a null or blank database product name reported
+     *         columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported
      *         by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
@@ -1514,7 +1514,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an INSERT SQL statement string with positional parameters for all included columns
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
      *         excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a
-     *         null or blank database product name reported by the driver.
+     *         {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1550,7 +1550,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an INSERT SQL statement string with positional parameters for all included columns
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
      *         excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a
-     *         null or blank database product name reported by the driver.
+     *         {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateInsertSql(Connection, String)
      * @see #generateInsertSql(DataSource, String, Collection)
@@ -1603,7 +1603,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns, or
      *         two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
-     *         labels, or a null or blank database product name reported by the driver.
+     *         labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1637,7 +1637,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns,
      *         or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
-     *         labels, or a null or blank database product name reported by the driver.
+     *         labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -1686,7 +1686,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an INSERT SQL statement string with named parameters for all included columns
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, all columns are excluded, or
      *         two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank
-     *         column labels, or a null or blank database product name reported by the driver.
+     *         column labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1722,7 +1722,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an INSERT SQL statement string with named parameters for all included columns
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, all columns are excluded,
      *         or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names,
-     *         blank column labels, or a null or blank database product name reported by the driver.
+     *         blank column labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateNamedInsertSql(Connection, String)
      * @see #generateNamedInsertSql(DataSource, String, Collection)
@@ -1776,7 +1776,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @return an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or the table has no columns
-     *         for the SET clause. This also applies to malformed qualified table names, blank column labels, or a null or blank database product name
+     *         for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name
      *         reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
@@ -1812,7 +1812,7 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @return an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or the table has no columns
-     *         for the SET clause. This also applies to malformed qualified table names, blank column labels, or a null or blank database product name
+     *         for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name
      *         reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
@@ -1856,7 +1856,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
      *         ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a
-     *         null or blank database product name reported by the driver.
+     *         {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1893,7 +1893,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
      *         ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a
-     *         null or blank database product name reported by the driver.
+     *         {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName)
@@ -1954,7 +1954,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names,
-     *         blank column labels, or a null or blank database product name reported by the driver.
+     *         blank column labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      * @see #generateUpdateSql(Connection, String, String)
@@ -2007,7 +2007,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names,
-     *         blank column labels, or a null or blank database product name reported by the driver.
+     *         blank column labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateUpdateSql(Connection, String, String)
      * @see #generateUpdateSql(DataSource, String, Collection, Collection, String)
@@ -2092,7 +2092,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns, or
      *         two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
-     *         labels, or a null or blank database product name reported by the driver.
+     *         labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -2129,7 +2129,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns,
      *         or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
-     *         labels, or a null or blank database product name reported by the driver.
+     *         labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -2175,7 +2175,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
      *         ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed
-     *         qualified table names, blank column labels, or a null or blank database product name reported by the driver.
+     *         qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -2212,7 +2212,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
      *         ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed
-     *         qualified table names, blank column labels, or a null or blank database product name reported by the driver.
+     *         qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName)
@@ -2271,7 +2271,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
-     *         malformed qualified table names, blank column labels, or a null or blank database product name reported by the driver.
+     *         malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      * @see #generateNamedUpdateSql(Connection, String, String)
@@ -2324,7 +2324,7 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
-     *         malformed qualified table names, blank column labels, or a null or blank database product name reported by the driver.
+     *         malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateNamedUpdateSql(Connection, String, String)
      * @see #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)
@@ -2433,10 +2433,17 @@ public final class JdbcCodeGenerationUtil {
      *   <li>Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
      *       (with backticks for MySQL/MariaDB, or double quotes for other databases) based on the
      *       {@link ProductInfo} resolved from {@code ds}.</li>
-     *   <li>Value tokens are copied verbatim from the parsed {@code VALUES} list; they are not re-quoted,
-     *       re-escaped, or otherwise transformed (the supplied INSERT is assumed to already contain valid SQL literals).</li>
+     *   <li>Value expressions are copied from the parsed {@code VALUES} list without re-quoting or re-escaping.
+     *       Surrounding whitespace is trimmed, except that a trailing line comment is terminated by a newline
+     *       (the supplied INSERT is assumed to already contain valid SQL expressions).</li>
      *   <li>The parser recognizes doubled quote escapes, backslash-escaped characters, bracketed identifiers,
-     *       and PostgreSQL dollar-quoted strings while locating commas and parentheses.</li>
+     *       PostgreSQL dollar-quoted strings, and SQL line/block comments while locating commas and parentheses in the column and value lists.
+     *       Comments in the column list are removed before the column names are validated. Comments in the value list are kept;
+     *       a terminating line break is retained after a trailing line comment so it cannot hide the next assignment or WHERE clause.</li>
+     *   <li>For MySQL/MariaDB, {@code #} also starts a line comment, a {@code --} line comment must be followed by whitespace or a
+     *       control character, and block comments do not nest. For PostgreSQL, SQL Server and H2, block comments nest.
+     *       For other databases (for example Oracle, SQLite and HSQLDB), block comments do not nest. Outside MySQL/MariaDB,
+     *       {@code --} always starts a line comment.</li>
      *   <li>Multi-row value tuples and trailing clauses are rejected rather than silently discarded. A single trailing
      *       semicolon is accepted.</li>
      *   <li>The WHERE clause is appended only when {@code whereClause} is not {@code null} or blank.</li>
@@ -2509,8 +2516,10 @@ public final class JdbcCodeGenerationUtil {
 
             final String checkedTableName = SqlIdentifierUtil.renderTableName(tableName, dbProductInfo);
 
-            final int idx3 = findClosingParenthesis(insertSql, idx2);
-            final List<String> columnNames = splitSqlList(insertSql.substring(idx2 + 1, idx3), insertSql);
+            final SqlCommentStyle commentStyle = SqlCommentStyle.of(dbProductInfo);
+            final int idx3 = findClosingParenthesis(insertSql, idx2, commentStyle);
+            // Column names are validated and possibly quoted, so a retained comment would become part of the identifier.
+            final List<String> columnNames = splitSqlList(insertSql.substring(idx2 + 1, idx3), insertSql, commentStyle, false);
 
             int valuesIdx = idx3 + 1;
 
@@ -2535,8 +2544,8 @@ public final class JdbcCodeGenerationUtil {
                 throw new IllegalArgumentException("Missing VALUES list in SQL: " + insertSql);
             }
 
-            final int idx5 = findClosingParenthesis(insertSql, idx4);
-            final List<String> values = splitSqlList(insertSql.substring(idx4 + 1, idx5), insertSql);
+            final int idx5 = findClosingParenthesis(insertSql, idx4, commentStyle);
+            final List<String> values = splitSqlList(insertSql.substring(idx4 + 1, idx5), insertSql, commentStyle, true);
             final String trailingSql = insertSql.substring(idx5 + 1).trim();
 
             if (Strings.isNotEmpty(trailingSql) && !";".equals(trailingSql)) {
@@ -2659,14 +2668,16 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Finds the closing parenthesis matching the {@code (} at {@code openingParenthesisIndex}, skipping nested
-     * parentheses and any quoted, dollar-quoted, or bracketed content.
+     * parentheses and any quoted, dollar-quoted, bracketed, or commented content.
      *
      * @param sql the SQL text to scan
      * @param openingParenthesisIndex the index of the opening parenthesis to match
+     * @param commentStyle the comment syntax of the target database
      * @return the index of the matching closing parenthesis
      * @throws IllegalArgumentException if no matching closing parenthesis exists
      */
-    private static int findClosingParenthesis(final String sql, final int openingParenthesisIndex) throws IllegalArgumentException {
+    private static int findClosingParenthesis(final String sql, final int openingParenthesisIndex, final SqlCommentStyle commentStyle)
+            throws IllegalArgumentException {
         int parenthesisDepth = 0;
         char quote = 0;
         boolean inBracketIdentifier = false;
@@ -2698,6 +2709,8 @@ public final class JdbcCodeGenerationUtil {
                         inBracketIdentifier = false;
                     }
                 }
+            } else if (startsSqlComment(sql, i, commentStyle)) {
+                i = skipSqlComment(sql, i, commentStyle) - 1;
             } else if (ch == '$') {
                 dollarQuoteDelimiter = findDollarQuoteDelimiter(sql, i);
 
@@ -2747,6 +2760,139 @@ public final class JdbcCodeGenerationUtil {
         }
 
         return sql.substring(startIndex, endIndex + 1);
+    }
+
+    /**
+     * The comment syntax used while scanning an INSERT statement for conversion.
+     */
+    private enum SqlCommentStyle {
+        /**
+         * MySQL/MariaDB: {@code #} starts a line comment, {@code --} starts one only when followed by whitespace or a
+         * control character, and block comments do not nest.
+         */
+        MYSQL,
+        /**
+         * PostgreSQL, SQL Server and H2: {@code --} starts a line comment and block comments nest.
+         */
+        NESTED_BLOCKS,
+        /**
+         * Every other database (for example Oracle, SQLite and HSQLDB): {@code --} starts a line comment and block
+         * comments do not nest.
+         */
+        FLAT_BLOCKS;
+
+        /**
+         * Resolves the comment style of a database product.
+         *
+         * @param dbProductInfo the database product info; may be {@code null}
+         * @return the comment style, {@link #FLAT_BLOCKS} for an unknown product
+         */
+        static SqlCommentStyle of(final ProductInfo dbProductInfo) {
+            final String productName = dbProductInfo == null ? null : dbProductInfo.name();
+
+            if (Strings.containsAnyIgnoreCase(productName, "MySQL", "MariaDB")) {
+                return MYSQL;
+            } else if (Strings.containsAnyIgnoreCase(productName, "PostgreSQL", "SQL Server") || "H2".equalsIgnoreCase(productName)) {
+                return NESTED_BLOCKS;
+            } else {
+                return FLAT_BLOCKS;
+            }
+        }
+    }
+
+    /**
+     * Returns whether a SQL line or block comment starts at {@code index}.
+     *
+     * <p>With {@link SqlCommentStyle#MYSQL}, {@code #} also starts a line comment, while {@code --} is a comment only
+     * when followed by whitespace or a control character, so {@code 1--1} remains the expression {@code 1 - -1}.</p>
+     *
+     * @param sql the SQL text to inspect
+     * @param index the position to test
+     * @param commentStyle the comment syntax of the target database
+     * @return {@code true} if a comment opens at {@code index}
+     */
+    private static boolean startsSqlComment(final String sql, final int index, final SqlCommentStyle commentStyle) {
+        final char ch = sql.charAt(index);
+
+        if (ch == '#') {
+            return commentStyle == SqlCommentStyle.MYSQL;
+        }
+
+        if (index + 1 >= sql.length()) {
+            return false;
+        }
+
+        final char next = sql.charAt(index + 1);
+
+        if (ch == '/') {
+            return next == '*';
+        }
+
+        if (ch != '-' || next != '-') {
+            return false;
+        }
+
+        if (commentStyle != SqlCommentStyle.MYSQL || index + 2 >= sql.length()) {
+            return true;
+        }
+
+        final char afterDashes = sql.charAt(index + 2);
+
+        return Character.isWhitespace(afterDashes) || Character.isISOControl(afterDashes);
+    }
+
+    /**
+     * Returns whether the comment starting at {@code index} is a line comment ({@code --} or MySQL {@code #}).
+     *
+     * @param sql the SQL text containing the comment
+     * @param index the position of a comment accepted by {@link #startsSqlComment(String, int, SqlCommentStyle)}
+     * @return {@code true} for a line comment, {@code false} for a block comment
+     */
+    private static boolean isLineComment(final String sql, final int index) {
+        return sql.charAt(index) != '/';
+    }
+
+    /**
+     * Finds the end of a SQL line comment or a block comment. Block comments nest only with
+     * {@link SqlCommentStyle#NESTED_BLOCKS}; otherwise the first {@code *}{@code /} closes the comment.
+     *
+     * @param sql the SQL text containing the comment
+     * @param startIndex the position of the opening {@code --}, {@code #} or {@code /*} delimiter
+     * @param commentStyle the comment syntax of the target database
+     * @return the position after a block comment, or at the line terminator/end of a line comment
+     * @throws IllegalArgumentException if a block comment is not terminated
+     */
+    private static int skipSqlComment(final String sql, final int startIndex, final SqlCommentStyle commentStyle) {
+        if (isLineComment(sql, startIndex)) {
+            int index = startIndex + 1;
+
+            while (index < sql.length() && sql.charAt(index) != '\n' && sql.charAt(index) != '\r') {
+                index++;
+            }
+
+            return index;
+        }
+
+        final boolean nested = commentStyle == SqlCommentStyle.NESTED_BLOCKS;
+        int index = startIndex + 2;
+        int depth = 1;
+
+        while (index + 1 < sql.length()) {
+            if (nested && sql.charAt(index) == '/' && sql.charAt(index + 1) == '*') {
+                depth++;
+                index += 2;
+            } else if (sql.charAt(index) == '*' && sql.charAt(index + 1) == '/') {
+                index += 2;
+
+                if (--depth == 0) {
+                    return index;
+                }
+            } else {
+                index++;
+            }
+        }
+
+        throw new IllegalArgumentException("SQL contains an unclosed block comment");
     }
 
     /**
@@ -3205,24 +3351,33 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Splits a comma-separated SQL list (column names or VALUES items) at top-level commas, respecting nested
-     * parentheses, quoted strings and identifiers, bracketed identifiers, and dollar-quoted bodies.
+     * parentheses, quoted strings and identifiers, bracketed identifiers, dollar-quoted bodies, and SQL comments.
      *
      * @param sqlList the list text to split
      * @param insertSql the full SQL statement, used only in error messages
-     * @return the trimmed list items
+     * @param commentStyle the comment syntax of the target database
+     * @param keepComments {@code true} to keep comments in the items (value expressions); {@code false} to replace each
+     *        comment with a single space (identifiers)
+     * @return the trimmed list items, with a terminating newline retained after trailing line comments when comments are kept
      * @throws IllegalArgumentException if the list contains an empty item, an unmatched parenthesis, or an unclosed token
      */
-    private static List<String> splitSqlList(final String sqlList, final String insertSql) throws IllegalArgumentException {
+    private static List<String> splitSqlList(final String sqlList, final String insertSql, final SqlCommentStyle commentStyle, final boolean keepComments)
+            throws IllegalArgumentException {
         final List<String> result = new ArrayList<>();
         final StringBuilder token = Objectory.createStringBuilder();
         int parenthesisDepth = 0;
         char quote = 0;
         boolean inBracketIdentifier = false;
         String dollarQuoteDelimiter = null;
+        boolean trailingLineComment = false;
 
         try {
             for (int i = 0, len = sqlList.length(); i < len; i++) {
                 final char ch = sqlList.charAt(i);
+
+                if (!Character.isWhitespace(ch) && ch != ',') {
+                    trailingLineComment = false;
+                }
 
                 if (dollarQuoteDelimiter != null) {
                     if (sqlList.startsWith(dollarQuoteDelimiter, i)) {
@@ -3254,6 +3409,18 @@ public final class JdbcCodeGenerationUtil {
                             inBracketIdentifier = false;
                         }
                     }
+                } else if (startsSqlComment(sqlList, i, commentStyle)) {
+                    final int end = skipSqlComment(sqlList, i, commentStyle);
+
+                    if (keepComments) {
+                        token.append(sqlList, i, end);
+                        trailingLineComment = isLineComment(sqlList, i);
+                    } else {
+                        // Keep adjacent tokens separate; trimming removes the space at either end of an item.
+                        token.append(' ');
+                    }
+
+                    i = end - 1;
                 } else if (ch == '$') {
                     dollarQuoteDelimiter = findDollarQuoteDelimiter(sqlList, i);
 
@@ -3280,7 +3447,8 @@ public final class JdbcCodeGenerationUtil {
                     parenthesisDepth--;
                     token.append(ch);
                 } else if (ch == ',' && parenthesisDepth == 0) {
-                    addSqlListToken(result, token, insertSql);
+                    addSqlListToken(result, token, insertSql, trailingLineComment);
+                    trailingLineComment = false;
                 } else {
                     token.append(ch);
                 }
@@ -3290,7 +3458,7 @@ public final class JdbcCodeGenerationUtil {
                 throw new IllegalArgumentException("Unclosed SQL token in SQL: " + insertSql);
             }
 
-            addSqlListToken(result, token, insertSql);
+            addSqlListToken(result, token, insertSql, trailingLineComment);
         } finally {
             Objectory.recycle(token);
         }
@@ -3299,21 +3467,25 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Appends the trimmed content of {@code token} to {@code result} and clears the buffer.
+     * Appends the trimmed content of {@code token} to {@code result}, terminates a trailing line comment when
+     * necessary, and clears the buffer.
      *
      * @param result the list collecting the items
      * @param token the accumulated characters of the current item; cleared afterwards
      * @param insertSql the full SQL statement, used only in error messages
+     * @param trailingLineComment whether the item ends in a line comment and needs a terminating newline
      * @throws IllegalArgumentException if the token is empty
      */
-    private static void addSqlListToken(final List<String> result, final StringBuilder token, final String insertSql) throws IllegalArgumentException {
+    private static void addSqlListToken(final List<String> result, final StringBuilder token, final String insertSql, final boolean trailingLineComment)
+            throws IllegalArgumentException {
         final String value = token.toString().trim();
 
         if (value.length() == 0) {
             throw new IllegalArgumentException("Empty item in SQL list: " + insertSql);
         }
 
-        result.add(value);
+        // Trimming the newline after '--' would let that comment swallow the generated WHERE clause.
+        result.add(trailingLineComment ? value + '\n' : value);
         token.setLength(0);
     }
 
@@ -3711,7 +3883,7 @@ public final class JdbcCodeGenerationUtil {
         /**
          * List of custom field mappings.
          * Allows overriding default field names and types for specific columns.
-         * A {@code null} list supplies no overrides; null elements are rejected when generation starts.
+         * A {@code null} list supplies no overrides; {@code null} elements are rejected when generation starts.
          */
         private List<FieldMapping> customFieldMappings;
 
@@ -3724,7 +3896,7 @@ public final class JdbcCodeGenerationUtil {
          * {@code Tuple.of("tags", "name = \"List<String>\"")} produces {@code @Type(name = "List<String>")}.
          * Used to generate {@code @Type} annotations for fields whose database types
          * require explicit type mapping.
-         * A {@code null} list supplies no annotations; null elements are rejected when generation starts.
+         * A {@code null} list supplies no annotations; {@code null} elements are rejected when generation starts.
          */
         private List<Tuple2<String, String>> fieldTypeAnnotationArguments;
 

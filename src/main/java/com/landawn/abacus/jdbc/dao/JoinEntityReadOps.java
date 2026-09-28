@@ -49,7 +49,7 @@ import com.landawn.abacus.util.u.Optional;
  * <p>This interface contains no operation that modifies the database, so it can be mixed into
  * read-only DAOs (see {@link ReadOnlyJoinEntityHelper}) without exposing any delete capability.</p>
  *
- * <p>A null or empty source-property selection loads all default source properties. Properties used as
+ * <p>A {@code null} or empty source-property selection loads all default source properties. Properties used as
  * source join keys are selected automatically and may therefore be populated even when omitted from a
  * selective read. Streams are caller-owned and must be closed. Parallel loaders do not propagate the
  * caller's thread-bound transaction and may partially populate entities before a task fails.</p>

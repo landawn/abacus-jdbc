@@ -37,7 +37,7 @@ import com.landawn.abacus.util.u.Optional;
  *
  * <p>This interface enables efficient loading of related entities when retrieving data by ID,
  * making it ideal for entities with complex relationships that need to be fetched together.
- * A null or empty source-property selection loads all default source properties; a restricted selection
+ * A {@code null} or empty source-property selection loads all default source properties; a restricted selection
  * also includes the required source join keys.</p>
  *
  * <p>Join entities are populated <i>in place</i>: the loaded related entities are set directly onto the

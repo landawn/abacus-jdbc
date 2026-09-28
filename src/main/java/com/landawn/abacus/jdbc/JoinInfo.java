@@ -263,7 +263,7 @@ public final class JoinInfo {
      * @param joinEntityPropName the name of the property annotated with {@code @JoinedBy}, must not be {@code null}.
      * @param allowNullOrDefaultJoinKeys if {@code true}, allows join operations when join property values are {@code null} or default;
      *                                         if {@code false}, an {@code IllegalArgumentException} is thrown later from the generated
-     *                                         parameter setters and source-key extractors when a null or default join value is encountered.
+     *                                         parameter setters and source-key extractors when a {@code null} or default join value is encountered.
      *                                         This flag is typically controlled by the {@code @DaoConfig} annotation on the DAO class.
      * @throws IllegalArgumentException if {@code entityClass}, {@code tableName}, or {@code joinEntityPropName} is {@code null};
      *                                   if the join property is not found, not properly annotated, or the join configuration is invalid;

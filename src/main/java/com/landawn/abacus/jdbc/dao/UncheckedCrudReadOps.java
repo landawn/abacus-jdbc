@@ -919,6 +919,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * Refreshes only the specified properties of the entity from the database.
      * The entity must have its ID set. Properties not in {@code propNamesToRefresh}
      * will retain their current values.
+     * Composite IDs are matched using the entity's ID properties, including when the DAO declares
+     * a separate bean or record type for the ID.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

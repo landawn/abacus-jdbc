@@ -108,6 +108,7 @@ import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.query.condition.Limit;
+import com.landawn.abacus.query.condition.OrderBy;
 import com.landawn.abacus.query.condition.SqlExpression;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.AsyncExecutor;
@@ -330,20 +331,24 @@ final class DaoImpl {
         private final Class<?> entityClass;
         /** The data source the join DAO is bound to; compared by reference identity. */
         private final javax.sql.DataSource dataSource;
+        /** Whether the selected DAO must support deleting joined rows. */
+        private final boolean forDelete;
 
-        JoinEntityDaoCacheKey(final Class<?> entityClass, final javax.sql.DataSource dataSource) {
+        JoinEntityDaoCacheKey(final Class<?> entityClass, final javax.sql.DataSource dataSource, final boolean forDelete) {
             this.entityClass = entityClass;
             this.dataSource = dataSource;
+            this.forDelete = forDelete;
         }
 
         @Override
         public int hashCode() {
-            return 31 * System.identityHashCode(entityClass) + System.identityHashCode(dataSource);
+            return 31 * (31 * System.identityHashCode(entityClass) + System.identityHashCode(dataSource)) + Boolean.hashCode(forDelete);
         }
 
         @Override
         public boolean equals(final Object obj) {
-            return this == obj || obj instanceof JoinEntityDaoCacheKey other && entityClass == other.entityClass && dataSource == other.dataSource;
+            return this == obj || obj instanceof JoinEntityDaoCacheKey other && entityClass == other.entityClass && dataSource == other.dataSource
+                    && forDelete == other.forDelete;
         }
     }
 
@@ -913,7 +918,7 @@ final class DaoImpl {
      * @param mappedByKey the property name from {@code @MappedByKey}, or {@code null}
      * @param mergedByIds the id property names from {@code @MergedById}, or {@code null}
      * @param prefixFieldMap the column-prefix-to-field mapping used for result mapping, or {@code null}
-     * @param fetchColumnByEntityClass {@code true} to fetch columns derived from the entity class
+     * @param fetchColumnByEntityClass {@code true} to read {@code Dataset} columns with the entity class's property types
      * @param hasRowMapperOrExtractor {@code true} if the method declares a row-mapper or result-extractor parameter
      * @param hasRowFilter {@code true} if the method declares a row-filter parameter
      * @param queryOperation the operation type declared for the method
@@ -2421,7 +2426,7 @@ final class DaoImpl {
      * otherwise the entity's declared table name, otherwise the entity class's simple name converted with
      * {@code namingPolicy}.
      *
-     * @param entityClass the entity class
+     * @param entityClass
      * @param entityInfo the entity's bean metadata
      * @param namingPolicy the naming policy used to derive the table name from the class name
      * @param targetTableName the explicit table name override, or {@code null}/empty
@@ -2437,7 +2442,8 @@ final class DaoImpl {
 
     /**
      * Validates a condition for a {@code paginate} operation: it must be non-{@code null} and carry an
-     * {@code ORDER BY} (either on the {@code Criteria} or in its literal form). Returns the condition unchanged.
+     * outer {@code ORDER BY} (as a standalone order-by clause, on the {@code Criteria}, or in its literal form).
+     * Returns the condition unchanged.
      *
      * @param <T> the condition type
      * @param cond the condition to validate
@@ -2447,13 +2453,54 @@ final class DaoImpl {
     private static <T extends Condition> T checkCondForPaginate(final T cond) throws IllegalArgumentException {
         N.checkArgNotNull(cond, "Condition for \"paginate\" cannot be null");
 
-        if ((cond instanceof Criteria && ((Criteria) cond).orderBy() != null) || Strings.containsIgnoreCase(cond.toString(), " ORDER BY ")) {
+        if (cond instanceof OrderBy || (cond instanceof Criteria && ((Criteria) cond).orderBy() != null) || hasTopLevelOrderBy(cond.toString())) {
             // okay, has order by
         } else {
             throw new IllegalArgumentException("Condition for \"paginate\" must have \"orderBy\"");
         }
 
         return cond;
+    }
+
+    /**
+     * Matches the words {@code ORDER BY} anywhere in a literal condition; used only when the tokenizer's view of the
+     * condition is unreliable (see {@link #hasTopLevelOrderBy(String)}).
+     */
+    private static final Pattern ORDER_BY_WORDS = Pattern.compile("\\bORDER\\s+BY\\b", Pattern.CASE_INSENSITIVE);
+
+    /**
+     * Finds an outer ordering clause in a literal condition, ignoring quoted tokens, comments and nested SQL.
+     *
+     * <p>{@link SqlParser#tokenize(String)} does not recognize PostgreSQL dollar-quoted strings or nested block
+     * comments, so a parenthesis inside them is counted as nesting. When the parentheses seen by the tokenizer do not
+     * balance, the nesting depth cannot be trusted and any {@code ORDER BY} in the text is accepted instead.</p>
+     *
+     * @param sql the literal condition
+     * @return whether consecutive top-level ORDER and BY keywords are present
+     */
+    private static boolean hasTopLevelOrderBy(final String sql) {
+        int depth = 0;
+        boolean balanced = true;
+        boolean previousWasOrder = false;
+        boolean found = false;
+
+        for (final String token : SqlParser.tokenize(sql)) {
+            if (token.isBlank()) {
+                continue;
+            }
+
+            if ("(".equals(token)) {
+                depth++;
+            } else if (")".equals(token)) {
+                balanced &= --depth >= 0;
+            } else if (depth == 0 && previousWasOrder && "BY".equalsIgnoreCase(token)) {
+                found = true;
+            }
+
+            previousWasOrder = depth == 0 && "ORDER".equalsIgnoreCase(token);
+        }
+
+        return balanced && depth == 0 ? found : ORDER_BY_WORDS.matcher(sql).find();
     }
 
     /**
@@ -2622,7 +2669,7 @@ final class DaoImpl {
 
     /**
      * Cache of DAOs resolved for join operations, keyed by {@link JoinEntityDaoCacheKey} (referenced entity class
-     * plus data source identity).
+     * plus data source identity and whether deletion support is required).
      */
     @SuppressWarnings("rawtypes")
     private static final Map<JoinEntityDaoCacheKey, DaoBase> joinEntityDaoPool = new ConcurrentHashMap<>();
@@ -2905,13 +2952,13 @@ final class DaoImpl {
         // the single aggregate row: an OFFSET skips that row (so the count became 0), and ORDER BY next to an aggregate is
         // rejected by strict databases. Both are dropped unless GROUP BY is present (one row per group, so they are meaningful).
         final Function<Condition, Condition> countCondFunc = cond -> {
-            if (cond instanceof Limit || cond instanceof com.landawn.abacus.query.condition.OrderBy) {
+            if (cond instanceof Limit || cond instanceof OrderBy) {
                 return Criteria.builder().build();
             } else if (cond instanceof final Criteria criteria && criteria.groupBy() == null && (criteria.limit() != null || criteria.orderBy() != null)) {
                 final Criteria.Builder builder = Criteria.builder().selectModifier(criteria.selectModifier());
 
                 for (final Condition clause : criteria.conditions()) {
-                    if (!(clause instanceof Limit || clause instanceof com.landawn.abacus.query.condition.OrderBy)) {
+                    if (!(clause instanceof Limit || clause instanceof OrderBy)) {
                         builder.add(clause);
                     }
                 }
@@ -5849,7 +5896,8 @@ final class DaoImpl {
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
                             final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = propJoinInfo.deleteSqlPlan(parameterizedDsl);
 
-                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy,
+                                    true);
 
                             if (Strings.isEmpty(tp._2)) {
                                 return joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
@@ -5883,7 +5931,8 @@ final class DaoImpl {
 
                             final JoinInfo propJoinInfo = JoinInfo.getPropJoinInfo(daoInterface, entityClass, tableName, joinEntityPropName);
 
-                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy);
+                            final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy,
+                                    true);
 
                             if (N.isEmpty(entities)) {
                                 return 0;
@@ -7745,14 +7794,31 @@ final class DaoImpl {
      */
     @SuppressWarnings("rawtypes")
     static DaoBase getApplicableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final DaoBase defaultDao) {
-        final JoinEntityDaoCacheKey key = new JoinEntityDaoCacheKey(referencedEntityClass, ds);
+        return getApplicableDaoForJoinEntity(referencedEntityClass, ds, defaultDao, false);
+    }
+
+    /**
+     * Resolves a join DAO that supports the requested operation, falling back to the source DAO.
+     *
+     * @param referencedEntityClass the joined entity type
+     * @param ds the data source, compared by identity
+     * @param defaultDao the source DAO used when no suitable target DAO is registered
+     * @param forDelete whether the target DAO must support DELETE statements
+     * @return the matching DAO, or {@code defaultDao}
+     */
+    @SuppressWarnings("rawtypes")
+    private static DaoBase getApplicableDaoForJoinEntity(final Class<?> referencedEntityClass, final javax.sql.DataSource ds, final DaoBase defaultDao,
+            final boolean forDelete) {
+        // A read-only/non-update DAO can load a join, but its SQL gate rejects DELETE. Keep the
+        // operation in the cache key so a previously loaded join cannot poison a later delete.
+        final JoinEntityDaoCacheKey key = new JoinEntityDaoCacheKey(referencedEntityClass, ds, forDelete);
         final DaoBase joinEntityDao = joinEntityDaoPool.get(key);
 
         if (joinEntityDao != null) {
             return joinEntityDao;
         } else {
             for (final DaoBase dao : daoPool.values()) {
-                if (dao.targetEntityClass() == referencedEntityClass && dao.dataSource() == ds) {
+                if (dao.targetEntityClass() == referencedEntityClass && dao.dataSource() == ds && (!forDelete || dao instanceof Dao)) {
                     final DaoBase existingDao = joinEntityDaoPool.putIfAbsent(key, dao);
                     return existingDao == null ? dao : existingDao;
                 }

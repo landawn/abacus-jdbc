@@ -784,6 +784,19 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(Arrays.asList("id", "name"), cols);
     }
 
+    @Test
+    public void testGetColumnNames_DriverWithoutGetSchema() throws SQLException {
+        final ResultSet columns = mock(ResultSet.class);
+        when(mockConnection.getSchema()).thenThrow(new AbstractMethodError("JDBC 4.0 driver"));
+        when(mockDatabaseMetaData.getColumns(null, null, "users", null)).thenReturn(columns);
+        when(columns.next()).thenReturn(true, false);
+        when(columns.getString("TABLE_NAME")).thenReturn("users");
+        when(columns.getString("COLUMN_NAME")).thenReturn("id");
+
+        assertEquals(List.of("id"), JdbcUtil.getColumnNames(mockConnection, "users"));
+        verify(columns).close();
+    }
+
     // A three-part "catalog.schema.table" name fills all three slots (JdbcUtil L1844-1848).
     @Test
     public void testGetColumnNames_ThreePartName_FromMetadata() throws SQLException {
@@ -1653,6 +1666,17 @@ public class JdbcUtilTest extends TestBase {
 
         assertTrue(JdbcUtil.tableExists(mockConnection, "users"));
         verify(mockDatabaseMetaData).getTables("current_catalog", null, "users", null);
+    }
+
+    @Test
+    public void testTableExists_DriverWithoutGetSchema() throws SQLException {
+        final ResultSet tables = mock(ResultSet.class);
+        when(mockConnection.getSchema()).thenThrow(new AbstractMethodError("JDBC 4.0 driver"));
+        when(mockDatabaseMetaData.getTables(null, null, "users", null)).thenReturn(tables);
+        when(tables.next()).thenReturn(true);
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "users"));
+        verify(tables).close();
     }
 
     @Test

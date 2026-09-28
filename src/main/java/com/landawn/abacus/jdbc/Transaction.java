@@ -147,6 +147,8 @@ public interface Transaction {
      * Rolls back the current transaction, undoing all changes made within
      * the transaction scope. After a successful rollback, the transaction
      * is no longer active and cannot be used for further operations.
+     * For nested scopes in {@link SqlTransaction}, an inner rollback instead marks the shared
+     * transaction rollback-only; the database rollback occurs when the outermost scope completes.
      *
      * <p>If the rollback fails, the transaction status will be set to
      * {@link Status#FAILED_ROLLBACK} and an exception will be thrown.</p>
@@ -159,6 +161,8 @@ public interface Transaction {
      * } catch (Exception e) {
      *     transaction.rollback();
      *     logger.warn(e, "Transaction rolled back");
+     * } finally {
+     *     transaction.rollbackIfNotCommitted();
      * }
      * }</pre>
      *

@@ -36,7 +36,7 @@ import com.landawn.abacus.util.u.Optional;
  *
  * <p>The interface handles one-to-one, one-to-many, and many-to-many relationships by loading
  * related entities when retrieving records from the database. Batch lookups load each join property
- * for a batch of parents, avoiding one query per parent. A null or empty source-property selection
+ * for a batch of parents, avoiding one query per parent. A {@code null} or empty source-property selection
  * loads all default source properties; a restricted selection also includes the required source join keys.</p>
  *
  * <p>Join entities are populated <i>in place</i>: the loaded related entities are set directly onto the

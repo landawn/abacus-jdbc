@@ -27,10 +27,11 @@ package com.landawn.abacus.jdbc;
  * {@link #DEFAULT}, the framework infers the appropriate strategy from the SQL statement and the
  * method's return type.</p>
  *
- * <p>Every constant except {@link #DEFAULT} is deliberately spelled in {@code camelCase} to mirror the name of
- * the corresponding {@link AbstractQuery} terminal operation it selects (for example {@link #findFirst},
- * {@link #findOnlyOne}). {@code DEFAULT} is upper-cased because it is a meta-sentinel that maps to no single
- * terminal method; this casing difference is intentional, not an inconsistency.</p>
+ * <p>Every constant except {@link #DEFAULT} uses {@code camelCase} to describe its execution strategy.
+ * Some names match an {@link AbstractQuery} terminal method directly, such as {@link #findFirst}; others
+ * abbreviate a method family, such as {@link #queryForSingle} for {@code queryForSingleValue} and
+ * {@link #listAll} for {@code listAllResultSets}. {@code DEFAULT} selects inference rather than a single
+ * terminal method.</p>
  *
  * @see AbstractQuery
  * @see com.landawn.abacus.jdbc.annotation.Query
@@ -55,7 +56,7 @@ public enum QueryOperation {
     exists,
 
     /**
-     * Retrieves exactly one record from the query results.
+     * Retrieves at most one record from the query results, rejecting multiple rows.
      * No row is treated as an empty result, and {@code DuplicateResultException} is thrown
      * if more than one record is found.
      *

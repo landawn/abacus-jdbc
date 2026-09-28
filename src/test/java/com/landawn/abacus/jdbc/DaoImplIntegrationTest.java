@@ -35,11 +35,13 @@ import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
+import com.landawn.abacus.jdbc.annotation.FetchColumnByEntityClass;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.NonUpdateCrudDao;
+import com.landawn.abacus.jdbc.dao.UncheckedCrudDao;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
@@ -341,6 +343,67 @@ public class DaoImplIntegrationTest extends TestBase {
         }
     }
 
+    // A standalone ORDER BY satisfies paginate's ordering requirement and still receives the page LIMIT.
+    @Test
+    public void testPaginateWithStandaloneOrderByLimitsFirstPage() throws SQLException {
+        final List<Long> ids = new ArrayList<>();
+
+        for (int i = 0; i < 5; i++) {
+            ids.add(dao.insert(newUser("P" + i, "Page", 20 + i)));
+        }
+
+        try (var pages = dao.paginate(Filters.orderBy("id"), 2, (query, previousPage) -> {
+        })) {
+            final Dataset firstPage = pages.first().orElseThrow();
+            assertEquals(ids.subList(0, 2), idsOf(firstPage));
+        }
+
+        // A literal outer ORDER BY with a keyset placeholder pages through every row exactly once.
+        final List<Long> pagedIds = new ArrayList<>();
+
+        try (var pages = dao.paginate(Filters.expr("id > ? ORDER BY id"), 2,
+                (query, previousPage) -> query.setLong(1, previousPage == null ? 0 : idsOf(previousPage).get(previousPage.size() - 1)))) {
+            pages.forEach(page -> pagedIds.addAll(idsOf(page)));
+        }
+
+        assertEquals(ids, pagedIds);
+    }
+
+    private static List<Long> idsOf(final Dataset page) {
+        final String idColumn = page.columnNames().stream().filter("id"::equalsIgnoreCase).findFirst().orElseThrow();
+        final List<Long> ids = new ArrayList<>();
+
+        for (final Object id : page.getColumn(idColumn)) {
+            ids.add(((Number) id).longValue());
+        }
+
+        return ids;
+    }
+
+    public interface DatasetTypingDao extends CrudDao<UserAccount, Long, DatasetTypingDao> {
+        @Query("SELECT id, first_name, age * 2 AS double_age FROM user_account ORDER BY id")
+        @FetchColumnByEntityClass(true)
+        Dataset withEntityTypes() throws SQLException;
+
+        @Query("SELECT id, first_name, age * 2 AS double_age FROM user_account ORDER BY id")
+        @FetchColumnByEntityClass(false)
+        Dataset withDefaultTypes() throws SQLException;
+    }
+
+    // FetchColumnByEntityClass only chooses how values are read; neither setting drops or renames columns.
+    @Test
+    public void testFetchColumnByEntityClassKeepsEveryColumnLabel() throws SQLException {
+        dao.insert(newUser("Ada", "Lovelace", 36));
+        final DatasetTypingDao typingDao = JdbcUtil.createDao(DatasetTypingDao.class, ds);
+
+        for (final Dataset dataset : List.of(typingDao.withEntityTypes(), typingDao.withDefaultTypes())) {
+            assertEquals(List.of("ID", "FIRST_NAME", "DOUBLE_AGE"), dataset.columnNames());
+            assertEquals(1, dataset.size());
+            assertEquals("Ada", dataset.getColumn("FIRST_NAME").get(0));
+            assertEquals(72, ((Number) dataset.getColumn("DOUBLE_AGE").get(0)).intValue());
+        }
+    }
+
     // insert returns the generated key; getOrNull / get / exists round-trip the row.
     @Test
     public void testInsertAndGet() throws SQLException {
@@ -510,6 +573,45 @@ public class DaoImplIntegrationTest extends TestBase {
 
     // A plain (non-CRUD) Dao declares no ID type.
     public interface CompositeKeyRowDao extends Dao<CompositeKeyRow, CompositeKeyRowDao> {
+    }
+
+    public interface CompositeRefreshDao extends CrudDao<CompositeKeyRow, GeneratedKeyRowId, CompositeRefreshDao> {
+    }
+
+    public interface UncheckedCompositeRefreshDao extends UncheckedCrudDao<CompositeKeyRow, GeneratedKeyRowId, UncheckedCompositeRefreshDao> {
+    }
+
+    @Test
+    public void testRefreshSupportsDeclaredCompositeIdBeans() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS composite_key_row (tenant_id BIGINT, row_id BIGINT, name VARCHAR(64), PRIMARY KEY (tenant_id, row_id))");
+            st.execute("DELETE FROM composite_key_row");
+            st.execute("INSERT INTO composite_key_row VALUES (1, 2, 'current')");
+        }
+
+        try {
+            final CompositeRefreshDao checked = JdbcUtil.createDao(CompositeRefreshDao.class, ds);
+            final UncheckedCompositeRefreshDao unchecked = JdbcUtil.createDao(UncheckedCompositeRefreshDao.class, ds);
+            final CompositeKeyRow row = newCompositeKeyRow(1, 2, "stale");
+            assertTrue(checked.refresh(row, List.of("name")));
+            assertEquals("current", row.getName());
+            row.setName("stale again");
+            assertTrue(unchecked.refresh(row));
+            assertEquals("current", row.getName());
+            assertEquals(1L, row.getTenantId());
+            assertEquals(2L, row.getRowId());
+
+            final CompositeKeyRow missing = newCompositeKeyRow(2, 2, "unchanged");
+            assertFalse(checked.refresh(missing));
+            assertFalse(unchecked.refresh(missing, List.of("name")));
+            assertEquals("unchanged", missing.getName());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS composite_key_row");
+            }
+        }
     }
 
     private static CompositeKeyRow newCompositeKeyRow(final long tenantId, final long rowId, final String name) {

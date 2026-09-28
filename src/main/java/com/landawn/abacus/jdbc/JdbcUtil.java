@@ -167,10 +167,11 @@ import lombok.experimental.Accessors;
  * DataSource dataSource = JdbcUtil.createHikariDataSource(url, user, password);
  *
  * // Query with automatic resource management
- * List<User> users = JdbcUtil.prepareQuery(dataSource,
- *     "SELECT * FROM users WHERE department = ?")
- *     .setString(1, "Engineering")
- *     .list(User.class);
+ * List<User> users;
+ * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+ *         "SELECT * FROM users WHERE department = ?")) {
+ *     users = query.setString(1, "Engineering").list(User.class);
+ * }
  *
  * // Transaction management
  * SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource);
@@ -185,10 +186,9 @@ import lombok.experimental.Accessors;
  * }
  *
  * // Stream processing for large result sets
- * try (Stream<Product> stream = JdbcUtil.prepareQuery(dataSource,
- *         "SELECT * FROM products WHERE category = ?")
- *         .setString(1, category)
- *         .stream(Product.class)) {
+ * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+ *         "SELECT * FROM products WHERE category = ?");
+ *         Stream<Product> stream = query.setString(1, category).stream(Product.class)) {
  *     Map<String, List<Product>> byBrand = stream
  *         .collect(Collectors.groupingBy(Product::getBrand));
  * }
@@ -253,7 +253,7 @@ public final class JdbcUtil {
 
     /**
      * Default minimum execution time (in milliseconds) for SQL performance logging. SQL statements
-     * that complete in less than this threshold are not logged at the {@code SQL-PERF} level.
+     * that complete in less than this threshold do not produce an {@code [SQL-PERF]} log entry.
      * Value: {@code 1000} (1 second).
      */
     public static final long DEFAULT_SQL_PERF_LOG_THRESHOLD_MILLIS = 1000L;
@@ -529,7 +529,7 @@ public final class JdbcUtil {
      * @param ds The DataSource from which to obtain a database connection.
      * @return A {@link SqlDialect.ProductInfo} object containing the database product name and version.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the database metadata reports a
-     *         null, empty, or blank product name.
+     *         {@code null}, empty, or blank product name.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection or reading its database metadata fails;
      *         connection acquisition follows {@link #getConnection(javax.sql.DataSource)}.
@@ -564,7 +564,7 @@ public final class JdbcUtil {
      * @param conn The database {@link Connection} to use for retrieving metadata. It must be an active connection.
      * @return A {@link SqlDialect.ProductInfo} object containing the database product name and version.
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if the database metadata reports a
-     *         null, empty, or blank product name.
+     *         {@code null}, empty, or blank product name.
      * @throws UncheckedSQLException if reading the connection's database product name or version fails.
      * @see #getDBProductInfo(javax.sql.DataSource)
      * @see DatabaseMetaData
@@ -837,7 +837,7 @@ public final class JdbcUtil {
     /**
      * Creates a new database {@link Connection} using an explicitly specified driver class.
      * This method is useful when the JDBC driver cannot be automatically determined from the URL
-     * or when a specific driver version needs to be enforced.
+     * or when the driver class must be loaded explicitly before asking {@link DriverManager} for a connection.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1140,21 +1140,25 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Statement stmt = connection.createStatement();
-     * ResultSet rs = null;
+     * // openOrders(...) creates a Statement and hands over only the ResultSet produced by it.
+     * ResultSet rs = openOrders(connection);
      * try {
-     *     rs = stmt.executeQuery("SELECT * FROM orders");
      *     // ... process results
      * } finally {
-     *     // Closes both the ResultSet and the Statement that created it
+     *     // Closes rs, then the Statement that created it (located through rs.getStatement()).
      *     JdbcUtil.close(rs, true);
      * }
      * }</pre>
+     *
+     * <p>The statement is located through the result set, so it is not closed when {@code rs} is {@code null},
+     * for example when executing the query failed. When the statement handle is available, prefer
+     * {@link #close(ResultSet, Statement)}, which also closes the statement in that case.</p>
      *
      * @param rs The {@link ResultSet} to close. If {@code null}, no action is taken.
      * @param closeStatement If {@code true}, the {@link Statement} that created the {@code ResultSet} will also be closed.
      * @throws UncheckedSQLException if locating the result set's statement (only when {@code closeStatement} is {@code true}),
      *         or closing the result set or that statement, fails with an SQL exception.
+     * @see #close(ResultSet, Statement)
      * @see #close(ResultSet, boolean, boolean)
      * @see #closeQuietly(ResultSet, boolean)
      */
@@ -1171,17 +1175,19 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // This is a low-level operation; using a DataSource is typically better.
-     * Connection conn = JdbcUtil.createConnection(url, user, pass);
-     * Statement stmt = conn.createStatement();
-     * ResultSet rs = null;
+     * // openProducts(...) opens a Connection and Statement and hands over only the ResultSet.
+     * ResultSet rs = openProducts(url, user, pass);
      * try {
-     *     rs = stmt.executeQuery("SELECT * FROM products");
      *     // ... process results
      * } finally {
-     *     // Closes rs, then the Statement and Connection it came from (stmt and conn)
+     *     // Closes rs, then the Statement and Connection it came from.
      *     JdbcUtil.close(rs, true, true);
      * }
      * }</pre>
+     *
+     * <p>The statement and connection are located through the result set, so they are not closed when
+     * {@code rs} is {@code null}, for example when executing the query failed. When those handles are
+     * available, prefer {@link #close(ResultSet, Statement, Connection)}.</p>
      *
      * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param closeStatement If {@code true}, the {@link Statement} from the {@code ResultSet} is also closed.
@@ -1189,6 +1195,7 @@ public final class JdbcUtil {
      *        This requires {@code closeStatement} to be {@code true}.
      * @throws IllegalArgumentException if {@code closeConnection} is {@code true} but {@code closeStatement} is {@code false}.
      * @throws UncheckedSQLException if locating a requested associated statement or connection, or closing any requested JDBC resource, fails with an SQL exception.
+     * @see #close(ResultSet, Statement, Connection)
      * @see #closeQuietly(ResultSet, boolean, boolean)
      */
     public static void close(final ResultSet rs, final boolean closeStatement, final boolean closeConnection)
@@ -1348,7 +1355,7 @@ public final class JdbcUtil {
      *
      * @param failure The failure to throw; must not be {@code null}.
      * @throws UncheckedSQLException if {@code failure} is a {@link SQLException}.
-     * @throws IllegalStateException if {@code failure} is null or is neither an SQL exception, a runtime exception, nor an error.
+     * @throws IllegalStateException if {@code failure} is {@code null} or is neither an SQL exception, a runtime exception, nor an error.
      */
     private static void throwCloseFailure(final Throwable failure) throws UncheckedSQLException, IllegalStateException {
         if (failure instanceof final SQLException sqlException) {
@@ -1564,22 +1571,22 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Statement stmt = null;
-     * ResultSet rs = null;
+     * // openProducts(...) creates a Statement and hands over only the ResultSet produced by it.
+     * ResultSet rs = openProducts(connection);
      * try {
-     *     stmt = connection.createStatement();
-     *     rs = stmt.executeQuery("SELECT * FROM products");
-     *     // ...
-     * } catch (SQLException e) {
      *     // ...
      * } finally {
-     *     // Quietly closes both the ResultSet and the Statement that created it.
+     *     // Quietly closes rs, then the Statement that created it.
      *     JdbcUtil.closeQuietly(rs, true);
      * }
      * }</pre>
      *
+     * <p>The statement is located through the result set, so it is not closed when {@code rs} is {@code null}.
+     * When the statement handle is available, prefer {@link #closeQuietly(ResultSet, Statement)}.</p>
+     *
      * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param closeStatement If {@code true}, the {@link Statement} associated with the {@code ResultSet} will also be closed quietly.
+     * @see #closeQuietly(ResultSet, Statement)
      * @see #close(ResultSet, boolean)
      */
     public static void closeQuietly(final ResultSet rs, final boolean closeStatement) {
@@ -1593,15 +1600,9 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Connection conn = null;
-     * Statement stmt = null;
-     * ResultSet rs = null;
+     * // openLogs(...) opens a Connection and Statement and hands over only the ResultSet.
+     * ResultSet rs = openLogs(dataSource);
      * try {
-     *     conn = ...;
-     *     stmt = conn.createStatement();
-     *     rs = stmt.executeQuery("SELECT * FROM logs");
-     *     // ...
-     * } catch (SQLException e) {
      *     // ...
      * } finally {
      *     // Quietly closes rs, then the Statement and Connection it came from.
@@ -1609,11 +1610,16 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
+     * <p>The statement and connection are located through the result set, so they are not closed when
+     * {@code rs} is {@code null}. When those handles are available, prefer
+     * {@link #closeQuietly(ResultSet, Statement, Connection)}.</p>
+     *
      * @param rs The {@link ResultSet} to close. Can be {@code null}.
      * @param closeStatement If {@code true}, the associated {@link Statement} is also closed quietly.
      * @param closeConnection If {@code true}, the associated {@link Connection} is also closed quietly.
      *        Requires {@code closeStatement} to be {@code true}.
      * @throws IllegalArgumentException if {@code closeConnection} is {@code true} but {@code closeStatement} is {@code false}.
+     * @see #closeQuietly(ResultSet, Statement, Connection)
      * @see #close(ResultSet, boolean, boolean)
      */
     public static void closeQuietly(final ResultSet rs, final boolean closeStatement, final boolean closeConnection) throws IllegalArgumentException {
@@ -2096,8 +2102,8 @@ public final class JdbcUtil {
         if (schemaToUse == null) {
             try {
                 schemaToUse = conn.getSchema();
-            } catch (final SQLException e) {
-                // Connection.getSchema() is JDBC 4.1 and optional; fall back to a schema-less lookup.
+            } catch (final SQLException | AbstractMethodError e) {
+                // JDBC 4.0 drivers may not implement getSchema(); use the same fallback as unsupported JDBC 4.1 drivers.
             }
         }
 
@@ -3258,7 +3264,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Statement configurer for queries expected to return a large result set: sets forward-only fetch direction
+     * Statement configurer for queries expected to return a large result set: sets the forward fetch-direction hint
      * and raises the fetch size to at least {@link #DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET}.
      */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
@@ -3270,7 +3276,7 @@ public final class JdbcUtil {
     };
 
     /**
-     * Statement configurer for stream-based result processing: sets forward-only fetch direction
+     * Statement configurer for stream-based result processing: sets the forward fetch-direction hint
      * and raises the fetch size to at least {@link #DEFAULT_FETCH_SIZE_FOR_STREAM}.
      */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForStream = stmt -> {
@@ -3307,22 +3313,23 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Basic query execution with single result
-     * // If closeAfterExecution(false) is not called,
-     * // there is no need to place the query instance in a try-with-resources block to close it.
-     * Optional<User> user = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?")
-     *                                  .setLong(1, userId).findFirst(User.class);
-     * if (user.isPresent()) {
-     *     System.out.println("Found: " + user.get().getName());
+     * // Own the query before binding, so a binding failure also closes it.
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM users WHERE id = ?")) {
+     *     Optional<User> user = query.setLong(1, userId).findFirst(User.class);
+     *     if (user.isPresent()) {
+     *         System.out.println("Found: " + user.get().getName());
+     *     }
      * }
      *
      * // Query with multiple parameters returning a list
-     * List<Order> orders = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM orders WHERE customer_id = ? AND status = ? AND order_date > ?")
-     *         .setLong(1, customerId)
-     *         .setString(2, "PENDING")
-     *         .setDate(3, Date.valueOf(lastWeek))
-     *         .list(Order.class);
-     *
-     *  orders.forEach(order -> System.out.println("Order #" + order.getId()));
+     * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
+     *         "SELECT * FROM orders WHERE customer_id = ? AND status = ? AND order_date > ?")) {
+     *     List<Order> orders = query.setLong(1, customerId)
+     *             .setString(2, "PENDING")
+     *             .setDate(3, Date.valueOf(lastWeek))
+     *             .list(Order.class);
+     *     orders.forEach(order -> System.out.println("Order #" + order.getId()));
+     * }
      *
      * // Reusing the same PreparedQuery with different parameters
      * try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource,
@@ -3654,10 +3661,9 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (Connection conn = dataSource.getConnection()) {
-     *     // If closeAfterExecution(false) is not called,
-     *     // there is no need to place the query instance in a try-with-resources block to close it.
-     *     User user = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?").setLong(1, userId).findOnlyOneOrNull(User.class);
+     * try (Connection conn = dataSource.getConnection();
+     *      PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM users WHERE id = ?")) {
+     *     User user = query.setLong(1, userId).findOnlyOneOrNull(User.class);
      *     // ...
      * } catch (SQLException e) {
      *     // Handle exceptions
@@ -3686,12 +3692,9 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (Connection conn = dataSource.getConnection()) {
-     *     // If closeAfterExecution(false) is not called,
-     *     // there is no need to place the query instance in a try-with-resources block to close it.
-     *     Optional<Long> newId = JdbcUtil.prepareQuery(conn, "INSERT INTO users (name) VALUES (?)", true)
-     *         .setString(1, "New User")
-     *         .insert();
+     * try (Connection conn = dataSource.getConnection();
+     *      PreparedQuery query = JdbcUtil.prepareQuery(conn, "INSERT INTO users (name) VALUES (?)", true)) {
+     *     Optional<Long> newId = query.setString(1, "New User").insert();
      *     System.out.println("New user ID: " + newId.orElse(null));
      * } catch (SQLException e) {
      *     // Handle exception
@@ -3795,17 +3798,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * try (Connection conn = dataSource.getConnection()) {
-     *     // Create a query with a specific fetch size and timeout
-     *     try (Stream<AuditRecord> stream = JdbcUtil.prepareQuery(conn, "SELECT * FROM large_table",
-     *             (c, s) -> {
-     *                 PreparedStatement stmt = c.prepareStatement(s);
-     *                 stmt.setFetchSize(100);
-     *                 stmt.setQueryTimeout(30);   // 30 seconds
-     *                 return stmt;
-     *             })
-     *         .stream(AuditRecord.class)) {
-     *
+     * try (Connection conn = dataSource.getConnection();
+     *      PreparedQuery query = JdbcUtil.prepareQuery(conn, "SELECT * FROM large_table",
+     *              (c, s) -> c.prepareStatement(s, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY))) {
+     *     query.setFetchSize(100).setQueryTimeout(30);   // Timeout in seconds
+     *     try (Stream<AuditRecord> stream = query.stream(AuditRecord.class)) {
      *         stream.forEach(System.out::println);
      *     }
      * } catch (SQLException e) {
@@ -5138,14 +5135,9 @@ public final class JdbcUtil {
      * }
      *
      * // Configure statement with specific timeout
-     * Throwables.BiFunction<Connection, String, CallableStatement, SQLException> creator =
-     *     (conn, sql) -> {
-     *         CallableStatement stmt = conn.prepareCall(sql);
-     *         stmt.setQueryTimeout(30);   // 30 seconds timeout
-     *         return stmt;
-     *     };
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(dataSource,
-     *         "{call long_running_procedure(?)}", creator)) {
+     *         "{call long_running_procedure(?)}", (conn, sql) -> conn.prepareCall(sql))) {
+     *     query.setQueryTimeout(30);   // Configure after the query owns the statement
      *     query.setString(1, "param");
      *     query.execute();
      * }
@@ -5242,14 +5234,11 @@ public final class JdbcUtil {
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Custom statement creator: configure a query timeout on the CallableStatement.
+     * // Custom statement creator with a query timeout configured after ownership is established.
      * Connection conn = dataSource.getConnection();
      * try (CallableQuery query = JdbcUtil.prepareCallableQuery(conn, "{call get_users(?, ?)}",
-     *         (c, sql) -> {
-     *             CallableStatement stmt = c.prepareCall(sql);
-     *             stmt.setQueryTimeout(30);   // 30 seconds
-     *             return stmt;
-     *         })) {
+     *         (c, sql) -> c.prepareCall(sql))) {
+     *     query.setQueryTimeout(30);   // 30 seconds
      *     query.setInt(1, departmentId)
      *          .registerOutParameter(2, Types.INTEGER)
      *          .execute();
@@ -6915,7 +6904,8 @@ public final class JdbcUtil {
 
     /**
      * Executes the given {@link PreparedStatement} as a query and returns the result set, handling SQL
-     * performance logging when enabled. The statement's parameters are cleared after execution.
+     * performance logging when enabled. Parameter clearing is attempted after execution except for
+     * {@link CallableStatement}s, whose bindings and OUT registrations are retained.
      *
      * @param stmt The {@link PreparedStatement} to execute.
      * @return The {@link ResultSet} produced by the query.
@@ -6950,7 +6940,8 @@ public final class JdbcUtil {
 
     /**
      * Executes the given {@link PreparedStatement} as an update, handling SQL performance logging when
-     * enabled. The statement's parameters are cleared after execution.
+     * enabled. Parameter clearing is attempted after execution except for {@link CallableStatement}s,
+     * whose bindings and OUT registrations are retained.
      *
      * @param stmt The {@link PreparedStatement} to execute.
      * @return The number of rows affected by the statement.
@@ -6981,7 +6972,8 @@ public final class JdbcUtil {
 
     /**
      * Executes the given {@link PreparedStatement} as a large update, handling SQL performance logging
-     * when enabled. The statement's parameters are cleared after execution.
+     * when enabled. Parameter clearing is attempted after execution except for {@link CallableStatement}s,
+     * whose bindings and OUT registrations are retained.
      *
      * @param stmt The {@link PreparedStatement} to execute.
      * @return The number of rows affected by the statement, as a long value.
@@ -7167,7 +7159,8 @@ public final class JdbcUtil {
 
     /**
      * Executes the given {@link PreparedStatement}, handling SQL performance logging when enabled. The
-     * statement's parameters are cleared after execution.
+     * statement's parameter clearing is attempted after execution except for {@link CallableStatement}s,
+     * whose bindings and OUT registrations are retained.
      *
      * @param stmt The {@link PreparedStatement} to execute.
      * @return {@code true} if the first result is a {@link ResultSet}; {@code false} if it is an update count or there is no result.
@@ -8671,7 +8664,7 @@ public final class JdbcUtil {
      * {@link UncheckedSQLException}.</p>
      *
      * <p>Traversal throws {@link UnsupportedOperationException} if the extractor returns a {@link ResultSet},
-     * which cannot be retained after its owning query is closed.</p>
+     * because each result set is closed immediately after its extractor returns.</p>
      *
      * @param <R> The type of the result extracted from the ResultSet.
      * @param stmt The Statement to extract ResultSets from.
@@ -8725,7 +8718,7 @@ public final class JdbcUtil {
      * {@link UncheckedSQLException}.</p>
      *
      * <p>Traversal throws {@link UnsupportedOperationException} if the extractor returns a {@link ResultSet},
-     * which cannot be retained after its owning query is closed.</p>
+     * because each result set is closed immediately after its extractor returns.</p>
      *
      * @param <R> The type of the result extracted from the ResultSet.
      * @param stmt The Statement to extract ResultSets from.
@@ -8898,6 +8891,10 @@ public final class JdbcUtil {
      * The query must be ordered by at least one key/id and have a result size limitation (e.g., LIMIT pageSize).
      * This method is useful for processing large result sets in manageable chunks.
      *
+     * <p>Queries run lazily during traversal. Each page acquires and releases its connection through
+     * this library's transaction-aware helpers and closes its statement before the page is emitted.
+     * The stream ends at the first empty page, which is not emitted.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String query = "SELECT * FROM users WHERE id > ? ORDER BY id LIMIT 1000";
@@ -8919,7 +8916,8 @@ public final class JdbcUtil {
      *
      * @param ds The {@link javax.sql.DataSource} to get the connection from.
      * @param sql The SQL query to run for each page. Must include ORDER BY and LIMIT/FETCH clauses.
-     * @param pageSize The number of rows to fetch per page.
+     * @param pageSize The positive JDBC fetch-size hint for each page query. The SQL must enforce the page's row limit;
+     *                 this value does not add a LIMIT/FETCH clause or cap the extracted row count.
      * @param parametersSetter The BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page).
      * @return A Stream of Dataset, each representing a page of results.
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null}, empty, or blank, mixes
@@ -8937,7 +8935,7 @@ public final class JdbcUtil {
      * The query must be ordered by at least one key/id and have a result size limitation.
      * Each page is processed by the provided ResultExtractor.
      *
-     * <p>The stream ends when a page's extracted result is empty: a {@code Dataset}, {@code Collection},
+     * <p>The stream ends when a page's extracted result is {@code null} or empty: a {@code Dataset}, {@code Collection},
      * {@code Map}, {@code Iterable} or {@code Iterator} result is checked for emptiness; any other
      * non-null result is treated as non-empty. The extractor should therefore return a container of the
      * page's rows — with a scalar result the stream never ends on its own.</p>
@@ -8968,12 +8966,16 @@ public final class JdbcUtil {
      * {@link UncheckedSQLException}.</p>
      *
      * <p>Traversal throws {@link UnsupportedOperationException} if the extractor returns a {@link ResultSet},
-     * which cannot be retained after its owning query is closed.</p>
+     * which cannot be retained after its owning query is closed. The extractor must also fully materialize
+     * any JDBC-backed streams or iterators before returning: each page's result set and statement are
+     * closed before that page is emitted.</p>
      *
      * @param <R> The type of the result extracted from each page.
-     * @param ds The {@link javax.sql.DataSource} to get the connection from.
+     * @param ds The {@link javax.sql.DataSource} from which each page lazily acquires and releases a connection
+     *           through this library's transaction-aware helpers.
      * @param sql The SQL query to run for each page.
-     * @param pageSize The number of rows to fetch per page.
+     * @param pageSize The positive JDBC fetch-size hint for each page query. The SQL must enforce the page's row limit;
+     *                 this value does not add a LIMIT/FETCH clause or cap the extracted row count.
      * @param parametersSetter The BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page).
      * @param resultExtractor The ResultExtractor to extract results from the ResultSet.
      * @return A {@link Stream} of the extracted results.
@@ -9018,7 +9020,7 @@ public final class JdbcUtil {
      * The query must be ordered by at least one key/id and have a result size limitation.
      * Each page is processed by the provided BiResultExtractor.
      *
-     * <p>The stream ends when a page's extracted result is empty: a {@code Dataset}, {@code Collection},
+     * <p>The stream ends when a page's extracted result is {@code null} or empty: a {@code Dataset}, {@code Collection},
      * {@code Map}, {@code Iterable} or {@code Iterator} result is checked for emptiness; any other
      * non-null result is treated as non-empty. The extractor should therefore return a container of the
      * page's rows — with a scalar result the stream never ends on its own.</p>
@@ -9047,12 +9049,16 @@ public final class JdbcUtil {
      * {@link UncheckedSQLException}.</p>
      *
      * <p>Traversal throws {@link UnsupportedOperationException} if the extractor returns a {@link ResultSet},
-     * which cannot be retained after its owning query is closed.</p>
+     * which cannot be retained after its owning query is closed. The extractor must also fully materialize
+     * any JDBC-backed streams or iterators before returning: each page's result set and statement are
+     * closed before that page is emitted.</p>
      *
      * @param <R> The type of the result extracted from each page.
-     * @param ds The {@link javax.sql.DataSource} to get the connection from.
+     * @param ds The {@link javax.sql.DataSource} from which each page lazily acquires and releases a connection
+     *           through this library's transaction-aware helpers.
      * @param sql The SQL query to run for each page.
-     * @param pageSize The number of rows to fetch per page.
+     * @param pageSize The positive JDBC fetch-size hint for each page query. The SQL must enforce the page's row limit;
+     *                 this value does not add a LIMIT/FETCH clause or cap the extracted row count.
      * @param parametersSetter The BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page).
      * @param resultExtractor The BiResultExtractor to extract results from the ResultSet.
      * @return A {@link Stream} of the extracted results.
@@ -9118,9 +9124,11 @@ public final class JdbcUtil {
      * <p>Database access errors encountered while traversing the returned stream are propagated as
      * {@link UncheckedSQLException}.</p>
      *
-     * @param conn The database {@link Connection} to use for queries.
+     * @param conn The caller-owned database {@link Connection}; keep it open throughout lazy stream traversal.
+     *             This method closes each page's statement but does not close the connection.
      * @param sql The SQL query to run for each page.
-     * @param pageSize The number of rows to fetch per page.
+     * @param pageSize The positive JDBC fetch-size hint for each page query. The SQL must enforce the page's row limit;
+     *                 this value does not add a LIMIT/FETCH clause or cap the extracted row count.
      * @param parametersSetter The BiParametersSetter to set parameters for the query; the second argument passed to the setter is the {@link Dataset} returned by the previous page (or {@code null} for the first page).
      * @return A Stream of Dataset, each representing a page of results.
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null}, empty, or blank, mixes
@@ -9138,7 +9146,7 @@ public final class JdbcUtil {
      * Similar to the DataSource version but uses an existing Connection.
      * Each page is processed by the provided ResultExtractor.
      *
-     * <p>The stream ends when a page's extracted result is empty: a {@code Dataset}, {@code Collection},
+     * <p>The stream ends when a page's extracted result is {@code null} or empty: a {@code Dataset}, {@code Collection},
      * {@code Map}, {@code Iterable} or {@code Iterator} result is checked for emptiness; any other
      * non-null result is treated as non-empty. The extractor should therefore return a container of the
      * page's rows — with a scalar result the stream never ends on its own.</p>
@@ -9169,12 +9177,16 @@ public final class JdbcUtil {
      * {@link UncheckedSQLException}.</p>
      *
      * <p>Traversal throws {@link UnsupportedOperationException} if the extractor returns a {@link ResultSet},
-     * which cannot be retained after its owning query is closed.</p>
+     * which cannot be retained after its owning query is closed. The extractor must also fully materialize
+     * any JDBC-backed streams or iterators before returning: each page's result set and statement are
+     * closed before that page is emitted.</p>
      *
      * @param <R> The type of the result extracted from each page.
-     * @param conn The database {@link Connection} to use for queries.
+     * @param conn The caller-owned database {@link Connection}; keep it open throughout lazy stream traversal.
+     *             This method closes each page's statement but does not close the connection.
      * @param sql The SQL query to run for each page.
-     * @param pageSize The number of rows to fetch per page.
+     * @param pageSize The positive JDBC fetch-size hint for each page query. The SQL must enforce the page's row limit;
+     *                 this value does not add a LIMIT/FETCH clause or cap the extracted row count.
      * @param parametersSetter The BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page).
      * @param resultExtractor The ResultExtractor to extract results from the ResultSet.
      * @return A {@link Stream} of the extracted results.
@@ -9219,7 +9231,7 @@ public final class JdbcUtil {
      * Similar to the DataSource version but uses an existing Connection.
      * Each page is processed by the provided BiResultExtractor.
      *
-     * <p>The stream ends when a page's extracted result is empty: a {@code Dataset}, {@code Collection},
+     * <p>The stream ends when a page's extracted result is {@code null} or empty: a {@code Dataset}, {@code Collection},
      * {@code Map}, {@code Iterable} or {@code Iterator} result is checked for emptiness; any other
      * non-null result is treated as non-empty. The extractor should therefore return a container of the
      * page's rows — with a scalar result the stream never ends on its own.</p>
@@ -9249,12 +9261,16 @@ public final class JdbcUtil {
      * {@link UncheckedSQLException}.</p>
      *
      * <p>Traversal throws {@link UnsupportedOperationException} if the extractor returns a {@link ResultSet},
-     * which cannot be retained after its owning query is closed.</p>
+     * which cannot be retained after its owning query is closed. The extractor must also fully materialize
+     * any JDBC-backed streams or iterators before returning: each page's result set and statement are
+     * closed before that page is emitted.</p>
      *
      * @param <R> The type of the result extracted from each page.
-     * @param conn The database {@link Connection} to use for queries.
+     * @param conn The caller-owned database {@link Connection}; keep it open throughout lazy stream traversal.
+     *             This method closes each page's statement but does not close the connection.
      * @param sql The SQL query to run for each page.
-     * @param pageSize The number of rows to fetch per page.
+     * @param pageSize The positive JDBC fetch-size hint for each page query. The SQL must enforce the page's row limit;
+     *                 this value does not add a LIMIT/FETCH clause or cap the extracted row count.
      * @param parametersSetter The BiParametersSetter to set parameters for the query; the second argument passed to the setter is the result extracted from the previous page (or {@code null} for the first page).
      * @param resultExtractor The BiResultExtractor to extract results from the ResultSet.
      * @return A {@link Stream} of the extracted results.
@@ -9361,7 +9377,7 @@ public final class JdbcUtil {
      * @param stmt The {@link Statement} to check.
      * @return {@code true} if date/time values should be normalized, or if the check fails.
      * @throws IllegalArgumentException if {@code stmt.getConnection()} is {@code null}, or the database metadata
-     *         reports a null, empty, or blank product name.
+     *         reports a {@code null}, empty, or blank product name.
      * @throws UncheckedSQLException if reading the connection's database product metadata fails; failures from
      *         {@link Statement#getConnection()} are caught and result in {@code true}.
      */
@@ -9473,9 +9489,8 @@ public final class JdbcUtil {
             }
         });
         sqlTypeGetterMap.put(Types.FLOAT, new OutParameterGetter() {
-            // Per JDBC spec (Appendix B), SQL FLOAT is an 8-byte, double-precision type that maps to
-            // Java double (it is the synonym of Types.DOUBLE); SQL REAL is the 4-byte type that maps to
-            // Java float. Reading a Types.FLOAT out parameter with getFloat() would narrow the value to
+            // JDBC maps SQL FLOAT and DOUBLE to Java double, and SQL REAL to Java float. FLOAT and
+            // DOUBLE are distinct JDBC type codes. Reading a Types.FLOAT out parameter with getFloat() would narrow the value to
             // single precision (losing precision and overflowing to Float.POSITIVE_INFINITY beyond ~3.4e38).
             // Use getDouble() for parity with the Types.DOUBLE getter and the input-side convention in
             // AbstractQuery.setFloat (which uses Types.REAL for Java float).
@@ -9869,8 +9884,8 @@ public final class JdbcUtil {
             if (schemaToUse == null) {
                 try {
                     schemaToUse = conn.getSchema();
-                } catch (final SQLException e) {
-                    // Connection.getSchema() is JDBC 4.1 and optional; fall back to a schema-less lookup.
+                } catch (final SQLException | AbstractMethodError e) {
+                    // JDBC 4.0 drivers may not implement getSchema(); use the same fallback as unsupported JDBC 4.1 drivers.
                 }
             }
 
@@ -10436,7 +10451,7 @@ public final class JdbcUtil {
      * part is a plain (unquoted-safe) SQL identifier; returns {@code null} otherwise.
      *
      * @param qualifiedName The qualified identifier to simplify.
-     * @return The unqualified dotted name, or {@code null} when a part cannot be embedded without quoting.
+     * @return The unquoted dotted name, or {@code null} when a part cannot be embedded without quoting.
      * @throws IllegalArgumentException if {@code qualifiedName} is {@code null}, blank, or not a one- to three-part
      *         SQL identifier.
      */
@@ -11128,6 +11143,10 @@ public final class JdbcUtil {
      *     stmt.registerOutParameter(2, Types.VARCHAR);
      *     stmt.registerOutParameter(3, Types.INTEGER);
      *     stmt.execute();
+     *     // Drain all results before reading output parameters for driver portability.
+     *     while (stmt.getMoreResults() || stmt.getUpdateCount() != -1) {
+     *         // Discard results that are not needed by this example.
+     *     }
      *
      *     List<OutParam> outParams = Arrays.asList(
      *         OutParam.of(2, Types.VARCHAR),
@@ -11830,7 +11849,8 @@ public final class JdbcUtil {
     }
 
     /**
-     * Checks if SQL logging is enabled for the current thread.
+     * Checks the current thread's SQL-logging flag. This does not check the global logging switch
+     * or whether the configured logger accepts DEBUG messages.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11872,7 +11892,7 @@ public final class JdbcUtil {
      * {@link SqlLogConfig#sqlPerfLogThresholdMillis} milliseconds, and notifies the SQL log handler
      * registered via {@link #setSqlLogHandler(TriConsumer)}, if any.
      *
-     * <p>Invoked from a {@code finally} block right after the statement finishes, so it must never throw:
+     * <p>Invoked from a {@code finally} block right after the statement finishes:
      * a {@code RuntimeException} from the handler is logged and swallowed rather than allowed to mask the
      * statement's own outcome.</p>
      *
@@ -11924,8 +11944,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Extracts the SQL text of a statement for logging, never throwing: returns an empty string if the
-     * extractor fails or yields {@code null}, so logging can never mask a JDBC failure.
+     * Extracts the SQL text of a statement for logging. Returns an empty string if the extractor
+     * throws an {@link Exception} or yields {@code null}, preserving the JDBC operation's outcome
+     * in those cases. Errors are not caught.
      *
      * @param stmt The statement whose SQL to extract.
      * @param sqlExtractor The extractor function to apply.
@@ -12121,7 +12142,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * JdbcUtil.runWithSqlLogDisabled(() -> {
-     *     // Execute sensitive SQL operations without logging
+     *     // Suppress the standard SQL log for this operation; performance logs and handlers remain active.
      *     JdbcUtil.executeUpdate(dataSource,
      *         "UPDATE users SET password = ? WHERE id = ?",
      *         password, userId);
@@ -12165,7 +12186,7 @@ public final class JdbcUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * String result = JdbcUtil.callWithSqlLogDisabled(() -> {
-     *     // Execute sensitive query without logging
+     *     // Suppress the standard SQL log for this query; performance logs and handlers remain active.
      *     return JdbcUtil.prepareQuery(dataSource, "SELECT email FROM users WHERE id = ?")
      *                    .setLong(1, userId)
      *                    .queryForString()
@@ -12233,7 +12254,7 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} to check.
      * @return {@code true} if a transaction is active on the current thread for {@code ds};
      *         {@code false} otherwise.
-     * @throws IllegalArgumentException if no library transaction exists and the enabled Spring transaction check receives a null {@code ds}.
+     * @throws IllegalArgumentException if no library transaction exists and the enabled Spring transaction check receives a {@code null} {@code ds}.
      * @throws CannotGetJdbcConnectionException if the enabled Spring transaction check cannot acquire a connection from {@code ds}.
      */
     public static boolean isInTransaction(final javax.sql.DataSource ds) throws IllegalArgumentException, CannotGetJdbcConnectionException {
@@ -12344,7 +12365,7 @@ public final class JdbcUtil {
      *     try {
      *         createOrder(order);   // Shares this transaction
      *         updateInventory(order);   // Shares this transaction
-     *         sendNotification(order);   // Shares this transaction
+     *         writeOrderAudit(order);   // Database writes use the same DataSource and transaction
      *         tran.commit();
      *     } finally {
      *         tran.rollbackIfNotCommitted();
@@ -12410,11 +12431,13 @@ public final class JdbcUtil {
     }
 
     /**
-     * Starts a global transaction which will be shared by all in-line database queries with the same DataSource
+     * Starts a thread-bound transaction scope shared by database queries with the same DataSource
      * in the same thread. This includes methods like prepareQuery, prepareNamedQuery, and prepareCallableQuery.
      *
-     * <p>Spring Transaction is supported and integrated. If a Spring transaction is already active
-     * with the specified DataSource, the Connection from the Spring transaction will be used.</p>
+     * <p>Connection acquisition may reuse a Spring-bound connection, but the outermost
+     * {@code SqlTransaction} scope directly commits or rolls back that connection. See the
+     * transaction-ownership guidance on {@link #beginTransaction(javax.sql.DataSource)} before
+     * using this method inside a Spring-owned transaction.</p>
      *
      * <p><b>Example of transaction sharing:</b></p>
      * <pre>{@code
@@ -12827,7 +12850,9 @@ public final class JdbcUtil {
      * <p><b>Spring integration:</b> When running inside a Spring-managed transaction context,
      * Spring's transaction participation is also temporarily disabled for the duration of
      * {@code cmd}, so the callable does not join any Spring {@code @Transactional} transaction
-     * either.</p>
+     * through this library's connection-acquisition helpers. This does not suspend Spring's own
+     * transaction synchronization, affect other database libraries, or detach an already acquired
+     * connection. The callback must obtain its connections through the appropriate helpers.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -12846,7 +12871,7 @@ public final class JdbcUtil {
      *     tran.rollbackIfNotCommitted();
      * }
      *
-     * // No active transaction — runs directly with a fresh connection
+     * // No active transaction: the callback acquires connections as needed
      * String token = JdbcUtil.callOutsideTransaction(dataSource, () ->
      *     tokenStore.generateAndPersist(userId));
      * }</pre>
@@ -12918,8 +12943,9 @@ public final class JdbcUtil {
      * {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid
      * connection-pool leaks.</p>
      *
-     * <p><b>Spring integration:</b> Spring's transaction participation is also temporarily
-     * disabled for the duration of {@code cmd}.</p>
+     * <p><b>Spring integration:</b> This library's participation in Spring transactions is temporarily
+     * disabled for the duration of {@code cmd}. Spring's own transaction synchronization and other
+     * database libraries are unaffected.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -13008,8 +13034,9 @@ public final class JdbcUtil {
      * (e.g., error logs, audit events, distributed-lock releases) and refreshing caches or
      * external systems that should not be deferred until the outer transaction commits.</p>
      *
-     * <p><b>Spring integration:</b> Spring's transaction participation is also temporarily
-     * disabled for the duration of {@code cmd}.</p>
+     * <p><b>Spring integration:</b> This library's participation in Spring transactions is temporarily
+     * disabled for the duration of {@code cmd}. Spring's own transaction synchronization and other
+     * database libraries are unaffected.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -13095,8 +13122,9 @@ public final class JdbcUtil {
      * {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid
      * connection-pool leaks.</p>
      *
-     * <p><b>Spring integration:</b> Spring's transaction participation is also temporarily
-     * disabled for the duration of {@code cmd}.</p>
+     * <p><b>Spring integration:</b> This library's participation in Spring transactions is temporarily
+     * disabled for the duration of {@code cmd}. Spring's own transaction synchronization and other
+     * database libraries are unaffected.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -13152,15 +13180,18 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given runnable with Spring's transaction management temporarily disabled for
+     * Executes the given runnable with this library's Spring transaction participation temporarily disabled for
      * the current thread.
      *
      * <p>When this library is used inside a Spring application, JDBC connections are normally
      * obtained via {@code DataSourceUtils.getConnection()}, which participates in any
      * Spring-managed ({@code @Transactional}) transaction that is active on the calling thread.
      * This method sets a thread-local flag that prevents that participation for the duration of
-     * {@code sqlAction}, so connections obtained from a {@link javax.sql.DataSource} during
+     * {@code sqlAction}, so connections obtained through this library's acquisition helpers during
      * execution come from the pool directly instead of from Spring's transaction synchronization.</p>
+     *
+     * <p>This flag does not suspend Spring's own transaction synchronization or affect connection
+     * acquisition in other libraries. It also does not detach an already acquired connection.</p>
      *
      * <p><b>Scope:</b> this method only affects Spring's transaction binding. It does <em>not</em>
      * suspend a transaction that was started via {@link #beginTransaction} or
@@ -13216,7 +13247,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Executes the given callable with Spring's transaction management temporarily disabled for
+     * Executes the given callable with this library's Spring transaction participation temporarily disabled for
      * the current thread, and returns its result.
      *
      * <p>This is the value-returning counterpart of
@@ -13313,10 +13344,10 @@ public final class JdbcUtil {
      * Returns the tuple of (generated-key extractor, ID getter, ID setter) used to populate entity IDs
      * from JDBC generated keys for the given DAO interface and entity class.
      *
-     * <p>When invoked, an ID getter for an entity with ID properties rejects a null entity with
+     * <p>When invoked, an ID getter for an entity with ID properties rejects a {@code null} entity with
      * {@link IllegalArgumentException}. An ID setter does the same when the supplied ID would assign
      * an entity property. Callbacks for entities without ID properties remain no-ops, and composite-ID
-     * setters still ignore null or unsupported IDs. A composite {@link EntityId} with no entries matching
+     * setters still ignore {@code null} or unsupported IDs. A composite {@link EntityId} with no entries matching
      * entity properties also leaves the entity untouched.</p>
      *
      * @param <ID> The ID type.
@@ -13631,8 +13662,10 @@ public final class JdbcUtil {
      * userDao.batchSave(users);
      *
      * // Update operations
-     * user.get().setStatus("INACTIVE");
-     * userDao.update(user.get());
+     * if (user.isPresent()) {
+     *     user.get().setStatus("INACTIVE");
+     *     userDao.update(user.get());
+     * }
      *
      * // Delete operations
      * userDao.deleteById(userId);

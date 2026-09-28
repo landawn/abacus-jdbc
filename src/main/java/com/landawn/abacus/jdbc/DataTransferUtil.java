@@ -422,11 +422,11 @@ public final class DataTransferUtil {
 
     /**
      * Imports data from a Dataset to a database table with custom column type mapping.
-     * This method allows specifying the type for each column, enabling custom type conversions during import.
+     * This method allows specifying a JDBC type handler for each column; values are passed to the handler without conversion.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.rows(List.of("name", "birthdate"), new Object[][] {{"John", "1990-01-15"}});
+     * Dataset dataset = Dataset.rows(List.of("name", "birthdate"), new Object[][] {{"John", java.sql.Date.valueOf("1990-01-15")}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
@@ -443,7 +443,7 @@ public final class DataTransferUtil {
      * @param dataset the Dataset containing the data to be imported
      * @param conn the Connection to the database
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
-     * @param columnTypeMap a map specifying the types of the columns for type conversion
+     * @param columnTypeMap a map of column names to JDBC type handlers; values must already be compatible with their handlers
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} is {@code null}, or a type-map key is not a dataset column or its mapped type is
      *         {@code null}, or {@code conn} is {@code null}
@@ -462,7 +462,7 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("name", "birthdate", "score"),
-     *     new Object[][] {{"John", "1990-01-15", "95.5"}, {"Jane", "1992-03-20", "87.3"}});
+     *     new Object[][] {{"John", java.sql.Date.valueOf("1990-01-15"), 95.5}, {"Jane", java.sql.Date.valueOf("1992-03-20"), 87.3}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
@@ -482,7 +482,7 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param columnTypeMap a map specifying the types of the columns for type conversion
+     * @param columnTypeMap a map of column names to JDBC type handlers; values must already be compatible with their handlers
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} is {@code null}, or {@code batchSize <= 0} or {@code batchIntervalInMillis < 0}, or a
      *         type-map key is not a dataset column or its mapped type is {@code null}, or {@code conn} is {@code null}
@@ -503,7 +503,7 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("name", "age", "status"),
-     *     new Object[][] {{"John", "25", "active"}, {"Jane", "30", "inactive"}});
+     *     new Object[][] {{"John", 25, "active"}, {"Jane", 30, "inactive"}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("age", Type.of(Integer.class));
@@ -526,7 +526,7 @@ public final class DataTransferUtil {
      * @param insertSql the SQL insert statement with placeholders; column order must match the Dataset
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param columnTypeMap a map specifying the types of the columns for type conversion
+     * @param columnTypeMap a map of column names to JDBC type handlers; values must already be compatible with their handlers
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} or {@code filter} is {@code null}, or {@code batchSize <= 0} or
      *         {@code batchIntervalInMillis < 0}, or a type-map key is not a dataset column or its mapped type is {@code null}, or {@code conn} is
@@ -815,10 +815,10 @@ public final class DataTransferUtil {
 
     /**
      * Validates optional column type overrides before preparing an insert statement.
-     * The source dataset has already been checked for null by the caller.
+     * The source dataset has already been checked for {@code null} by the caller.
      *
      * @param dataset the source dataset
-     * @param columnTypeMap optional type overrides; null or empty uses the default types
+     * @param columnTypeMap optional type overrides; {@code null} or empty uses the default types
      * @throws IllegalArgumentException if a key is not a dataset column or its mapped type is null
      */
     @SuppressWarnings("rawtypes")
@@ -842,7 +842,7 @@ public final class DataTransferUtil {
 
     /**
      * Resolves the requested columns before opening resources or importing any rows.
-     * The dataset and column collection have already been checked for null by the caller.
+     * The dataset and column collection have already been checked for {@code null} by the caller.
      *
      * @param dataset the source dataset
      * @param columnNames the columns to import, in binding order
@@ -870,11 +870,11 @@ public final class DataTransferUtil {
 
     /**
      * Imports data from a Dataset to a database table using the provided PreparedStatement with custom column type mapping.
-     * This method allows specifying the type for each column for proper type conversion during import.
+     * This method allows specifying a JDBC type handler for each column; values are passed to the handler without conversion.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * Dataset dataset = Dataset.rows(List.of("name", "birthdate"), new Object[][] {{"John", "1990-01-15"}});
+     * Dataset dataset = Dataset.rows(List.of("name", "birthdate"), new Object[][] {{"John", java.sql.Date.valueOf("1990-01-15")}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
@@ -885,7 +885,7 @@ public final class DataTransferUtil {
      *
      * @param dataset the Dataset containing the data to be imported
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
-     * @param columnTypeMap a map specifying the types of the columns for type conversion
+     * @param columnTypeMap a map of column names to JDBC type handlers; values must already be compatible with their handlers
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} or {@code stmt} is {@code null}, or a type-map key is not a dataset column or its mapped
      *         type is {@code null}
@@ -904,7 +904,7 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("name", "birthdate", "score"),
-     *     new Object[][] {{"John", "1990-01-15", "95.5"}, {"Jane", "1992-03-20", "87.3"}});
+     *     new Object[][] {{"John", java.sql.Date.valueOf("1990-01-15"), 95.5}, {"Jane", java.sql.Date.valueOf("1992-03-20"), 87.3}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("birthdate", Type.of(java.sql.Date.class));
@@ -918,7 +918,7 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param columnTypeMap a map specifying the types of the columns for type conversion
+     * @param columnTypeMap a map of column names to JDBC type handlers; values must already be compatible with their handlers
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} or {@code stmt} is {@code null}, or {@code batchSize <= 0} or
      *         {@code batchIntervalInMillis < 0}, or a type-map key is not a dataset column or its mapped type is {@code null}
@@ -939,7 +939,7 @@ public final class DataTransferUtil {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Dataset dataset = Dataset.rows(List.of("name", "age", "status"),
-     *     new Object[][] {{"John", "25", "active"}, {"Jane", "30", "inactive"}});
+     *     new Object[][] {{"John", 25, "active"}, {"Jane", 30, "inactive"}});
      * Map<String, Type> columnTypes = new HashMap<>();
      * columnTypes.put("name", Type.of(String.class));
      * columnTypes.put("age", Type.of(Integer.class));
@@ -962,7 +962,7 @@ public final class DataTransferUtil {
      * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
      * @param batchSize the number of rows to be inserted in each batch (must be greater than 0)
      * @param batchIntervalInMillis the interval in milliseconds between each batch execution (must be {@code >= 0})
-     * @param columnTypeMap a map specifying the types of the columns for type conversion
+     * @param columnTypeMap a map of column names to JDBC type handlers; values must already be compatible with their handlers
      * @return the number of source rows submitted after filtering; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code dataset}, {@code filter}, or {@code stmt} is {@code null}, or {@code batchSize <= 0} or
      *         {@code batchIntervalInMillis < 0}, or a type-map key is not a dataset column or its mapped type is {@code null}
@@ -1427,7 +1427,7 @@ public final class DataTransferUtil {
      * Imports data from a CSV file to the database using the specified DataSource.
      * This method uses default batch processing settings.
      *
-     * <p>The first line of the CSV file is treated as a header row and will be skipped during import.
+     * <p>The first record of the CSV file is treated as a header row and will be skipped during import.
      * The provided statement setter is responsible for parsing each CSV row value and binding it to
      * the appropriate {@link PreparedQuery} parameter.</p>
      *
@@ -1485,7 +1485,7 @@ public final class DataTransferUtil {
      * Imports data from a CSV file to the database using the provided Connection with configurable batch processing.
      * This method provides control over batch size and processing intervals for optimal performance.
      *
-     * <p>The first line of the CSV file is treated as a header row and will be skipped during import.</p>
+     * <p>The first record of the CSV file is treated as a header row and will be skipped during import.</p>
      *
      * <p>This method is useful for importing large CSV files where you need to control memory usage
      * and database load through batch processing parameters.</p>
@@ -1552,7 +1552,7 @@ public final class DataTransferUtil {
      * This method provides direct control over the PreparedStatement used for import.
      *
      * <p>The PreparedStatement will not be closed by this method, allowing for reuse in subsequent operations.
-     * The first line of the CSV file is treated as headers and will be skipped.</p>
+     * The first record of the CSV file is treated as headers and will be skipped.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1600,7 +1600,7 @@ public final class DataTransferUtil {
      * Imports data from a CSV file to the database using the provided PreparedStatement with configurable batch processing.
      * This method provides full control over the import process including batch size and processing intervals.
      *
-     * <p>The first line of the CSV file is treated as a header row and will be skipped during import.</p>
+     * <p>The first record of the CSV file is treated as a header row and will be skipped during import.</p>
      *
      * <p>This is useful for importing large CSV files where you need fine-grained control over
      * memory usage and database load through batch processing parameters.</p>
@@ -1653,7 +1653,7 @@ public final class DataTransferUtil {
      * Imports data from a CSV file to the database with row filtering capability.
      * This method allows selective import of CSV rows based on a filter predicate.
      *
-     * <p>The first line of the CSV file is treated as a header row and will be skipped during import.
+     * <p>The first record of the CSV file is treated as a header row and will be skipped during import.
      * The filter predicate is applied to each subsequent CSV row (as a String array).
      * Only rows for which the filter returns {@code true} will be imported to the database.</p>
      *
@@ -1661,7 +1661,7 @@ public final class DataTransferUtil {
      * <pre>{@code
      * // Import only active users from CSV
      * File csvFile = new File("all_users.csv");
-     * // Filter to import only users with "ACTIVE" status (assuming status is in column 3)
+     * // Filter to import only users with "ACTIVE" status in the fourth column (array index 3)
      * Predicate<String[]> activeUsersFilter = row -> "ACTIVE".equals(row[3]);
      * try (PreparedStatement stmt = conn.prepareStatement(
      *         "INSERT INTO active_users (id, name, email, status) VALUES (?, ?, ?, ?)")) {
@@ -1716,7 +1716,7 @@ public final class DataTransferUtil {
      * This method is useful when the CSV data comes from a source other than a file.
      *
      * <p>The Reader can be from any source such as a network stream, string, or in-memory data.
-     * The first line is treated as headers and will be skipped during import.</p>
+     * The first record is treated as headers and will be skipped during import.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1772,7 +1772,7 @@ public final class DataTransferUtil {
      * Imports data from a CSV Reader to the database using the provided PreparedStatement with default batch settings.
      * This method provides direct control over the PreparedStatement used for import.
      *
-     * <p>The first line read from the Reader is treated as a header row and will be skipped during import.
+     * <p>The first record read from the Reader is treated as a header row and will be skipped during import.
      * The PreparedStatement will not be closed by this method, allowing for reuse.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -1813,7 +1813,7 @@ public final class DataTransferUtil {
      * Imports data from a CSV Reader to the database using the provided PreparedStatement with configurable batch processing.
      * This method provides control over batch size and processing intervals.
      *
-     * <p>The first line read from the Reader is treated as a header row and will be skipped during import.</p>
+     * <p>The first record read from the Reader is treated as a header row and will be skipped during import.</p>
      *
      * <p>This method is useful for importing CSV data from various sources with optimized batch processing
      * for better performance and resource management.</p>
@@ -1861,7 +1861,7 @@ public final class DataTransferUtil {
      * Imports data from a CSV Reader to the database with row filtering capability and configurable batch processing.
      * This is the most comprehensive CSV import method providing full control over the import process.
      *
-     * <p>The first line read from the Reader is treated as a header row and will be skipped during import.</p>
+     * <p>The first record read from the Reader is treated as a header row and will be skipped during import.</p>
      *
      * <p>This method combines all import features:</p>
      * <ul>
@@ -2241,7 +2241,7 @@ public final class DataTransferUtil {
      * @param output the File to write the CSV data to (created if it doesn't exist; an existing file is truncated; its parent directory must already exist)
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code selectSql} is {@code null} or empty, or is blank or cannot be
-     *         parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a null or blank
+     *         parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a {@code null} or blank
      *         product name
      * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
      *         JDBC resources fails
@@ -2285,7 +2285,7 @@ public final class DataTransferUtil {
      * @return the total number of rows exported to the CSV file
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code selectSql} is {@code null} or empty, or is blank or cannot be
      *         parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if any specified column name is not found in
-     *         the query result, or if database metadata reports a null or blank product name
+     *         the query result, or if database metadata reports a {@code null} or blank product name
      * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
      *         JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
@@ -2567,7 +2567,7 @@ public final class DataTransferUtil {
      * @param output the Writer to write the CSV data to (will be flushed but not closed by this method)
      * @return the total number of rows exported
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code selectSql} is {@code null} or empty, or is blank or cannot be
-     *         parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a null or blank
+     *         parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a {@code null} or blank
      *         product name
      * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
      *         JDBC resources fails
@@ -2629,11 +2629,11 @@ public final class DataTransferUtil {
     /**
      * Exports data from a ResultSet to a Writer in CSV format with column selection.
      * This method writes the specified columns from the ResultSet to the Writer in CSV format.
-     * The first line contains column headers, and each subsequent line represents a row of data.
+     * The first CSV record contains column headers, and each subsequent record represents a row of data.
      *
      * <p>The method handles proper CSV formatting including:</p>
      * <ul>
-     *   <li>Column headers in the first line</li>
+     *   <li>Column headers in the first record</li>
      *   <li>Proper escaping of special characters</li>
      *   <li>Null value handling: a SQL {@code NULL} is written as the unquoted text {@code null}, which CSV import reads back as the string {@code "null"}</li>
      *   <li>Type-aware conversion based on each value's runtime type (including heterogeneous result columns)</li>
@@ -2753,8 +2753,8 @@ public final class DataTransferUtil {
      * Resolves requested export columns before opening or writing the CSV destination.
      *
      * @param rs the source result set, already checked for null
-     * @param columnNames optional column names; null or empty selects all columns
-     * @return labels at their result-set indexes, with null for unselected columns
+     * @param columnNames optional column names; {@code null} or empty selects all columns
+     * @return labels at their result-set indexes, with {@code null} for unselected columns
      * @throws SQLException if reading column metadata fails
      * @throws IllegalArgumentException if a requested column is absent from the result set
      */
@@ -2820,7 +2820,7 @@ public final class DataTransferUtil {
      * @param tableName the name of the table to copy
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is {@code null},
-     *         blank, or malformed, or if database metadata reports a null or blank product name
+     *         blank, or malformed, or if database metadata reports a {@code null} or blank product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
      *         because the table does not exist in the source database); connection acquisition follows
@@ -2853,7 +2853,7 @@ public final class DataTransferUtil {
      * @param targetTableName the name of the table in the target data source
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is {@code null},
-     *         blank, or malformed, or if database metadata reports a null or blank product name
+     *         blank, or malformed, or if database metadata reports a {@code null} or blank product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
      *         because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -2886,7 +2886,7 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or a table
-     *         name is {@code null}, blank, or malformed, or if database metadata reports a null or blank product name
+     *         name is {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -2952,7 +2952,7 @@ public final class DataTransferUtil {
      * @param columnNames the collection of column names to copy; {@code null} or empty copies all columns
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is {@code null},
-     *         blank, or malformed, or a selected column name is {@code null}, blank, or malformed, or if database metadata reports a null or blank
+     *         blank, or malformed, or a selected column name is {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank
      *         product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
@@ -2993,7 +2993,7 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or a table
      *         name is {@code null}, blank, or malformed, or a selected column name is {@code null}, blank, or malformed, or if database metadata
-     *         reports a null or blank product name
+     *         reports a {@code null} or blank product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -3062,7 +3062,7 @@ public final class DataTransferUtil {
      * @param insertSql the SQL query to insert data into the target data source (must have matching parameter placeholders)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or if database metadata reports a
-     *         null or blank product name
+     *         {@code null} or blank product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -3100,7 +3100,7 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or
-     *         {@code fetchSize < 0}, or if database metadata reports a null or blank product name
+     *         {@code fetchSize < 0}, or if database metadata reports a {@code null} or blank product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -3140,7 +3140,7 @@ public final class DataTransferUtil {
      * @param parameterSetter a bi-consumer to set parameters on the prepared statement from the result set; must not be {@code null}
      * @return the number of rows copied
      * @throws IllegalArgumentException if any of {@code sourceDataSource}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or
-     *         if database metadata reports a null or blank product name
+     *         if database metadata reports a {@code null} or blank product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -3195,7 +3195,7 @@ public final class DataTransferUtil {
      * @param parameterSetter a bi-consumer to set parameters on the prepared statement; must not be {@code null}
      * @return the number of rows copied
      * @throws IllegalArgumentException if any of {@code sourceDataSource}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or
-     *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or {@code fetchSize < 0}, or if database metadata reports a null or blank
+     *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or {@code fetchSize < 0}, or if database metadata reports a {@code null} or blank
      *         product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
@@ -3264,7 +3264,7 @@ public final class DataTransferUtil {
      * @param tableName the name of the table to copy data from and to
      * @return the number of rows copied
      * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata
-     *         reports a null or blank product name
+     *         reports a {@code null} or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      */
@@ -3296,7 +3296,7 @@ public final class DataTransferUtil {
      * @param targetTableName the name of the target table to copy data to
      * @return the number of rows copied
      * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata
-     *         reports a null or blank product name
+     *         reports a {@code null} or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      */
@@ -3331,7 +3331,7 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}, or a table name is {@code null}, blank, or malformed, or a connection is
-     *         {@code null}, or if database metadata reports a null or blank product name
+     *         {@code null}, or if database metadata reports a {@code null} or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).batchSize(batchSize).to(targetConn, targetTableName)}.
@@ -3412,7 +3412,7 @@ public final class DataTransferUtil {
      * @param columnNames the collection of column names to be copied; {@code null} or empty copies all columns
      * @return the number of rows copied
      * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or a selected column name is {@code null}, blank, or
-     *         malformed, or a connection is {@code null}, or if database metadata reports a null or blank product name
+     *         malformed, or a connection is {@code null}, or if database metadata reports a {@code null} or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any
      *         specified column doesn't exist
@@ -3452,7 +3452,7 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}, or a table name is {@code null}, blank, or malformed, or a selected column name is
-     *         {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata reports a null or blank product name
+     *         {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata reports a {@code null} or blank product name
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).columns(columnNames).batchSize(batchSize).to(targetConn, targetTableName)}.
@@ -3619,7 +3619,7 @@ public final class DataTransferUtil {
      * @param targetConn the connection to the target database
      * @param insertSql the SQL query to insert data into the target database
      * @return the number of rows copied
-     * @throws IllegalArgumentException if {@code sourceConn} or {@code targetConn} is {@code null}, or database metadata reports a null or blank
+     * @throws IllegalArgumentException if {@code sourceConn} or {@code targetConn} is {@code null}, or database metadata reports a {@code null} or blank
      *         product name
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
@@ -3660,7 +3660,7 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceConn} or {@code targetConn} is {@code null}, or {@code batchSize <= 0}, or
-     *         {@code fetchSize < 0}, or if database metadata reports a null or blank product name
+     *         {@code fetchSize < 0}, or if database metadata reports a {@code null} or blank product name
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
      * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).fetchSize(fetchSize).batchSize(batchSize).to(targetConn, insertSql)}.
@@ -3698,7 +3698,7 @@ public final class DataTransferUtil {
      * @param parameterSetter the custom statement setter to set the parameters of the prepared statement; must not be {@code null}
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceConn} or {@code targetConn} is {@code null}, or {@code parameterSetter} is {@code null}, or if
-     *         database metadata reports a null or blank product name
+     *         database metadata reports a {@code null} or blank product name
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
      * @deprecated use {@link #copyFrom(Connection, String)} instead: {@code copyFrom(sourceConn, selectSql).parameterSetter(parameterSetter).to(targetConn, insertSql)}.
@@ -3755,7 +3755,7 @@ public final class DataTransferUtil {
      * @param parameterSetter the custom statement setter to set the parameters of the prepared statement; must not be {@code null}
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceConn} or {@code targetConn} is {@code null}, or {@code parameterSetter} is {@code null}, or
-     *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or {@code fetchSize < 0}, or if database metadata reports a null or blank
+     *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or {@code fetchSize < 0}, or if database metadata reports a {@code null} or blank
      *         product name
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @throws UncheckedSQLException if the database product metadata lookup fails.
@@ -3980,7 +3980,7 @@ public final class DataTransferUtil {
      * }</pre>
      *
      * <p>The returned setter propagates {@link SQLException} from result-set metadata, the column getter,
-     * or parameter binding when it is invoked. It rejects a null statement or result set with
+     * or parameter binding when it is invoked. It rejects a {@code null} statement or result set with
      * {@link IllegalArgumentException} before reading metadata or binding parameters. Binding through a query
      * whose underlying statement has been closed is not detected by the setter itself; the driver reports it as
      * a {@link SQLException} when the first column is bound.</p>
@@ -4096,7 +4096,7 @@ public final class DataTransferUtil {
          */
         private long batchIntervalInMillis = 0;
         /**
-         * The per-column {@link Type} map used to coerce values while binding; mutually exclusive with
+         * The per-column {@link Type} map used to bind values; mutually exclusive with
          * {@link #columnNames} and {@link #parameterSetter}.
          */
         @SuppressWarnings("rawtypes")
@@ -4172,7 +4172,8 @@ public final class DataTransferUtil {
         }
 
         /**
-         * Supplies a per-column {@link Type} map used to coerce values while setting statement parameters.
+         * Supplies a per-column {@link Type} map used to bind statement parameters. Values must already be
+         * compatible with their handlers; no conversion is performed before binding.
          * Mutually exclusive with {@link #columns(Collection)} and {@link #parameterSetter(Throwables.BiConsumer)}.
          *
          * @param columnTypes a map of column name to {@link Type}; keys must be columns of the dataset. The supplied map is copied.
@@ -4391,7 +4392,7 @@ public final class DataTransferUtil {
      *
      * <p>Obtain an instance via {@link DataTransferUtil#importFrom(Iterator)} (one row per element) or
      * {@link DataTransferUtil#importCsvFrom(File)} / {@link DataTransferUtil#importCsvFrom(Reader)}
-     * (CSV; the header line is skipped; element type {@code String[]}). Chain the optional configuration methods, then
+     * (CSV; the header record is skipped; element type {@code String[]}). Chain the optional configuration methods, then
      * call a terminal {@code to(...)} method to run the import.</p>
      *
      * <p>A value-binding strategy must be configured via {@link #parameterSetter(Throwables.BiConsumer)} (binds each element
@@ -4629,7 +4630,7 @@ public final class DataTransferUtil {
         }
 
         /**
-         * Imports the CSV rows read from {@code r} into {@code stmt}. The first line is treated as a header and
+         * Imports the CSV rows read from {@code r} into {@code stmt}. The first record is treated as a header and
          * skipped; the reader is not closed by this method.
          *
          * @param r the reader supplying CSV data; not closed by this method
@@ -4827,7 +4828,7 @@ public final class DataTransferUtil {
          * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection, PreparedStatement or
          *         ResultSet) configured; normally guaranteed by the factory methods
          * @throws IllegalArgumentException if {@code output} is {@code null}, the configured SQL is empty, blank, or cannot be parsed (for example it
-         *         mixes parameter styles), or a configured column name is not present in the query result, or if database metadata reports a null or
+         *         mixes parameter styles), or a configured column name is not present in the query result, or if database metadata reports a {@code null} or
          *         blank product name
          * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
          * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using a DataSource or Connection;
@@ -4852,7 +4853,7 @@ public final class DataTransferUtil {
          * @throws IllegalStateException if the builder does not have exactly one query source (a DataSource, Connection, PreparedStatement or
          *         ResultSet) configured; normally guaranteed by the factory methods
          * @throws IllegalArgumentException if {@code output} is {@code null}, the configured SQL is empty, blank, or cannot be parsed (for example it
-         *         mixes parameter styles), or a configured column name is not present in the query result, or if database metadata reports a null or
+         *         mixes parameter styles), or a configured column name is not present in the query result, or if database metadata reports a {@code null} or
          *         blank product name
          * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
          * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using a DataSource or Connection;
@@ -4876,7 +4877,7 @@ public final class DataTransferUtil {
          * @return the number of rows exported
          * @throws IllegalStateException if not exactly one query source ({@code dataSource}, {@code conn}, {@code stmt} or {@code rs}) is configured
          * @throws IllegalArgumentException if the configured SQL is empty, blank, or cannot be parsed, or the exporter requests a missing column, or
-         *         if database metadata reports a null or blank product name
+         *         if database metadata reports a {@code null} or blank product name
          * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
          * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using a DataSource or Connection;
          *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -4957,7 +4958,7 @@ public final class DataTransferUtil {
          * @param sql the parsed {@link #selectSql}
          * @param exporter writes the result set rows to the CSV target
          * @return the number of rows exported
-         * @throws IllegalArgumentException if the exporter requests a missing column, or if database metadata reports a null or blank product name
+         * @throws IllegalArgumentException if the exporter requests a missing column, or if database metadata reports a {@code null} or blank product name
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          * @throws UncheckedSQLException if the database product metadata lookup fails.
          * @throws UncheckedIOException if the exporter cannot write the CSV output.
@@ -5257,7 +5258,7 @@ public final class DataTransferUtil {
          * @param insertSql the SQL insert statement with placeholders matching the selected columns
          * @return the number of rows copied
          * @throws IllegalArgumentException if {@code targetDataSource} is {@code null}, {@code fetchSize < 0}, or {@code batchSize <= 0}, or if
-         *         database metadata reports a null or blank product name
+         *         database metadata reports a {@code null} or blank product name
          * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
          * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
          *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -5379,7 +5380,7 @@ public final class DataTransferUtil {
          * @param targetConn the connection to write to
          * @param insertSql the SQL insert statement with placeholders matching the selected columns
          * @return the number of rows copied
-         * @throws IllegalArgumentException if {@code fetchSize < 0} or {@code batchSize <= 0}, or if database metadata reports a null or blank
+         * @throws IllegalArgumentException if {@code fetchSize < 0} or {@code batchSize <= 0}, or if database metadata reports a {@code null} or blank
          *         product name, or {@code targetConn} is {@code null}
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          * @throws UncheckedSQLException if the database product metadata lookup fails.
@@ -5557,7 +5558,7 @@ public final class DataTransferUtil {
          * @param targetTableName the name of the target table
          * @return the number of rows copied
          * @throws IllegalArgumentException if {@code targetDataSource} is {@code null}, {@code batchSize <= 0}, or a table/selected column name is
-         *         {@code null}, blank, or malformed, or if database metadata reports a null or blank product name
+         *         {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name
          * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
          * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
          *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -5641,7 +5642,7 @@ public final class DataTransferUtil {
          * @param targetTableName the name of the target table
          * @return the number of rows copied
          * @throws IllegalArgumentException if {@code targetConn} is {@code null}, {@code batchSize <= 0}, or a table/selected column name is
-         *         {@code null}, blank, or malformed, or if database metadata reports a null or blank product name
+         *         {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name
          * @throws UncheckedSQLException if database product or table metadata lookup fails.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          */

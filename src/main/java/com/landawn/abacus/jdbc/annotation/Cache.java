@@ -27,7 +27,7 @@ import com.landawn.abacus.jdbc.Jdbc.DaoCache;
 import com.landawn.abacus.jdbc.JdbcUtil;
 
 /**
- * Enables caching at the DAO level for database query results.
+ * Configures the shared DAO cache used by methods with {@link CacheResult} enabled.
  * This annotation is typically used for DAOs that interact with static or rarely-changing tables,
  * where caching can significantly improve performance by reducing database queries.
  *
@@ -68,6 +68,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * // Using custom cache implementation
  * @Cache(capacity = 500, evictDelayMillis = 30000, impl = MyCustomDaoCache.class)
+ * @CacheResult(enabled = true)
  * public interface ConfigDao extends ReadOnlyDao<Config, ConfigDao> {
  *     // Query results cached with custom implementation
  * }

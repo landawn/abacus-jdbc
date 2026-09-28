@@ -107,8 +107,8 @@ public @interface DaoConfig {
      * <pre>{@code
      * @DaoConfig(addLimitForSingleQuery = true)
      * public interface ProductDao extends CrudDao<Product, Long, ProductDao> {
-     *     // Built-in Condition-based methods will have LIMIT 1 appended
-     *     // when invoked through the proxy.
+     *     // Built-in Condition-based single-result methods receive a limit when needed:
+     *     // one row for find-first/exists, two rows for duplicate detection in find-only-one.
      * }
      * }</pre>
      *
@@ -124,7 +124,7 @@ public @interface DaoConfig {
      * <p>This applies to {@code CrudDao.insert(T entity)} and {@code CrudDao.batchInsert(Collection<T> entities)}
      * methods (including the {@code batchSize} overloads), and to their {@code propNamesToInsert} overloads
      * when the ID property is among the properties to insert. The ID is considered "not set" when it's null
-     * or has the default value for its type (0 for numeric types, null for objects).</p>
+     * or has the default value for its type (0 for numeric types, {@code null} for objects).</p>
      *
      * <p>The DAO must override {@code generateId()}: the inherited default implementation throws
      * {@code UnsupportedOperationException}, so with this flag enabled an insert of an entity whose ID is
@@ -185,7 +185,7 @@ public @interface DaoConfig {
      * Controls whether framework-managed join operations (driven by {@code @JoinedBy} entity annotations)
      * can be performed when the join key value is {@code null} or the type's default value.
      * When {@code false} (default), an {@code IllegalArgumentException} is thrown at runtime if a
-     * null or default join key is encountered. When {@code true}, the join query is executed with the
+     * {@code null} or default join key is encountered. When {@code true}, the join query is executed with the
      * null/default key (typically loading no join entities) instead of raising an error.
      *
      * <p>This applies to the built-in join methods provided by {@code JoinEntityHelper}
@@ -204,33 +204,32 @@ public @interface DaoConfig {
      * }
      * }</pre>
      *
-     * @return {@code true} to allow framework-managed joins when join key values are null or default;
+     * @return {@code true} to allow framework-managed joins when join key values are {@code null} or default;
      *         {@code false} (default) to throw an exception in that case
      */
     boolean allowNullOrDefaultJoinKeys() default false;
 
     /**
-     * Controls the default column-selection behavior of built-in {@code Dataset}-returning
+     * Controls the default column-value typing of built-in {@code Dataset}-returning
      * methods (e.g., {@code query(Condition)}, {@code query(Collection<String>, Condition)})
      * provided by {@code Dao}/{@code CrudDao}, when individual call sites do not override it
      * with {@link FetchColumnByEntityClass @FetchColumnByEntityClass}.
      *
-     * <p>When {@code true} (default), the framework retains result columns that
-     * map to properties on the DAO's target entity class, producing a {@code Dataset} that
-     * mirrors the entity shape. When {@code false}, the returned Dataset keeps every column
-     * produced by the SQL (useful for joins with extra columns, calculated columns, or
-     * aggregations that have no corresponding entity property).</p>
+     * <p>When {@code true} (default), columns whose labels match properties of the DAO's target entity class
+     * are read with those properties' types. When {@code false}, every column is read with the default
+     * column-value mapping. In both cases the {@code Dataset} contains every column produced by the SQL
+     * (including joined, calculated, or aggregated columns without a corresponding entity property), under its
+     * SQL column label.</p>
      *
      * <p>This setting applies to every built-in <em>and</em> {@link Query @Query}-based method that returns a
      * {@code Dataset} and does not carry a method-level {@link FetchColumnByEntityClass @FetchColumnByEntityClass}
-     * (which always wins over this default). The SQL text declared by {@code @Query} is never rewritten; only the
-     * set of columns retained in the resulting {@code Dataset} is affected.</p>
+     * (which always wins over this default). The SQL text declared by {@code @Query} is never rewritten.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @DaoConfig(fetchColumnByEntityClassForDatasetQuery = false)
      * public interface ReportDao extends CrudDao<Report, Long, ReportDao> {
-     *     // Will fetch all columns including calculated ones
+     *     // Reads every column, including calculated ones, with the default column-value mapping
      *     @Query("SELECT r.*, COUNT(d.id) as detail_count, SUM(d.amount) as total_amount " +
      *             "FROM reports r LEFT JOIN report_details d ON r.id = d.report_id " +
      *             "GROUP BY r.id")
@@ -238,8 +237,8 @@ public @interface DaoConfig {
      * }
      * }</pre>
      *
-     * @return {@code true} (default) to restrict {@code Dataset} results to entity-mapped columns;
-     *         {@code false} to retain every column produced by the SELECT
+     * @return {@code true} (default) to read entity-mapped columns with the entity property types;
+     *         {@code false} to read every column with the default column-value mapping
      */
     boolean fetchColumnByEntityClassForDatasetQuery() default true;
 }

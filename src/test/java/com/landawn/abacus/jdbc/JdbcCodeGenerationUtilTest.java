@@ -1307,6 +1307,188 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
+    public void testConvertInsertSqlToUpdateSql_PreservesLineCommentBoundaries() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertEquals("UPDATE order_history SET id = 1 -- first value\n, status = 2 -- last value\n WHERE id = 42",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
+                        "INSERT INTO order_history(id, status) VALUES (1 -- first value\n, 2 -- last value\n)", "id = 42"));
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_IgnoresPunctuationInsideValueComments() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertEquals("UPDATE order_history SET id = 1 /* ), ' */ + 2, status = 3 -- ), ' ignored\n WHERE id = 42",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
+                        "INSERT INTO order_history(id, status) VALUES (1 /* ), ' */ + 2, 3 -- ), ' ignored\n)", "id = 42"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
+                "INSERT INTO order_history(id) VALUES (1 /* unclosed )"));
+    }
+
+    private static DataSource dataSourceReporting(final String productName) throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
+        when(dataSource.getConnection()).thenReturn(conn);
+        when(conn.getMetaData()).thenReturn(metaData);
+        when(metaData.getDatabaseProductName()).thenReturn(productName);
+        when(metaData.getDatabaseProductVersion()).thenReturn("1.0");
+        return dataSource;
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_NestsBlockCommentsForPostgreSqlSqlServerAndH2() throws SQLException {
+        for (final String productName : List.of("PostgreSQL", "Microsoft SQL Server", "H2")) {
+            final DataSource nesting = dataSourceReporting(productName);
+
+            assertEquals("UPDATE order_history SET id = 1 /* outer /* ), */ inner */ + 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(nesting, "INSERT INTO order_history(id) VALUES (1 /* outer /* ), */ inner */ + 2)"),
+                    productName);
+            // The inner opener keeps the comment open, so the closing parenthesis is never found.
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(nesting, "INSERT INTO order_history(id, status) VALUES (1 /* a /* b */, 2)"),
+                    productName);
+            // "--" always starts a comment outside MySQL/MariaDB, hiding the rest of the line.
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(nesting, "INSERT INTO order_history(id, status) VALUES (5--1, 2)"), productName);
+            // "#" is an operator here (bitwise XOR in PostgreSQL), not a comment.
+            assertEquals("UPDATE order_history SET id = 5 # 3, status = 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(nesting, "INSERT INTO order_history(id, status) VALUES (5 # 3, 2)"), productName);
+        }
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_DoesNotNestBlockCommentsForOtherDatabases() throws SQLException {
+        for (final String productName : List.of("SQLite", "Oracle", "HSQL Database Engine", "SomeOtherDatabase")) {
+            final DataSource flat = dataSourceReporting(productName);
+
+            // The first "*/" closes the comment, so the second "/*" is plain comment text.
+            assertEquals("UPDATE order_history SET id = 1 /* literal /* marker */ + 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(flat, "INSERT INTO order_history(id) VALUES (1 /* literal /* marker */ + 2)"),
+                    productName);
+            assertEquals("UPDATE order_history SET id = 1 /* a /* b */, status = 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(flat, "INSERT INTO order_history(id, status) VALUES (1 /* a /* b */, 2)"),
+                    productName);
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(flat, "INSERT INTO order_history(id, status) VALUES (5--1, 2)"), productName);
+            assertEquals("UPDATE order_history SET id = 5 # 3, status = 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(flat, "INSERT INTO order_history(id, status) VALUES (5 # 3, 2)"), productName);
+        }
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_UsesMySqlCommentRules() throws SQLException {
+        for (final String productName : List.of("MySQL", "MariaDB")) {
+            final DataSource mySql = dataSourceReporting(productName);
+
+            // MySQL block comments do not nest: the first "*/" closes the comment.
+            assertEquals("UPDATE order_history SET id = 1 /* a /* b */, status = 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO order_history(id, status) VALUES (1 /* a /* b */, 2)"));
+            // "--" without following whitespace is two minus signs in MySQL.
+            assertEquals("UPDATE order_history SET id = 5--1, status = 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO order_history(id, status) VALUES (5--1, 2)"));
+            // "-- " followed by whitespace or a control character is still a line comment.
+            assertEquals("UPDATE order_history SET id = 1 -- c\n, status = 2 --\t),\n",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql,
+                            "INSERT INTO order_history(id, status) VALUES (1 -- c\n, 2 --\t),\n)"));
+        }
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_TerminatesMySqlHashComments() throws SQLException {
+        for (final String productName : List.of("MySQL", "MariaDB")) {
+            final DataSource mySql = dataSourceReporting(productName);
+
+            // Without the retained newline, "# note" would comment out the WHERE clause and update every row.
+            assertEquals("UPDATE t SET a = 99 # note\n WHERE id = 1",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a) VALUES (99 # note\n)", "id = 1"));
+            // Commas and parentheses inside a "#" comment do not split or close the value list.
+            assertEquals("UPDATE t SET a = 1 # ), x\n, b = 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a, b) VALUES (1 # ), x\n, 2)"));
+            // Column-list "#" comments are removed before the names are validated.
+            assertEquals("UPDATE t SET a = 1, b = 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a # first, (x)\n, b) VALUES (1, 2)"));
+            // "#" inside a quoted value is text.
+            assertEquals("UPDATE t SET a = '#1'",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a) VALUES ('#1')"));
+            // A "#" comment reaching the end of the statement leaves the value list unclosed.
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a) VALUES (1 # )"));
+        }
+    }
+
+    // HSQLDB does not nest block comments; nesting them would reject this statement as an unclosed comment.
+    @Test
+    public void testConvertedUpdateWithFlatBlockCommentRunsOnHsqldb() throws SQLException {
+        final org.hsqldb.jdbc.JDBCDataSource dataSource = new org.hsqldb.jdbc.JDBCDataSource();
+        dataSource.setUrl("jdbc:hsqldb:mem:converter_flat_comments");
+        dataSource.setUser("sa");
+        dataSource.setPassword("");
+
+        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE comment_values (id INTEGER PRIMARY KEY, amount INTEGER)");
+            stmt.execute("INSERT INTO comment_values VALUES (1, 10), (2, 20)");
+
+            final String sql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
+                    "INSERT INTO comment_values(amount) VALUES (99 /* literal /* marker */)", "id = 1");
+
+            assertEquals(1, stmt.executeUpdate(sql));
+            try (ResultSet rows = stmt.executeQuery("SELECT amount FROM comment_values ORDER BY id")) {
+                assertTrue(rows.next());
+                assertEquals(99, rows.getInt(1));
+                assertTrue(rows.next());
+                assertEquals(20, rows.getInt(1));
+            }
+        } finally {
+            try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
+                stmt.execute("DROP TABLE IF EXISTS comment_values");
+            }
+        }
+    }
+
+    @Test
+    public void testConvertInsertSqlToUpdateSql_RemovesColumnListComments() throws SQLException {
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+
+        assertEquals("UPDATE order_history SET id = 1, status = 2 WHERE id = 42",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
+                        "INSERT INTO order_history(id /* pk, (x) */, -- ), '\n status -- last\n) VALUES (1, 2)", "id = 42"));
+        // Comment text inside a quoted identifier is part of the name, not a comment.
+        assertEquals("UPDATE order_history SET `a--b` = 1",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(`a--b`) VALUES (1)"));
+        // A column entry consisting only of a comment is empty.
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id, /* none */) VALUES (1, 2)"));
+    }
+
+    @Test
+    public void testConvertedUpdateWithTrailingCommentOnlyChangesMatchingRow() throws SQLException {
+        final org.h2.jdbcx.JdbcDataSource dataSource = new org.h2.jdbcx.JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:converter_line_comments");
+
+        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE comment_values (id INTEGER PRIMARY KEY, amount INTEGER)");
+            stmt.execute("INSERT INTO comment_values VALUES (1, 10), (2, 20)");
+
+            final String sql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
+                    "INSERT INTO comment_values(amount) VALUES (99 -- preserve the row predicate\n)", "id = 1");
+
+            assertEquals(1, stmt.executeUpdate(sql));
+            try (ResultSet rows = stmt.executeQuery("SELECT amount FROM comment_values ORDER BY id")) {
+                assertTrue(rows.next());
+                assertEquals(99, rows.getInt(1));
+                assertTrue(rows.next());
+                assertEquals(20, rows.getInt(1));
+                assertFalse(rows.next());
+            }
+        }
+    }
+
+    @Test
     public void testConvertInsertSqlToUpdateSql_PreservesNamedParametersAndQuotedCommas() throws SQLException {
         DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
@@ -2983,13 +3165,22 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     // The defensive "Unmatched closing parenthesis" branch in splitSqlList (L2079) cannot be reached
     // through convertInsertSqlToUpdateSql (findClosingParenthesis only ever hands splitSqlList a
     // balanced substring), so it is exercised directly via reflection.
+    private static Class<?> commentStyleClass() throws ClassNotFoundException {
+        return Class.forName(JdbcCodeGenerationUtil.class.getName() + "$SqlCommentStyle");
+    }
+
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static Object flatCommentStyle() throws ClassNotFoundException {
+        return Enum.valueOf((Class) commentStyleClass(), "FLAT_BLOCKS");
+    }
+
     @Test
     public void testSplitSqlList_UnmatchedClosingParenthesis_Reflection() throws Exception {
-        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class);
+        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(), boolean.class);
         m.setAccessible(true);
 
         final java.lang.reflect.InvocationTargetException ex = assertThrows(java.lang.reflect.InvocationTargetException.class,
-                () -> m.invoke(null, "a)", "INSERT INTO t(a)) VALUES (1)"));
+                () -> m.invoke(null, "a)", "INSERT INTO t(a)) VALUES (1)", flatCommentStyle(), true));
         assertTrue(ex.getCause() instanceof IllegalArgumentException);
         assertTrue(ex.getCause().getMessage().contains("Unmatched closing parenthesis in SQL"), ex.getCause().getMessage());
     }
@@ -2999,11 +3190,11 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     // exercised directly via reflection (an unterminated single-quote literal).
     @Test
     public void testSplitSqlList_UnclosedToken_Reflection() throws Exception {
-        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class);
+        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(), boolean.class);
         m.setAccessible(true);
 
         final java.lang.reflect.InvocationTargetException ex = assertThrows(java.lang.reflect.InvocationTargetException.class,
-                () -> m.invoke(null, "'abc", "INSERT INTO t('abc) VALUES (1)"));
+                () -> m.invoke(null, "'abc", "INSERT INTO t('abc) VALUES (1)", flatCommentStyle(), true));
         assertTrue(ex.getCause() instanceof IllegalArgumentException);
         assertTrue(ex.getCause().getMessage().contains("Unclosed SQL token in SQL"), ex.getCause().getMessage());
     }

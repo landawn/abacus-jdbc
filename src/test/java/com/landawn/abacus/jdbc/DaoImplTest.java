@@ -64,6 +64,55 @@ import com.landawn.abacus.util.u.Optional;
 @Tag("2025")
 public class DaoImplTest extends TestBase {
 
+    @Test
+    public void testPaginateAcceptsStandaloneOrderByCondition() throws SQLException {
+        final SpecializedTestEntityDao dao = DaoImpl.createDao(SpecializedTestEntityDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null,
+                null);
+
+        try (var pages = dao.paginate(Filters.orderBy("id"), 10, (query, previousPage) -> { })) {
+            assertNotNull(pages);
+        }
+
+        assertThrows(IllegalArgumentException.class, () -> dao.paginate(Filters.eq("id", 1), 10, (query, previousPage) -> { }));
+    }
+
+    @Test
+    public void testPaginateRequiresOuterOrderByClause() throws SQLException {
+        final SpecializedTestEntityDao dao = DaoImpl.createDao(SpecializedTestEntityDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null,
+                null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.paginate(Filters.eq("name", " ORDER BY id "), 10, (query, previousPage) -> { }));
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.paginate(Filters.expr("id IN (SELECT id FROM other_table ORDER BY id)"), 10, (query, previousPage) -> { }));
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.paginate(Filters.expr("id > 0 /* ORDER BY id */"), 10, (query, previousPage) -> { }));
+
+        try (var pages = dao.paginate(Filters.expr("id IN (SELECT id FROM other_table ORDER BY id) ORDER\nBY id"), 10,
+                (query, previousPage) -> { })) {
+            assertNotNull(pages);
+        }
+    }
+
+    // SqlParser.tokenize does not understand dollar quotes or nested block comments, so a parenthesis inside them
+    // unbalances its nesting count; the outer ORDER BY must still be recognized.
+    @Test
+    public void testPaginateAcceptsOuterOrderByAfterTextTheTokenizerMisreads() throws SQLException {
+        final SpecializedTestEntityDao dao = DaoImpl.createDao(SpecializedTestEntityDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null,
+                null);
+
+        for (final String literal : List.of("name = $$( $$ ORDER BY id", "name = $$) $$ ORDER BY id", "id > 0 /* /* */ ( */ ORDER BY id",
+                "id > 0 /* a /* ( */ ) */ ORDER BY id")) {
+            try (var pages = dao.paginate(Filters.expr(literal), 10, (query, previousPage) -> { })) {
+                assertNotNull(pages, literal);
+            }
+        }
+
+        // With balanced parentheses the tokenizer's view is trusted, so an ORDER BY only inside a subquery is still rejected.
+        assertThrows(IllegalArgumentException.class,
+                () -> dao.paginate(Filters.expr("name = $$ok$$ AND id IN (SELECT id FROM other_table ORDER BY id)"), 10, (query, previousPage) -> { }));
+    }
+
     @SuppressWarnings({ "rawtypes", "unchecked" })
     @Test
     public void testCreateDaoValidatesInterfaceBeforeLaterArguments() {

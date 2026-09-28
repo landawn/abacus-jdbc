@@ -59,7 +59,7 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * <p><b>ID semantics:</b> the entity class must declare one or more {@code @Id} properties. A single id
  * property maps directly to the {@code <ID>} type (for example {@code Long} or {@code String}), whereas a
- * composite (multi-column) key is represented by an {@link EntityId}. Insert operations write a
+ * composite (multi-column) key can use an {@link EntityId} or a bean/record with matching ID properties. Insert operations write a
  * database-generated key back into the entity's id property where applicable, and {@code by-id} lookups
  * treat the supplied id as a primary-key match.</p>
  *
@@ -306,7 +306,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * (or either set is large), the operation is wrapped in a transaction.</p>
      *
      * <p>For a single match property, a {@code null} key is matched with {@code IS NULL}; it is not
-     * placed in an {@code IN} predicate, whose SQL semantics would never match a null column.</p>
+     * placed in an {@code IN} predicate, whose SQL semantics would never match a {@code null} column.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

@@ -520,8 +520,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery setFloat(final String parameterName, final Float value) throws SQLException {
         if (value == null) {
-            // Per JDBC spec Appendix B.4, Java float maps to SQL REAL (not Types.FLOAT, which is
-            // an alias for Types.DOUBLE). Matches AbstractQuery.setFloat(int, Float) fix.
+            // Java float maps to SQL REAL; Types.FLOAT and Types.DOUBLE are distinct JDBC type codes.
+            // Match the typed-null mapping used by AbstractQuery.setFloat(int, Float).
             cstmt.setNull(parameterName, java.sql.Types.REAL);
         } else {
             cstmt.setFloat(parameterName, value);
@@ -2725,8 +2725,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * String result = query.executeThenApply(stmt -> {
-     *     // Custom processing of the executed statement
+     * String result = query.registerOutParameter(1, Types.VARCHAR).executeThenApply(stmt -> {
+     *     // Drain procedure results before reading the registered OUT parameter.
+     *     while (stmt.getMoreResults() || stmt.getUpdateCount() != -1) {
+     *         // Discard results that are not needed by this example.
+     *     }
      *     return stmt.getString(1);
      * });
      * }</pre>

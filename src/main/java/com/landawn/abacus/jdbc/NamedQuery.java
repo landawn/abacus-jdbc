@@ -4323,7 +4323,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li>{@code Object[]} arrays or Collections for positional parameters</li>
      * </ul>
      *
-     * <p>All elements are interpreted in the same way as the first element (see {@link #addBatchParameters(Iterator)}).
+     * <p>For a non-null first element, later non-null elements use the same parameter shape (see
+     * {@link #addBatchParameters(Iterator)}). If the first element is {@code null}, later elements are
+     * dispatched individually through {@link #setParameters(Object)}.
      * If {@code batchParameters} is empty, this is a no-op and no batch is added. If a row is rejected or binding
      * or queuing a row fails, this query is closed because its batch may have been only partially queued.
      *
@@ -4409,6 +4411,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * value was previously bound (or stay unbound); any other missing property causes an
      * {@link IllegalArgumentException}. If a row is rejected or binding or queuing a row fails, this query is
      * closed because its batch may have been only partially queued.
+     *
+     * <p>Map, collection, reference-array and {@code EntityId} rows clear all current parameter bindings
+     * before each row, including the first. Consequently, missing values cannot inherit bindings from
+     * a previous row or an earlier {@code setXxx} call; each such row must supply every required value.
+     * Bean rows retain pre-bound values for the reserved system date/time parameters described above.</p>
      *
      * <p>After adding batch parameters, call {@link #batchUpdate()} or {@link #batchInsert()} to execute the batch.
      *
