@@ -36,9 +36,11 @@
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.target>21</maven.compiler.target>
 		<maven.compiler.release>21</maven.compiler.release>
-		<junit.jupiter.version>6.1.1</junit.jupiter.version>
-		<junit.platform.version>6.1.1</junit.platform.version>
-		<mockito.version>5.23.0</mockito.version>
+		<lombok.version>1.18.48</lombok.version>
+		<spring.version>7.0.9</spring.version>
+		<junit.jupiter.version>6.1.3</junit.jupiter.version>
+		<junit.platform.version>6.1.3</junit.platform.version>
+		<mockito.version>5.24.0</mockito.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
@@ -47,14 +49,14 @@
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>1.18.46</version>
+			<version>${lombok.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>com.landawn.abacus</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>8.0.1</version>
+			<version>8.1.0</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -65,6 +67,7 @@
 			<scope>provided</scope>
 		</dependency>
 
+		<!-- Loaded through abacus-common's ParserFactory for DAO cache serialization. -->
 		<dependency>
 			<groupId>com.esotericsoftware</groupId>
 			<artifactId>kryo</artifactId>
@@ -86,38 +89,46 @@
 			<scope>provided</scope>
 		</dependency>
 
+		<!-- Required by abacus-common's XmlUtil when mapping XML column values. -->
 		<dependency>
-			<groupId>org.glassfish.jaxb</groupId>
-			<artifactId>jaxb-runtime</artifactId>
-			<version>4.0.9</version>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
+			<version>4.0.5</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-jdbc</artifactId>
-			<version>7.0.8</version>
+			<version>${spring.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-context</artifactId>
-			<version>7.0.8</version>
+			<version>${spring.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-beans</artifactId>
+			<version>${spring.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>com.mysql</groupId>
 			<artifactId>mysql-connector-j</artifactId>
-			<version>[9.5.0,)</version>
+			<version>26.7.0</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>com.oracle.database.jdbc</groupId>
 			<artifactId>ojdbc11</artifactId>
-			<version>23.26.2.0.0</version>
+			<version>23.26.3.0.0</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -131,7 +142,7 @@
 		<dependency>
 			<groupId>com.mchange</groupId>
 			<artifactId>c3p0</artifactId>
-			<version>0.14.1</version>
+			<version>0.14.2</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -145,7 +156,7 @@
 		<dependency>
 			<groupId>com.h2database</groupId>
 			<artifactId>h2</artifactId>
-			<version>2.4.240</version>
+			<version>2.5.252</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -156,6 +167,12 @@
 			<scope>test</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-api</artifactId>
+			<version>${junit.jupiter.version}</version>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-engine</artifactId>
@@ -170,7 +187,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.junit.platform</groupId>
-			<artifactId>junit-platform-suite</artifactId>
+			<artifactId>junit-platform-suite-engine</artifactId>
 			<version>${junit.platform.version}</version>
 			<scope>test</scope>
 		</dependency>
@@ -187,8 +204,38 @@
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-clean-plugin</artifactId>
+				<version>3.5.0</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<version>3.5.0</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<version>3.5.1</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<version>3.2.0</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>3.2.0</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.15.0</version>
+				<version>3.16.0</version>
 				<configuration>
 					<source>${maven.compiler.source}</source>
 					<target>${maven.compiler.target}</target>
@@ -197,7 +244,7 @@
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
-							<version>1.18.46</version>
+							<version>${lombok.version}</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>
@@ -248,7 +295,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
-				<version>3.5.6</version>
+				<version>3.6.0</version>
 				<configuration>
 					<includes>
 						<include>**/AbacusJdbcTestSuite.java</include>
