@@ -4059,7 +4059,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>This flexible method accepts different parameter sources:
      * <ul>
-     * <li><b>Bean/Entity objects</b>: Properties matching parameter names will be used</li>
+     * <li><b>Bean/Entity objects</b>: Properties matching parameter names will be used; a dotted name such as
+     *     {@code :address.city} is read as a nested property path</li>
      * <li><b>Map</b>: Entries with keys matching parameter names will be used</li>
      * <li><b>Collection/Object[]</b>: Elements will be assigned to parameters in positional order</li>
      * <li><b>EntityId</b>: Values with keys matching parameter names will be used</li>
@@ -4105,13 +4106,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
         if (Beans.isBeanClass(cls)) {
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
-            final PropInfo[] propInfos = new PropInfo[parameterCount];
+            final PropBinder[] binders = new PropBinder[parameterCount];
 
             try {
                 for (int i = 0; i < parameterCount; i++) {
-                    propInfos[i] = entityInfo.getPropInfo(parameterNames.get(i));
+                    binders[i] = PropBinder.resolve(entityInfo, parameterNames.get(i));
 
-                    if (propInfos[i] == null) {
+                    if (binders[i] == null) {
                         if (!JdbcUtil.SYS_DATE_TIME_NAME_SET.contains(parameterNames.get(i))) {
                             throw new IllegalArgumentException(
                                     "No property found with name: " + parameterNames.get(i) + " in class: " + ClassUtil.getCanonicalClassName(cls));
@@ -4120,10 +4121,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 }
 
                 for (int i = 0; i < parameterCount; i++) {
-                    final PropInfo propInfo = propInfos[i];
+                    final PropBinder binder = binders[i];
 
-                    if (propInfo != null) {
-                        propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(parameters));
+                    if (binder != null) {
+                        binder.dbType.set(stmt, i + 1, binder.valueOf(entityInfo, parameters));
                     }
                 }
             } catch (final SQLException | RuntimeException | Error e) {
@@ -4170,9 +4171,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets the specified named parameters from an entity (bean/record) by reading the matching properties.
      *
      * <p>For each name in {@code parameterNamesToSet}, the entity must expose a property that resolves
-     * to that name — by exact property name, {@code @Column} name, or the usual case/underscore-insensitive
-     * matching (so {@code :user_name} resolves to a {@code userName} property) — otherwise an
-     * {@link IllegalArgumentException} is thrown. The value of that property is bound
+     * to that name — by exact property name, {@code @Column} name, the usual case/underscore-insensitive
+     * matching (so {@code :user_name} resolves to a {@code userName} property), or a nested dotted path such as
+     * {@code address.city} — otherwise an {@link IllegalArgumentException} is thrown. The value of that property is bound
      * to every occurrence of the named parameter in the SQL. Named parameters in the SQL that are
      * not listed in {@code parameterNamesToSet} are left unchanged: previously bound values are
      * retained, and parameters that remain unbound must be bound separately before execution.
@@ -4216,15 +4217,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
         final List<String> names = new ArrayList<>(parameterNamesToSet);
-        final PropInfo[] propInfos = new PropInfo[names.size()];
+        final PropBinder[] binders = new PropBinder[names.size()];
         final IntList[] parameterIndexes = new IntList[names.size()];
 
         try {
             for (int i = 0; i < names.size(); i++) {
                 final String parameterName = names.get(i);
-                propInfos[i] = entityInfo.getPropInfo(parameterName);
+                binders[i] = PropBinder.resolve(entityInfo, parameterName);
 
-                if (propInfos[i] == null) {
+                if (binders[i] == null) {
                     throw new IllegalArgumentException("No property found with name: " + parameterName + " in class: " + ClassUtil.getCanonicalClassName(cls));
                 }
 
@@ -4236,9 +4237,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             }
 
             for (int parameter = 0; parameter < names.size(); parameter++) {
-                final PropInfo propInfo = propInfos[parameter];
-                final Object propValue = propInfo.getPropValue(entity);
-                final Type<Object> dbType = propInfo.dbType;
+                final PropBinder binder = binders[parameter];
+                final Object propValue = binder.valueOf(entityInfo, entity);
+                final Type<Object> dbType = binder.dbType;
                 final IntList indexes = parameterIndexes[parameter];
 
                 if (indexes.size() == 1) {
@@ -4318,7 +4319,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Each element in the collection should be a parameter object compatible with
      * {@link #setParameters(Object)}, such as:
      * <ul>
-     * <li>Bean objects with properties matching parameter names</li>
+     * <li>Bean objects with properties matching parameter names (a dotted name such as {@code :address.city}
+     *     is read as a nested property path)</li>
      * <li>Maps with keys matching parameter names</li>
      * <li>{@code Object[]} arrays or Collections for positional parameters</li>
      * </ul>
@@ -4394,7 +4396,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * all data into memory at once. Each element provided by the iterator should be a parameter
      * object compatible with {@link #setParameters(Object)}, such as:
      * <ul>
-     * <li>Bean objects with properties matching parameter names</li>
+     * <li>Bean objects with properties matching parameter names (a dotted name such as {@code :address.city}
+     *     is read as a nested property path)</li>
      * <li>Maps with keys matching parameter names</li>
      * <li>{@code Object[]} arrays or Collections for positional parameters</li>
      * </ul>
@@ -4490,24 +4493,24 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
                 if (Beans.isBeanClass(cls)) {
                     final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
-                    final PropInfo[] propInfos = new PropInfo[parameterCount];
+                    final PropBinder[] binders = new PropBinder[parameterCount];
 
                     for (int i = 0; i < parameterCount; i++) {
-                        propInfos[i] = entityInfo.getPropInfo(parameterNames.get(i));
+                        binders[i] = PropBinder.resolve(entityInfo, parameterNames.get(i));
 
-                        if (propInfos[i] == null && !JdbcUtil.SYS_DATE_TIME_NAME_SET.contains(parameterNames.get(i))) {
+                        if (binders[i] == null && !JdbcUtil.SYS_DATE_TIME_NAME_SET.contains(parameterNames.get(i))) {
                             throw new IllegalArgumentException(
                                     "No property found with name: " + parameterNames.get(i) + " in class: " + ClassUtil.getCanonicalClassName(cls));
                         }
                     }
 
-                    PropInfo propInfo = null;
+                    PropBinder binder = null;
 
                     for (int i = 0; i < parameterCount; i++) {
-                        propInfo = propInfos[i];
+                        binder = binders[i];
 
-                        if (propInfo != null) {
-                            propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(first));
+                        if (binder != null) {
+                            binder.dbType.set(stmt, i + 1, binder.valueOf(entityInfo, first));
                         }
                     }
 
@@ -4523,10 +4526,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         }
 
                         for (int i = 0; i < parameterCount; i++) {
-                            propInfo = propInfos[i];
+                            binder = binders[i];
 
-                            if (propInfo != null) {
-                                propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(params));
+                            if (binder != null) {
+                                binder.dbType.set(stmt, i + 1, binder.valueOf(entityInfo, params));
                             }
                         }
 
@@ -4649,4 +4652,48 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         addBatch();
     }
 
+    /**
+     * Binds one named placeholder to a bean property: either a direct property of the bean class or a nested
+     * dotted path such as {@code address.city}, which {@link BeanInfo#getPropInfo(String)} does not resolve.
+     */
+    private static final class PropBinder {
+        private final String propName;
+        /** Non-null for a direct property; {@code null} for a nested path, which is read through the {@link BeanInfo}. */
+        private final PropInfo propInfo;
+        private final Type<Object> dbType;
+
+        private PropBinder(final String propName, final PropInfo propInfo, final Type<Object> dbType) {
+            this.propName = propName;
+            this.propInfo = propInfo;
+            this.dbType = dbType;
+        }
+
+        /**
+         * Resolves {@code propName} against {@code entityInfo} as a direct property first and, failing that, as a nested
+         * dotted path. Returns {@code null} when neither matches so the caller can raise its own error.
+         */
+        static PropBinder resolve(final BeanInfo entityInfo, final String propName) {
+            final PropInfo propInfo = entityInfo.getPropInfo(propName);
+
+            if (propInfo != null) {
+                return new PropBinder(propName, propInfo, propInfo.dbType);
+            }
+
+            if (propName.indexOf('.') > 0) {
+                // A nested path resolves to a chain of PropInfos; the leaf's dbType is what gets bound to the statement.
+                final List<PropInfo> chain = entityInfo.getPropInfoChain(propName);
+
+                if (N.notEmpty(chain)) {
+                    return new PropBinder(propName, null, chain.get(chain.size() - 1).dbType);
+                }
+            }
+
+            return null;
+        }
+
+        Object valueOf(final BeanInfo entityInfo, final Object entity) {
+            // BeanInfo.getPropValue walks the dotted path and yields null when an intermediate bean is null.
+            return propInfo != null ? propInfo.getPropValue(entity) : entityInfo.getPropValue(entity, propName);
+        }
+    }
 }

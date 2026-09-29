@@ -4121,27 +4121,27 @@ public class JdbcUtilTest extends TestBase {
         verify(conn3).close();
     }
 
-    // BUG FIX: executeBatchUpdate/executeLargeBatchUpdate(ds, sql, params, batchSize) begin their own
-    // transaction when listOfParameters.size() > batchSize. The unguarded rollbackIfNotCommitted() in
-    // finally used to replace the primary batch failure with the rollback failure; the primary failure
-    // must propagate with the rollback failure attached via addSuppressed (same contract as the
-    // callInTransaction/runInTransaction helpers).
+    // executeBatchUpdate/executeLargeBatchUpdate(ds, sql, params, batchSize) run a multi-batch list atomically
+    // through the Connection overload (auto-commit disabled, then commit/rollback). The primary batch failure
+    // must propagate with the rollback failure attached via addSuppressed.
     @Test
     @Tag("2025")
     @DisplayName("executeBatchUpdate(ds, ...): preserves primary batch failure when rollback also fails")
     public void testExecuteBatchUpdatePreservesPrimaryFailureWhenRollbackFails() throws SQLException {
         final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 }, new Object[] { 3 });
 
+        when(mockConnection.getAutoCommit()).thenReturn(true);
         final SQLException primary = new SQLException("primary batch failure");
         doThrow(primary).when(mockPreparedStatement).executeBatch();
-        doThrow(new SQLException("rollback failed")).when(mockConnection).rollback();
+        final SQLException rollbackFailure = new SQLException("rollback failed");
+        doThrow(rollbackFailure).when(mockConnection).rollback();
 
         final SQLException thrown = assertThrows(SQLException.class,
                 () -> JdbcUtil.executeBatchUpdate(mockDataSource, "UPDATE account SET status = ?", parameters, 2));
 
         assertSame(primary, thrown, "the primary batch failure must propagate, not the rollback failure");
         assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
-        assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
+        assertSame(rollbackFailure, thrown.getSuppressed()[0]);
     }
 
     @Test
@@ -4150,16 +4150,88 @@ public class JdbcUtilTest extends TestBase {
     public void testExecuteLargeBatchUpdatePreservesPrimaryFailureWhenRollbackFails() throws SQLException {
         final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 }, new Object[] { 3 });
 
+        when(mockConnection.getAutoCommit()).thenReturn(true);
         final SQLException primary = new SQLException("primary large batch failure");
         doThrow(primary).when(mockPreparedStatement).executeLargeBatch();
-        doThrow(new SQLException("rollback failed")).when(mockConnection).rollback();
+        final SQLException rollbackFailure = new SQLException("rollback failed");
+        doThrow(rollbackFailure).when(mockConnection).rollback();
 
         final SQLException thrown = assertThrows(SQLException.class,
                 () -> JdbcUtil.executeLargeBatchUpdate(mockDataSource, "UPDATE account SET status = ?", parameters, 2));
 
         assertSame(primary, thrown, "the primary batch failure must propagate, not the rollback failure");
         assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
-        assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
+        assertSame(rollbackFailure, thrown.getSuppressed()[0]);
+    }
+
+    // BUG FIX: when listOfParameters.size() > batchSize and no SqlTransaction was active, the DataSource overloads
+    // used to open their own SqlTransaction around JdbcUtil.getConnection(ds). Under Spring that connection is the
+    // one bound to the surrounding @Transactional scope, so the batch's commit also committed the outer
+    // transaction's earlier work. A transactional connection must be used as-is and never committed here.
+    @Test
+    @Tag("2025")
+    @DisplayName("executeBatchUpdate(ds, ...): does not commit a Spring-bound transactional connection")
+    public void testExecuteBatchUpdateDoesNotCommitSpringBoundConnection() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 }, new Object[] { 3 });
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        org.springframework.transaction.support.TransactionSynchronizationManager.bindResource(mockDataSource,
+                new org.springframework.jdbc.datasource.ConnectionHolder(mockConnection));
+
+        try {
+            assertEquals(3, JdbcUtil.executeBatchUpdate(mockDataSource, "INSERT INTO t (a) VALUES (?)", parameters, 1));
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.unbindResource(mockDataSource);
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+
+        verify(mockConnection, never()).commit();
+        verify(mockConnection, never()).rollback();
+        verify(mockConnection, never()).setAutoCommit(anyBoolean());
+        verify(mockConnection, never()).close();
+    }
+
+    @Test
+    @Tag("2025")
+    @DisplayName("executeLargeBatchUpdate(ds, ...): does not commit a Spring-bound transactional connection")
+    public void testExecuteLargeBatchUpdateDoesNotCommitSpringBoundConnection() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 }, new Object[] { 3 });
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { 1L });
+
+        org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
+        org.springframework.transaction.support.TransactionSynchronizationManager.bindResource(mockDataSource,
+                new org.springframework.jdbc.datasource.ConnectionHolder(mockConnection));
+
+        try {
+            assertEquals(3L, JdbcUtil.executeLargeBatchUpdate(mockDataSource, "INSERT INTO t (a) VALUES (?)", parameters, 1));
+        } finally {
+            org.springframework.transaction.support.TransactionSynchronizationManager.unbindResource(mockDataSource);
+            org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
+        }
+
+        verify(mockConnection, never()).commit();
+        verify(mockConnection, never()).rollback();
+        verify(mockConnection, never()).setAutoCommit(anyBoolean());
+        verify(mockConnection, never()).close();
+    }
+
+    @Test
+    @Tag("2025")
+    @DisplayName("executeBatchUpdate(ds, ...): multi-batch list on an auto-commit connection is committed once at the end")
+    public void testExecuteBatchUpdateMultiBatchOnAutoCommitConnectionCommitsOnce() throws SQLException {
+        final List<Object[]> parameters = List.of(new Object[] { 1 }, new Object[] { 2 }, new Object[] { 3 });
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        assertEquals(3, JdbcUtil.executeBatchUpdate(mockDataSource, "INSERT INTO t (a) VALUES (?)", parameters, 1));
+
+        verify(mockConnection).setAutoCommit(false);
+        verify(mockConnection).commit();
+        verify(mockConnection).setAutoCommit(true);
+        verify(mockConnection).close();
     }
 
     @Test

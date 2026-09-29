@@ -514,7 +514,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
             final List<String> idPropNameList = QueryUtil.idPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
-                Beans.mergeInto(entity, dbEntity);
+                Beans.mergeInto(entity, dbEntity, false, N.emptySet());
                 update(dbEntity, cond);
             } else {
                 Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));

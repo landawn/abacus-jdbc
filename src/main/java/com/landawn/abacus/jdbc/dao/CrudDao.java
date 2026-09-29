@@ -171,7 +171,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             final List<String> idPropNameList = QueryUtil.idPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
-                Beans.mergeInto(entity, dbEntity);
+                Beans.mergeInto(entity, dbEntity, false, N.emptySet());
             } else {
                 Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
             }
@@ -323,7 +323,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
-     *                                  or if any name in {@code matchPropNames} is not a property of the entity class
+     *                                  or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails

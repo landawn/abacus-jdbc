@@ -151,8 +151,8 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param propNamesToUpdate the properties to update from the entity
      * @param cond the condition to match records to update
      * @return the number of records updated
-     * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
-     *                                  or if {@code cond} is {@code null}
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty
+     *                                  or contains a name that is not a property of the entity class, or if {@code cond} is {@code null}
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */

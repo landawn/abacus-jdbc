@@ -988,9 +988,11 @@ public final class JdbcUtil {
 
     /**
      * Retrieves a {@link Connection} from the specified {@link javax.sql.DataSource}.
-     * This method is aware of Spring-managed transactions. If a transaction is active,
-     * it returns the connection associated with the current transaction. Otherwise, it
-     * retrieves a new connection from the DataSource.
+     * This method is aware of Spring-managed transactions: if a Spring transaction is active on the
+     * current thread, it returns the connection bound to that transaction. Otherwise, it retrieves a new
+     * connection from the DataSource. A transaction begun with {@link #beginTransaction(javax.sql.DataSource)}
+     * is not consulted here; use {@link SqlTransaction#connection()} (or the DataSource-taking execution methods,
+     * which join it automatically) for that connection.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1046,7 +1048,9 @@ public final class JdbcUtil {
     /**
      * Releases the given {@link Connection} back to the {@link javax.sql.DataSource}.
      * This method correctly handles connections in Spring-managed transactions, ensuring that
-     * connections are not prematurely closed. If no transaction is active, it closes the connection.
+     * connections are not prematurely closed. If no Spring transaction is active, it closes the connection;
+     * a connection owned by a transaction begun with {@link #beginTransaction(javax.sql.DataSource)} must not be
+     * passed here, since that transaction releases it on completion.
      * It is crucial to call this method in a {@code finally} block to prevent connection leaks.
      *
      * <p><b>Usage Examples:</b></p>
@@ -6074,25 +6078,25 @@ public final class JdbcUtil {
      *         empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot
      *         satisfy the SQL's required positional or named parameters.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
-     * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
+     * @throws UncheckedSQLException if acquiring a connection fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot
-     *         accept another scope, or the batch transaction cannot be committed because it is not active.
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
      * @see PreparedStatement#executeBatch()
      */
     public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalStateException, SQLException, ArithmeticException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, ArithmeticException {
         return executeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
      * Executes a batch SQL update using the provided DataSource with specified batch size.
      * Large lists will be automatically split into smaller batches for optimal performance.
-     * When the number of parameter sets exceeds the batch size, a transaction is automatically
-     * started to ensure atomicity.
+     * When the connection is in auto-commit mode and more than one parameter set is supplied, auto-commit is
+     * temporarily disabled so that all batches execute atomically; a connection that is already transactional
+     * (an active {@code SqlTransaction} on this thread or a Spring-managed transaction) is used as-is and is
+     * never committed or rolled back here.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -6130,10 +6134,8 @@ public final class JdbcUtil {
      *         when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter
      *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
-     * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
+     * @throws UncheckedSQLException if acquiring a connection fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot
-     *         accept another scope, or the batch transaction cannot be committed because it is not active.
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
@@ -6141,7 +6143,7 @@ public final class JdbcUtil {
      * @see #executeBatchUpdate(javax.sql.DataSource, String, List)
      */
     public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalStateException, SQLException, ArithmeticException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, ArithmeticException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -6154,7 +6156,10 @@ public final class JdbcUtil {
 
         if (tran != null) {
             return executeBatchUpdate(tran.connection(), sql, listOfParameters, batchSize);
-        } else if (listOfParameters.size() <= batchSize) {
+        } else {
+            // The Connection overload already runs a multi-batch list atomically by disabling auto-commit and
+            // committing at the end. Opening a SqlTransaction here instead would wrap a connection that may be bound
+            // to an outer Spring-managed transaction and commit that transaction's earlier work too.
             final Connection conn = JdbcUtil.getConnection(ds);
 
             try {
@@ -6162,22 +6167,6 @@ public final class JdbcUtil {
             } finally {
                 JdbcUtil.releaseConnection(conn, ds);
             }
-        } else {
-            final SqlTransaction tran2 = JdbcUtil.beginTransaction(ds);
-            int ret = 0;
-            Throwable failure = null;
-
-            try {
-                ret = executeBatchUpdate(tran2.connection(), sql, listOfParameters, batchSize);
-                tran2.commit();
-            } catch (final Throwable e) { //NOSONAR
-                failure = e;
-                throw e;
-            } finally {
-                rollbackAfterTransactionCommand(tran2, failure);
-            }
-
-            return ret;
         }
     }
 
@@ -6407,10 +6396,8 @@ public final class JdbcUtil {
      *         empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot
      *         satisfy the SQL's required positional or named parameters.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
-     * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
+     * @throws UncheckedSQLException if acquiring a connection fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot
-     *         accept another scope, or the batch transaction cannot be committed because it is not active.
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or
      *         restoring an owned transaction fails.
      * @throws UnsupportedOperationException if the JDBC driver does not implement
@@ -6421,7 +6408,7 @@ public final class JdbcUtil {
      * @see #executeLargeBatchUpdate(javax.sql.DataSource, String, List, int)
      */
     public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters) throws IllegalArgumentException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, IllegalStateException, SQLException, UnsupportedOperationException, ArithmeticException {
+            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UnsupportedOperationException, ArithmeticException {
         return executeLargeBatchUpdate(ds, sql, listOfParameters, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -6455,10 +6442,8 @@ public final class JdbcUtil {
      *         when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter
      *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
-     * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
+     * @throws UncheckedSQLException if acquiring a connection fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot
-     *         accept another scope, or the batch transaction cannot be committed because it is not active.
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or
      *         restoring an owned transaction fails.
      * @throws UnsupportedOperationException if the JDBC driver does not implement
@@ -6468,8 +6453,8 @@ public final class JdbcUtil {
      * @see PreparedStatement#executeLargeBatch()
      */
     public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalStateException, SQLException,
-            UnsupportedOperationException, ArithmeticException {
+            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UnsupportedOperationException,
+            ArithmeticException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgPositive(batchSize, cs.batchSize);
@@ -6482,7 +6467,9 @@ public final class JdbcUtil {
 
         if (tran != null) {
             return executeLargeBatchUpdate(tran.connection(), sql, listOfParameters, batchSize);
-        } else if (listOfParameters.size() <= batchSize) {
+        } else {
+            // See executeBatchUpdate(DataSource, ...): the Connection overload provides atomicity on its own, and a
+            // SqlTransaction here could commit an outer Spring-managed transaction.
             final Connection conn = JdbcUtil.getConnection(ds);
 
             try {
@@ -6490,22 +6477,6 @@ public final class JdbcUtil {
             } finally {
                 JdbcUtil.releaseConnection(conn, ds);
             }
-        } else {
-            final SqlTransaction tran2 = JdbcUtil.beginTransaction(ds);
-            long ret = 0;
-            Throwable failure = null;
-
-            try {
-                ret = executeLargeBatchUpdate(tran2.connection(), sql, listOfParameters, batchSize);
-                tran2.commit();
-            } catch (final Throwable e) { //NOSONAR
-                failure = e;
-                throw e;
-            } finally {
-                rollbackAfterTransactionCommand(tran2, failure);
-            }
-
-            return ret;
         }
     }
 
@@ -8641,8 +8612,9 @@ public final class JdbcUtil {
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * Each ResultSet is processed by the provided ResultExtractor.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
-     * Closing the returned stream closes any result set that the iterator advanced to but did not
-     * deliver because traversal stopped early; it does not close {@code stmt}.
+     * Closing the returned stream closes the statement's current result set if it has not been delivered yet
+     * (including the first result set when the stream is closed before any traversal), so that a result set the
+     * iterator positioned on but did not hand out is not left open; it does not close {@code stmt}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8689,8 +8661,9 @@ public final class JdbcUtil {
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * Each ResultSet is processed by the provided BiResultExtractor which also receives column labels.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
-     * Closing the returned stream closes any result set that the iterator advanced to but did not
-     * deliver because traversal stopped early; it does not close {@code stmt}.
+     * Closing the returned stream closes the statement's current result set if it has not been delivered yet
+     * (including the first result set when the stream is closed before any traversal), so that a result set the
+     * iterator positioned on but did not hand out is not left open; it does not close {@code stmt}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8741,8 +8714,9 @@ public final class JdbcUtil {
 
     /**
      * Creates an {@link ObjIteratorEx} over all result sets of an executed {@link Statement} (for stored
-     * procedures or statements returning multiple result sets). Closing the iterator closes any result
-     * set it advanced to but did not deliver.
+     * procedures or statements returning multiple result sets). Closing the iterator closes the statement's
+     * current result set when it has not been delivered (including the first one if the iterator was never
+     * advanced).
      *
      * <p>The iterator propagates database access failures as {@link UncheckedSQLException}; calling
      * {@code next()} after exhaustion throws {@link NoSuchElementException}.</p>
