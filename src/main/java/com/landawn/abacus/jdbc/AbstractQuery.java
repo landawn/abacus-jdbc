@@ -130,6 +130,9 @@ import com.landawn.abacus.util.stream.Stream;
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  *
  * <p>Parameter-binding methods validate their arguments without checking whether this query has been closed.
+ * When such an argument check fails (a {@code null} setter, type or collection, a non-positive index, an invalid
+ * SQL type), this query is closed (the statement is closed and registered close handlers run) before the
+ * {@link IllegalArgumentException} is thrown, consistent with the other argument checks in this class.
  * When a binding reaches the underlying JDBC statement, that statement reports a closed-statement failure
  * through {@link SQLException}. A valid empty binding operation may return without accessing the statement.
  * Custom parameter setters are invoked directly and retain their own validation and exception behavior.</p>
@@ -349,7 +352,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param closeHandler a task to execute after this query is closed
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query is already closed
-     * @throws IllegalArgumentException if {@code closeHandler} is {@code null}
+     * @throws IllegalArgumentException if {@code closeHandler} is {@code null}; consistent with the other argument checks in this
+     *         class, this query is closed first (the underlying statement is closed and any close handlers registered so far
+     *         are run) before the exception is thrown
      */
     @SuppressWarnings("hiding")
     public This onClose(final Runnable closeHandler) throws IllegalStateException, IllegalArgumentException {
@@ -3918,7 +3923,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                        An empty collection adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query has already been closed
-     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or a collection/array batch contains a {@code null} row
+     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or if the first row is a {@code Collection}/{@code Object[]}
+     *         and a later row is {@code null}. The first row decides the row shape: a {@code null} first row selects single-value
+     *         mode (bound at position 1), so a collection or array batch must not start with a {@code null} row
      * @throws SQLException if clearing the bound parameters, binding a row's values, or adding a row to the batch fails
      *         (for example, because a row has more values than the SQL statement has parameter markers); this query
      *         is closed before the exception is rethrown
@@ -3992,7 +3999,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                        An empty iterator adds no batch rows and returns this query unchanged.
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query has already been closed
-     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or a collection/array batch contains a {@code null} row
+     * @throws IllegalArgumentException if {@code batchParameters} is {@code null}, or if the first row is a {@code Collection}/{@code Object[]}
+     *         and a later row is {@code null}. The first row decides the row shape: a {@code null} first row selects single-value
+     *         mode (bound at position 1), so a collection or array batch must not start with a {@code null} row
      * @throws SQLException if clearing the bound parameters, binding a row's values, or adding a row to the batch fails
      *         (for example, because a row has more values than the SQL statement has parameter markers); this query
      *         is closed before the exception is rethrown

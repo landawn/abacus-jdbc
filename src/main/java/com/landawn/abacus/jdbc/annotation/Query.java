@@ -133,7 +133,9 @@ public @interface Query {
      * {@code UnsupportedOperationException} when multiple entries are declared on an abstract method.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if
-     * applicable, and passed to that {@code String[]} parameter at runtime. The caller must leave that
+     * applicable, and passed to that {@code String[]} parameter at runtime. Entries resolved through the SQL
+     * mapper are supplied as written there (named parameters such as {@code :id} preserved), so the default
+     * method may bind them by name or by position. The caller must leave that
      * parameter empty; passing any SQL in it fails the call with {@code IllegalArgumentException}.</p>
      *
      * <p>The SQL can include:</p>
@@ -215,7 +217,9 @@ public @interface Query {
      * {@code UnsupportedOperationException} when multiple entries are declared on an abstract method.
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@link #value()} and {@code id} are collected, dereferenced through the SQL mapper if
-     * applicable, and passed to that {@code String[]} parameter at runtime. The caller must leave that
+     * applicable, and passed to that {@code String[]} parameter at runtime. Entries resolved through the SQL
+     * mapper are supplied as written there (named parameters such as {@code :id} preserved), so the default
+     * method may bind them by name or by position. The caller must leave that
      * parameter empty; passing any SQL in it fails the call with {@code IllegalArgumentException}.</p>
      *
      * <p>The SQL mapper can be specified at the DAO interface level using the {@link SqlSource} annotation,
@@ -899,8 +903,11 @@ public @interface Query {
      * @return the fetch size hint for the JDBC driver; only positive values are forwarded to the
      *         statement ({@code -1} and {@code 0} both leave it unset). When unset, the framework may
      *         still apply its own per-operation fetch size for SELECTs (e.g. 1 for find-first/exists
-     *         style queries, 2 for find-only-one/unique queries, and a large-result configuration for
-     *         streaming) rather than the raw driver default
+     *         style queries, 2 for find-only-one/unique queries, at least
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#DEFAULT_FETCH_SIZE_FOR_STREAM} for
+     *         {@link com.landawn.abacus.util.stream.Stream} results, and at least
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET} for list,
+     *         {@code Dataset} and {@link MergedById @MergedById} results) rather than the raw driver default
      */
     int fetchSize() default -1;
 

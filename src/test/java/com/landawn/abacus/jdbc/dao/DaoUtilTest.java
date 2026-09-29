@@ -976,4 +976,18 @@ public class DaoUtilTest extends TestBase {
 
         assertEquals(777L, DaoUtil.generateId(dao));
     }
+
+    // BUG FIX: when the first id is an EntityId, a later Map/entity id used to surface as a ClassCastException from the
+    // unchecked cast inside idsToCondition; it is now rejected up front with IllegalArgumentException.
+    @Test
+    public void testIdsToConditionRejectsNonEntityIdMixedWithEntityIds() {
+        final List<Object> mixed = Arrays.asList(Seid.of("tenantId", 1L, "rowId", 2L), java.util.Map.of("tenantId", 1L, "rowId", 3L));
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> DaoUtil.idsToCondition(mixed, List.of("tenantId", "rowId"), true, false));
+
+        assertTrue(failure.getMessage().contains("EntityId"));
+        assertNotNull(DaoUtil.idsToCondition(Arrays.asList(Seid.of("tenantId", 1L, "rowId", 2L), Seid.of("tenantId", 1L, "rowId", 3L)),
+                List.of("tenantId", "rowId"), true, false));
+    }
 }

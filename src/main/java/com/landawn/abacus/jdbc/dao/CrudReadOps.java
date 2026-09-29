@@ -657,7 +657,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param ids the collection of IDs to retrieve
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
-     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys
+     *                                  or a later element is not an {@code EntityId} while the first non-null one is,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
@@ -687,7 +688,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                  large collections into chunks of this size.
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
-     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys
+     *                                  or a later element is not an {@code EntityId} while the first non-null one is,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
@@ -715,7 +717,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                        All properties will be selected if {@code null}
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
-     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys
+     *                                  or a later element is not an {@code EntityId} while the first non-null one is,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
@@ -748,7 +751,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                  large collections into chunks of this size.
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
-     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys
+     *                                  or a later element is not an {@code EntityId} while the first non-null one is,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
@@ -862,7 +866,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param ids the collection of IDs to count
      * @return the number of records in the database whose IDs are contained in {@code ids}
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
-     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys
+     *                                  or a later element is not an {@code EntityId} while the first non-null one is,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null}
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails

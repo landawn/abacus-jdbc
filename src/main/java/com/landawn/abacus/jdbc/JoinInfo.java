@@ -894,7 +894,8 @@ public final class JoinInfo {
      *
      * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the SELECT SQL from a collection
-     *         of selected property names (a {@code null} or empty collection yields the default all-columns SELECT),
+     *         of selected property names (a {@code null} or empty collection yields the default all-columns SELECT;
+     *         the referenced join-key property(ies) are prepended when the collection omits them),
      *         and whose {@code _2} is a parameter setter that binds the join key(s) of a single source entity onto a
      *         {@link PreparedStatement}.
      * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
@@ -936,7 +937,9 @@ public final class JoinInfo {
      * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the batch SELECT SQL from a collection
      *         of selected property names and the batch size (a {@code null} or empty collection yields the default
-     *         all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
+     *         all-columns SELECT; the referenced join-key property(ies) are prepended when the collection omits them,
+     *         and a many-to-many join appends the junction table's source-key column as the last, unaliased column),
+     *         and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
      *         in the batch onto a {@link PreparedStatement}. The SQL-builder function requires a positive batch size
      *         and throws {@link IllegalArgumentException} if the boxed {@link Integer} is {@code null}, zero, or negative.
      * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
