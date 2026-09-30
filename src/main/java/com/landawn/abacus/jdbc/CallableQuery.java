@@ -1575,8 +1575,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * The appropriate SQL type is automatically inferred from the runtime class of {@code value}
      * via the abacus type system. If {@code value} is {@code null}, the parameter will be
      * set to SQL {@code NULL} by delegating to {@link CallableStatement#setObject(String, Object)}.
-     * JDBC value objects ({@link java.sql.Array}, {@link java.sql.Ref}, {@link java.sql.RowId},
-     * {@link java.sql.SQLXML} and {@link java.sql.Struct}) are passed to the driver unchanged.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1593,8 +1591,6 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery setObject(final String parameterName, final Object value) throws SQLException {
         if (value == null) {
-            cstmt.setObject(parameterName, value);
-        } else if (JdbcUtil.isJdbcValueObject(value)) {
             cstmt.setObject(parameterName, value);
         } else {
             Type.<Object> of(value.getClass()).set(cstmt, parameterName, value);

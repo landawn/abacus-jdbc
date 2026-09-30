@@ -2336,9 +2336,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * If the value is {@code null}, it is set as SQL {@code NULL}; otherwise the value is set
      * using the Abacus {@link Type} resolved from its runtime class, which maps it to an
      * appropriate SQL type. Note that a bean/entity value is not expanded into columns: it is bound as
-     * its JSON string via {@code setString}. JDBC value objects ({@link java.sql.Array}, {@link java.sql.Ref},
-     * {@link java.sql.RowId}, {@link java.sql.SQLXML} and {@link java.sql.Struct}) are passed to the driver
-     * unchanged through {@link PreparedStatement#setObject(int, Object)}.
+     * its JSON string via {@code setString}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2355,8 +2353,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public This setObject(final int parameterIndex, final Object value) throws SQLException {
         if (value == null) {
-            stmt.setObject(parameterIndex, value);
-        } else if (JdbcUtil.isJdbcValueObject(value)) {
             stmt.setObject(parameterIndex, value);
         } else {
             Type.<Object> of(value.getClass()).set(stmt, parameterIndex, value);
@@ -3315,8 +3311,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         for (final Object param : parameters) {
             if (param == null) {
                 stmt.setObject(startParameterIndex++, null);
-            } else if (JdbcUtil.isJdbcValueObject(param)) {
-                stmt.setObject(startParameterIndex++, param);
             } else {
                 final Class<?> cls = param.getClass();
 

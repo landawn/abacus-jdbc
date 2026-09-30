@@ -3593,67 +3593,6 @@ public class NamedQueryTest extends TestBase {
         }
     }
 
-    // JDBC value objects (mocks, like H2's JdbcSQLXML, pass Beans.isBeanClass and resolve to a BeanType) are single
-    // values: with one placeholder they reach the driver unchanged instead of failing with "No property found".
-    @Test
-    public void testSetParameters_Object_SingleJdbcValueObjectPassedToDriver() throws SQLException {
-        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("x"));
-        when(mockParsedSql.parameterCount()).thenReturn(1);
-        final SQLXML xml = mock(SQLXML.class);
-        final SQLXML xml2 = mock(SQLXML.class);
-
-        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(xml);
-        new NamedQuery(mockPreparedStatement, mockParsedSql).addBatchParameters(Arrays.asList(xml2));
-
-        verify(mockPreparedStatement).setObject(1, xml);
-        verify(mockPreparedStatement).setObject(1, xml2);
-        verify(mockPreparedStatement, never()).close();
-    }
-
-    // The by-name, Map and Object[] paths all reach AbstractQuery.setObject(int, Object), so
-    // JDBC value objects are passed to the driver unchanged on every NamedQuery binding path.
-    @Test
-    public void testNamedBindingPaths_JdbcValueObjectsPassedToDriverUnchanged() throws SQLException {
-        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("x", "y"));
-        when(mockParsedSql.parameterCount()).thenReturn(2);
-        final SQLXML xml = mock(SQLXML.class);
-        final java.sql.Struct struct = mock(java.sql.Struct.class);
-        final Array array = mock(Array.class);
-        final RowId rowId = mock(RowId.class);
-
-        new NamedQuery(mockPreparedStatement, mockParsedSql).setObject("x", xml);
-        verify(mockPreparedStatement).setObject(1, xml);
-
-        final Map<String, Object> map = new HashMap<>();
-        map.put("x", struct);
-        map.put("y", array);
-        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(map);
-        verify(mockPreparedStatement).setObject(1, struct);
-        verify(mockPreparedStatement).setObject(2, array);
-
-        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters((Object) new Object[] { rowId, xml });
-        verify(mockPreparedStatement).setObject(1, rowId);
-        verify(mockPreparedStatement).setObject(2, xml);
-        verify(mockPreparedStatement, never()).setString(anyInt(), anyString());
-    }
-
-    @Test
-    public void testSetParametersAndAddBatch_H2SqlXml_SinglePlaceholderBindsXml() throws SQLException {
-        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:namedQuerySqlXmlSingleValue")) {
-            JdbcUtil.executeUpdate(conn, "CREATE TABLE sqlxml_holder (x CLOB)");
-
-            final SQLXML xml = conn.createSQLXML();
-            xml.setString("<a>1</a>");
-            JdbcUtil.prepareNamedQuery(conn, "INSERT INTO sqlxml_holder (x) VALUES (:x)").setParameters(xml).update();
-
-            final SQLXML xml2 = conn.createSQLXML();
-            xml2.setString("<b>2</b>");
-            JdbcUtil.prepareNamedQuery(conn, "INSERT INTO sqlxml_holder (x) VALUES (:x)").addBatchParameters(List.of(xml2)).batchUpdate();
-
-            assertEquals(List.of("<a>1</a>", "<b>2</b>"), JdbcUtil.prepareQuery(conn, "SELECT x FROM sqlxml_holder ORDER BY x").list(String.class));
-        }
-    }
-
     @Test
     public void testSetParameters_Object_UnsupportedType() throws SQLException {
         // Multi-param query, unsupported non-bean type → throws (L3993-3994)

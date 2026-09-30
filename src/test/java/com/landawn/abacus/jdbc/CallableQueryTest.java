@@ -415,21 +415,6 @@ public class CallableQueryTest extends TestBase {
         verify(callableStatement).setObject("obj", null);
     }
 
-    // JDBC value objects must reach the driver unchanged; the runtime-class Type lookup used to resolve their
-    // driver implementation classes to a bean Type and bind a JSON string instead.
-    @Test
-    public void testSetObject_ByName_JdbcValueObjectsPassedToDriverUnchanged() throws SQLException {
-        final Object[] values = { Mockito.mock(SQLXML.class), Mockito.mock(java.sql.Array.class), Mockito.mock(java.sql.Ref.class),
-                Mockito.mock(RowId.class), Mockito.mock(java.sql.Struct.class) };
-
-        for (int i = 0; i < values.length; i++) {
-            assertSame(callableQuery, callableQuery.setObject("p" + i, values[i]));
-            verify(callableStatement).setObject("p" + i, values[i]);
-        }
-
-        verify(callableStatement, Mockito.never()).setString(Mockito.anyString(), Mockito.anyString());
-    }
-
     @Test
     public void testSetObject_ByName_WithSqlType() throws SQLException {
         CallableQuery result = callableQuery.setObject("obj", "value", Types.VARCHAR);

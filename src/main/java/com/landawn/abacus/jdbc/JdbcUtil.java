@@ -7333,7 +7333,7 @@ public final class JdbcUtil {
             }
         } else if (N.notEmpty(parameters) && parameters.length >= parameterCount) {
             for (int i = 0; i < parameterCount; i++) {
-                if (parameters[i] == null || JdbcUtil.isJdbcValueObject(parameters[i])) {
+                if (parameters[i] == null) {
                     stmt.setObject(i + 1, parameters[i]);
                 } else {
                     Type.<Object> of(parameters[i].getClass()).set(stmt, i + 1, parameters[i]);
@@ -14522,21 +14522,6 @@ public final class JdbcUtil {
         }
 
         return Strings.concat(fullClassMethodName, CACHE_KEY_SEPARATOR, tableName, CACHE_KEY_SEPARATOR, paramKey);
-    }
-
-    /**
-     * Returns {@code true} if {@code value} is a JDBC value object ({@link java.sql.Array}, {@link java.sql.Ref},
-     * {@link java.sql.RowId}, {@link java.sql.SQLXML} or {@link java.sql.Struct}) that must be passed to the driver unchanged.
-     *
-     * @param value the non-null parameter value
-     * @return {@code true} if the value should be bound through {@code setObject} as-is
-     */
-    static boolean isJdbcValueObject(final Object value) {
-        // The Abacus Type lookup by runtime class resolves driver implementation classes of these JDBC value
-        // interfaces (e.g. H2's JdbcSQLXML) to a generic bean/object Type, which binds a JSON string such as
-        // {"string": "<a/>"} instead of the value itself. Callers let the driver bind them natively.
-        return value instanceof java.sql.SQLXML || value instanceof java.sql.Array || value instanceof java.sql.Ref || value instanceof java.sql.RowId
-                || value instanceof java.sql.Struct;
     }
 
     // ==============================================Jdbc Context=======================================================>>

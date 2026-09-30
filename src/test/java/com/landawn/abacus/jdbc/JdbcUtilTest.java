@@ -1821,22 +1821,6 @@ public class JdbcUtilTest extends TestBase {
         verify(mockStatement, never()).getMoreResults(Statement.KEEP_CURRENT_RESULT);
     }
 
-    // setParameters without declared types binds JDBC value objects through setObject unchanged (a runtime-class Type
-    // lookup resolves driver implementation classes to a bean Type that binds their JSON form).
-    @Test
-    public void testSetParameters_JdbcValueObjectsPassedToDriverUnchanged() throws SQLException {
-        final Object[] values = { mock(java.sql.SQLXML.class), mock(java.sql.Array.class), mock(java.sql.Ref.class), mock(java.sql.RowId.class),
-                mock(java.sql.Struct.class), "plain" };
-
-        JdbcUtil.setParameters(mockPreparedStatement, values.length, values, null);
-
-        for (int i = 0; i < values.length - 1; i++) {
-            verify(mockPreparedStatement).setObject(i + 1, values[i]);
-        }
-
-        verify(mockPreparedStatement).setString(values.length, "plain");
-    }
-
     @Test
     public void testQueryByPage() throws SQLException {
         String query = "SELECT * FROM users WHERE id > ? ORDER BY id LIMIT 10";

@@ -216,22 +216,6 @@ public class AbstractQueryTest extends TestBase {
         verify(preparedStatement).setString(3, "b");
     }
 
-    // Same JDBC value-object pass-through as setObject(int, Object): an H2 SQLXML element used to be bound as the
-    // JSON string {"string": "<a>2</a>"}.
-    @Test
-    public void testSetParametersFrom_Collection_H2SqlXml_BindsXmlNotJson() throws SQLException {
-        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:abstractQuerySetParametersFromSqlXml")) {
-            JdbcUtil.executeUpdate(conn, "CREATE TABLE sqlxml_holder (id INT, x CLOB)");
-
-            final java.sql.SQLXML xml = conn.createSQLXML();
-            xml.setString("<a>2</a>");
-
-            JdbcUtil.prepareQuery(conn, "INSERT INTO sqlxml_holder (id, x) VALUES (?, ?)").setParametersFrom(1, List.of(1, xml)).update();
-
-            assertEquals("<a>2</a>", JdbcUtil.prepareQuery(conn, "SELECT x FROM sqlxml_holder").queryForString().orElseNull());
-        }
-    }
-
     @Test
     public void testSetParametersFromRejectsNonPositiveStartIndexForEmptyInput() throws SQLException {
         final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> query.setParametersFrom(0, new int[0]));
@@ -248,36 +232,6 @@ public class AbstractQueryTest extends TestBase {
         assertSame(query, result);
         verify(preparedStatement).setNull(1, Types.INTEGER);
         verify(preparedStatement).setNull(3, Types.INTEGER);
-    }
-
-    // Driver implementation classes of the JDBC value interfaces are not resolved to their dedicated Type by the
-    // runtime-class lookup (H2's JdbcSQLXML and these mocks become a BeanType), so setObject(int, Object) used to
-    // bind a JSON string of their bean properties instead of passing the value object to the driver.
-    @Test
-    public void testSetObject_JdbcValueObjects_PassedToDriverUnchanged() throws SQLException {
-        final Object[] values = { Mockito.mock(java.sql.SQLXML.class), Mockito.mock(java.sql.Array.class), Mockito.mock(java.sql.Ref.class),
-                Mockito.mock(java.sql.RowId.class), Mockito.mock(java.sql.Struct.class) };
-
-        for (int i = 0; i < values.length; i++) {
-            assertSame(query, query.setObject(i + 1, values[i]));
-            verify(preparedStatement).setObject(i + 1, values[i]);
-        }
-
-        verify(preparedStatement, never()).setString(anyInt(), Mockito.anyString());
-    }
-
-    @Test
-    public void testSetObject_H2SqlXml_BindsXmlNotJson() throws SQLException {
-        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:abstractQuerySetObjectSqlXml")) {
-            JdbcUtil.executeUpdate(conn, "CREATE TABLE sqlxml_holder (x CLOB)");
-
-            final java.sql.SQLXML xml = conn.createSQLXML();
-            xml.setString("<a>1</a>");
-
-            JdbcUtil.prepareQuery(conn, "INSERT INTO sqlxml_holder (x) VALUES (?)").setObject(1, xml).update();
-
-            assertEquals("<a>1</a>", JdbcUtil.prepareQuery(conn, "SELECT x FROM sqlxml_holder").queryForString().orElseNull());
-        }
     }
 
     // setObject(int, Object, int) validates sqlType against the standard java.sql.Types / JDBCType

@@ -4068,10 +4068,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li><b>Collection/Object[]</b>: Elements will be assigned to parameters in positional order</li>
      * <li><b>EntityId</b>: Values with keys matching parameter names will be used</li>
      * <li><b>Single value</b>: Used only if the query has exactly one parameter placeholder
-     *     (a single named parameter appearing exactly once). With one placeholder, a JDBC value object such as
-     *     {@link java.sql.SQLXML}, and an object whose class looks like a bean but is bound as one value by the
-     *     Abacus type system (such as a {@link java.util.Calendar}) and has no property named after the placeholder,
-     *     are also bound as a single value</li>
+     *     (a single named parameter appearing exactly once). With one placeholder, an object whose class looks like
+     *     a bean but is bound as one value by the Abacus type system (such as a {@link java.util.Calendar}) and has no
+     *     property named after the placeholder is also bound as a single value</li>
      * </ul>
      *
      * <p>If {@code parameters} is rejected or any binding fails, this query is closed because its parameters may
@@ -4658,15 +4657,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             return true;
         }
 
-        // Some value classes pass Beans.isBeanClass only because they expose getter/setter pairs: JDBC value objects
-        // (e.g. H2's JdbcSQLXML), and classes the Abacus type system binds as one value (GregorianCalendar,
-        // MutableBoolean, a class with a registered Type). With exactly one placeholder, bind such a value directly,
-        // as the "single value" contract promises, instead of failing to find a property named after the parameter.
-        // A non-JDBC value class that does have that property keeps the bean binding it always had.
-        if (JdbcUtil.isJdbcValueObject(parameters)) {
-            return false;
-        }
-
+        // Some value classes pass Beans.isBeanClass only because they expose getter/setter pairs: classes the Abacus
+        // type system binds as one value (GregorianCalendar, MutableBoolean, a class with a registered Type). With exactly
+        // one placeholder, bind such a value directly, as the "single value" contract promises, instead of failing to find
+        // a property named after the parameter. A value class that does have that property keeps the bean binding it
+        // always had.
         return N.typeOf(cls).isBean() || ParserUtil.getBeanInfo(cls).getPropInfo(parameterNames.get(0)) != null;
     }
 

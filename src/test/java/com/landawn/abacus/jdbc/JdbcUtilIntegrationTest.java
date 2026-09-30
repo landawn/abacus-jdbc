@@ -1009,20 +1009,6 @@ public class JdbcUtilIntegrationTest extends TestBase {
         assertEquals(3L, widgetCount("pos"));
     }
 
-    // BUG FIX: a driver-created SQLXML parameter was bound through Type.of(<driver impl class>), which resolves to a
-    // generic bean type and stored the JSON of its bean properties ({"string": "<a>3</a>"}) instead of the XML text.
-    @Test
-    public void testExecuteUpdate_SqlXmlParameter_BoundAsXmlText() throws SQLException {
-        try (Connection conn = ds.getConnection()) {
-            final java.sql.SQLXML xml = conn.createSQLXML();
-            xml.setString("<a>3</a>");
-
-            assertEquals(1, JdbcUtil.executeUpdate(conn, "INSERT INTO widget (name, qty) VALUES (?, ?)", xml, 31));
-        }
-
-        assertEquals("<a>3</a>", JdbcUtil.prepareQuery(ds, "SELECT name FROM widget WHERE qty = 31").queryForString().orElseNull());
-    }
-
     // setParameters on a no-parameter SQL returns immediately (no-op).
     @Test
     public void testSetParameters_NoParams_NoOp() throws SQLException {
