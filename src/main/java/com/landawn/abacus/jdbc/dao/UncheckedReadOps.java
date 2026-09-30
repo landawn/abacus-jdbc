@@ -794,7 +794,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * Returns a {@code Nullable<V>} holding the value of a single column for the first record matching
      * the condition, converted to the specified target type. Only the first matching record is read; any
      * remaining matching records are ignored. The returned {@code Nullable} preserves the distinction
-     * between "no record matched" (empty) and "the matched value is SQL {@code NULL}" (present-but-null).
+     * between "no record matched" (empty) and "the matched value is SQL {@code NULL}" (present-but-null)
+     * for a non-primitive {@code targetValueType}; a primitive type such as {@code int.class} maps SQL
+     * {@code NULL} to its primitive default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -885,7 +887,9 @@ sealed interface UncheckedReadOps<T, TD extends UncheckedDaoBase<T, TD>> extends
      * Returns a {@code Nullable<V>} holding the value of a single column for the unique record matching
      * the condition, converted to the specified target type. Throws {@code DuplicateResultException} if
      * more than one record matches. The returned {@code Nullable} preserves the distinction between
-     * "no record matched" (empty) and "the matched value is SQL {@code NULL}" (present-but-null).
+     * "no record matched" (empty) and "the matched value is SQL {@code NULL}" (present-but-null) for a
+     * non-primitive {@code targetValueType}; a primitive type such as {@code int.class} maps SQL
+     * {@code NULL} to its primitive default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

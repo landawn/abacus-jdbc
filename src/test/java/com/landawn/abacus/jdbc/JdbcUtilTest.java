@@ -285,6 +285,113 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
+    public void testGeneratedIdGetterBuildsImmutableRecordCompositeId() {
+        final var accessors = JdbcUtil.<RecordId> getIdGeneratorGetterSetter(CrudDao.class, CompositeIdEntity.class,
+                com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, RecordId.class);
+        final CompositeIdEntity entity = new CompositeIdEntity();
+        entity.setTenantId(3);
+        entity.setEntityId(7);
+
+        assertEquals(new RecordId(3, 7), accessors._2.apply(entity));
+    }
+
+    @Test
+    public void testGeneratedKeyExtractorWrapsSingleCompositeKeyColumnAsEntityId() throws SQLException {
+        final var accessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class, CompositeIdEntity.class,
+                com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, com.landawn.abacus.util.EntityId.class);
+        final ResultSet rs = mock(ResultSet.class);
+        when(rs.getLong(1)).thenReturn(42L);
+
+        final com.landawn.abacus.util.EntityId generatedId = accessors._1.apply(rs, List.of("ENTITY_ID"));
+        assertEquals(42L, (Long) generatedId.get("entityId"));
+        assertFalse(JdbcUtil.isDefaultIdPropValue(generatedId));
+
+        final CompositeIdEntity entity = new CompositeIdEntity();
+        entity.setTenantId(5);
+        accessors._3.accept(generatedId, entity);
+        assertEquals(5, entity.getTenantId());
+        assertEquals(42, entity.getEntityId());
+    }
+
+    // BUG FIX: MySQL returns the AUTO_INCREMENT part of a composite key as a single GENERATED_KEY column. It used to be
+    // attributed to the FIRST id property (overwriting the caller's tenantId), and then to "the only id property still
+    // holding a default value", which also corrupts a valid zero component: for (tenantId = 0, entityId = 9 supplied
+    // explicitly) the driver still reports GENERATED_KEY = 9 and tenantId became 9. Without a declaration of which id
+    // property the database generates, the key is now left unassigned.
+    @Test
+    public void testGeneratedKeyWithUnmappedLabelIsNotGuessedOntoUndeclaredIdProperty() throws SQLException {
+        final var accessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class, CompositeIdEntity.class,
+                com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, com.landawn.abacus.util.EntityId.class);
+        final ResultSet rs = mock(ResultSet.class);
+        when(rs.getObject(1)).thenReturn(java.math.BigInteger.valueOf(9));
+
+        final com.landawn.abacus.util.EntityId generatedId = accessors._1.apply(rs, List.of("GENERATED_KEY"));
+        assertEquals(1, generatedId.size());
+        assertFalse(JdbcUtil.isDefaultIdPropValue(generatedId));
+
+        // A legitimate zero tenant with an explicitly supplied auto-increment id: nothing may be overwritten.
+        final CompositeIdEntity zeroTenant = new CompositeIdEntity();
+        zeroTenant.setEntityId(9);
+        accessors._3.accept(generatedId, zeroTenant);
+        assertEquals(0, zeroTenant.getTenantId());
+        assertEquals(9, zeroTenant.getEntityId());
+
+        // Even the seemingly obvious case is not guessed: the generated column is not declared.
+        final CompositeIdEntity tenantSet = new CompositeIdEntity();
+        tenantSet.setTenantId(5);
+        accessors._3.accept(generatedId, tenantSet);
+        assertEquals(5, tenantSet.getTenantId());
+        assertEquals(0, tenantSet.getEntityId());
+
+        assertThrows(IllegalArgumentException.class, () -> accessors._3.accept(generatedId, null));
+
+        // A multi-entry EntityId without matching properties still leaves the entity untouched.
+        final CompositeIdEntity untouched = new CompositeIdEntity();
+        untouched.setTenantId(5);
+        accessors._3.accept(com.landawn.abacus.util.EntityId.of("K1", 1, "K2", 2), untouched);
+        assertEquals(5, untouched.getTenantId());
+        assertEquals(0, untouched.getEntityId());
+    }
+
+    // The unlabeled generated key is assigned to the id property declared as database-generated (@ReadOnlyId or JPA
+    // @GeneratedValue), whatever the other components hold, including a legitimate zero. Two declared generated id
+    // properties are ambiguous and leave the entity untouched.
+    @Test
+    public void testGeneratedKeyWithUnmappedLabelIsAssignedToDeclaredGeneratedIdProperty() throws SQLException {
+        final ResultSet rs = mock(ResultSet.class);
+        when(rs.getObject(1)).thenReturn(java.math.BigInteger.valueOf(42));
+
+        final var readOnlyIdAccessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class,
+                ReadOnlyIdCompositeEntity.class, com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, com.landawn.abacus.util.EntityId.class);
+        final com.landawn.abacus.util.EntityId generatedId = readOnlyIdAccessors._1.apply(rs, List.of("GENERATED_KEY"));
+
+        final ReadOnlyIdCompositeEntity zeroTenant = new ReadOnlyIdCompositeEntity();
+        readOnlyIdAccessors._3.accept(generatedId, zeroTenant);
+        assertEquals(0, zeroTenant.getTenantId());
+        assertEquals(42, zeroTenant.getEntityId());
+
+        final ReadOnlyIdCompositeEntity tenantSet = new ReadOnlyIdCompositeEntity();
+        tenantSet.setTenantId(5);
+        readOnlyIdAccessors._3.accept(generatedId, tenantSet);
+        assertEquals(5, tenantSet.getTenantId());
+        assertEquals(42, tenantSet.getEntityId());
+
+        final var jpaAccessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class, JpaGeneratedCompositeEntity.class,
+                com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, com.landawn.abacus.util.EntityId.class);
+        final JpaGeneratedCompositeEntity jpaEntity = new JpaGeneratedCompositeEntity();
+        jpaAccessors._3.accept(jpaAccessors._1.apply(rs, List.of("GENERATED_KEYS")), jpaEntity);
+        assertEquals(0, jpaEntity.getTenantId());
+        assertEquals(42, jpaEntity.getEntityId());
+
+        final var ambiguousAccessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class,
+                TwoGeneratedIdsEntity.class, com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, com.landawn.abacus.util.EntityId.class);
+        final TwoGeneratedIdsEntity ambiguous = new TwoGeneratedIdsEntity();
+        ambiguousAccessors._3.accept(ambiguousAccessors._1.apply(rs, List.of("GENERATED_KEY")), ambiguous);
+        assertEquals(0, ambiguous.getFirstId());
+        assertEquals(0, ambiguous.getSecondId());
+    }
+
+    @Test
     public void testHikariPoolSizesAreValidatedBeforePoolCreation() {
         assertTrue(assertThrows(IllegalArgumentException.class,
                 () -> JdbcUtil.createHikariDataSource("jdbc:unsupported:test", null, null, -1, 0)).getMessage().contains("minIdle"));
@@ -810,6 +917,24 @@ public class JdbcUtilTest extends TestBase {
 
         final List<String> cols = JdbcUtil.getColumnNames(mockConnection, "mycat.myschema.users");
         assertEquals(Arrays.asList("id"), cols);
+    }
+
+    // JDBC allows TABLE_CAT to be null even when Connection.getCatalog() is not (e.g. older pgjdbc).
+    // A delimited name has no SELECT fallback, so rejecting such rows made the lookup fail outright.
+    @Test
+    public void testGetColumnNames_NullTableCatalogInMetadataStillMatchesConnectionCatalog() throws SQLException {
+        final ResultSet colsRs = mock(ResultSet.class);
+        when(mockConnection.getCatalog()).thenReturn("appdb");
+        when(mockConnection.getSchema()).thenReturn("public");
+        when(mockDatabaseMetaData.getColumns("appdb", "public", "Order Items", null)).thenReturn(colsRs);
+        when(colsRs.next()).thenReturn(true, true, false);
+        when(colsRs.getString("TABLE_NAME")).thenReturn("Order Items");
+        when(colsRs.getString("TABLE_SCHEM")).thenReturn("public");
+        when(colsRs.getString("TABLE_CAT")).thenReturn(null);
+        when(colsRs.getString("COLUMN_NAME")).thenReturn("id", "qty");
+
+        assertEquals(Arrays.asList("id", "qty"), JdbcUtil.getColumnNames(mockConnection, "\"Order Items\""));
+        verify(mockConnection, never()).prepareStatement(anyString());
     }
 
     // When neither the metadata lookups nor the SELECT fallback yield any column, a SQLException is
@@ -1536,6 +1661,180 @@ public class JdbcUtilTest extends TestBase {
         } finally {
             iter.closeResource();
         }
+    }
+
+    // KEEP_CURRENT_RESULT rejected with SQLFeatureNotSupportedException although the driver's capability could not be
+    // read (no connection): the iterator falls back to a deferred getMoreResults(), delivers every result set while it
+    // is still open, never retries KEEP_CURRENT_RESULT, and stops at the end of the results.
+    @Test
+    public void testIterateAllResultSets_KeepCurrentResultNotSupported_DefersAdvance() throws SQLException {
+        final ResultSet rs1 = mock(ResultSet.class);
+        final ResultSet rs2 = mock(ResultSet.class);
+        when(mockStatement.getResultSet()).thenReturn(rs1, rs2);
+        when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(new java.sql.SQLFeatureNotSupportedException("KEEP_CURRENT_RESULT"));
+        when(mockStatement.getMoreResults()).thenReturn(true, false);
+        when(mockStatement.getUpdateCount()).thenReturn(-1);
+
+        final com.landawn.abacus.util.stream.ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(mockStatement, true);
+
+        assertTrue(iter.hasNext());
+        iter.next().next();
+        verify(rs1).next();
+        verify(mockStatement, never()).getMoreResults();
+        verify(rs1, never()).close();
+
+        assertTrue(iter.hasNext());
+        verify(mockStatement).getMoreResults();
+        iter.next().next();
+        verify(rs2).next();
+
+        assertFalse(iter.hasNext());
+        assertThrows(NoSuchElementException.class, iter::next);
+        verify(mockStatement).getMoreResults(Statement.KEEP_CURRENT_RESULT);
+        verify(mockStatement, org.mockito.Mockito.times(2)).getMoreResults();
+        iter.closeResource();
+    }
+
+    // Closing the iterator right after a deferred-advance delivery leaves the delivered result set to the caller and
+    // does not advance the statement.
+    @Test
+    public void testIterateAllResultSets_KeepCurrentResultNotSupported_CloseAfterDeliveryDoesNotAdvance() throws SQLException {
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet);
+        when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(new java.sql.SQLFeatureNotSupportedException("KEEP_CURRENT_RESULT"));
+
+        final com.landawn.abacus.util.stream.ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(mockStatement, true);
+        assertNotNull(iter.next());
+        iter.closeResource();
+
+        assertFalse(iter.hasNext());
+        verify(mockStatement, never()).getMoreResults();
+        verify(mockResultSet, never()).close();
+    }
+
+    // A driver that supports multiple open results reports a real failure: the undelivered result set is closed and
+    // the failure is propagated.
+    @Test
+    public void testIterateAllResultSets_KeepCurrentResultFailureOnDriverSupportingMultipleOpenResults_Propagates() throws SQLException {
+        final SQLException failure = new SQLException("deadlock");
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet);
+        when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(failure);
+        when(mockStatement.getConnection()).thenReturn(mockConnection);
+        when(mockDatabaseMetaData.supportsMultipleOpenResults()).thenReturn(true);
+
+        final com.landawn.abacus.util.stream.ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(mockStatement, true);
+
+        assertSame(failure, assertThrows(UncheckedSQLException.class, iter::next).getCause());
+        verify(mockResultSet).close();
+        verify(mockStatement, never()).getMoreResults();
+    }
+
+    // If the driver's capabilities cannot be read, KEEP_CURRENT_RESULT support is assumed, so its failure propagates
+    // unchanged (the lookup failure is only logged).
+    @Test
+    public void testIterateAllResultSets_MetadataFailure_AssumesKeepCurrentResultAndPropagatesItsFailure() throws SQLException {
+        final SQLException failure = new SQLException("getMoreResults failed");
+        final SQLException metadataFailure = new SQLException("connection is closed");
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet);
+        when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(failure);
+        when(mockStatement.getConnection()).thenReturn(mockConnection);
+        when(mockConnection.getMetaData()).thenThrow(metadataFailure);
+
+        final com.landawn.abacus.util.stream.ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(mockStatement, true);
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, iter::next);
+        assertSame(failure, thrown.getCause());
+        assertEquals(0, failure.getSuppressed().length);
+        verify(mockResultSet).close();
+        verify(mockStatement, never()).getMoreResults();
+    }
+
+    // Regression: a driver reporting supportsMultipleOpenResults() == false used to have EVERY getMoreResults(KEEP_CURRENT_RESULT)
+    // failure reinterpreted as "unsupported", so a genuine failure (e.g. a timeout) was swallowed and iteration ended
+    // normally. The capability is now checked up front: KEEP_CURRENT_RESULT is never called for such a driver, and a
+    // failure of the deferred getMoreResults() propagates.
+    @Test
+    public void testIterateAllResultSets_DriverWithoutMultipleOpenResults_NeverCallsKeepCurrentResultAndPropagatesTimeout() throws SQLException {
+        final java.sql.SQLTimeoutException timeout = new java.sql.SQLTimeoutException("query timed out");
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet);
+        when(mockStatement.getConnection()).thenReturn(mockConnection);
+        when(mockConnection.getMetaData()).thenReturn(mockDatabaseMetaData);
+        when(mockDatabaseMetaData.supportsMultipleOpenResults()).thenReturn(false);
+        when(mockStatement.getMoreResults()).thenThrow(timeout);
+
+        final com.landawn.abacus.util.stream.ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(mockStatement, true);
+
+        iter.next().next();
+        verify(mockResultSet).next();
+        assertSame(timeout, assertThrows(UncheckedSQLException.class, iter::hasNext).getCause());
+        verify(mockStatement, never()).getMoreResults(Statement.KEEP_CURRENT_RESULT);
+        iter.closeResource();
+    }
+
+    // A timeout from getMoreResults(KEEP_CURRENT_RESULT) on a driver that declares multiple-open-result support, or
+    // whose capability is unknown, is a real failure: it propagates and the undelivered result set is closed.
+    @Test
+    public void testIterateAllResultSets_KeepCurrentResultTimeoutIsNeverTreatedAsUnsupported() throws SQLException {
+        final java.sql.SQLTimeoutException timeout = new java.sql.SQLTimeoutException("query timed out");
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet);
+        when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(timeout);
+
+        // Capability unknown (no connection).
+        when(mockStatement.getConnection()).thenReturn(null);
+        assertSame(timeout, assertThrows(UncheckedSQLException.class, JdbcUtil.iterateAllResultSets(mockStatement, true)::next).getCause());
+
+        // Capability declared.
+        when(mockStatement.getConnection()).thenReturn(mockConnection);
+        when(mockConnection.getMetaData()).thenReturn(mockDatabaseMetaData);
+        when(mockDatabaseMetaData.supportsMultipleOpenResults()).thenReturn(true);
+        assertSame(timeout, assertThrows(UncheckedSQLException.class, JdbcUtil.iterateAllResultSets(mockStatement, true)::next).getCause());
+
+        verify(mockResultSet, org.mockito.Mockito.times(2)).close();
+        verify(mockStatement, never()).getMoreResults();
+    }
+
+    // The public stream API over the deferred-advance fallback extracts every result set before advancing past it.
+    @Test
+    public void testStreamAllResultSets_KeepCurrentResultRejected_ExtractsEveryResultSet() throws SQLException {
+        final ResultSet rs1 = mock(ResultSet.class);
+        final ResultSet rs2 = mock(ResultSet.class);
+        when(rs1.next()).thenReturn(true, false);
+        when(rs2.next()).thenReturn(true, true, false);
+        when(mockStatement.getResultSet()).thenReturn(rs1, rs2);
+        when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(new SQLException("This operation is not supported."));
+        when(mockStatement.getConnection()).thenReturn(mockConnection);
+        when(mockDatabaseMetaData.supportsMultipleOpenResults()).thenReturn(false);
+        when(mockStatement.getMoreResults()).thenReturn(true, false);
+        when(mockStatement.getUpdateCount()).thenReturn(-1);
+
+        try (Stream<Integer> rowCounts = JdbcUtil.streamAllResultSets(mockStatement, (Jdbc.ResultExtractor<Integer>) rs -> {
+            int count = 0;
+
+            while (rs.next()) {
+                count++;
+            }
+
+            return count;
+        })) {
+            assertEquals(List.of(1, 2), rowCounts.toList());
+        }
+
+        verify(mockStatement, never()).getMoreResults(Statement.KEEP_CURRENT_RESULT);
+    }
+
+    // setParameters without declared types binds JDBC value objects through setObject unchanged (a runtime-class Type
+    // lookup resolves driver implementation classes to a bean Type that binds their JSON form).
+    @Test
+    public void testSetParameters_JdbcValueObjectsPassedToDriverUnchanged() throws SQLException {
+        final Object[] values = { mock(java.sql.SQLXML.class), mock(java.sql.Array.class), mock(java.sql.Ref.class), mock(java.sql.RowId.class),
+                mock(java.sql.Struct.class), "plain" };
+
+        JdbcUtil.setParameters(mockPreparedStatement, values.length, values, null);
+
+        for (int i = 0; i < values.length - 1; i++) {
+            verify(mockPreparedStatement).setObject(i + 1, values[i]);
+        }
+
+        verify(mockPreparedStatement).setString(values.length, "plain");
     }
 
     @Test
@@ -3949,6 +4248,130 @@ public class JdbcUtilTest extends TestBase {
         assertTrue(JdbcUtil.tableExists(mockConnection, "users_log"));
     }
 
+    // BUG FIX: in a transaction (auto-commit off) the tableExists fallback probe must run under a savepoint and roll
+    // back to it when the probe fails. On PostgreSQL an expected "relation does not exist" error otherwise aborts the
+    // caller's whole transaction ("current transaction is aborted") although tableExists just returns false.
+    @Test
+    public void testTableExists_FallbackProbeFailureInTransaction_RollsBackToSavepoint() throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
+                .thenThrow(new SQLException("relation \"missing_tbl\" does not exist", "42P01"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+
+        verify(mockConnection).rollback(savepoint);
+        verify(mockConnection).releaseSavepoint(savepoint);
+    }
+
+    @Test
+    public void testTableExists_FallbackProbeSuccessInTransaction_ReleasesSavepoint() throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "present_tbl"));
+
+        verify(mockConnection).prepareStatement("SELECT 1 FROM present_tbl WHERE 1 > 2");
+        verify(mockConnection).releaseSavepoint(savepoint);
+        verify(mockConnection, never()).rollback(savepoint);
+    }
+
+    @Test
+    public void testTableExists_FallbackProbeInAutoCommitMode_NoSavepoint() throws SQLException {
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
+                .thenThrow(new SQLException("relation \"missing_tbl\" does not exist", "42P01"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+
+        verify(mockConnection, never()).setSavepoint();
+    }
+
+    // A driver without savepoint support: the probe still runs (without a savepoint), as before the fix.
+    @Test
+    public void testTableExists_FallbackProbeInTransaction_SavepointsUnsupported_ProbesWithoutSavepoint() throws SQLException {
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenThrow(new java.sql.SQLFeatureNotSupportedException("savepoints"));
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
+                .thenThrow(new SQLException("relation \"missing_tbl\" does not exist", "42P01"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+        assertTrue(JdbcUtil.tableExists(mockConnection, "present_tbl"));
+
+        verify(mockConnection, never()).rollback(org.mockito.ArgumentMatchers.any(java.sql.Savepoint.class));
+        verify(mockConnection, never()).releaseSavepoint(org.mockito.ArgumentMatchers.any(java.sql.Savepoint.class));
+    }
+
+    // A probe failure that is not "table not found" is still propagated, after the savepoint restored the transaction;
+    // a failing rollback is attached to it as suppressed.
+    @Test
+    public void testTableExists_FallbackProbeOtherErrorInTransaction_RollsBackAndPropagates() throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        final SQLException probeFailure = new SQLException("could not read block 0 in file", "XX001");
+        final SQLException rollbackFailure = new SQLException("rollback failed");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockConnection.prepareStatement("SELECT 1 FROM secret_tbl WHERE 1 > 2")).thenThrow(probeFailure);
+        doThrow(rollbackFailure).when(mockConnection).rollback(savepoint);
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.tableExists(mockConnection, "secret_tbl"));
+
+        assertSame(probeFailure, thrown.getCause());
+        assertArrayEquals(new Throwable[] { rollbackFailure }, probeFailure.getSuppressed());
+        verify(mockConnection).rollback(savepoint);
+        verify(mockConnection).releaseSavepoint(savepoint);
+    }
+
+    // Regression: a "table not found" probe failure whose savepoint rollback also failed (e.g. the connection was lost)
+    // used to return false, discarding the rollback failure, so the caller never learned that its transaction may be
+    // unusable. It now propagates the probe failure with the rollback failure suppressed.
+    @Test
+    public void testTableExists_TableNotFoundButSavepointRollbackFails_Propagates() throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        final SQLException notFound = new SQLException("relation \"missing_tbl\" does not exist", "42P01");
+        final SQLException connectionLost = new java.sql.SQLNonTransientConnectionException("connection lost", "08006");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2")).thenThrow(notFound);
+        doThrow(connectionLost).when(mockConnection).rollback(savepoint);
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+
+        assertSame(notFound, thrown.getCause());
+        assertArrayEquals(new Throwable[] { connectionLost }, notFound.getSuppressed());
+        verify(mockConnection).releaseSavepoint(savepoint);
+    }
+
+    // BUG FIX: JDBC allows DatabaseMetaData.getTables rows with a null TABLE_CAT (older pgjdbc reports none). A
+    // delimited catalog part must only reject a row whose reported catalog differs, not one that reports no catalog.
+    @Test
+    public void testTableExists_DelimitedCatalog_AcceptsRowWithNullTableCat() throws SQLException {
+        final ResultSet tableRs = mock(ResultSet.class);
+
+        when(mockDatabaseMetaData.getTables("cat", "sch", "tbl", null)).thenReturn(tableRs);
+        when(tableRs.next()).thenReturn(true, false);
+        when(tableRs.getString("TABLE_NAME")).thenReturn("tbl");
+        when(tableRs.getString("TABLE_SCHEM")).thenReturn("sch");
+        when(tableRs.getString("TABLE_CAT")).thenReturn(null);
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "\"cat\".\"sch\".\"tbl\""));
+    }
+
+    @Test
+    public void testTableExists_DelimitedCatalog_RejectsRowWithDifferentTableCat() throws SQLException {
+        final ResultSet tableRs = mock(ResultSet.class);
+
+        when(mockDatabaseMetaData.getTables("cat", "sch", "tbl", null)).thenReturn(tableRs);
+        when(tableRs.next()).thenReturn(true, false);
+        when(tableRs.getString("TABLE_NAME")).thenReturn("tbl");
+        when(tableRs.getString("TABLE_SCHEM")).thenReturn("sch");
+        when(tableRs.getString("TABLE_CAT")).thenReturn("other_cat");
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "\"cat\".\"sch\".\"tbl\""));
+    }
+
     // BUG FIX: getDriverClassByUrl must not misclassify HSQLDB URLs whose database/host portion
     // contains the substring "h2" (e.g., "h2_compat") as H2. With the bug present, the H2 driver
     // would be selected for an HSQLDB URL and the connection attempt would fail because H2 does
@@ -4834,6 +5257,108 @@ public class JdbcUtilTest extends TestBase {
     }
 
     public record RecordId(@com.landawn.abacus.annotation.Id long tenantId, @com.landawn.abacus.annotation.Id long entityId) {
+    }
+
+    public static class ReadOnlyIdCompositeEntity {
+        @com.landawn.abacus.annotation.Id
+        private long tenantId;
+        @com.landawn.abacus.annotation.ReadOnlyId
+        private long entityId;
+
+        public long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public long getEntityId() {
+            return entityId;
+        }
+
+        public void setEntityId(final long entityId) {
+            this.entityId = entityId;
+        }
+    }
+
+    public static class JpaGeneratedCompositeEntity {
+        @com.landawn.abacus.annotation.Id
+        private long tenantId;
+        @com.landawn.abacus.annotation.Id
+        @jakarta.persistence.GeneratedValue
+        private long entityId;
+
+        public long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public long getEntityId() {
+            return entityId;
+        }
+
+        public void setEntityId(final long entityId) {
+            this.entityId = entityId;
+        }
+    }
+
+    public static class TwoGeneratedIdsEntity {
+        @com.landawn.abacus.annotation.ReadOnlyId
+        private long firstId;
+        @com.landawn.abacus.annotation.ReadOnlyId
+        private long secondId;
+
+        public long getFirstId() {
+            return firstId;
+        }
+
+        public void setFirstId(final long firstId) {
+            this.firstId = firstId;
+        }
+
+        public long getSecondId() {
+            return secondId;
+        }
+
+        public void setSecondId(final long secondId) {
+            this.secondId = secondId;
+        }
+    }
+
+    public static class CompositeIdEntity {
+        @com.landawn.abacus.annotation.Id
+        private long tenantId;
+        @com.landawn.abacus.annotation.Id
+        private long entityId;
+        private String name;
+
+        public long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public long getEntityId() {
+            return entityId;
+        }
+
+        public void setEntityId(final long entityId) {
+            this.entityId = entityId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
     }
 
     // isDefaultIdPropValue: bean with an @Id whose value is default vs set.

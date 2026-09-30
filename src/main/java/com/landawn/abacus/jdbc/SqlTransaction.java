@@ -1007,7 +1007,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         // Skip the connection mutation when the effective level is unchanged: the constructor already
         // applied the requested isolation for the outermost scope (where _isolationLevel equals the
         // requested level), and a nested scope re-requesting the current level needs no JDBC call.
-        if (_conn != null && effectiveIsolationLevel != IsolationLevel.DEFAULT && effectiveIsolationLevel != _isolationLevel) {
+        // Compare the PHYSICAL levels: an outer DEFAULT scope runs at the connection's original level,
+        // so a nested scope explicitly requesting that same level must not issue a redundant call
+        // either - some drivers reject setTransactionIsolation once transaction work has started.
+        if (_conn != null && effectiveIsolationLevel != IsolationLevel.DEFAULT
+                && toConnectionIsolationLevel(effectiveIsolationLevel) != toConnectionIsolationLevel(_isolationLevel)) {
             try {
                 _conn.setTransactionIsolation(effectiveIsolationLevel.intValue());
             } catch (final SQLException e) {
@@ -1016,7 +1020,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 // A JDBC driver is allowed to report a failure after changing connection state.
                 // Best-effort restore the isolation that belongs to the still-active outer scope.
                 try {
-                    _conn.setTransactionIsolation(_isolationLevel == IsolationLevel.DEFAULT ? _originalIsolationLevel : _isolationLevel.intValue());
+                    _conn.setTransactionIsolation(toConnectionIsolationLevel(_isolationLevel));
                 } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary SQL failure
                     if (restoreException != e) {
                         failure.addSuppressed(restoreException);
@@ -1034,7 +1038,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                 // both the physical connection and the just-pushed in-memory nesting state before the
                 // original failure escapes; any restoration failure is secondary.
                 try {
-                    _conn.setTransactionIsolation(_isolationLevel == IsolationLevel.DEFAULT ? _originalIsolationLevel : _isolationLevel.intValue());
+                    _conn.setTransactionIsolation(toConnectionIsolationLevel(_isolationLevel));
                 } catch (final Throwable restoreException) { //NOSONAR
                     if (restoreException != e) {
                         e.addSuppressed(restoreException);
@@ -1117,13 +1121,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             // Restore the physical connection only when the effective isolation actually changes.
             // Reissuing the same level is not merely a redundant round-trip: some drivers reject
             // setTransactionIsolation once transaction work has started, even for the current value.
-            if (_conn != null && _isolationLevel != preIsolationLevel) {
+            // DEFAULT resolves to the connection's original level, so DEFAULT and that explicit level are equal.
+            if (_conn != null && toConnectionIsolationLevel(_isolationLevel) != toConnectionIsolationLevel(preIsolationLevel)) {
                 try {
-                    if (_isolationLevel == IsolationLevel.DEFAULT) {
-                        _conn.setTransactionIsolation(_originalIsolationLevel);
-                    } else {
-                        _conn.setTransactionIsolation(_isolationLevel.intValue());
-                    }
+                    _conn.setTransactionIsolation(toConnectionIsolationLevel(_isolationLevel));
                 } catch (final SQLException | RuntimeException | Error e) {
                     // Capture the level we failed to restore to before resetting the field below,
                     // otherwise the log would report the (rolled-back) inner level instead of the target.
@@ -1145,7 +1146,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
                     // The driver may have changed the physical isolation before reporting failure.
                     // Keep it aligned with the nested scope that remains active after this failed exit.
                     try {
-                        _conn.setTransactionIsolation(preIsolationLevel == IsolationLevel.DEFAULT ? _originalIsolationLevel : preIsolationLevel.intValue());
+                        _conn.setTransactionIsolation(toConnectionIsolationLevel(preIsolationLevel));
                     } catch (final Throwable recoveryFailure) { //NOSONAR - preserve the original scope-exit failure
                         if (recoveryFailure != failure && recoveryFailure != e) {
                             failure.addSuppressed(recoveryFailure);
@@ -1167,6 +1168,18 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         }
 
         return res;
+    }
+
+    /**
+     * Maps a scope's isolation level to the JDBC isolation constant the connection actually runs at:
+     * {@link IsolationLevel#DEFAULT} leaves the connection unchanged, so it resolves to the level
+     * captured when this transaction was created.
+     *
+     * @param isolationLevel the scope's isolation level, never {@code null}
+     * @return the JDBC {@code TRANSACTION_*} constant in effect for that scope
+     */
+    private int toConnectionIsolationLevel(final IsolationLevel isolationLevel) {
+        return isolationLevel == IsolationLevel.DEFAULT ? _originalIsolationLevel : isolationLevel.intValue();
     }
 
     /**

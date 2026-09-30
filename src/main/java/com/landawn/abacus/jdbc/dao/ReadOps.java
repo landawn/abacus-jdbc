@@ -711,7 +711,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
      * Queries a single value of the specified type from one column for the first record matching the condition.
      * Only the first matching record is read; any remaining matching records are ignored.
      * The returned {@code Nullable} preserves the distinction between "no record matched" (empty) and
-     * "the matched value is SQL {@code NULL}" (present-but-null).
+     * "the matched value is SQL {@code NULL}" (present-but-null) for a non-primitive {@code targetValueType};
+     * a primitive type such as {@code int.class} maps SQL {@code NULL} to its primitive default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -807,7 +808,8 @@ sealed interface ReadOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> pe
     /**
      * Queries a unique single value of the specified type from one column, throwing if more than one record matches.
      * The returned {@code Nullable} preserves the distinction between "no record matched" (empty) and
-     * "the matched value is SQL {@code NULL}" (present-but-null).
+     * "the matched value is SQL {@code NULL}" (present-but-null) for a non-primitive {@code targetValueType};
+     * a primitive type such as {@code int.class} maps SQL {@code NULL} to its primitive default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

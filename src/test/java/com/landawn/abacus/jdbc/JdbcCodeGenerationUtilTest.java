@@ -552,6 +552,40 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         }
     }
 
+    // '$' is legal in Java identifiers but ends a :named parameter in ParsedSql, so ":price$usd" would be parsed as
+    // ":price" followed by the literal text "$usd" (UPDATE ... = ?$usd) - the generated SQL must be rejected instead.
+    @Test
+    public void testGenerateNamedSqlRejectsColumnWhoseParameterNameParsedSqlWouldTruncate() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:codegen_dollar_named_param", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE dollar_guard (id INT PRIMARY KEY, price$usd INT)");
+
+            // The positional forms remain usable.
+            assertEquals("UPDATE dollar_guard SET \"PRICE$USD\" = ? WHERE ID = ?", JdbcCodeGenerationUtil.generateUpdateSql(conn, "dollar_guard", "id"));
+
+            assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", "id"))
+                    .getMessage()
+                    .contains("PRICE$USD"));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard"));
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", null, List.of("id"), null));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "dollar_guard"));
+            // Excluding the column leaves only valid parameter names.
+            assertEquals("UPDATE dollar_guard SET ID = :id",
+                    JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", List.of("price$usd"), null, null));
+
+            // Other currency symbols are Java identifier characters too, and are cut off by ParsedSql the same way.
+            stmt.execute("CREATE TABLE pound_guard (id INT PRIMARY KEY, \"price£gbp\" INT)");
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "pound_guard"));
+
+            // Guard: non-ASCII letters remain valid named parameters, and ParsedSql reads each one whole.
+            stmt.execute("CREATE TABLE unicode_guard (id INT PRIMARY KEY, \"名前\" VARCHAR(10))");
+            final String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "unicode_guard");
+            assertTrue(insertSql.endsWith("VALUES (:id, :名前)"), insertSql);
+            assertEquals(List.of("id", "名前"), com.landawn.abacus.query.ParsedSql.parse(insertSql).namedParameters());
+        }
+    }
+
     @Test
     public void testGenerateSelectSql_DataSourceWrapsSQLException() throws SQLException {
         DataSource dataSource = Mockito.mock(DataSource.class);
@@ -1592,6 +1626,26 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(name, status) VALUES ($tag$A,B)C$tag$, 1)"));
     }
 
+    @Test
+    public void testConvertInsertSqlToUpdateSql_DollarInsideIdentifierDoesNotOpenDollarQuote() throws SQLException {
+        final DataSource postgreSql = dataSourceReporting("PostgreSQL");
+
+        // PostgreSQL (like Oracle and MySQL) allows '$' inside identifiers: the "$y$" in x$y$z is not a dollar-quote opener,
+        // so it must not swallow the rest of the statement.
+        assertEquals("UPDATE t SET a = x$y$z, b = 2", JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(postgreSql, "INSERT INTO t(a, b) VALUES (x$y$z, 2)"));
+        assertEquals("UPDATE t SET a = seq$a$b.nextval + 1, b = (c$d$e)",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(postgreSql, "INSERT INTO t(a, b) VALUES (seq$a$b.nextval + 1, (c$d$e))"));
+        // A dollar quote that does not follow an identifier character is still recognized.
+        assertEquals("UPDATE t SET a = $q$1,2)$q$, b = 2",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(postgreSql, "INSERT INTO t(a, b) VALUES ($q$1,2)$q$, 2)"));
+        // Underscore, digit, '$' and non-ASCII letters are identifier characters too.
+        assertEquals("UPDATE t SET a = x_$y$z, b = x1$y$z, c = x$$y$z, d = é$y$z",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(postgreSql, "INSERT INTO t(a, b, c, d) VALUES (x_$y$z, x1$y$z, x$$y$z, é$y$z)"));
+        // Right after an operator, comma or opening parenthesis a dollar quote still opens.
+        assertEquals("UPDATE t SET a = 'p'||$q$,)$q$, b = ($q$)$q$)",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(postgreSql, "INSERT INTO t(a, b) VALUES ('p'||$q$,)$q$,($q$)$q$))"));
+    }
+
     // Test generateEntityClass with customized EntityCodeConfig fields
     @Test
     public void testEntityCodeConfig_GettersAndSetters() {
@@ -2118,6 +2172,112 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("import java.util.List;"));
+    }
+
+    // BUG FIX: the java.util auto-import only looked at the raw type before the first '<'. A nested parameterized
+    // type (List in Map<String, List<String>>) was never imported; Map.Entry<K, V> imported java.util.Map.Entry, which
+    // leaves the qualifier Map unresolved; and Optional<String> was auto-imported from java.util even when
+    // classNamesToImport already imports another Optional. Each generated class must compile.
+    @Test
+    public void testGenerateEntityClass_AdditionalGenericFieldImportsCompile(@TempDir final Path directory) throws IOException {
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+
+        final List<JdbcCodeGenerationUtil.EntityCodeConfig> configs = List.of(
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                        .className("OrderHistory")
+                        .additionalClassBodySource("private Map<String, List<String>> index;")
+                        .build(),
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                        .className("OrderHistory")
+                        .additionalClassBodySource("private Map.Entry<String, Integer> entry;")
+                        .build(),
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                        .className("OrderHistory")
+                        .classNamesToImport(List.of("com.landawn.abacus.util.u.Optional"))
+                        .additionalClassBodySource("private Optional<String> maybe = Optional.of(\"x\");")
+                        .build());
+
+        for (final JdbcCodeGenerationUtil.EntityCodeConfig config : configs) {
+            final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+            Files.writeString(source, code, StandardCharsets.UTF_8);
+            diagnostics.reset();
+            final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
+                    System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d",
+                    directory.toString(), source.toString());
+            assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+        }
+    }
+
+    // Arrays, wildcards/bounds, whitespace before '<', fully qualified generic types and an explicitly imported
+    // java.util type: every parameterized java.util simple name is imported exactly once, and nothing else.
+    @Test
+    public void testGenerateEntityClass_AdditionalGenericFieldImportsEdgeCasesCompile(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .classNamesToImport(List.of("java.util.Queue"))
+                .additionalClassBodySource(String.join("\n", //
+                        "    private Set<String>[] sets;", //
+                        "    private Map<String, ? extends Deque<Integer>> bounded;", //
+                        "    private TreeMap <String, Comparable<String>> spaced;", //
+                        "    private java.util.List<NavigableSet<Long>> qualified;", //
+                        "    private java.util.Map.Entry<String, Integer> qualifiedEntry;", //
+                        "    private Queue<String> explicitlyImported;"))
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        for (final String simpleName : List.of("Set", "Map", "Deque", "TreeMap", "NavigableSet", "Queue")) {
+            assertEquals(1, code.split("import java\\.util\\." + simpleName + ";", -1).length - 1, () -> simpleName + " import count:\n" + code);
+        }
+
+        assertFalse(code.contains("import java.util.List;"), code);
+        assertFalse(code.contains("import java.util.Comparable;"), code);
+        assertFalse(code.contains("import java.util.java;"), code);
+
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
+                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
+                source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
+    // A fully qualified non-java.util generic type and annotation names never trigger a java.util import.
+    @Test
+    public void testGenerateEntityClass_AdditionalGenericFieldImportsIgnoreQualifiedAndAnnotationNames() {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .additionalClassBodySource(String.join("\n", //
+                        "    private com.acme.List<String> acmeList;", //
+                        "    private @Nullable com.acme.Map<String, Integer> annotated;"))
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        assertFalse(code.contains("import java.util.List;"), code);
+        assertFalse(code.contains("import java.util.Map;"), code);
+        assertFalse(code.contains("import java.util.com;"), code);
+    }
+
+    // BUG FIX: the NonUpdatable import was dropped up front whenever no configured non-updatable field matched a
+    // column, so an additionalClassBodySource using @NonUpdatable did not compile. It is now pruned only by the final
+    // scan of the emitted lines, like the other annotation imports.
+    @Test
+    public void testGenerateEntityClass_AdditionalBodyNonUpdatableKeepsImport(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .additionalClassBodySource("    @NonUpdatable\n    private String note;")
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+
+        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
+                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
+                source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+        assertFalse(JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, null).contains("NonUpdatable"));
     }
 
     // generateEntityClass — jsonXmlConfig with enumerated set (line 631-632).
@@ -2871,6 +3031,92 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(result.contains("@Id"), "Expected @Id annotation from schema-qualified PK lookup; got:\n" + result);
         // Verify the call signature exactly.
         Mockito.verify(md).getPrimaryKeys(null, "myschema", "users");
+    }
+
+    // BUG FIX: on a catalog-only database (MySQL/MariaDB with the default CATALOG database term) "mydb.users" is
+    // database.table and getPrimaryKeys ignores its schema argument. The qualifier used to go into the schema slot, so
+    // the lookup searched the connection's current database instead and the @Id was missing (or taken from another
+    // table of the same name).
+    @Test
+    public void testGenerateEntityClass_TwoPartTableNameUsesCatalogSlotOnCatalogOnlyDatabase() throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData rsMd = Mockito.mock(ResultSetMetaData.class);
+        final DatabaseMetaData md = Mockito.mock(DatabaseMetaData.class);
+        final Statement jdbcStmt = Mockito.mock(Statement.class);
+        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+        final ResultSet noPrimaryKeys = Mockito.mock(ResultSet.class);
+
+        when(conn.getMetaData()).thenReturn(md);
+        when(conn.getCatalog()).thenReturn("currentdb");
+        when(md.getDatabaseProductName()).thenReturn("MySQL");
+        when(md.getDatabaseProductVersion()).thenReturn("8.0");
+        when(md.supportsSchemasInTableDefinitions()).thenReturn(false);
+        when(md.supportsCatalogsInTableDefinitions()).thenReturn(true);
+        when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
+        when(stmt.executeQuery()).thenReturn(rs);
+        when(rs.getMetaData()).thenReturn(rsMd);
+        when(rs.getStatement()).thenReturn(jdbcStmt);
+        when(jdbcStmt.getConnection()).thenReturn(conn);
+        when(md.getPrimaryKeys(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.anyString())).thenReturn(noPrimaryKeys);
+        when(md.getPrimaryKeys("mydb", null, "users")).thenReturn(pkRs);
+        when(pkRs.next()).thenReturn(true, false);
+        when(pkRs.getString("COLUMN_NAME")).thenReturn("id");
+
+        when(rsMd.getColumnCount()).thenReturn(2);
+        when(rsMd.getColumnLabel(1)).thenReturn("id");
+        when(rsMd.getColumnClassName(1)).thenReturn("java.lang.Long");
+        when(rsMd.getColumnLabel(2)).thenReturn("name");
+        when(rsMd.getColumnClassName(2)).thenReturn("java.lang.String");
+
+        final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "mydb.users");
+
+        assertTrue(result.contains("@Id"), () -> "Expected @Id from the database-qualified PK lookup; got:\n" + result);
+        Mockito.verify(md).getPrimaryKeys("mydb", null, "users");
+    }
+
+    // Guard: a database that supports schemas in table definitions (MySQL with databaseTerm=SCHEMA, or SQL Server/H2
+    // which support both) keeps the two-part qualifier in the schema slot.
+    @Test
+    public void testGenerateEntityClass_TwoPartTableNameUsesSchemaSlotWhenSchemasSupported() throws SQLException {
+        for (final boolean catalogsSupported : new boolean[] { false, true }) {
+            final Connection conn = Mockito.mock(Connection.class);
+            final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+            final ResultSet rs = Mockito.mock(ResultSet.class);
+            final ResultSetMetaData rsMd = Mockito.mock(ResultSetMetaData.class);
+            final DatabaseMetaData md = Mockito.mock(DatabaseMetaData.class);
+            final Statement jdbcStmt = Mockito.mock(Statement.class);
+            final ResultSet pkRs = Mockito.mock(ResultSet.class);
+            final ResultSet noPrimaryKeys = Mockito.mock(ResultSet.class);
+
+            when(conn.getMetaData()).thenReturn(md);
+            when(conn.getCatalog()).thenReturn("currentdb");
+            when(md.getDatabaseProductName()).thenReturn("MySQL");
+            when(md.getDatabaseProductVersion()).thenReturn("8.0");
+            when(md.supportsSchemasInTableDefinitions()).thenReturn(true);
+            when(md.supportsCatalogsInTableDefinitions()).thenReturn(catalogsSupported);
+            when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
+            when(stmt.executeQuery()).thenReturn(rs);
+            when(rs.getMetaData()).thenReturn(rsMd);
+            when(rs.getStatement()).thenReturn(jdbcStmt);
+            when(jdbcStmt.getConnection()).thenReturn(conn);
+            when(md.getPrimaryKeys(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.anyString())).thenReturn(noPrimaryKeys);
+            when(md.getPrimaryKeys("currentdb", "mydb", "users")).thenReturn(pkRs);
+            when(pkRs.next()).thenReturn(true, false);
+            when(pkRs.getString("COLUMN_NAME")).thenReturn("id");
+
+            when(rsMd.getColumnCount()).thenReturn(2);
+            when(rsMd.getColumnLabel(1)).thenReturn("id");
+            when(rsMd.getColumnClassName(1)).thenReturn("java.lang.Long");
+            when(rsMd.getColumnLabel(2)).thenReturn("name");
+            when(rsMd.getColumnClassName(2)).thenReturn("java.lang.String");
+
+            final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "mydb.users");
+
+            assertTrue(result.contains("@Id"), () -> "catalogsSupported=" + catalogsSupported + ", got:\n" + result);
+            Mockito.verify(md).getPrimaryKeys("currentdb", "mydb", "users");
+        }
     }
 
     // A three-part qualified name (catalog.schema.table) routes all three slots to getPrimaryKeys

@@ -36,7 +36,10 @@ import com.landawn.abacus.util.RegExUtil;
  * from an external SQL mapper through {@link #id()} (see {@link SqlSource}). Ordinary abstract methods
  * must supply exactly one of the two: declaring both, or neither, causes DAO initialization to fail with an
  * {@code IllegalArgumentException}. A default method ending in a {@code String[]} parameter can collect
- * entries from both sources, as described by {@link #value()}.</p>
+ * entries from both sources, as described by {@link #value()}. On any other {@code default} method the
+ * annotation is not used: at most one {@code value} entry and at most one {@code id} entry are ignored and the
+ * body runs unchanged, while more than one {@code value} entry, or more than one {@code id} entry, fails DAO
+ * initialization with {@code UnsupportedOperationException}.</p>
  *
  * <p>Beyond the SQL itself, the annotation lets a method choose an {@link QueryOperation execution mode}
  * ({@link #op()}), flag a stored-procedure call ({@link #procedure()}), enable batching
@@ -190,7 +193,12 @@ public @interface Query {
      * List<Employee> rankEmployeesByDepartment(@Bind("dept") String department) throws SQLException;
      * }</pre>
      *
-     * <p>Note: Exactly one of {@code value} or {@link #id()} must be non-empty; specifying both
+     * <p>A single {@code value} entry that contains no whitespace and equals an id defined through
+     * {@link SqlSource}, a {@link SqlScript} field, or the SQL mapper supplied when the DAO is created is treated
+     * as that id: the referenced SQL, and any mapper attributes of that id (timeout, fetch size, batch size), are
+     * used instead of the literal text.</p>
+     *
+     * <p>Note: On an abstract method exactly one of {@code value} or {@link #id()} must be non-empty; specifying both
      * or neither causes initialization to fail with an {@code IllegalArgumentException}. The only exception is
      * a {@code default} method whose last parameter is a {@code String[]} (see above), which collects every
      * entry from both {@code value} and {@link #id()} at runtime.</p>
@@ -206,7 +214,8 @@ public @interface Query {
      * enabling better organization and reusability.
      * Each id entry must be a valid Java identifier as per {@link RegExUtil#JAVA_IDENTIFIER_MATCHER}, and
      * must resolve to a non-empty SQL statement; an id that is not a Java identifier, or that no
-     * {@link SqlSource} entry and no {@link SqlScript} field defines, fails DAO initialization with
+     * {@link SqlSource} entry, no {@link SqlScript} field and no SQL mapper supplied when the DAO is created defines, fails DAO
+     * initialization with
      * {@code IllegalArgumentException}.
      *
      * <p>An ordinary abstract DAO method must specify exactly one entry; supplying more than one entry
@@ -255,7 +264,7 @@ public @interface Query {
      * // </sql>
      * }</pre>
      *
-     * <p>Note: Exactly one of {@link #value()} or {@code id} must be non-empty; specifying both
+     * <p>Note: On an abstract method exactly one of {@link #value()} or {@code id} must be non-empty; specifying both
      * or neither causes initialization to fail with an {@code IllegalArgumentException}. The only exception is
      * a {@code default} method whose last parameter is a {@code String[]} (see above), which collects every
      * entry from both {@link #value()} and {@code id} at runtime.</p>

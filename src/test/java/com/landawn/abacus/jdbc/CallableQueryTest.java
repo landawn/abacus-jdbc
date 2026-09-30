@@ -415,6 +415,21 @@ public class CallableQueryTest extends TestBase {
         verify(callableStatement).setObject("obj", null);
     }
 
+    // JDBC value objects must reach the driver unchanged; the runtime-class Type lookup used to resolve their
+    // driver implementation classes to a bean Type and bind a JSON string instead.
+    @Test
+    public void testSetObject_ByName_JdbcValueObjectsPassedToDriverUnchanged() throws SQLException {
+        final Object[] values = { Mockito.mock(SQLXML.class), Mockito.mock(java.sql.Array.class), Mockito.mock(java.sql.Ref.class),
+                Mockito.mock(RowId.class), Mockito.mock(java.sql.Struct.class) };
+
+        for (int i = 0; i < values.length; i++) {
+            assertSame(callableQuery, callableQuery.setObject("p" + i, values[i]));
+            verify(callableStatement).setObject("p" + i, values[i]);
+        }
+
+        verify(callableStatement, Mockito.never()).setString(Mockito.anyString(), Mockito.anyString());
+    }
+
     @Test
     public void testSetObject_ByName_WithSqlType() throws SQLException {
         CallableQuery result = callableQuery.setObject("obj", "value", Types.VARCHAR);
@@ -2149,6 +2164,47 @@ public class CallableQueryTest extends TestBase {
         assertEquals("c", result._3);
         assertEquals(Integer.valueOf(77), result._4.getOutParamValue(1));
         inOrder.verify(callableStatement, org.mockito.Mockito.atLeast(1)).getMoreResults();
+        inOrder.verify(callableStatement).getInt(1);
+    }
+
+    // A driver rejecting getMoreResults(KEEP_CURRENT_RESULT) (e.g. SQL Server): each result set must be extracted before
+    // the deferred getMoreResults() closes it, and the trailing result must still be drained before OUT params are read.
+    @Test
+    public void testQuery2ResultSetsAndGetOutParameters_KeepCurrentResultRejected_ExtractsThenDrains() throws SQLException {
+        final ResultSet rs1 = mock(ResultSet.class);
+        final ResultSet rs2 = mock(ResultSet.class);
+        final ResultSetMetaData md = mock(ResultSetMetaData.class);
+        when(md.getColumnCount()).thenReturn(0);
+        when(rs1.getMetaData()).thenReturn(md);
+        when(rs2.getMetaData()).thenReturn(md);
+
+        when(callableStatement.execute()).thenReturn(true);
+        when(callableStatement.getResultSet()).thenReturn(rs1, rs2);
+        when(callableStatement.getMoreResults(java.sql.Statement.KEEP_CURRENT_RESULT))
+                .thenThrow(new java.sql.SQLFeatureNotSupportedException("KEEP_CURRENT_RESULT"));
+        // rs1 -> rs2 (deferred advance), rs2 -> trailing rs3 (drain), then no more results.
+        when(callableStatement.getMoreResults()).thenReturn(true, true, false);
+        when(callableStatement.getUpdateCount()).thenReturn(-1);
+
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+        when(callableStatement.getInt(1)).thenReturn(55);
+
+        final java.util.function.Supplier<Long> advanceCount = () -> Mockito.mockingDetails(callableStatement)
+                .getInvocations()
+                .stream()
+                .filter(it -> it.getMethod().getName().equals("getMoreResults") && it.getArguments().length == 0)
+                .count();
+
+        final com.landawn.abacus.util.Tuple.Tuple3<Long, Long, Jdbc.OutParamResult> result = callableQuery.query2ResultSetsAndGetOutParameters(
+                (Jdbc.BiResultExtractor<Long>) (rs, labels) -> advanceCount.get(), (Jdbc.BiResultExtractor<Long>) (rs, labels) -> advanceCount.get());
+
+        assertEquals(0L, result._1, "rs1 must be extracted before the statement advances past it");
+        assertEquals(1L, result._2, "rs2 must be extracted before the statement advances past it");
+        assertEquals(Integer.valueOf(55), result._3.getOutParamValue(1));
+        assertEquals(3L, advanceCount.get());
+
+        final org.mockito.InOrder inOrder = Mockito.inOrder(callableStatement);
+        inOrder.verify(callableStatement, Mockito.times(3)).getMoreResults();
         inOrder.verify(callableStatement).getInt(1);
     }
 

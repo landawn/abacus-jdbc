@@ -44,6 +44,11 @@ import java.lang.annotation.Target;
  * id must be unique across both sources. Every loaded id must also be a valid Java identifier;
  * punctuated ids fail DAO initialization as well.</p>
  *
+ * <p>{@code @SqlSource} declarations on the DAO's super-interfaces are loaded too. A loaded id that is
+ * already defined &mdash; by another {@code @SqlSource} resource or by the SQL mapper
+ * supplied when the DAO is created &mdash; also fails DAO initialization with
+ * {@code IllegalArgumentException}.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @SqlSource("sql/UserDao.xml")

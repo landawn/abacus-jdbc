@@ -516,6 +516,29 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals("Explicit-2", mixedIdDao.getOrNull(explicitId2.getId()).getName());
     }
 
+    // Regression: the mixed generated/explicit-id batchInsert wrote each run's generated IDs back onto its entities
+    // before the enclosing transaction committed. When a later run failed, the transaction rolled the earlier rows
+    // back but those entities kept the IDs of rows that no longer existed (so a retry inserted them as explicit IDs).
+    @Test
+    public void testBatchInsert_MixedIds_FailureDoesNotLeaveRolledBackIdsOnEntities() throws SQLException {
+        final MixedIdAccount existing = new MixedIdAccount();
+        existing.setName("Existing");
+        existing.setId(10_000L);
+        mixedIdDao.insert(existing);
+
+        final MixedIdAccount generatedId = new MixedIdAccount();
+        generatedId.setName("Generated");
+        final MixedIdAccount duplicateExplicitId = new MixedIdAccount();
+        duplicateExplicitId.setName("Duplicate");
+        duplicateExplicitId.setId(10_000L);
+
+        assertThrows(SQLException.class, () -> mixedIdDao.batchInsert(List.of(generatedId, duplicateExplicitId), 10));
+
+        assertEquals(null, generatedId.getId(), "an ID of a rolled-back row must not be written back");
+        assertEquals(1, mixedIdDao.count(Filters.isNotNull("id")));
+        assertFalse(mixedIdDao.findFirst(Filters.eq("name", "Generated")).isPresent());
+    }
+
     @Test
     public void testBatchSave_MixedGeneratedAndExplicitIds() throws SQLException {
         final MixedIdAccount generatedId1 = new MixedIdAccount();
@@ -830,6 +853,56 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(3, dao.count(Filters.eq("firstName", "Multi").or(Filters.eq("lastName", "Key"))));
     }
 
+    // batchUpsert resolves each match name through the bean metadata (which also accepts a non-canonical
+    // spelling such as "FIRSTNAME"). The multi-prop path always queried by the resolved property name, but the
+    // single-prop lookup used the raw spelling and failed with "Column FIRSTNAME not found".
+    @Test
+    public void testBatchUpsert_SingleMatchPropUsesResolvedPropertyName() throws SQLException {
+        final Long existingId = dao.insert(newUser("Resolved", "Before", 40));
+
+        final List<UserAccount> result = dao.batchUpsert(Arrays.asList(newUser("Resolved", "After", 41), newUser("ResolvedNew", "New", 42)),
+                List.of("FIRSTNAME"), 10);
+
+        assertEquals(2, result.size());
+        assertEquals("After", dao.getOrNull(existingId).getLastName());
+        assertEquals(1, dao.count(Filters.eq("firstName", "Resolved")));
+        assertEquals(1, dao.count(Filters.eq("firstName", "ResolvedNew")));
+    }
+
+    public interface UncheckedUserAccountCrudDao extends com.landawn.abacus.jdbc.dao.UncheckedCrudDao<UserAccount, Long, UncheckedUserAccountCrudDao> {
+    }
+
+    public interface UncheckedUserAccountDao extends com.landawn.abacus.jdbc.dao.UncheckedDao<UserAccount, UncheckedUserAccountDao> {
+    }
+
+    // upsert(T, matchPropNames) used to render the raw spelling into SQL: "FIRSTNAME" resolved the property value
+    // but referenced a non-existent column. Covers Dao/CrudDao (inherited), UncheckedCrudDao and UncheckedDao on both
+    // the update and the insert path; an unknown name is still rejected.
+    @Test
+    public void testUpsert_MatchPropNamesUseResolvedPropertyNames() throws SQLException {
+        final UncheckedUserAccountCrudDao uncheckedCrudDao = JdbcUtil.createDao(UncheckedUserAccountCrudDao.class, ds);
+        final UncheckedUserAccountDao uncheckedDao = JdbcUtil.createDao(UncheckedUserAccountDao.class, ds);
+
+        final Long id1 = dao.insert(newUser("UpsName1", "Before", 40));
+        final Long id2 = dao.insert(newUser("UpsName2", "Before", 41));
+        final Long id3 = dao.insert(newUser("UpsName3", "Before", 42));
+
+        dao.upsert(newUser("UpsName1", "After", 50), List.of("FIRSTNAME"));
+        uncheckedCrudDao.upsert(newUser("UpsName2", "After", 51), List.of("first_name"));
+        uncheckedDao.upsert(newUser("UpsName3", "After", 52), List.of("FirstName", "LASTNAME", "age"));
+
+        assertEquals("After", dao.getOrNull(id1).getLastName());
+        assertEquals("After", dao.getOrNull(id2).getLastName());
+        // No row matched (UpsName3, After, 52), so a new row is inserted and the existing one is untouched.
+        assertEquals("Before", dao.getOrNull(id3).getLastName());
+        assertEquals(2, dao.count(Filters.eq("firstName", "UpsName3")));
+
+        dao.upsert(newUser("UpsNameNew", "New", 60), List.of("FIRSTNAME"));
+        assertEquals(1, dao.count(Filters.eq("firstName", "UpsNameNew")));
+
+        assertThrows(IllegalArgumentException.class, () -> dao.upsert(newUser("UpsName1", "X", 1), List.of("noSuchProp")));
+    }
+
     // batchUpsert de-duplicates lookup keys before splitting them into query batches: equal match
     // keys landing in different query batches previously returned the same database row more than
     // once, making the throwing merger report a spurious duplicate result (CrudDao de-dup comment).
@@ -1038,6 +1111,26 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(Integer.valueOf(7), dao.queryForSingleNonNull("age", id, Integer.class).orElseThrow());
         assertEquals(Integer.valueOf(7), dao.queryForUniqueValue("age", id, Integer.class).orElseNull());
         assertEquals(Integer.valueOf(7), dao.queryForUniqueNonNull("age", id, Integer.class).orElseThrow());
+    }
+
+    // Pins the queryForSingleValue/queryForUniqueValue Javadoc: SQL NULL is present-but-null for a wrapper target type,
+    // but a primitive target type maps it to the primitive default (still present).
+    @Test
+    public void testQueryForValue_SqlNull_PrimitiveTargetTypeYieldsDefault() throws SQLException {
+        final Long id = dao.insert(newUser("NullAge", "Probe", 5));
+        dao.prepareQuery("UPDATE user_account SET age = NULL WHERE id = ?").setLong(1, id).update();
+
+        assertEquals(Nullable.of(0), dao.queryForSingleValue("age", id, int.class));
+        assertEquals(Nullable.of(0), dao.queryForUniqueValue("age", id, int.class));
+        assertEquals(Nullable.of(0), dao.queryForSingleValue("age", Filters.eq("id", id), int.class));
+        assertEquals(Nullable.of(0), dao.queryForUniqueValue("age", Filters.eq("id", id), int.class));
+
+        assertEquals(Nullable.of((Integer) null), dao.queryForSingleValue("age", id, Integer.class));
+        assertEquals(Nullable.of((Integer) null), dao.queryForUniqueValue("age", id, Integer.class));
+        assertEquals(Nullable.of((Integer) null), dao.queryForSingleValue("age", Filters.eq("id", id), Integer.class));
+        assertEquals(Nullable.of((Integer) null), dao.queryForUniqueValue("age", Filters.eq("id", id), Integer.class));
+
+        assertFalse(dao.queryForSingleValue("age", Filters.eq("id", -1L), int.class).isPresent());
     }
 
     // Dao queryFor* single-column-by-Condition family.
@@ -1323,6 +1416,17 @@ public class DaoImplIntegrationTest extends TestBase {
         @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY {sortCol}")
         List<UserAccount> findSortedByFragment(@com.landawn.abacus.jdbc.annotation.SqlFragment("sortCol") String sortCol,
                 @com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        // @SqlFragmentList joins the elements verbatim into the {cols} token.
+        @Query("SELECT {cols} FROM user_account WHERE last_name = :ln ORDER BY id")
+        List<String> firstColumnByFragmentList(@com.landawn.abacus.jdbc.annotation.SqlFragmentList("cols") List<String> cols,
+                @com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        // Array form: String elements and primitive (non-String) elements are joined verbatim too.
+        @Query("SELECT {cols} FROM user_account WHERE last_name = :ln ORDER BY {positions} DESC")
+        List<String> firstColumnByFragmentArrays(@com.landawn.abacus.jdbc.annotation.SqlFragmentList("cols") String[] cols,
+                @com.landawn.abacus.jdbc.annotation.SqlFragmentList("positions") int[] positions, @com.landawn.abacus.jdbc.annotation.Bind("ln") String ln)
+                throws SQLException;
     }
 
     @Test
@@ -1390,6 +1494,19 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(3, sorted.size());
         assertEquals(10, sorted.get(0).getAge());
         assertEquals(30, sorted.get(2).getAge());
+    }
+
+    // @SqlFragmentList elements used to be serialized as JSON, which escaped a quoted identifier "FIRST_NAME" into
+    // \"FIRST_NAME\" and produced invalid SQL.
+    @Test
+    public void testSqlFragmentList_QuotedIdentifierElementIsNotJsonEscaped() throws SQLException {
+        final AnnotatedQueryDao aqDao = JdbcUtil.createDao(AnnotatedQueryDao.class, ds);
+        dao.insert(newUser("FragList1", "FragList", 20));
+        dao.insert(newUser("FragList2", "FragList", 30));
+
+        assertEquals(List.of("FragList1", "FragList2"), aqDao.firstColumnByFragmentList(List.of("\"FIRST_NAME\""), "FragList"));
+        assertEquals(List.of("FragList2", "FragList1"),
+                aqDao.firstColumnByFragmentArrays(new String[] { "\"FIRST_NAME\"" }, new int[] { 1 }, "FragList"));
     }
 
     // SQL referenced by id (@SqlScript/SqlMapper) is stored in its parameterized form ("?" markers). When the
@@ -1566,6 +1683,245 @@ public class DaoImplIntegrationTest extends TestBase {
 
         assertEquals(1, nDao.deleteNamed("Dml"));
         assertEquals(0, dao.count(Filters.eq("lastName", "Dml")));
+    }
+
+    // A bean that is NOT the DAO entity: custom INSERTs into another table must not write the DAO entity's id into it.
+    public static class CrossTableEventLog {
+        private Long id;
+        private String msg;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getMsg() {
+            return msg;
+        }
+
+        public void setMsg(final String msg) {
+            this.msg = msg;
+        }
+    }
+
+    private static CrossTableEventLog newEventLog(final long id, final String msg) {
+        final CrossTableEventLog log = new CrossTableEventLog();
+        log.setId(id);
+        log.setMsg(msg);
+        return log;
+    }
+
+    public interface CrossTableInsertDao extends CrudDao<UserAccount, Long, CrossTableInsertDao> {
+        @Query("INSERT INTO dao_it_event_log (id, msg) VALUES (:id, :msg)")
+        void insertEventLog(CrossTableEventLog log) throws SQLException;
+
+        @Query("INSERT INTO dao_it_event_log (id, msg) VALUES (:id, :msg)")
+        long insertEventLogReturningId(CrossTableEventLog log) throws SQLException;
+
+        @Query(value = "INSERT INTO dao_it_event_log (id, msg) VALUES (:id, :msg)", batch = true)
+        void batchInsertEventLogs(Collection<CrossTableEventLog> logs) throws SQLException;
+
+        @Query("INSERT INTO dao_it_audit_note (note) VALUES (:note)")
+        void insertAuditNote(@com.landawn.abacus.jdbc.annotation.Bind("note") String note) throws SQLException;
+
+        @Query(value = "INSERT INTO dao_it_audit_note (note) VALUES (:note)", batch = true)
+        void batchInsertAuditNotes(List<Map<String, Object>> notes) throws SQLException;
+
+        // void INSERTs whose rows may be DAO entities must still request the generated keys to write the ids back.
+        @Query("INSERT INTO user_account (first_name, last_name, age, active) VALUES (:firstName, :lastName, :age, :active)")
+        void insertAccount(UserAccount account) throws SQLException;
+
+        @Query(value = "INSERT INTO user_account (first_name, last_name, age, active) VALUES (:firstName, :lastName, :age, :active)", batch = true)
+        void batchInsertAccountsWildcard(Collection<? extends UserAccount> accounts) throws SQLException;
+
+        @SuppressWarnings("rawtypes")
+        @Query(value = "INSERT INTO user_account (first_name, last_name, age, active) VALUES (:firstName, :lastName, :age, :active)", batch = true)
+        void batchInsertAccountsRaw(Collection accounts, int batchSize) throws SQLException;
+    }
+
+    @Table("composite_gen_key")
+    public static class CompositeGenKeyRow {
+        @Id
+        private Long seq;
+        @Id
+        private String region;
+        private String name;
+
+        public Long getSeq() {
+            return seq;
+        }
+
+        public void setSeq(final Long seq) {
+            this.seq = seq;
+        }
+
+        public String getRegion() {
+            return region;
+        }
+
+        public void setRegion(final String region) {
+            this.region = region;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    public interface CompositeGenKeyDao extends CrudDao<CompositeGenKeyRow, com.landawn.abacus.util.EntityId, CompositeGenKeyDao> {
+        // Simulates a driver that returns only the generated column of a composite key (H2 returns every requested column).
+        @Override
+        default Jdbc.BiRowMapper<com.landawn.abacus.util.EntityId> idExtractor() {
+            return (rs, columnLabels) -> com.landawn.abacus.util.Seid.of("CompositeGenKeyRow").set("seq", rs.getLong(1));
+        }
+
+        @Query("INSERT INTO composite_gen_key (region, name) VALUES (:region, :name)")
+        com.landawn.abacus.util.EntityId insertRow(CompositeGenKeyRow row) throws SQLException;
+
+        @Query(value = "INSERT INTO composite_gen_key (region, name) VALUES (:region, :name)", batch = true)
+        List<com.landawn.abacus.util.EntityId> insertRows(List<CompositeGenKeyRow> rows) throws SQLException;
+    }
+
+    private static CompositeGenKeyRow newCompositeGenKeyRow(final String region, final String name) {
+        final CompositeGenKeyRow row = new CompositeGenKeyRow();
+        row.setRegion(region);
+        row.setName(name);
+        return row;
+    }
+
+    // Regression: when the generated keys cover only part of a composite id, the propNames insert/batchInsert overloads
+    // and custom @Query INSERTs returned that partial key ({seq}) instead of the entity's full id ({seq, region}).
+    @Test
+    public void testInsert_CompositeIdWithPartialGeneratedKeyReturnsFullId() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS composite_gen_key (seq BIGINT GENERATED BY DEFAULT AS IDENTITY, region VARCHAR(8), "
+                    + "name VARCHAR(64), PRIMARY KEY (seq, region))");
+        }
+
+        try {
+            final CompositeGenKeyDao ckDao = JdbcUtil.createDao(CompositeGenKeyDao.class, ds);
+            final List<CompositeGenKeyRow> rows = new ArrayList<>();
+            final List<com.landawn.abacus.util.EntityId> ids = new ArrayList<>();
+
+            final CompositeGenKeyRow single = newCompositeGenKeyRow("EU", "single");
+            rows.add(single);
+            ids.add(ckDao.insert(single, List.of("region", "name")));
+
+            final List<CompositeGenKeyRow> batch = List.of(newCompositeGenKeyRow("US", "b1"), newCompositeGenKeyRow("AP", "b2"));
+            rows.addAll(batch);
+            ids.addAll(ckDao.batchInsert(batch, List.of("region", "name"), 10));
+
+            final CompositeGenKeyRow custom = newCompositeGenKeyRow("SA", "custom");
+            rows.add(custom);
+            ids.add(ckDao.insertRow(custom));
+
+            final List<CompositeGenKeyRow> customBatch = List.of(newCompositeGenKeyRow("AF", "cb1"), newCompositeGenKeyRow("OC", "cb2"));
+            rows.addAll(customBatch);
+            ids.addAll(ckDao.insertRows(customBatch));
+
+            assertEquals(rows.size(), ids.size());
+
+            for (int i = 0; i < rows.size(); i++) {
+                assertNotNull(rows.get(i).getSeq(), rows.get(i).getName());
+                assertEquals(rows.get(i).getSeq(), ids.get(i).get("seq"), rows.get(i).getName());
+                assertEquals(rows.get(i).getRegion(), ids.get(i).get("region"), rows.get(i).getName());
+            }
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS composite_gen_key");
+            }
+        }
+    }
+
+    // Guard for the keys-requested decision: a void custom INSERT whose (element) type is the DAO entity, a wildcard
+    // bounded by it, or unresolvable (raw collection) still requests generated keys and writes the ids back.
+    @Test
+    public void testCustomVoidInsert_DaoEntityRowsStillReceiveGeneratedIds() throws SQLException {
+        final CrossTableInsertDao crossDao = JdbcUtil.createDao(CrossTableInsertDao.class, ds);
+
+        final UserAccount single = newUser("KeysSingle", "KeysRequested", 1);
+        crossDao.insertAccount(single);
+        assertNotNull(single.getId());
+        assertEquals("KeysSingle", dao.getOrNull(single.getId()).getFirstName());
+
+        final List<UserAccount> wildcardRows = List.of(newUser("KeysW1", "KeysRequested", 2), newUser("KeysW2", "KeysRequested", 3));
+        crossDao.batchInsertAccountsWildcard(wildcardRows);
+
+        final List<UserAccount> rawRows = List.of(newUser("KeysR1", "KeysRequested", 4), newUser("KeysR2", "KeysRequested", 5));
+        crossDao.batchInsertAccountsRaw(rawRows, 1);
+
+        final List<UserAccount> batchRows = new ArrayList<>(wildcardRows);
+        batchRows.addAll(rawRows);
+
+        for (final UserAccount row : batchRows) {
+            assertNotNull(row.getId(), row.getFirstName());
+            assertEquals(row.getFirstName(), dao.getOrNull(row.getId()).getFirstName());
+        }
+    }
+
+    // Regression: a custom @Query INSERT whose single argument was ANY bean was treated as the DAO entity, so the
+    // generated key was written back through the DAO entity's id setter (and read through its id getter) on an
+    // unrelated bean, failing after the row had already been inserted.
+    @Test
+    public void testCustomInsert_OtherBeanArgumentIsNotTreatedAsDaoEntity() throws SQLException {
+        final CrossTableInsertDao crossDao = JdbcUtil.createDao(CrossTableInsertDao.class, ds);
+
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS dao_it_event_log (id BIGINT PRIMARY KEY, msg VARCHAR(64))");
+            st.execute("DELETE FROM dao_it_event_log");
+        }
+
+        try {
+            final CrossTableEventLog first = newEventLog(5, "one");
+            crossDao.insertEventLog(first);
+            assertEquals(5L, first.getId());
+
+            assertEquals(6L, crossDao.insertEventLogReturningId(newEventLog(6, "two")));
+
+            crossDao.batchInsertEventLogs(List.of(newEventLog(7, "three"), newEventLog(8, "four")));
+
+            assertEquals(4, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM dao_it_event_log").queryForInt().orElseThrow());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS dao_it_event_log");
+            }
+        }
+    }
+
+    // Regression: a void custom @Query INSERT into a table without the DAO entity's id column always requested that
+    // column as a generated key, which drivers that validate the requested names (H2, PostgreSQL) reject.
+    @Test
+    public void testCustomVoidInsert_IntoTableWithoutDaoIdColumn() throws SQLException {
+        final CrossTableInsertDao crossDao = JdbcUtil.createDao(CrossTableInsertDao.class, ds);
+
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS dao_it_audit_note (note VARCHAR(64))");
+            st.execute("DELETE FROM dao_it_audit_note");
+        }
+
+        try {
+            crossDao.insertAuditNote("single");
+            crossDao.batchInsertAuditNotes(List.of(Map.of("note", "batch1"), Map.of("note", "batch2")));
+
+            assertEquals(3, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM dao_it_audit_note").queryForInt().orElseThrow());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS dao_it_audit_note");
+            }
+        }
     }
 
     // =====================================================================================
@@ -1924,6 +2280,38 @@ public class DaoImplIntegrationTest extends TestBase {
         assertThrows(DuplicateResultException.class, mergedDao::uniqueMerged);
         // An explicit operation takes precedence over a uniqueness-style method name.
         assertEquals(firstId, mergedDao.queryForUniqueMergedFirst().get().getId());
+    }
+
+    public interface CustomWriteCacheDao extends CrudDao<UserAccount, Long, CustomWriteCacheDao> {
+        // "reset" is not an update-method name prefix.
+        @Query("UPDATE user_account SET age = :age WHERE last_name = :ln")
+        int resetAgeByLastName(@com.landawn.abacus.jdbc.annotation.Bind("age") int age, @com.landawn.abacus.jdbc.annotation.Bind("ln") String ln)
+                throws SQLException;
+
+        // "get" is a query-method name prefix, but the SQL is an UPDATE.
+        @Query("UPDATE user_account SET age = age + 1 WHERE last_name = :ln")
+        int getAndIncrementAgeByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    // Regression (thread-local DAO cache scope): whether a custom @Query method invalidated or used the cache was
+    // decided only by its name prefix, so an UPDATE named "reset..." left stale cached query results behind, and an
+    // UPDATE named "get..." was itself served from the cache on the second call without executing.
+    @Test
+    public void testLocalThreadCache_CustomWriteQueryClassifiedBySqlNotName() throws SQLException {
+        final CustomWriteCacheDao writeDao = JdbcUtil.createDao(CustomWriteCacheDao.class, ds);
+        final long id = dao.insert(newUser("CW1", "CustomWrite", 10));
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
+            assertEquals(10, writeDao.list(Filters.eq("lastName", "CustomWrite")).get(0).getAge());
+
+            assertEquals(1, writeDao.resetAgeByLastName(20, "CustomWrite"));
+            assertEquals(20, writeDao.list(Filters.eq("lastName", "CustomWrite")).get(0).getAge());
+
+            assertEquals(1, writeDao.getAndIncrementAgeByLastName("CustomWrite"));
+            assertEquals(1, writeDao.getAndIncrementAgeByLastName("CustomWrite"));
+        }
+
+        assertEquals(22, dao.getOrNull(id).getAge());
     }
 
     public interface LocalCacheProbeDao extends CrudDao<UserAccount, Long, LocalCacheProbeDao> {

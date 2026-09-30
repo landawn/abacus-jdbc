@@ -208,8 +208,9 @@ public enum QueryOperation {
      * Retrieves all {@code ResultSet}s from a stored procedure call as {@code List}s.
      * Each {@code ResultSet} is converted to a {@code List} of the specified type.
      *
-     * <p>This operation is primarily used with the {@code @Query} annotation for stored procedures
-     * that return multiple result sets. Each result set is processed and returned
+     * <p>This operation is used with the {@code @Query} annotation for stored procedures
+     * that return multiple result sets and requires {@code @Query(procedure = true)}; DAO creation
+     * fails with {@link UnsupportedOperationException} otherwise. Each result set is processed and returned
      * in a collection via {@code listAllResultSets/listAllResultSetsAndGetOutParameters}.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -229,8 +230,10 @@ public enum QueryOperation {
      *
      * <p>Similar to {@link #listAll} but returns {@code Dataset} objects which provide more
      * flexibility for data processing and transformation compared to typed {@code List}s.
-     * This operation is primarily used with the {@code @Query} annotation to retrieve all the {@code ResultSet}s
-     * returned from the executed procedure via {@code queryAllResultSets/queryAllResultSetsAndGetOutParameters}.</p>
+     * This operation is used with the {@code @Query} annotation to retrieve all the {@code ResultSet}s
+     * returned from the executed procedure via {@code queryAllResultSets/queryAllResultSetsAndGetOutParameters},
+     * and requires {@code @Query(procedure = true)}; DAO creation fails with
+     * {@link UnsupportedOperationException} otherwise.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

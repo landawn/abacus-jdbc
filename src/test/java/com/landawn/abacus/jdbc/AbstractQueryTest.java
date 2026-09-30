@@ -216,6 +216,22 @@ public class AbstractQueryTest extends TestBase {
         verify(preparedStatement).setString(3, "b");
     }
 
+    // Same JDBC value-object pass-through as setObject(int, Object): an H2 SQLXML element used to be bound as the
+    // JSON string {"string": "<a>2</a>"}.
+    @Test
+    public void testSetParametersFrom_Collection_H2SqlXml_BindsXmlNotJson() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:abstractQuerySetParametersFromSqlXml")) {
+            JdbcUtil.executeUpdate(conn, "CREATE TABLE sqlxml_holder (id INT, x CLOB)");
+
+            final java.sql.SQLXML xml = conn.createSQLXML();
+            xml.setString("<a>2</a>");
+
+            JdbcUtil.prepareQuery(conn, "INSERT INTO sqlxml_holder (id, x) VALUES (?, ?)").setParametersFrom(1, List.of(1, xml)).update();
+
+            assertEquals("<a>2</a>", JdbcUtil.prepareQuery(conn, "SELECT x FROM sqlxml_holder").queryForString().orElseNull());
+        }
+    }
+
     @Test
     public void testSetParametersFromRejectsNonPositiveStartIndexForEmptyInput() throws SQLException {
         final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> query.setParametersFrom(0, new int[0]));
@@ -232,6 +248,36 @@ public class AbstractQueryTest extends TestBase {
         assertSame(query, result);
         verify(preparedStatement).setNull(1, Types.INTEGER);
         verify(preparedStatement).setNull(3, Types.INTEGER);
+    }
+
+    // Driver implementation classes of the JDBC value interfaces are not resolved to their dedicated Type by the
+    // runtime-class lookup (H2's JdbcSQLXML and these mocks become a BeanType), so setObject(int, Object) used to
+    // bind a JSON string of their bean properties instead of passing the value object to the driver.
+    @Test
+    public void testSetObject_JdbcValueObjects_PassedToDriverUnchanged() throws SQLException {
+        final Object[] values = { Mockito.mock(java.sql.SQLXML.class), Mockito.mock(java.sql.Array.class), Mockito.mock(java.sql.Ref.class),
+                Mockito.mock(java.sql.RowId.class), Mockito.mock(java.sql.Struct.class) };
+
+        for (int i = 0; i < values.length; i++) {
+            assertSame(query, query.setObject(i + 1, values[i]));
+            verify(preparedStatement).setObject(i + 1, values[i]);
+        }
+
+        verify(preparedStatement, never()).setString(anyInt(), Mockito.anyString());
+    }
+
+    @Test
+    public void testSetObject_H2SqlXml_BindsXmlNotJson() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:abstractQuerySetObjectSqlXml")) {
+            JdbcUtil.executeUpdate(conn, "CREATE TABLE sqlxml_holder (x CLOB)");
+
+            final java.sql.SQLXML xml = conn.createSQLXML();
+            xml.setString("<a>1</a>");
+
+            JdbcUtil.prepareQuery(conn, "INSERT INTO sqlxml_holder (x) VALUES (?)").setObject(1, xml).update();
+
+            assertEquals("<a>1</a>", JdbcUtil.prepareQuery(conn, "SELECT x FROM sqlxml_holder").queryForString().orElseNull());
+        }
     }
 
     // setObject(int, Object, int) validates sqlType against the standard java.sql.Types / JDBCType
@@ -287,6 +333,23 @@ public class AbstractQueryTest extends TestBase {
 
         assertThrows(ClassCastException.class, () -> query.addBatchParameters(rows.iterator()));
         assertTrue(query.isClosed);
+    }
+
+    // A null FIRST row fixes the single-value shape (documented): later collection rows are bound as one
+    // value at position 1, parameters are never cleared, and no IllegalArgumentException is raised.
+    @Test
+    public void testAddBatchParameters_Iterator_NullFirstRow_FixesSingleValueShape() throws SQLException {
+        final List<Object> rows = new ArrayList<>();
+        rows.add(null);
+        rows.add(List.of("a", "b"));
+
+        assertSame(query, query.addBatchParameters(rows.iterator()));
+
+        verify(preparedStatement).setObject(1, null);
+        verify(preparedStatement, never()).setString(2, "b");
+        verify(preparedStatement, never()).clearParameters();
+        verify(preparedStatement, times(2)).addBatch();
+        assertFalse(query.isClosed);
     }
 
     // An empty typed iterator adds no batch rows and leaves the query open and reusable.
@@ -864,6 +927,19 @@ public class AbstractQueryTest extends TestBase {
         when(rs.getString(1)).thenReturn("");
 
         assertEquals(OptionalChar.of((char) 0), query.queryForChar());
+    }
+
+    // queryForChar() reads the column as a string and returns its first character, so a numeric 65
+    // yields '6' rather than the code point 'A' (pins the documented getString-based conversion).
+    @Test
+    public void testQueryForChar_NumericColumn_ReturnsFirstCharacterOfStringForm() throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        when(preparedStatement.executeQuery()).thenReturn(rs);
+        when(rs.next()).thenReturn(true);
+        when(rs.getInt(1)).thenReturn(65);
+        when(rs.getString(1)).thenReturn("65");
+
+        assertEquals(OptionalChar.of('6'), query.queryForChar());
     }
 
     // queryForInt() — SQL NULL maps to a PRESENT OptionalInt.of(0) (ResultSet.getInt contract), not empty().
@@ -2286,6 +2362,34 @@ public class AbstractQueryTest extends TestBase {
             verify(statement).getMoreResults();
             verify(statement, never()).close();
             assertFalse(streamQuery.isClosed);
+        }
+    }
+
+    // Regression: with closeAfterExecution(false), closing a partially consumed streamAllResultSets stream after
+    // the caller had already closed the query still drained the (closed) statement, so Stream.close() threw the
+    // driver's "statement is closed" SQLException wrapped in UncheckedSQLException.
+    @Test
+    public void testStreamAllResultSetsClosedAfterQueryCloseDoesNotDrainClosedStatement() throws SQLException {
+        for (final boolean withColumnLabels : new boolean[] { false, true }) {
+            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+            final ResultSet rs = Mockito.mock(ResultSet.class);
+            final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(false);
+            when(statement.execute()).thenReturn(true);
+            when(statement.getResultSet()).thenReturn(rs);
+            when(statement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true);
+            when(statement.getMoreResults()).thenThrow(new SQLException("Statement is closed"));
+            when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
+
+            final Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (result, labels) -> "value")
+                    : streamQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) result -> "value");
+            final java.util.Iterator<String> iter = results.iterator();
+            assertEquals("value", iter.next());
+
+            streamQuery.close();
+            assertDoesNotThrow(results::close);
+
+            verify(statement, never()).getMoreResults();
+            verify(statement).close();
         }
     }
 

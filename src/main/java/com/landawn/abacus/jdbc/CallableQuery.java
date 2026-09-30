@@ -1012,7 +1012,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}
+     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp} and the runtime's
+     *         {@link Timestamp#from(Instant)} detects the overflow (JDK 25 does); on JDK 21 the conversion silently overflows and an
+     *         incorrect timestamp is bound instead
      * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
      *         closed, or the driver fails to bind the {@code value}
      */
@@ -1035,7 +1037,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}
+     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp} and the runtime's
+     *         {@link Timestamp#from(Instant)} detects the overflow (JDK 25 does); on JDK 21 the conversion silently overflows and an
+     *         incorrect timestamp is bound instead
      * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
      *         closed, or the driver fails to bind the {@code value}
      */
@@ -1058,7 +1062,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param parameterName the name of the parameter
      * @param value the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this CallableQuery instance for method chaining
-     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}
+     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp} and the runtime's
+     *         {@link Timestamp#from(Instant)} detects the overflow (JDK 25 does); on JDK 21 the conversion silently overflows and an
+     *         incorrect timestamp is bound instead
      * @throws SQLException if the driver rejects {@code parameterName} (for example, it is not a parameter of the procedure), the statement is
      *         closed, or the driver fails to bind the {@code value}
      */
@@ -1569,6 +1575,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * The appropriate SQL type is automatically inferred from the runtime class of {@code value}
      * via the abacus type system. If {@code value} is {@code null}, the parameter will be
      * set to SQL {@code NULL} by delegating to {@link CallableStatement#setObject(String, Object)}.
+     * JDBC value objects ({@link java.sql.Array}, {@link java.sql.Ref}, {@link java.sql.RowId},
+     * {@link java.sql.SQLXML} and {@link java.sql.Struct}) are passed to the driver unchanged.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1585,6 +1593,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      */
     public CallableQuery setObject(final String parameterName, final Object value) throws SQLException {
         if (value == null) {
+            cstmt.setObject(parameterName, value);
+        } else if (JdbcUtil.isJdbcValueObject(value)) {
             cstmt.setObject(parameterName, value);
         } else {
             Type.<Object> of(value.getClass()).set(cstmt, parameterName, value);
@@ -3112,6 +3122,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The result set is fully loaded into memory as a {@link Dataset}, which provides
      * a convenient API for working with tabular data.</p>
      *
+     * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
+     * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
+     * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Dataset, Jdbc.OutParamResult> result = query.queryAndGetOutParameters();
@@ -3150,6 +3164,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p>This method provides flexibility in how the result set is processed and converted
      * to the desired type. The ResultExtractor has full access to the ResultSet for custom processing.</p>
+     *
+     * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
+     * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
+     * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3211,6 +3229,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p>The BiResultExtractor receives the column labels as a second parameter, which can be
      * useful for dynamic result processing or validation.</p>
+     *
+     * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
+     * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
+     * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3647,6 +3669,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *   <li>Column name mapping can be customized using {@code @Column} annotation</li>
      * </ul>
      *
+     * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
+     * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
+     * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Simple stored procedure returning employees
@@ -3697,6 +3723,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The {@code RowMapper} receives the {@code ResultSet} positioned at each row and
      * should extract the data to create an instance of type T. This method is useful when
      * you need custom mapping logic that cannot be achieved with automatic mapping.</p>
+     *
+     * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
+     * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
+     * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3773,6 +3803,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The {@code RowFilter} is applied before the {@code RowMapper}, so rows that don't
      * match the filter criteria are skipped entirely, avoiding unnecessary object creation.</p>
      *
+     * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
+     * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
+     * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Filter and map only active accounts with balance > 1000
@@ -3848,6 +3882,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The column labels list is retrieved once and reused for all rows, making this method
      * efficient when you need column metadata for mapping decisions.</p>
      *
+     * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
+     * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
+     * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Dynamic mapping based on column presence
@@ -3922,6 +3960,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p>This method is ideal for complex scenarios where both filtering and mapping decisions
      * depend on column metadata or when you need to handle dynamic result set structures.</p>
+     *
+     * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
+     * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
+     * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4417,7 +4459,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <ol>
      *   <li>Calls {@code clearParameters()} on the {@code CallableStatement}; a warning is
      *       logged if it throws {@link SQLException}, and that exception is not propagated</li>
-     *   <li>Delegates to {@code super.closeStatement()} to close the statement and release resources</li>
+     *   <li>Delegates to {@code super.closeStatement()}, which restores the statement properties this query
+     *       changed (such as the fetch direction) and then closes the statement</li>
      * </ol>
      *
      * <p>{@link #close()} ensures this cleanup is invoked at most once for this query.</p>

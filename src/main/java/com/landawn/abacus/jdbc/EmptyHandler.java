@@ -25,15 +25,15 @@ import com.landawn.abacus.jdbc.dao.Dao;
  * Null Object pattern. It is marked as {@code @Internal} indicating it is intended for framework
  * internal use only and should not be used directly by application code.</p>
  *
- * <p>The EmptyHandler is automatically used by the framework in scenarios where a handler interface
- * must be provided but no actual handling logic is required, such as when creating DAO instances
- * without custom initialization or cleanup logic.</p>
+ * <p>It is the default value of {@link com.landawn.abacus.jdbc.annotation.Handler#impl()}: a
+ * {@code @Handler} annotation that specifies neither a {@code qualifier} nor an {@code impl} resolves
+ * to a shared {@code EmptyHandler} instance, whose {@code beforeInvoke}/{@code afterInvoke} hooks do nothing.</p>
  *
  * <p><b>Internal Framework Usage:</b></p>
  * <pre>{@code
  * // Framework code - DO NOT use directly in application code
  * Jdbc.Handler<Dao> handler = new EmptyHandler();
- * // Handler is applied during DAO creation but performs no operations
+ * // Handler hooks run around DAO method invocations but perform no operations
  * }</pre>
  *
  * @see Jdbc.Handler

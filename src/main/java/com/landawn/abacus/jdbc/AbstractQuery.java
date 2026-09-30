@@ -1663,7 +1663,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterIndex the 1-based index of the parameter to set
      * @param value the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}
+     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}. The range check is
+     *         performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 25 throws, while older runtimes such as
+     *         JDK 21 silently overflow and bind an incorrect timestamp instead
      * @throws SQLException if {@code parameterIndex} does not correspond to a parameter marker in the SQL statement, the statement is closed, or
      *         the driver fails to bind the {@code value}
      */
@@ -1685,7 +1687,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterIndex the 1-based index of the parameter to set
      * @param value the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}
+     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}. The range check is
+     *         performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 25 throws, while older runtimes such as
+     *         JDK 21 silently overflow and bind an incorrect timestamp instead
      * @throws SQLException if {@code parameterIndex} does not correspond to a parameter marker in the SQL statement, the statement is closed, or
      *         the driver fails to bind the {@code value}
      */
@@ -1707,7 +1711,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param parameterIndex the 1-based index of the parameter to set
      * @param value the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this AbstractQuery instance for method chaining
-     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}
+     * @throws IllegalArgumentException if the {@code value} is outside the range supported by {@link Timestamp}. The range check is
+     *         performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 25 throws, while older runtimes such as
+     *         JDK 21 silently overflow and bind an incorrect timestamp instead
      * @throws SQLException if {@code parameterIndex} does not correspond to a parameter marker in the SQL statement, the statement is closed, or
      *         the driver fails to bind the {@code value}
      */
@@ -2330,7 +2336,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * If the value is {@code null}, it is set as SQL {@code NULL}; otherwise the value is set
      * using the Abacus {@link Type} resolved from its runtime class, which maps it to an
      * appropriate SQL type. Note that a bean/entity value is not expanded into columns: it is bound as
-     * its JSON string via {@code setString}.
+     * its JSON string via {@code setString}. JDBC value objects ({@link java.sql.Array}, {@link java.sql.Ref},
+     * {@link java.sql.RowId}, {@link java.sql.SQLXML} and {@link java.sql.Struct}) are passed to the driver
+     * unchanged through {@link PreparedStatement#setObject(int, Object)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2347,6 +2355,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     public This setObject(final int parameterIndex, final Object value) throws SQLException {
         if (value == null) {
+            stmt.setObject(parameterIndex, value);
+        } else if (JdbcUtil.isJdbcValueObject(value)) {
             stmt.setObject(parameterIndex, value);
         } else {
             Type.<Object> of(value.getClass()).set(stmt, parameterIndex, value);
@@ -3305,6 +3315,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         for (final Object param : parameters) {
             if (param == null) {
                 stmt.setObject(startParameterIndex++, null);
+            } else if (JdbcUtil.isJdbcValueObject(param)) {
+                stmt.setObject(startParameterIndex++, param);
             } else {
                 final Class<?> cls = param.getClass();
 
@@ -3843,7 +3855,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgument(N.notEmpty(parameterIndices), "'parameterIndices' can't be null or empty");
 
         for (final int parameterIndex : parameterIndices) {
-            checkArgument(parameterIndex > 0, "'parameterIndices' must all be positive. It can't be: " + N.toString(parameterIndices));
+            if (parameterIndex <= 0) {
+                checkArgument(false, "'parameterIndices' must all be positive. It can't be: " + N.toString(parameterIndices));
+            }
         }
     }
 
@@ -3900,7 +3914,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Each element in the collection represents one batch row. All rows must have the same shape:
      * {@code Collection}, {@code Object[]}, or a single value bound at position 1. Collection and
      * array rows replace the complete parameter set; single-value rows leave any parameters already
-     * bound at positions 2 and above unchanged.
+     * bound at positions 2 and above unchanged. The first row determines the shape: a {@code null}
+     * first row makes this a single-value batch, so later rows are then each bound as one value at position 1.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3978,7 +3993,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Adds multiple sets of parameters for batch execution using an iterator.
      * Each element is one batch row. All rows must have the same shape: {@code Collection},
      * {@code Object[]}, or a single value bound at position 1. Collection and array rows replace
-     * the complete parameter set; single-value rows retain pre-bound positions 2 and above.
+     * the complete parameter set; single-value rows retain pre-bound positions 2 and above. The first
+     * row determines the shape: a {@code null} first row makes this a single-value batch, so later rows
+     * are then each bound as one value at position 1.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -4914,7 +4931,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Executes this query and returns the first column of the first row as a char value.
      *
-     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.</p>
+     * <p>Only the first column of the first row is read; any remaining rows or columns are ignored.
+     * The column is read with {@link ResultSet#getString(int)} and the first character of that string is
+     * returned, so a numeric column is not treated as a character code (for example, {@code 65} yields
+     * {@code '6'}, not {@code 'A'}).</p>
      *
      * <p><b>Empty vs. present semantics:</b> {@code OptionalChar.empty()} is returned <i>only</i> when the
      * query produces no rows. If a row exists but the column is SQL {@code NULL} or an empty string, the returned
@@ -6193,8 +6213,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A list containing the extracted results from all ResultSets
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code resultExtractor} is null
-     * @throws SQLException if executing the statement or retrieving any of its result sets fails, or {@code resultExtractor} throws
-     *         {@code SQLException}
+     * @throws SQLException if executing the statement or retrieving any of its result sets fails, {@code resultExtractor} throws
+     *         {@code SQLException}, or draining the remaining results (when this query is kept open) fails
      * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see #streamAllResultSets(ResultExtractor)
      */
@@ -6250,8 +6270,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A list containing the extracted results from all ResultSets
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code resultExtractor} is null
-     * @throws SQLException if executing the statement or retrieving any of its result sets or their column labels fails, or
-     *         {@code resultExtractor} throws {@code SQLException}
+     * @throws SQLException if executing the statement or retrieving any of its result sets or their column labels fails,
+     *         {@code resultExtractor} throws {@code SQLException}, or draining the remaining results (when this query is kept open) fails
      * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see #streamAllResultSets(BiResultExtractor)
      */
@@ -7767,8 +7787,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A list of lists, where each inner list represents one ResultSet
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code rowMapper} is null
-     * @throws SQLException if executing the statement or retrieving or advancing through any of its result sets fails, or {@code rowMapper}
-     *         throws {@code SQLException}
+     * @throws SQLException if executing the statement or retrieving or advancing through any of its result sets fails, {@code rowMapper}
+     *         throws {@code SQLException}, or draining the remaining results (when this query is kept open) fails
      * @see Jdbc.RowMapper
      */
     public <T> List<List<T>> listAllResultSets(final Jdbc.RowMapper<? extends T> rowMapper)
@@ -7821,8 +7841,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A list of lists, where each inner list contains filtered and mapped rows from one ResultSet
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is null
-     * @throws SQLException if executing the statement or retrieving or advancing through any of its result sets fails, or {@code rowFilter}
-     *         or {@code rowMapper} throws {@code SQLException}
+     * @throws SQLException if executing the statement or retrieving or advancing through any of its result sets fails, {@code rowFilter}
+     *         or {@code rowMapper} throws {@code SQLException}, or draining the remaining results (when this query is kept open) fails
      */
     public <T> List<List<T>> listAllResultSets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
@@ -7879,7 +7899,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code rowMapper} is null
      * @throws SQLException if executing the statement, retrieving any of its result sets or their column labels, or advancing through
-     *         their rows fails, or {@code rowMapper} throws {@code SQLException}
+     *         their rows fails, {@code rowMapper} throws {@code SQLException}, or draining the remaining results (when this query is kept
+     *         open) fails
      * @see Jdbc.BiRowMapper
      */
     public <T> List<List<T>> listAllResultSets(final Jdbc.BiRowMapper<? extends T> rowMapper)
@@ -7941,7 +7962,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is null
      * @throws SQLException if executing the statement, retrieving any of its result sets or their column labels, or advancing through
-     *         their rows fails, or {@code rowFilter} or {@code rowMapper} throws {@code SQLException}
+     *         their rows fails, {@code rowFilter} or {@code rowMapper} throws {@code SQLException}, or draining the remaining results (when
+     *         this query is kept open) fails
      */
     public <T> List<List<T>> listAllResultSets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
@@ -8804,7 +8826,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Closes the result-set iterator, drains any trailing results when the statement will be reused, and
+     * Closes the result-set iterator, drains any trailing results when the still-open statement will be reused, and
      * finally closes this query if automatic closing is enabled. A supplied {@code primaryFailure} is
      * preserved as the primary exception: cleanup failures are added to it as suppressed rather than
      * replacing it.
@@ -8845,14 +8867,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Drains all remaining result sets and update counts from the statement when it will be kept open
      * ({@code isCloseAfterExecution == false}), so the statement can be executed again safely. Does nothing
-     * when the statement will be closed anyway. A drain failure is rethrown if there is no primary failure,
+     * when the statement will be closed anyway, or when this query has already been closed (closing the
+     * statement already released its results). A drain failure is rethrown if there is no primary failure,
      * otherwise it is added to {@code primaryFailure} as suppressed.
      *
      * @param primaryFailure the failure that must remain primary, or {@code null} if there is none
      * @throws SQLException if draining the remaining results fails and {@code primaryFailure} is {@code null}
      */
     private void discardRemainingResultsIfStatementWillBeReused(final Throwable primaryFailure) throws SQLException {
-        if (!isCloseAfterExecution) {
+        // A query closed by the caller before its stream is closed has no reusable statement left: draining
+        // it would only make Stream.close() fail with the driver's "statement is closed" SQLException.
+        if (!isCloseAfterExecution && !isClosed) {
             try {
                 while (stmt.getMoreResults() || stmt.getUpdateCount() != -1) {
                     // Drain all trailing results so the statement can be executed again safely.

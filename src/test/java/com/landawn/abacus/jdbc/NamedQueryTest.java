@@ -3512,6 +3512,149 @@ public class NamedQueryTest extends TestBase {
     }
 
     @Test
+    public void testSetParameters_Object_SingleValueCalendarIsNotBoundAsBean() throws SQLException {
+        // GregorianCalendar passes Beans.isBeanClass (getter/setter pairs such as getTimeInMillis/setTimeInMillis),
+        // but it is a single value in the Abacus type system: with one placeholder it must be bound directly
+        // instead of failing with "No property found with name: since".
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("since"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        java.util.GregorianCalendar since = new java.util.GregorianCalendar();
+        since.setTimeInMillis(1_000L);
+
+        assertSame(q, q.setParameters(since));
+
+        verify(mockPreparedStatement).setTimestamp(1, new Timestamp(1_000L));
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    @Test
+    public void testSetParameters_Object_SingleParameterBeanAndRecordStillBindProperty() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        TestEntity entity = new TestEntity();
+        entity.setParam1("fromBean");
+
+        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(entity);
+        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(new SingleParamRecord("fromRecord"));
+
+        verify(mockPreparedStatement).setString(1, "fromBean");
+        verify(mockPreparedStatement).setString(1, "fromRecord");
+    }
+
+    public record SingleParamRecord(String param1) {
+    }
+
+    // A bean class bound as ONE value by the Abacus type system (here: a registered string Type) keeps its bean
+    // binding when it DOES have a property named after the single placeholder; only the case that used to fail
+    // ("No property found") falls back to single-value binding through the registered Type.
+    @Test
+    public void testSetParameters_Object_SingleValueTypedBeanWithMatchingPropertyStillBoundAsBean() throws SQLException {
+        TypeFactory.registerType(RegisteredMoney.class, m -> m.getAmount() + " " + m.getCurrency(), str -> {
+            final RegisteredMoney m = new RegisteredMoney();
+            m.setAmount(str.substring(0, str.indexOf(' ')));
+            m.setCurrency(str.substring(str.indexOf(' ') + 1));
+            return m;
+        });
+        final RegisteredMoney money = new RegisteredMoney();
+        money.setAmount("10");
+        money.setCurrency("USD");
+
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("amount"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(money);
+        new NamedQuery(mockPreparedStatement, mockParsedSql).addBatchParameters(Arrays.asList(money));
+        verify(mockPreparedStatement, times(2)).setString(1, "10");
+
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("price"));
+        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(money);
+        verify(mockPreparedStatement).setString(1, "10 USD");
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    public static class RegisteredMoney {
+        private String amount;
+        private String currency;
+
+        public String getAmount() {
+            return amount;
+        }
+
+        public void setAmount(final String amount) {
+            this.amount = amount;
+        }
+
+        public String getCurrency() {
+            return currency;
+        }
+
+        public void setCurrency(final String currency) {
+            this.currency = currency;
+        }
+    }
+
+    // JDBC value objects (mocks, like H2's JdbcSQLXML, pass Beans.isBeanClass and resolve to a BeanType) are single
+    // values: with one placeholder they reach the driver unchanged instead of failing with "No property found".
+    @Test
+    public void testSetParameters_Object_SingleJdbcValueObjectPassedToDriver() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("x"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        final SQLXML xml = mock(SQLXML.class);
+        final SQLXML xml2 = mock(SQLXML.class);
+
+        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(xml);
+        new NamedQuery(mockPreparedStatement, mockParsedSql).addBatchParameters(Arrays.asList(xml2));
+
+        verify(mockPreparedStatement).setObject(1, xml);
+        verify(mockPreparedStatement).setObject(1, xml2);
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    // The by-name, Map and Object[] paths all reach AbstractQuery.setObject(int, Object), so
+    // JDBC value objects are passed to the driver unchanged on every NamedQuery binding path.
+    @Test
+    public void testNamedBindingPaths_JdbcValueObjectsPassedToDriverUnchanged() throws SQLException {
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("x", "y"));
+        when(mockParsedSql.parameterCount()).thenReturn(2);
+        final SQLXML xml = mock(SQLXML.class);
+        final java.sql.Struct struct = mock(java.sql.Struct.class);
+        final Array array = mock(Array.class);
+        final RowId rowId = mock(RowId.class);
+
+        new NamedQuery(mockPreparedStatement, mockParsedSql).setObject("x", xml);
+        verify(mockPreparedStatement).setObject(1, xml);
+
+        final Map<String, Object> map = new HashMap<>();
+        map.put("x", struct);
+        map.put("y", array);
+        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(map);
+        verify(mockPreparedStatement).setObject(1, struct);
+        verify(mockPreparedStatement).setObject(2, array);
+
+        new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters((Object) new Object[] { rowId, xml });
+        verify(mockPreparedStatement).setObject(1, rowId);
+        verify(mockPreparedStatement).setObject(2, xml);
+        verify(mockPreparedStatement, never()).setString(anyInt(), anyString());
+    }
+
+    @Test
+    public void testSetParametersAndAddBatch_H2SqlXml_SinglePlaceholderBindsXml() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:namedQuerySqlXmlSingleValue")) {
+            JdbcUtil.executeUpdate(conn, "CREATE TABLE sqlxml_holder (x CLOB)");
+
+            final SQLXML xml = conn.createSQLXML();
+            xml.setString("<a>1</a>");
+            JdbcUtil.prepareNamedQuery(conn, "INSERT INTO sqlxml_holder (x) VALUES (:x)").setParameters(xml).update();
+
+            final SQLXML xml2 = conn.createSQLXML();
+            xml2.setString("<b>2</b>");
+            JdbcUtil.prepareNamedQuery(conn, "INSERT INTO sqlxml_holder (x) VALUES (:x)").addBatchParameters(List.of(xml2)).batchUpdate();
+
+            assertEquals(List.of("<a>1</a>", "<b>2</b>"), JdbcUtil.prepareQuery(conn, "SELECT x FROM sqlxml_holder ORDER BY x").list(String.class));
+        }
+    }
+
+    @Test
     public void testSetParameters_Object_UnsupportedType() throws SQLException {
         // Multi-param query, unsupported non-bean type → throws (L3993-3994)
         assertThrows(IllegalArgumentException.class, () -> namedQuery.setParameters(42));
@@ -3615,6 +3758,26 @@ public class NamedQueryTest extends TestBase {
         // so an Integer is dispatched to setInt(1, x) rather than raw setObject(1, x).
         verify(mockPreparedStatement, times(3)).setInt(eq(1), anyInt());
         verify(mockPreparedStatement, times(3)).addBatch();
+    }
+
+    @Test
+    public void testAddBatchParameters_SingleValueCalendarElementsAreNotBoundAsBeans() throws SQLException {
+        // See testSetParameters_Object_SingleValueCalendarIsNotBoundAsBean: the first-row dispatch must also treat
+        // a Calendar as a single value when the SQL has exactly one placeholder.
+        when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("since"));
+        when(mockParsedSql.parameterCount()).thenReturn(1);
+        NamedQuery q = new NamedQuery(mockPreparedStatement, mockParsedSql);
+        java.util.GregorianCalendar first = new java.util.GregorianCalendar();
+        first.setTimeInMillis(1_000L);
+        java.util.GregorianCalendar second = new java.util.GregorianCalendar();
+        second.setTimeInMillis(2_000L);
+
+        q.addBatchParameters(Arrays.asList(first, second).iterator());
+
+        verify(mockPreparedStatement).setTimestamp(1, new Timestamp(1_000L));
+        verify(mockPreparedStatement).setTimestamp(1, new Timestamp(2_000L));
+        verify(mockPreparedStatement, times(2)).addBatch();
+        verify(mockPreparedStatement, never()).close();
     }
 
     // --- addBatchParameters(Iterator): unsupported type throws (L4366) ---

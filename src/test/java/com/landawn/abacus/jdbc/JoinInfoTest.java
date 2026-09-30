@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1683,6 +1684,15 @@ public class JoinInfoTest extends TestBase {
         role.setName("Admin");
 
         assertThrows(UnsupportedOperationException.class, () -> joinInfo.setJoinPropEntities(List.of(user), List.of(role)));
+    }
+
+    // Argument validation precedes the many-to-many state check: a null source collection is an
+    // IllegalArgumentException, not the UnsupportedOperationException reserved for valid arguments.
+    @Test
+    public void testSetJoinPropEntities_ManyToMany_NullEntitiesRejectedBeforeUnsupportedJoin() {
+        final JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_m2m_set", "roles");
+
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.setJoinPropEntities(null, List.of()));
     }
 
     // The Map overload remains the supported entry point for M:M: callers/the framework augment

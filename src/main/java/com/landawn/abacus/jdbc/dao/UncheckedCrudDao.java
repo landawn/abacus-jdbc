@@ -97,7 +97,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entity the entity to insert or update (must not be {@code null})
-     * @return the saved entity (either newly inserted or updated)
+     * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or an existing row is updated and {@code entity}
      *                                  has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
@@ -137,6 +137,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *
      * @param entity the entity to insert or update (must not be {@code null})
      * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
+     *            (a spelling the entity's property lookup accepts, such as the column name, is resolved to the property name)
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
      *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
@@ -155,7 +156,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
-        final Condition cond = Filters.allEqual(entity, matchPropNames);
+        // Filters.allEqual reads values through the lenient bean-info lookup but renders the raw name into SQL, so a spelling
+        // such as "FIRSTNAME" would read the right value yet reference a non-existent column.
+        final Condition cond = Filters.allEqual(entity, DaoUtil.toCanonicalPropNames(entity, matchPropNames));
 
         return upsert(entity, cond);
     }
@@ -226,7 +229,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @param entities the collection of entities to upsert
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or an existing row is updated
+     *                                  and an entity has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
@@ -259,7 +263,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive,
+     *                                  or an existing row is updated and an entity has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
@@ -311,7 +316,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty
-     *                                  and a name in {@code matchPropNames} is not a property of the entity class
+     *                                  and a name in {@code matchPropNames} is not a property of the entity class,
+     *                                  or an existing row is updated and an entity has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
@@ -360,7 +366,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
-     *                                  or if any name in {@code matchPropNames} is not a property of the entity class
+     *                                  or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class,
+     *                                  or an existing row is updated and an entity has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails

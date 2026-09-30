@@ -100,7 +100,8 @@ import com.landawn.abacus.annotation.JoinedBy;
  *   <li>The query must include the ID field(s) in the SELECT clause</li>
  *   <li>Rows whose merge-key value(s) are all {@code null} are skipped and do not appear in the result</li>
  *   <li>Input row order determines the encounter order of the merged entities and their nested values</li>
- *   <li>Collection properties in entities should be initialized</li>
+ *   <li>Collection properties need not be initialized: a {@code null} collection property is created
+ *       during the merge, while an already-initialized one is appended to and must therefore be mutable</li>
  * </ul>
  *
  * @see MappedByKey

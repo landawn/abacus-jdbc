@@ -2,6 +2,7 @@ package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -363,6 +364,80 @@ public class DataTransferUtilIntegrationTest extends TestBase {
 
         assertEquals(3, imported);
         assertEquals(3, count("csv_tgt"));
+    }
+
+    // A column-type map only overrides the columns it names: every other column must be bound by its value's runtime
+    // type exactly as the map-less overload binds it, not handed raw to PreparedStatement.setObject.
+    @SuppressWarnings({ "rawtypes", "deprecation" })
+    @Test
+    public void testImportData_ColumnTypeMap_UnmappedColumnsBindLikeMapLessOverload() throws SQLException {
+        final Dataset dataset = Dataset.rows(List.of("id", "name", "amount"), new Object[][] { { 1L, java.time.DayOfWeek.MONDAY, 10.5 } });
+
+        try (Connection conn = ds.getConnection()) {
+            assertEquals(1, DataTransferUtil.importData(dataset, conn, CSV_INSERT_SQL, Map.<String, Type> of("id", Type.of(Long.class))));
+        }
+
+        assertEquals("MONDAY", nameOf(1));
+    }
+
+    // Importing reads rows by index and must not move the caller's Dataset cursor (a shared, frozen Dataset may be
+    // imported by several threads at once, and a moved cursor would make them read each other's rows).
+    @Test
+    public void testImportData_DoesNotMoveDatasetCursor() throws SQLException {
+        final Dataset dataset = threeRowDataset();
+        dataset.moveToRow(1);
+
+        assertEquals(3, DataTransferUtil.importData(dataset, ds, CSV_INSERT_SQL));
+
+        assertEquals(1, dataset.currentRowIndex());
+        assertEquals("Bob", dataset.get("name"));
+        assertEquals("Cara", nameOf(3));
+    }
+
+    // Every Dataset import strategy (selected columns, column-type map, custom setter; each with a filter) shares the
+    // index-based row read, so none of them may move the caller's cursor.
+    @SuppressWarnings("rawtypes")
+    @Test
+    public void testImportFrom_AllStrategies_DoNotMoveDatasetCursor() throws SQLException {
+        final Dataset dataset = threeRowDataset();
+        dataset.moveToRow(1);
+
+        assertEquals(1, DataTransferUtil.importFrom(dataset)
+                .columns(List.of("id", "name", "amount"))
+                .filter(row -> Long.valueOf(1L).equals(row[0]))
+                .to(ds, CSV_INSERT_SQL));
+        assertEquals(1, dataset.currentRowIndex());
+
+        assertEquals(1, DataTransferUtil.importFrom(dataset)
+                .columnTypes(Map.<String, Type> of("id", Type.of(Long.class)))
+                .filter(row -> Long.valueOf(2L).equals(row[0]))
+                .to(ds, CSV_INSERT_SQL));
+        assertEquals(1, dataset.currentRowIndex());
+
+        assertEquals(1, DataTransferUtil.importFrom(dataset).parameterSetter((q, row) -> {
+            q.setLong(1, (Long) row[0]);
+            q.setString(2, (String) row[1]);
+            q.setDouble(3, (Double) row[2]);
+        }).filter(row -> Long.valueOf(3L).equals(row[0])).to(ds, CSV_INSERT_SQL));
+        assertEquals(1, dataset.currentRowIndex());
+
+        assertEquals("Alice", nameOf(1));
+        assertEquals("Bob", nameOf(2));
+        assertEquals("Cara", nameOf(3));
+    }
+
+    // An unmapped column holding null is still bound as SQL NULL when a column-type map is supplied.
+    @SuppressWarnings({ "rawtypes", "deprecation" })
+    @Test
+    public void testImportData_ColumnTypeMap_UnmappedNullValueBindsSqlNull() throws SQLException {
+        final Dataset dataset = Dataset.rows(List.of("id", "name", "amount"), new Object[][] { { 1L, null, 10.5 } });
+
+        try (Connection conn = ds.getConnection()) {
+            assertEquals(1, DataTransferUtil.importData(dataset, conn, CSV_INSERT_SQL, Map.<String, Type> of("id", Type.of(Long.class))));
+        }
+
+        assertEquals(1, count("csv_tgt"));
+        assertNull(nameOf(1));
     }
 
     // Configuring more than one value-mapping strategy is rejected when the import runs.
