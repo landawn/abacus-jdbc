@@ -4238,6 +4238,7 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testTableExists_FallbackProbeFailureInTransaction_RollsBackToSavepoint() throws SQLException {
         final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockConnection.getAutoCommit()).thenReturn(false);
         when(mockConnection.setSavepoint()).thenReturn(savepoint);
         when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
@@ -4252,6 +4253,7 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testTableExists_FallbackProbeSuccessInTransaction_ReleasesSavepoint() throws SQLException {
         final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockConnection.getAutoCommit()).thenReturn(false);
         when(mockConnection.setSavepoint()).thenReturn(savepoint);
 
@@ -4264,6 +4266,7 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testTableExists_FallbackProbeInAutoCommitMode_NoSavepoint() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockConnection.getAutoCommit()).thenReturn(true);
         when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
                 .thenThrow(new SQLException("relation \"missing_tbl\" does not exist", "42P01"));
@@ -4276,6 +4279,7 @@ public class JdbcUtilTest extends TestBase {
     // A driver without savepoint support: the probe still runs (without a savepoint), as before the fix.
     @Test
     public void testTableExists_FallbackProbeInTransaction_SavepointsUnsupported_ProbesWithoutSavepoint() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockConnection.getAutoCommit()).thenReturn(false);
         when(mockConnection.setSavepoint()).thenThrow(new java.sql.SQLFeatureNotSupportedException("savepoints"));
         when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
@@ -4295,6 +4299,7 @@ public class JdbcUtilTest extends TestBase {
         final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
         final SQLException probeFailure = new SQLException("could not read block 0 in file", "XX001");
         final SQLException rollbackFailure = new SQLException("rollback failed");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockConnection.getAutoCommit()).thenReturn(false);
         when(mockConnection.setSavepoint()).thenReturn(savepoint);
         when(mockConnection.prepareStatement("SELECT 1 FROM secret_tbl WHERE 1 > 2")).thenThrow(probeFailure);
@@ -4316,6 +4321,7 @@ public class JdbcUtilTest extends TestBase {
         final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
         final SQLException notFound = new SQLException("relation \"missing_tbl\" does not exist", "42P01");
         final SQLException connectionLost = new java.sql.SQLNonTransientConnectionException("connection lost", "08006");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockConnection.getAutoCommit()).thenReturn(false);
         when(mockConnection.setSavepoint()).thenReturn(savepoint);
         when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2")).thenThrow(notFound);
@@ -4325,6 +4331,42 @@ public class JdbcUtilTest extends TestBase {
 
         assertSame(notFound, thrown.getCause());
         assertArrayEquals(new Throwable[] { connectionLost }, notFound.getSuppressed());
+        verify(mockConnection).releaseSavepoint(savepoint);
+    }
+
+    // Databases that roll back only the failed statement (MySQL, Oracle, SQL Server, ...) need no savepoint: the
+    // "table not found" probe failure leaves the caller's transaction usable.
+    @Test
+    public void testTableExists_FallbackProbeInTransaction_NonPostgreSQL_NoSavepoint() throws SQLException {
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
+                .thenThrow(new SQLException("Table 'missing_tbl' doesn't exist", "42S02"));
+
+        for (final String productName : new String[] { "MySQL", "Oracle", "Microsoft SQL Server" }) {
+            when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn(productName);
+
+            assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"), productName);
+            assertTrue(JdbcUtil.tableExists(mockConnection, "present_tbl"), productName);
+        }
+
+        verify(mockConnection, never()).setSavepoint();
+        verify(mockConnection, never()).rollback(org.mockito.ArgumentMatchers.any(java.sql.Savepoint.class));
+        verify(mockConnection, never()).releaseSavepoint(org.mockito.ArgumentMatchers.any(java.sql.Savepoint.class));
+    }
+
+    // PostgreSQL-compatible products reporting their own product name are also probed under a savepoint.
+    @Test
+    public void testTableExists_FallbackProbeFailureInTransaction_Redshift_RollsBackToSavepoint() throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("Redshift");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
+                .thenThrow(new SQLException("relation \"missing_tbl\" does not exist", "42P01"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+
+        verify(mockConnection).rollback(savepoint);
         verify(mockConnection).releaseSavepoint(savepoint);
     }
 

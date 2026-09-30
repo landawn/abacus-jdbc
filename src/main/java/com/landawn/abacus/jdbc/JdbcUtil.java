@@ -9848,9 +9848,10 @@ public final class JdbcUtil {
      * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
      * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
-     * {@code false}; any other SQL error is propagated. When the connection has auto-commit disabled, the fallback query
+     * {@code false}; any other SQL error is propagated. On PostgreSQL and PostgreSQL-compatible databases (where a
+     * failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query
      * runs under a savepoint that is rolled back if the query fails, so an expected "table not found" error does not
-     * abort the caller's transaction on databases such as PostgreSQL. If rolling back to that savepoint fails, the
+     * abort the caller's transaction. If rolling back to that savepoint fails, the
      * transaction may be unusable, so the "table not found" error is propagated (with the rollback failure suppressed)
      * instead of returning {@code false}.</p>
      *
@@ -9900,9 +9901,10 @@ public final class JdbcUtil {
      * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
      * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
-     * {@code false}; any other SQL error is propagated. When the connection has auto-commit disabled, the fallback query
+     * {@code false}; any other SQL error is propagated. On PostgreSQL and PostgreSQL-compatible databases (where a
+     * failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query
      * runs under a savepoint that is rolled back if the query fails, so an expected "table not found" error does not
-     * abort the caller's transaction on databases such as PostgreSQL. If rolling back to that savepoint fails, the
+     * abort the caller's transaction. If rolling back to that savepoint fails, the
      * transaction may be unusable, so the "table not found" error is propagated (with the rollback failure suppressed)
      * instead of returning {@code false}.</p>
      *
@@ -10009,20 +10011,25 @@ public final class JdbcUtil {
             // splitQualifiedSqlIdentifier removes delimiters. Never feed those stripped parts to
             // unquoted fallback SQL: "mixedCase" and mixedCase can identify different tables.
             if (!hasDelimitedIdentifierPart(tableName) && Strings.isNotEmpty(safeQualifiedTableName)) {
-                // On PostgreSQL (and similar databases) any failed statement aborts the enclosing transaction, so an
+                // On PostgreSQL (and compatible databases) any failed statement aborts the enclosing transaction, so an
                 // expected "table not found" from this probe would leave the caller's transaction unusable ("current
-                // transaction is aborted") even though this method just returns false. Probe under a savepoint when
-                // the connection is in a transaction, and roll back to it on failure.
-                final java.sql.Savepoint savepoint = setSavepointForTableProbe(conn);
+                // transaction is aborted") even though this method just returns false. There, probe under a savepoint
+                // when the connection is in a transaction, and roll back to it on failure. Other databases (MySQL,
+                // Oracle, SQL Server, ...) roll back only the failed statement, so no savepoint is needed.
+                final java.sql.Savepoint savepoint = abortsTransactionOnStatementError(metadata) ? setSavepointForTableProbe(conn) : null;
 
                 try {
                     execute(conn, "SELECT 1 FROM " + safeQualifiedTableName + " WHERE 1 > 2");
-                    releaseSavepointQuietly(conn, savepoint);
+
+                    if (savepoint != null) {
+                        releaseSavepointQuietly(conn, savepoint);
+                    }
+
                     return true;
                 } catch (final SQLException e) {
                     // A failed rollback leaves the caller's transaction possibly aborted: report it rather than a plain
                     // "does not exist" result the caller would take as a clean answer.
-                    if (rollbackToProbeSavepoint(conn, savepoint, e) && isTableNotExistsException(e)) {
+                    if ((savepoint == null || rollbackToProbeSavepoint(conn, savepoint, e)) && isTableNotExistsException(e)) {
                         return false;
                     }
 
@@ -10037,8 +10044,29 @@ public final class JdbcUtil {
     }
 
     /**
+     * Returns whether the database is PostgreSQL or a PostgreSQL-compatible database (identified by product name),
+     * on which a failed statement aborts the enclosing transaction until it is rolled back (SQLState {@code 25P02}
+     * "current transaction is aborted"). Most other databases (MySQL, Oracle, SQL Server, ...) roll back only the
+     * failed statement.
+     *
+     * @param metadata The database metadata to read the product name from.
+     * @return {@code true} if the product is PostgreSQL-compatible, or if the product name cannot be read
+     *         (so the {@code tableExists} probe stays protected by a savepoint); {@code false} otherwise.
+     */
+    private static boolean abortsTransactionOnStatementError(final DatabaseMetaData metadata) {
+        try {
+            // CockroachDB, YugabyteDB, Aurora PostgreSQL and Greenplum report "PostgreSQL" through pgjdbc.
+            return Strings.containsAnyIgnoreCase(metadata.getDatabaseProductName(), "PostgreSQL", "EnterpriseDB", "Redshift", "Greenplum");
+        } catch (final SQLException | RuntimeException e) {
+            logger.debug(e, "Failed to read the database product name for the table-existence probe; assuming PostgreSQL-like behavior");
+            return true;
+        }
+    }
+
+    /**
      * Sets a savepoint before the {@code tableExists} fallback probe when {@code conn} is in a transaction
      * (auto-commit disabled), so a failed probe can be undone without aborting the caller's transaction.
+     * Only called for databases on which {@link #abortsTransactionOnStatementError(DatabaseMetaData)} is {@code true}.
      *
      * @param conn The connection the probe runs on.
      * @return The savepoint, or {@code null} if the connection is in auto-commit mode or savepoints are unavailable.
@@ -10055,18 +10083,16 @@ public final class JdbcUtil {
 
     /**
      * Releases a savepoint created by {@link #setSavepointForTableProbe(Connection)}, ignoring any failure
-     * (some drivers, e.g. Oracle, do not support releasing savepoints). Does nothing for a {@code null} savepoint.
+     * (a failed release only leaves the savepoint in place until the transaction ends).
      *
      * @param conn The connection that owns the savepoint.
-     * @param savepoint The savepoint to release. Can be {@code null}.
+     * @param savepoint The savepoint to release.
      */
     private static void releaseSavepointQuietly(final Connection conn, final java.sql.Savepoint savepoint) {
-        if (savepoint != null) {
-            try {
-                conn.releaseSavepoint(savepoint);
-            } catch (final SQLException | RuntimeException e) {
-                logger.debug(e, "Failed to release the table-existence probe savepoint");
-            }
+        try {
+            conn.releaseSavepoint(savepoint);
+        } catch (final SQLException | RuntimeException e) {
+            logger.debug(e, "Failed to release the table-existence probe savepoint");
         }
     }
 
@@ -10075,15 +10101,11 @@ public final class JdbcUtil {
      * after the probe failed. A rollback failure is attached to {@code probeFailure} as suppressed.
      *
      * @param conn The connection that owns the savepoint.
-     * @param savepoint The savepoint to roll back to. Can be {@code null} (no savepoint was set), which counts as success.
+     * @param savepoint The savepoint to roll back to.
      * @param probeFailure The probe failure that triggered the rollback.
-     * @return {@code true} if there was nothing to roll back or the rollback succeeded; {@code false} if it failed.
+     * @return {@code true} if the rollback succeeded; {@code false} if it failed.
      */
     private static boolean rollbackToProbeSavepoint(final Connection conn, final java.sql.Savepoint savepoint, final SQLException probeFailure) {
-        if (savepoint == null) {
-            return true;
-        }
-
         boolean rolledBack = false;
 
         try {
