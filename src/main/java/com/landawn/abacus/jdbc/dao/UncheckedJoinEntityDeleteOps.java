@@ -220,6 +220,9 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *   <li>This operation does NOT modify the in-memory join property of the entity</li>
      *   <li>The deletion is permanent and cannot be rolled back unless within a transaction</li>
      *   <li>Cascade deletion of further nested entities depends on database constraints</li>
+     *   <li>For a many-to-many join (through an intermediate entity), the referenced entity rows themselves are deleted, located
+     *       through the intermediate table; the intermediate-table rows are not deleted by this method and are expected to be
+     *       removed by the database, e.g. by an {@code ON DELETE CASCADE} foreign key</li>
      *   <li>For transactional deletion of multiple properties, use {@link #deleteJoinEntities(Object, Collection)}</li>
      * </ul>
      *
@@ -278,6 +281,9 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * <ul>
      *   <li>This operation does NOT modify the in-memory join properties of the entities</li>
      *   <li>All deletions are permanent unless executed within a transaction</li>
+     *   <li>For a many-to-many join (through an intermediate entity), the referenced entity rows themselves are deleted, located
+     *       through the intermediate table; the intermediate-table rows are not deleted by this method and are expected to be
+     *       removed by the database, e.g. by an {@code ON DELETE CASCADE} foreign key</li>
      *   <li>For transactional deletion of multiple properties, use {@link #deleteJoinEntities(Collection, Collection)}</li>
      * </ul>
      *

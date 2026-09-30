@@ -371,7 +371,9 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
 
     /**
      * Queries for a single value of the specified type from a property of the entity with the specified ID.
-     * This is a generic method that can handle any type conversion supported by the underlying JDBC driver.
+     * The column value is read with the {@code Type} handler for {@code targetValueType}. For a non-primitive
+     * target type the returned {@code Nullable} holds {@code null} when the value is SQL {@code null}; a
+     * primitive type such as {@code int.class} maps SQL {@code null} to its primitive default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -453,6 +455,8 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
     /**
      * Queries for a unique single result of the specified type.
      * Throws {@link DuplicateResultException} if more than one record matches the given {@code id}.
+     * For a non-primitive target type the returned {@code Nullable} holds {@code null} when the value is SQL
+     * {@code null}; a primitive type such as {@code int.class} maps SQL {@code null} to its primitive default.
      *
      * <p>This method ensures that at most one record matches the query.</p>
      *

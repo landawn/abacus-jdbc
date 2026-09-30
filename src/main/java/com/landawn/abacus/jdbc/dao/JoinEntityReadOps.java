@@ -16,6 +16,7 @@
 package com.landawn.abacus.jdbc.dao;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -32,7 +33,6 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.condition.Condition;
-import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Fn;
@@ -1734,6 +1734,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
     /**
      * Loads multiple join entities for a single entity only if they are currently {@code null},
      * using a custom executor for parallel execution.
+     * Every property name is checked to be non-empty and to exist in the entity class before any task is submitted,
+     * so such an invalid name fails without starting any load.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1751,7 +1753,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any of the
-     *                                  {@code joinEntityPropNames} does not exist,
+     *                                  {@code joinEntityPropNames} is {@code null} or empty or does not exist,
      *                                  or names a property that is currently {@code null} and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
@@ -1773,8 +1775,29 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .filter(joinEntityPropName -> Beans.getPropValue(entity, joinEntityPropName) == null)
+        // Validate every name before dispatching any task. Rejecting a bad name part-way through the (lazy) dispatch would
+        // throw while the tasks already submitted keep running un-awaited and may still write the entity after the caller
+        // has seen the failure.
+        final Class<?> cls = entity.getClass();
+        final ParserUtil.BeanInfo beanInfo = ParserUtil.getBeanInfo(cls);
+        final List<String> absentJoinEntityPropNames = new ArrayList<>(joinEntityPropNames.size());
+
+        for (final String joinEntityPropName : joinEntityPropNames) {
+            N.checkArgNotEmpty(joinEntityPropName, cs.joinEntityPropName);
+
+            final PropInfo propInfo = beanInfo.getPropInfo(joinEntityPropName);
+
+            if (propInfo == null) {
+                throw new IllegalArgumentException(
+                        "No property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(cls));
+            }
+
+            if (propInfo.getPropValue(entity) == null) {
+                absentJoinEntityPropNames.add(joinEntityPropName);
+            }
+        }
+
+        final List<ContinuableFuture<Void>> futures = Stream.of(absentJoinEntityPropNames)
                 .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entity, joinEntityPropName), executor))
                 .toList();
 

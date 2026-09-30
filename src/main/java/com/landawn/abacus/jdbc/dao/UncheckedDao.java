@@ -322,6 +322,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * @param entity the entity to insert or update
      * @param matchPropNames the list of property names that uniquely identify the record
+     *            (a spelling the entity's property lookup accepts, such as the column name, is resolved to the property name)
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
      *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
@@ -339,7 +340,9 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
-        final Condition cond = Filters.allEqual(entity, matchPropNames);
+        // Filters.allEqual reads values through the lenient bean-info lookup but renders the raw name into SQL, so a spelling
+        // such as "FIRSTNAME" would read the right value yet reference a non-existent column.
+        final Condition cond = Filters.allEqual(entity, DaoUtil.toCanonicalPropNames(entity, matchPropNames));
 
         return upsert(entity, cond);
     }

@@ -1187,6 +1187,7 @@ public final class Jdbc {
          *
          * @param entityClassForExtractor the class used to map fields from columns
          * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name.
+         *        May be {@code null} or empty, in which case no prefix remapping is applied.
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
          * @throws IllegalArgumentException if {@code entityClassForExtractor} is {@code null} or not a bean/entity class
          */
@@ -2476,7 +2477,9 @@ public final class Jdbc {
              * @param columnIndex the 1-based index of the column
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnIndex} is not positive
-             * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific getter is set.
+             * @deprecated A builder created by {@link RowMapper#builder()} already uses {@link ColumnGetter#GET_OBJECT} for columns
+             *             without a specific getter. To override a different default getter (see {@link RowMapper#builder(ColumnGetter)}),
+             *             use {@code get(columnIndex, ColumnGetter.GET_OBJECT)}.
              */
             @Deprecated
             public RowMapperBuilder getObject(final int columnIndex) throws IllegalArgumentException {
@@ -2650,7 +2653,7 @@ public final class Jdbc {
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * RowMapper<Set<Object>> mapper = RowMapper.builder()
-             *     .getObject(1)
+             *     .getString(1)
              *     .toCollection(size -> new HashSet<>(size));
              * }</pre>
              *
@@ -4571,7 +4574,8 @@ public final class Jdbc {
              * @param columnName the name of the column
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
-             * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific getter is set.
+             * @deprecated A builder created by {@link BiRowMapper#builder()} already uses {@link ColumnGetter#GET_OBJECT}
+             *             for any column without a specific getter.
              */
             @Deprecated
             public BiRowMapperBuilder getObject(final String columnName) throws IllegalArgumentException {
@@ -6061,7 +6065,8 @@ public final class Jdbc {
              * @param columnIndex the 1-based index of the column.
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
-             * @deprecated The default behavior already uses {@link ColumnGetter#GET_OBJECT} if no specific {@code ColumnGetter} is set for the column.
+             * @deprecated A builder created by {@link RowExtractor#builder()} already uses {@link ColumnGetter#GET_OBJECT} for any column
+             *             without a specific {@code ColumnGetter}.
              */
             @Deprecated
             public RowExtractorBuilder getObject(final int columnIndex) throws IllegalArgumentException {
@@ -6374,7 +6379,10 @@ public final class Jdbc {
 
         /**
          * Returns a cached (or newly created) {@code ColumnGetter} for the specified Abacus-common {@code Type}.
-         * Common types are cached for efficient reuse.
+         * Getters are cached per {@code Type}, so repeated calls with the same {@code Type} return the same instance.
+         * Common types map to the predefined getters (for example {@code int} to {@link #GET_INT}, {@code String} to
+         * {@link #GET_STRING} and {@code Object} to {@link #GET_OBJECT}); other types read the value through
+         * {@code Type.get(ResultSet, int)}.
          *
          * <p>This is a <i>factory</i> that returns a getter; call {@link #get(ResultSet, int)} on the
          * returned instance to actually fetch a value.</p>
@@ -6424,6 +6432,10 @@ public final class Jdbc {
          *   <li>Factory methods: {@link #get(Class)}, {@link #set(Class)}, {@link #readJson(Class)}, {@link #readXml(Class)}
          *       for dynamic type-based mappers and setters.</li>
          * </ul>
+         *
+         * <p>The primitive-valued mappers, such as {@link #GET_INT}, {@link #GET_LONG} and {@link #GET_BOOLEAN}, return the
+         * JDBC default value ({@code 0} or {@code false}) for SQL {@code NULL}; for example, a {@code NULL} {@code MAX(...)}
+         * is read as {@code 0}. To preserve {@code null}, use a wrapper-type mapper such as {@code ColumnOne.get(Integer.class)}.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -6710,6 +6722,11 @@ public final class Jdbc {
              * This method reuses a cached {@code RowMapper} per type, so repeated calls with the same type
              * return the same instance.
              *
+             * <p>The value is read by the abacus-common {@code Type} of {@code firstColumnType}. In particular,
+             * {@code get(Object.class)} returns the driver's raw {@code ResultSet.getObject(1)} value (e.g. an
+             * unmaterialized {@code Blob}/{@code Clob}), unlike {@link #getObject()} / {@link #GET_OBJECT}, which
+             * normalize the value through {@link JdbcUtil#getColumnValue(ResultSet, int)}.</p>
+             *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
              * // Returns a mapper that gets a String from column 1.
@@ -6766,7 +6783,8 @@ public final class Jdbc {
              * <p>Deserialization happens when the returned mapper is applied, not when this method is called:
              * the mapper propagates a {@code ParsingException} if the first column's text is not valid JSON for
              * {@code targetType}, and an {@code UncheckedIOException} if a delegated value reader reports an
-             * I/O failure while materializing a value.</p>
+             * I/O failure while materializing a value. A SQL {@code NULL} column yields {@code null} (the default
+             * value for a primitive {@code targetType}).</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -6793,7 +6811,8 @@ public final class Jdbc {
              * <p>Deserialization happens when the returned mapper is applied, not when this method is called:
              * the mapper propagates a {@code ParsingException} if the first column's text is not valid XML for
              * {@code targetType}, and an {@code UncheckedIOException} if a delegated value reader reports an
-             * I/O failure while materializing a value.</p>
+             * I/O failure while materializing a value. A SQL {@code NULL} column yields {@code null} (the default
+             * value for a primitive {@code targetType}).</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -7268,6 +7287,10 @@ public final class Jdbc {
 
         /**
          * Registers a handler instance. The handler is registered using its canonical class name as the qualifier.
+         *
+         * <p>Because the qualifier is derived from the class, all handlers returned by the same factory method
+         * (for example {@link #create(Throwables.TriConsumer, Throwables.QuadConsumer)}) share one qualifier: only the
+         * first of them is registered by this method, and later ones return {@code false}.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code

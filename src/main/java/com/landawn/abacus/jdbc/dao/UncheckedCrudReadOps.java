@@ -395,7 +395,9 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
 
     /**
      * Returns a {@code Nullable<V>} describing the value of a single property for the entity with the specified ID,
-     * converted to the specified target type.
+     * converted to the specified target type. For a non-primitive target type the returned {@code Nullable} holds
+     * {@code null} when the value is SQL {@code null}; a primitive type such as {@code int.class} maps SQL
+     * {@code null} to its primitive default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -409,7 +411,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the target value type
-     * @return a {@code Nullable} containing the converted value (which holds {@code null} when the value is SQL {@code null}),
+     * @return a {@code Nullable} containing the converted value (possibly {@code null} for a SQL {@code null}),
      *         or {@code Nullable.empty()} if no record matches the {@code id}
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
@@ -484,6 +486,8 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
     /**
      * Returns a {@code Nullable} describing the value of a single property for the entity with the specified ID.
      * Throws {@link DuplicateResultException} if more than one record matches the given {@code id}.
+     * For a non-primitive target type the returned {@code Nullable} holds {@code null} when the value is SQL
+     * {@code null}; a primitive type such as {@code int.class} maps SQL {@code null} to its primitive default.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -495,7 +499,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @param singleSelectPropName the property name to select
      * @param id the entity ID
      * @param targetValueType the class of the target value type
-     * @return a {@code Nullable} containing the unique result value (which holds {@code null} when the value is SQL {@code null}),
+     * @return a {@code Nullable} containing the unique result value (possibly {@code null} for a SQL {@code null}),
      *         or {@code Nullable.empty()} if no record matches the {@code id}
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection

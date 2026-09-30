@@ -894,7 +894,8 @@ public final class JoinInfo {
      *
      * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the SELECT SQL from a collection
-     *         of selected property names (a {@code null} or empty collection yields the default all-columns SELECT),
+     *         of selected property names (a {@code null} or empty collection yields the default all-columns SELECT;
+     *         for a many-to-many join the referenced join-key property is prepended when the collection omits it),
      *         and whose {@code _2} is a parameter setter that binds the join key(s) of a single source entity onto a
      *         {@link PreparedStatement}.
      * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
@@ -936,7 +937,9 @@ public final class JoinInfo {
      * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the batch SELECT SQL from a collection
      *         of selected property names and the batch size (a {@code null} or empty collection yields the default
-     *         all-columns SELECT), and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
+     *         all-columns SELECT; the referenced join-key property(ies) are prepended when the collection omits them,
+     *         and a many-to-many join appends the junction table's source-key column as the last, unaliased column),
+     *         and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
      *         in the batch onto a {@link PreparedStatement}. The SQL-builder function requires a positive batch size
      *         and throws {@link IllegalArgumentException} if the boxed {@link Integer} is {@code null}, zero, or negative.
      * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
@@ -962,6 +965,13 @@ public final class JoinInfo {
      * This method returns SQL statements for deleting joined entities.
      * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
      * or {@link IllegalArgumentException} if a source entity is {@code null} or has a disallowed null/default join key.
+     *
+     * <p>For a many-to-many join, the delete SQL removes the referenced-entity rows themselves, selected through
+     * the junction table ({@code ... WHERE referencedKey IN (SELECT ... FROM junction WHERE sourceKey = ?)}).
+     * A referenced row is deleted even when other source entities are still linked to it, and no junction-table
+     * row is deleted: that cleanup is assumed to be done by the database (for example by an
+     * {@code ON DELETE CASCADE} foreign key). Without such a constraint the junction rows are left pointing at
+     * deleted rows, or a restricting foreign key makes the delete fail.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1002,6 +1012,10 @@ public final class JoinInfo {
      * The returned parameter setter rejects a {@code null} source collection with {@link IllegalArgumentException}; an empty collection is a no-op.
      * Invoking the returned parameter setter can throw {@link SQLException} if binding a join key fails,
      * or {@link IllegalArgumentException} if a source entity is {@code null} or has a disallowed null/default join key.
+     *
+     * <p>For a many-to-many join, the delete SQL removes the referenced-entity rows linked to any source entity of
+     * the batch, including rows other source entities are still linked to, and deletes no junction-table row; see
+     * {@link #deleteSqlPlan(Dsl)}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1082,6 +1096,8 @@ public final class JoinInfo {
      */
     public void setJoinPropEntities(final Collection<?> entities, final Collection<?> joinPropEntities)
             throws UnsupportedOperationException, IllegalArgumentException {
+        N.checkArgNotNull(entities, cs.entities);
+
         if (isManyToManyJoin) {
             // For many-to-many, srcEntityKeyExtractor reads the source-side join key (e.g.,
             // employee.employeeId) while referencedEntityKeyExtractor reads the referenced-side
@@ -1094,8 +1110,6 @@ public final class JoinInfo {
                     + "Use setJoinPropEntities(Collection, Map) with keys derived from the junction table, "
                     + "or have the framework load join entities via DaoImpl.");
         }
-
-        N.checkArgNotNull(entities, cs.entities);
 
         final Map<Object, List<Object>> groupedPropEntities = Stream.of((Collection<Object>) joinPropEntities)
                 .onEach(entity -> N.checkArgNotNull(entity, "An element of 'joinPropEntities' cannot be null"))

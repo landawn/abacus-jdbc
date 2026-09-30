@@ -207,7 +207,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Checks a named parameter before converting or validating its value or type.
      *
      * @param parameterName the exact parameter name to locate
-     * @throws IllegalArgumentException if {@code parameterName} is absent from the SQL, including when it is {@code null}
+     * @throws IllegalArgumentException if {@code parameterName} is absent from the SQL, including when it is {@code null};
+     *         this query is closed before the exception is thrown
      */
     private void checkParameterName(final String parameterName) throws IllegalArgumentException {
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
@@ -1874,7 +1875,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the {@code value} is outside the range supported
-     *         by {@link Timestamp}
+     *         by {@link Timestamp}. The range check is performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 25
+     *         throws, while older runtimes such as JDK 21 silently overflow and bind an incorrect timestamp instead
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
      *         is closed or the driver rejects the {@code value}
      */
@@ -1907,7 +1909,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the {@code value} is outside the range supported
-     *         by {@link Timestamp}
+     *         by {@link Timestamp}. The range check is performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 25
+     *         throws, while older runtimes such as JDK 21 silently overflow and bind an incorrect timestamp instead
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
      *         is closed or the driver rejects the {@code value}
      */
@@ -1942,7 +1945,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the {@code value} is outside the range supported
-     *         by {@link Timestamp}
+     *         by {@link Timestamp}. The range check is performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 25
+     *         throws, while older runtimes such as JDK 21 silently overflow and bind an incorrect timestamp instead
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
      *         is closed or the driver rejects the {@code value}
      */
@@ -4064,7 +4068,10 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li><b>Collection/Object[]</b>: Elements will be assigned to parameters in positional order</li>
      * <li><b>EntityId</b>: Values with keys matching parameter names will be used</li>
      * <li><b>Single value</b>: Used only if the query has exactly one parameter placeholder
-     *     (a single named parameter appearing exactly once)</li>
+     *     (a single named parameter appearing exactly once). With one placeholder, a JDBC value object such as
+     *     {@link java.sql.SQLXML}, and an object whose class looks like a bean but is bound as one value by the
+     *     Abacus type system (such as a {@link java.util.Calendar}) and has no property named after the placeholder,
+     *     are also bound as a single value</li>
      * </ul>
      *
      * <p>If {@code parameters} is rejected or any binding fails, this query is closed because its parameters may
@@ -4091,7 +4098,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameters} is {@code null}; if it is a bean that lacks a property matching one of the named
      *         parameters in the SQL (except the reserved system date/time parameter names {@code now}, {@code sysTime} and {@code
-     *         sysDate}, which are skipped and left unbound when no matching property exists — bind them separately); or if it is none of a bean,
+     *         sysDate}, which are skipped when no matching property exists, so they keep any value already bound to them or otherwise stay
+     *         unbound — bind them separately); or if it is none of a bean,
      *         {@code Map}, {@code Collection}, reference array or {@code EntityId} and the SQL does not have exactly one parameter placeholder
      * @throws SQLException if binding one of the parameter values to the underlying {@code PreparedStatement} fails, for example because a collection
      *         or array supplies more values than the SQL has parameter placeholders
@@ -4103,7 +4111,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
 
         final Class<?> cls = parameters.getClass();
 
-        if (Beans.isBeanClass(cls)) {
+        if (isBeanParameters(parameters)) {
             final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
             final PropInfo[] propInfos = new PropInfo[parameterCount];
 
@@ -4415,7 +4423,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <p>Map, collection, reference-array and {@code EntityId} rows clear all current parameter bindings
      * before each row, including the first. Consequently, missing values cannot inherit bindings from
      * a previous row or an earlier {@code setXxx} call; each such row must supply every required value.
-     * Bean rows retain pre-bound values for the reserved system date/time parameters described above.</p>
+     * When the first row is a bean, bean rows are not cleared and retain pre-bound values for the reserved system
+     * date/time parameters described above. When the first row is {@code null}, every later non-null row is
+     * bound after all current parameter bindings are cleared.</p>
      *
      * <p>After adding batch parameters, call {@link #batchUpdate()} or {@link #batchInsert()} to execute the batch.
      *
@@ -4488,7 +4498,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             } else {
                 final Class<?> cls = first.getClass();
 
-                if (Beans.isBeanClass(cls)) {
+                if (isBeanParameters(first)) {
                     final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
                     final PropInfo[] propInfos = new PropInfo[parameterCount];
 
@@ -4628,6 +4638,36 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         }
 
         return this;
+    }
+
+    /**
+     * Whether {@code parameters} is bound property-by-property as a bean by {@link #setParameters(Object)} and
+     * {@link #addBatchParameters(Iterator)}.
+     *
+     * @param parameters the non-null parameters object
+     * @return {@code true} if the object's properties supply the named parameter values
+     */
+    private boolean isBeanParameters(final Object parameters) {
+        final Class<?> cls = parameters.getClass();
+
+        if (!Beans.isBeanClass(cls)) {
+            return false;
+        }
+
+        if (parameterCount != 1) {
+            return true;
+        }
+
+        // Some value classes pass Beans.isBeanClass only because they expose getter/setter pairs: JDBC value objects
+        // (e.g. H2's JdbcSQLXML), and classes the Abacus type system binds as one value (GregorianCalendar,
+        // MutableBoolean, a class with a registered Type). With exactly one placeholder, bind such a value directly,
+        // as the "single value" contract promises, instead of failing to find a property named after the parameter.
+        // A non-JDBC value class that does have that property keeps the bean binding it always had.
+        if (JdbcUtil.isJdbcValueObject(parameters)) {
+            return false;
+        }
+
+        return N.typeOf(cls).isBean() || ParserUtil.getBeanInfo(cls).getPropInfo(parameterNames.get(0)) != null;
     }
 
     /**

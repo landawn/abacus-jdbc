@@ -31,6 +31,7 @@ import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.cs;
+import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
@@ -413,6 +414,28 @@ public final class DaoUtil {
         } else {
             return Filters.in(propName, nonNullValues).or(Filters.isNull(propName));
         }
+    }
+
+    /**
+     * Resolves each name to the canonical property name of {@code entity}'s class, so that a spelling accepted by the
+     * bean-info lookup (for example {@code "FIRSTNAME"} or {@code "first_name"} for {@code firstName}) renders as a real
+     * column in SQL. A name that does not resolve to a property is kept unchanged, so the caller's own validation still
+     * reports it.
+     *
+     * @param entity the non-null entity whose class defines the properties
+     * @param propNames the non-empty property names to resolve
+     * @return the resolved property names, in the same order
+     */
+    static List<String> toCanonicalPropNames(final Object entity, final Collection<String> propNames) {
+        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entity.getClass());
+        final List<String> result = new ArrayList<>(propNames.size());
+
+        for (final String propName : propNames) {
+            final PropInfo propInfo = propName == null ? null : entityInfo.getPropInfo(propName);
+            result.add(propInfo == null ? propName : propInfo.name);
+        }
+
+        return result;
     }
 
     /**

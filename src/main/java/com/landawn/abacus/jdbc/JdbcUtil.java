@@ -988,9 +988,13 @@ public final class JdbcUtil {
 
     /**
      * Retrieves a {@link Connection} from the specified {@link javax.sql.DataSource}.
-     * This method is aware of Spring-managed transactions. If a transaction is active,
-     * it returns the connection associated with the current transaction. Otherwise, it
-     * retrieves a new connection from the DataSource.
+     * This method is aware of Spring-managed transactions. If Spring JDBC is on the classpath (and its
+     * integration is not disabled for the current thread, e.g. by {@link #runIgnoringSpringTransaction(Throwables.Runnable)}),
+     * the connection is obtained through Spring's {@code DataSourceUtils}, so a connection bound to an active Spring
+     * transaction is returned. Otherwise, it retrieves a new connection from the DataSource.
+     *
+     * <p>A {@link SqlTransaction} started by {@link #beginTransaction(javax.sql.DataSource)} is <i>not</i> consulted
+     * here; use {@link SqlTransaction#connection()} to work with that transaction's connection.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2149,7 +2153,8 @@ public final class JdbcUtil {
     /**
      * Returns the column names of one table through {@link DatabaseMetaData#getColumns(String, String, String, String)}.
      * Because the metadata arguments are patterns, every returned row is checked against the requested
-     * catalog, schema, and table before it is accepted. If a pattern matches more than one table, columns
+     * catalog, schema, and table before it is accepted (a row whose {@code TABLE_CAT} is {@code null}, which
+     * JDBC permits, is not rejected on its catalog). If a pattern matches more than one table, columns
      * from the first matching table (in metadata order) are returned.
      *
      * @param metadata The database metadata to query.
@@ -2186,9 +2191,12 @@ public final class JdbcUtil {
 
                 // JDBC metadata arguments are patterns, so verify every requested identifier against
                 // the concrete row before accepting columns returned through '_'/'%' expansion.
+                // The catalog argument is an exact name the driver already filtered on, and JDBC allows
+                // TABLE_CAT to be null (e.g. drivers that report Connection.getCatalog() but no row catalog),
+                // so only a reported catalog that differs rejects the row.
                 if (!identifierMatches(tableNamePattern, tableNameInMetadata, tableCaseSensitive)
                         || !identifierMatches(schemaPattern, schemaInMetadata, schemaCaseSensitive)
-                        || !identifierMatches(catalog, catalogInMetadata, catalogCaseSensitive)) {
+                        || (catalogInMetadata != null && !identifierMatches(catalog, catalogInMetadata, catalogCaseSensitive))) {
                     continue;
                 }
 
@@ -2946,19 +2954,23 @@ public final class JdbcUtil {
      * Retrieves a mapping from database column names to entity field names for a given entity class.
      * This mapping is crucial for the automatic object-relational mapping (ORM) features,
      * allowing {@code JdbcUtil} to populate entity objects from a {@code ResultSet}.
-     * The mapping is determined by analyzing the entity class's annotations (e.g., {@code @Column}) and naming conventions.
+     * Only properties that declare an explicit column name (e.g., {@code @Column("user_id")}) are included;
+     * properties mapped purely by naming convention are not. Besides each declared column name, the map also
+     * contains its lower- and upper-case variants for case-insensitive lookups (an exact declared spelling
+     * always wins over a folded variant).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Assuming User class has fields like 'userId' and 'userName' mapped to columns 'user_id' and 'user_name'
+     * // Assuming User declares @Column("user_id") on 'userId' and @Column("user_name") on 'userName'
      * ImmutableMap<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(User.class);
      *
      * System.out.println(columnToPropNameMap.get("user_id"));     // Output: userId
-     * System.out.println(columnToPropNameMap.get("user_name"));   // Output: userName
+     * System.out.println(columnToPropNameMap.get("USER_NAME"));   // Output: userName
      * }</pre>
      *
      * @param entityClass The entity class to analyze for column-to-field mappings; must not be {@code null}.
-     * @return An {@link ImmutableMap} where keys are database column names and values are the corresponding entity field names.
+     * @return An {@link ImmutableMap} where keys are the declared database column names (plus their lower- and upper-case
+     *         variants) and values are the corresponding entity field names.
      * @throws IllegalArgumentException if {@code entityClass} is {@code null} or is not a valid entity bean class.
      * @see com.landawn.abacus.annotation.Column
      * @see com.landawn.abacus.util.NamingPolicy
@@ -3299,7 +3311,8 @@ public final class JdbcUtil {
      * <p>This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.</p>
+     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
+     * A {@code SqlTransaction} begun with {@code isForUpdateOnly = true} is not used for a {@code SELECT} statement.</p>
      *
      * <p><b>Key Features:</b></p>
      * <ul>
@@ -5796,7 +5809,8 @@ public final class JdbcUtil {
      *
      * // Iterate through results
      * for (int i = 0; i < products.size(); i++) {
-     *     System.out.println(products.get(i, products.getColumnIndex("product_name")));
+     *     String productName = products.get(i, products.getColumnIndex("product_name"));
+     *     System.out.println(productName);
      * }
      *
      * // Query with no parameters
@@ -6068,7 +6082,7 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} to use for the batch update.
      * @param sql The SQL statement to execute.
      * @param listOfParameters A list of parameter sets for the batch update.
-     * @return The total number of rows affected by the batch update across all batches.
+     * @return The total number of rows affected by the batch update across all batches
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not
      *         empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot
@@ -6091,8 +6105,12 @@ public final class JdbcUtil {
     /**
      * Executes a batch SQL update using the provided DataSource with specified batch size.
      * Large lists will be automatically split into smaller batches for optimal performance.
-     * When the number of parameter sets exceeds the batch size, a transaction is automatically
-     * started to ensure atomicity.
+     *
+     * <p>If a transaction is already active on the current thread for {@code ds}, its connection is used and
+     * no new transaction is started. Otherwise, when the number of parameter sets exceeds the batch size, a
+     * transaction is automatically started so that all batches commit or roll back together; a list of at most
+     * {@code batchSize} (but more than one) parameter sets is executed on a newly acquired connection with
+     * auto-commit temporarily disabled, as described in {@link #executeBatchUpdate(Connection, String, List, int)}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -6121,10 +6139,11 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} to use for the batch update, must not be {@code null}.
      * @param sql The SQL statement to execute, must not be {@code null} or empty.
      * @param listOfParameters A list of parameter sets for the batch update. Each element should be
-     *                        an Object array or a compatible collection representing one set of parameters.
+     *                        an Object array or a compatible collection representing one set of parameters
+     *                        (for named-parameter SQL, an entity, {@link Map}, or {@link EntityId} is also accepted).
      * @param batchSize The size of each batch, must be positive. Smaller batches use less memory
      *                  but may be slower; larger batches are faster but use more memory.
-     * @return The total number of rows affected by the batch update across all batches.
+     * @return The total number of rows affected by the batch update across all batches
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or,
      *         when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter
@@ -6255,7 +6274,7 @@ public final class JdbcUtil {
      * @param sql The SQL statement to execute.
      * @param listOfParameters A list of parameter sets for the batch update.
      * @param batchSize The size of each batch, must be positive.
-     * @return The total number of rows affected by the batch update across all batches.
+     * @return The total number of rows affected by the batch update across all batches
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or,
      *         when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter
@@ -6428,6 +6447,12 @@ public final class JdbcUtil {
     /**
      * Executes a large batch SQL update using the provided DataSource with specified batch size.
      * This method returns a {@code long} value to support updates affecting more than {@link Integer#MAX_VALUE} rows.
+     *
+     * <p>If a transaction is already active on the current thread for {@code ds}, its connection is used and
+     * no new transaction is started. Otherwise, when the number of parameter sets exceeds the batch size, a
+     * transaction is automatically started so that all batches commit or roll back together; a list of at most
+     * {@code batchSize} (but more than one) parameter sets is executed on a newly acquired connection with
+     * auto-commit temporarily disabled, as described in {@link #executeLargeBatchUpdate(Connection, String, List, int)}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7308,7 +7333,7 @@ public final class JdbcUtil {
             }
         } else if (N.notEmpty(parameters) && parameters.length >= parameterCount) {
             for (int i = 0; i < parameterCount; i++) {
-                if (parameters[i] == null) {
+                if (parameters[i] == null || JdbcUtil.isJdbcValueObject(parameters[i])) {
                     stmt.setObject(i + 1, parameters[i]);
                 } else {
                     Type.<Object> of(parameters[i].getClass()).set(stmt, i + 1, parameters[i]);
@@ -7811,7 +7836,7 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to extract from. It is closed before this method returns.
      * @param resultExtractor The extractor that produces the result from the {@link ResultSet}.
      * @return The extraction result.
-     * @throws SQLException if reading column metadata or the supplied result extractor throws an SQL exception.
+     * @throws SQLException if the supplied result extractor throws an SQL exception.
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link ResultSet}, which would be closed before it could be used.
      */
     static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor)
@@ -8747,6 +8772,13 @@ public final class JdbcUtil {
      * <p>The iterator propagates database access failures as {@link UncheckedSQLException}; calling
      * {@code next()} after exhaustion throws {@link NoSuchElementException}.</p>
      *
+     * <p>When the driver reports that it supports multiple open results, a delivered result set stays open while the
+     * iterator advances ({@link Statement#KEEP_CURRENT_RESULT}). Otherwise (e.g. Microsoft SQL Server, or a driver that
+     * rejects {@code KEEP_CURRENT_RESULT} with {@link java.sql.SQLFeatureNotSupportedException}), the iterator instead
+     * advances on the following {@code hasNext()}/{@code next()} call, which closes the previously delivered result
+     * set; it must therefore be fully consumed before the iterator is used again. Any other failure while advancing is
+     * propagated.</p>
+     *
      * @param stmt The executed {@link Statement} to extract result sets from.
      * @param isFirstResultSet Whether the statement's first result is a result set.
      * @return An {@link ObjIteratorEx} over the statement's result sets.
@@ -8756,6 +8788,9 @@ public final class JdbcUtil {
             private final Holder<ResultSet> resultSetHolder = new Holder<>();
             private boolean isNextResultSet = isFirstResultSet;
             private boolean noMoreResult = false;
+            // null until the first next(): whether advancing with KEEP_CURRENT_RESULT is used.
+            private Boolean useKeepCurrentResult = null;
+            private boolean advancePending = false;
 
             /**
              * {@inheritDoc}
@@ -8766,6 +8801,13 @@ public final class JdbcUtil {
             public boolean hasNext() throws UncheckedSQLException {
                 if (resultSetHolder.isNull() && !noMoreResult) {
                     try {
+                        if (advancePending) {
+                            // Deferred advance (driver without KEEP_CURRENT_RESULT support, see next()): this closes
+                            // the result set delivered by the previous next() call.
+                            advancePending = false;
+                            isNextResultSet = stmt.getMoreResults();
+                        }
+
                         while (true) {
                             if (isNextResultSet) {
                                 final ResultSet currentRs = stmt.getResultSet();
@@ -8777,10 +8819,10 @@ public final class JdbcUtil {
                                     resultSetHolder.setValue(ResultSetProxy.wrap(currentRs));
                                     break;
                                 }
-                                // First-result claim was wrong (driver returned null, meaning the
-                                // first result was actually an update count or no result). Fall
-                                // through to advance via getMoreResults/getUpdateCount below
-                                // instead of terminating the iteration early.
+                                // Result-set claim was wrong (driver returned null, meaning the current
+                                // result is actually an update count or no result). Fall through to the
+                                // update-count check below: a real update count advances via getMoreResults();
+                                // -1 means, per the JDBC contract, that there are no more results.
                             } else if (stmt.getUpdateCount() != -1) {
                                 isNextResultSet = stmt.getMoreResults();
                             } else {
@@ -8811,14 +8853,34 @@ public final class JdbcUtil {
 
                 final ResultSet rs = resultSetHolder.getAndSet(null);
 
-                try {
-                    isNextResultSet = stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT);
-                } catch (final SQLException e) {
-                    // The caller never received `rs`, so they cannot close it. Release it
-                    // here instead of leaking it to be cleaned up when the statement closes.
-                    closeQuietly(rs);
-                    throw new UncheckedSQLException(e);
+                if (useKeepCurrentResult == null) {
+                    // KEEP_CURRENT_RESULT is optional (the SQL Server driver, for example, always rejects it). Decide from
+                    // the driver's declared capability up front instead of reinterpreting a failed call afterwards: a
+                    // genuine failure (timeout, lost connection) must never be mistaken for "unsupported" and swallowed.
+                    useKeepCurrentResult = supportsMultipleOpenResults(stmt);
                 }
+
+                if (useKeepCurrentResult) {
+                    try {
+                        isNextResultSet = stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT);
+                        return rs;
+                    } catch (final java.sql.SQLFeatureNotSupportedException e) {
+                        // The driver claims support but explicitly rejects the feature: use the deferred advance below.
+                        useKeepCurrentResult = false;
+                    } catch (final SQLException e) {
+                        // The caller never received `rs`, so they cannot close it. Release it
+                        // here instead of leaking it to be cleaned up when the statement closes.
+                        closeQuietly(rs);
+                        throw new UncheckedSQLException(e);
+                    }
+                }
+
+                // Without KEEP_CURRENT_RESULT, advancing (getMoreResults()) would close `rs` before delivery, so defer the
+                // advance to the next hasNext().
+
+                // `rs` is still the statement's current result: advancing now would close it before delivery.
+                isNextResultSet = false;
+                advancePending = true;
 
                 return rs;
             }
@@ -8848,9 +8910,30 @@ public final class JdbcUtil {
                 }
 
                 isNextResultSet = false;
+                advancePending = false;
                 noMoreResult = true;
             }
         };
+    }
+
+    /**
+     * Returns whether the driver behind {@code stmt} declares support for multiple open results, which
+     * {@code getMoreResults(Statement.KEEP_CURRENT_RESULT)} requires. If the capability cannot be read, support is
+     * assumed: the {@code KEEP_CURRENT_RESULT} call is then attempted and any genuine failure still propagates.
+     *
+     * @param stmt The statement whose driver capability is checked.
+     * @return {@code false} only if the driver reports that it does not support multiple open results.
+     */
+    private static boolean supportsMultipleOpenResults(final Statement stmt) {
+        try {
+            final Connection conn = stmt.getConnection();
+            final DatabaseMetaData metadata = conn == null ? null : conn.getMetaData();
+
+            return metadata == null || metadata.supportsMultipleOpenResults();
+        } catch (final SQLException | RuntimeException | AbstractMethodError e) {
+            logger.debug(e, "Failed to read supportsMultipleOpenResults(); assuming KEEP_CURRENT_RESULT is supported");
+            return true;
+        }
     }
 
     /**
@@ -9765,7 +9848,11 @@ public final class JdbcUtil {
      * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
      * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
-     * {@code false}; any other SQL error is propagated.</p>
+     * {@code false}; any other SQL error is propagated. When the connection has auto-commit disabled, the fallback query
+     * runs under a savepoint that is rolled back if the query fails, so an expected "table not found" error does not
+     * abort the caller's transaction on databases such as PostgreSQL. If rolling back to that savepoint fails, the
+     * transaction may be unusable, so the "table not found" error is propagated (with the rollback failure suppressed)
+     * instead of returning {@code false}.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like {@code schema.table}
      * or {@code catalog.schema.table}.</p>
@@ -9785,7 +9872,7 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is blank or otherwise invalid.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if acquiring a connection or reading table metadata fails, or the fallback table query fails
-     *         with an SQL error other than "table not found".
+     *         with an SQL error other than "table not found", or rolling back to the probe savepoint fails.
      * @see #tableExists(Connection, String)
      */
     public static boolean tableExists(final javax.sql.DataSource ds, final String tableName)
@@ -9813,7 +9900,11 @@ public final class JdbcUtil {
      * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
      * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
-     * {@code false}; any other SQL error is propagated.</p>
+     * {@code false}; any other SQL error is propagated. When the connection has auto-commit disabled, the fallback query
+     * runs under a savepoint that is rolled back if the query fails, so an expected "table not found" error does not
+     * abort the caller's transaction on databases such as PostgreSQL. If rolling back to that savepoint fails, the
+     * transaction may be unusable, so the "table not found" error is propagated (with the rollback failure suppressed)
+     * instead of returning {@code false}.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like {@code schema.table}
      * or {@code catalog.schema.table}.</p>
@@ -9832,7 +9923,7 @@ public final class JdbcUtil {
      * @return {@code true} if the table exists, {@code false} otherwise.
      * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
      * @throws UncheckedSQLException if reading connection or table metadata fails, or the fallback table query fails
-     *         with an SQL error other than "table not found".
+     *         with an SQL error other than "table not found", or rolling back to the probe savepoint fails.
      */
     public static boolean tableExists(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -9918,11 +10009,20 @@ public final class JdbcUtil {
             // splitQualifiedSqlIdentifier removes delimiters. Never feed those stripped parts to
             // unquoted fallback SQL: "mixedCase" and mixedCase can identify different tables.
             if (!hasDelimitedIdentifierPart(tableName) && Strings.isNotEmpty(safeQualifiedTableName)) {
+                // On PostgreSQL (and similar databases) any failed statement aborts the enclosing transaction, so an
+                // expected "table not found" from this probe would leave the caller's transaction unusable ("current
+                // transaction is aborted") even though this method just returns false. Probe under a savepoint when
+                // the connection is in a transaction, and roll back to it on failure.
+                final java.sql.Savepoint savepoint = setSavepointForTableProbe(conn);
+
                 try {
                     execute(conn, "SELECT 1 FROM " + safeQualifiedTableName + " WHERE 1 > 2");
+                    releaseSavepointQuietly(conn, savepoint);
                     return true;
                 } catch (final SQLException e) {
-                    if (isTableNotExistsException(e)) {
+                    // A failed rollback leaves the caller's transaction possibly aborted: report it rather than a plain
+                    // "does not exist" result the caller would take as a clean answer.
+                    if (rollbackToProbeSavepoint(conn, savepoint, e) && isTableNotExistsException(e)) {
                         return false;
                     }
 
@@ -9934,6 +10034,68 @@ public final class JdbcUtil {
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
+    }
+
+    /**
+     * Sets a savepoint before the {@code tableExists} fallback probe when {@code conn} is in a transaction
+     * (auto-commit disabled), so a failed probe can be undone without aborting the caller's transaction.
+     *
+     * @param conn The connection the probe runs on.
+     * @return The savepoint, or {@code null} if the connection is in auto-commit mode or savepoints are unavailable.
+     */
+    private static java.sql.Savepoint setSavepointForTableProbe(final Connection conn) {
+        try {
+            return conn.getAutoCommit() ? null : conn.setSavepoint();
+        } catch (final SQLException | RuntimeException | AbstractMethodError e) {
+            // Savepoints are optional (JDBC 3.0) and not allowed in every state: probe without one, as before.
+            logger.debug(e, "Failed to set a savepoint for the table-existence probe; probing without one");
+            return null;
+        }
+    }
+
+    /**
+     * Releases a savepoint created by {@link #setSavepointForTableProbe(Connection)}, ignoring any failure
+     * (some drivers, e.g. Oracle, do not support releasing savepoints). Does nothing for a {@code null} savepoint.
+     *
+     * @param conn The connection that owns the savepoint.
+     * @param savepoint The savepoint to release. Can be {@code null}.
+     */
+    private static void releaseSavepointQuietly(final Connection conn, final java.sql.Savepoint savepoint) {
+        if (savepoint != null) {
+            try {
+                conn.releaseSavepoint(savepoint);
+            } catch (final SQLException | RuntimeException e) {
+                logger.debug(e, "Failed to release the table-existence probe savepoint");
+            }
+        }
+    }
+
+    /**
+     * Rolls back to (and then releases) a savepoint created by {@link #setSavepointForTableProbe(Connection)}
+     * after the probe failed. A rollback failure is attached to {@code probeFailure} as suppressed.
+     *
+     * @param conn The connection that owns the savepoint.
+     * @param savepoint The savepoint to roll back to. Can be {@code null} (no savepoint was set), which counts as success.
+     * @param probeFailure The probe failure that triggered the rollback.
+     * @return {@code true} if there was nothing to roll back or the rollback succeeded; {@code false} if it failed.
+     */
+    private static boolean rollbackToProbeSavepoint(final Connection conn, final java.sql.Savepoint savepoint, final SQLException probeFailure) {
+        if (savepoint == null) {
+            return true;
+        }
+
+        boolean rolledBack = false;
+
+        try {
+            conn.rollback(savepoint);
+            rolledBack = true;
+        } catch (final SQLException | RuntimeException e) {
+            addSuppressedIfDistinct(probeFailure, e);
+        }
+
+        releaseSavepointQuietly(conn, savepoint);
+
+        return rolledBack;
     }
 
     /**
@@ -9997,7 +10159,9 @@ public final class JdbcUtil {
                 if (catalogCaseSensitive) {
                     final String catalogInMetadata = rows.getString("TABLE_CAT");
 
-                    if (!identifierMatches(catalog, catalogInMetadata, true)) {
+                    // JDBC allows a null TABLE_CAT (e.g. older PostgreSQL drivers report none even though the
+                    // connection has a current catalog); only a reported catalog that differs rules the row out.
+                    if (catalogInMetadata != null && !identifierMatches(catalog, catalogInMetadata, true)) {
                         continue;
                     }
                 }
@@ -11629,6 +11793,10 @@ public final class JdbcUtil {
      * Associates the given value with the given key, merging it with any existing value (including an
      * existing {@code null} value) via the given remapping function.
      *
+     * <p>Unlike {@link Map#merge}, a key mapped to {@code null} counts as present, so a duplicate key still reaches
+     * the remapping function (keeping {@code Fn.throwingMerger()} duplicate detection intact), and either argument
+     * passed to it may be {@code null}. A {@code null} result is stored as the value rather than removing the key.</p>
+     *
      * @param <K> The type of the map keys.
      * @param <V> The type of the map values.
      * @param map The map to update.
@@ -12465,7 +12633,9 @@ public final class JdbcUtil {
      *
      * @param ds The {@link javax.sql.DataSource} for which to begin the transaction.
      * @param isolationLevel The isolation level for the transaction.
-     * @param isForUpdateOnly Whether this transaction is only for update operations.
+     * @param isForUpdateOnly Whether this transaction is only for update operations. While this scope is the
+     *        innermost one, {@code SELECT} statements prepared from {@code ds} on this thread do not join the
+     *        transaction and run on a separate connection; other statements still use the transaction's connection.
      * @return A {@link SqlTransaction} object representing the transaction.
      * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}, or if
      *         {@code isolationLevel} is {@link IsolationLevel#NONE}, which is not a usable transaction isolation level.
@@ -13348,7 +13518,10 @@ public final class JdbcUtil {
      * {@link IllegalArgumentException}. An ID setter does the same when the supplied ID would assign
      * an entity property. Callbacks for entities without ID properties remain no-ops, and composite-ID
      * setters still ignore {@code null} or unsupported IDs. A composite {@link EntityId} with no entries matching
-     * entity properties also leaves the entity untouched.</p>
+     * entity properties also leaves the entity untouched, except that a single entry (a generated key returned under a
+     * driver-specific label such as {@code GENERATED_KEY}) is assigned to the ID property declared as database-generated
+     * ({@code @ReadOnlyId}, {@code @Id} with {@code @ReadOnly}, or JPA {@code @GeneratedValue}), if exactly one is declared;
+     * otherwise it is left unassigned and a warning is logged.</p>
      *
      * @param <ID> The ID type.
      * @param daoInterface The DAO interface class.
@@ -13375,6 +13548,7 @@ public final class JdbcUtil {
             final String oneIdPropName = isNoId ? null : idPropNameList.get(0);
             final BeanInfo entityInfo = isNoId ? null : ParserUtil.getBeanInfo(entityClass);
             final List<PropInfo> idPropInfoList = isNoId ? null : Stream.of(idPropNameList).map(entityInfo::getPropInfo).toList();
+            final PropInfo generatedIdPropInfo = isNoId ? null : getDeclaredGeneratedIdProp(idPropInfoList);
             final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
             final boolean isOneId = !isNoId && idPropNameList.size() == 1;
             final boolean isEntityId = idType != null && EntityId.class.isAssignableFrom(idType);
@@ -13402,7 +13576,9 @@ public final class JdbcUtil {
                                 final Object ret = idBeanInfo.createBeanResult();
 
                                 for (final PropInfo propInfo : idPropInfoList) {
-                                    Beans.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
+                                    // Set through idBeanInfo: for an immutable ID class (e.g. a record) 'ret' is the constructor-argument
+                                    // array or builder, not an ID instance, so Beans.setPropValue(ret, ...) cannot resolve its properties.
+                                    idBeanInfo.setPropValue(ret, propInfo.name, propInfo.getPropValue(entity));
                                 }
 
                                 return (ID) idBeanInfo.finishBeanResult(ret);
@@ -13416,12 +13592,18 @@ public final class JdbcUtil {
                             : (isEntityId ? (id, entity) -> {
                                 if (id instanceof final EntityId entityId) {
                                     PropInfo propInfo = null;
+                                    boolean anyPropSet = false;
 
                                     for (final String propName : entityId.keySet()) {
                                         if ((propInfo = entityInfo.getPropInfo(propName)) != null) {
                                             N.checkArgNotNull(entity, cs.entity);
                                             propInfo.setPropValue(entity, entityId.get(propName));
+                                            anyPropSet = true;
                                         }
+                                    }
+
+                                    if (!anyPropSet && entityId.size() == 1) {
+                                        setSingleUnlabeledGeneratedKey(entityClass, generatedIdPropInfo, entityId, entity);
                                     }
                                 } else {
                                     logger.warn("Cannot set generated keys for unsupported id type(idType={})",
@@ -13458,7 +13640,21 @@ public final class JdbcUtil {
                         : (idExtractorPool.containsKey(daoInterface) ? (BiRowMapper<Object>) idExtractorPool.get(daoInterface) //
                                 : (isOneId ? (rs, columnLabels) -> idPropInfo.dbType.get(rs, 1) //
                                         : (rs, columnLabels) -> {
-                                            if (columnLabels.size() == 1) {
+                                            if (columnLabels.size() == 1 && isEntityId) {
+                                                // Some drivers (e.g. MySQL, SQL Server) return only the auto-generated column of a composite key.
+                                                // Wrap it in an EntityId: a bare value is rejected by the paired EntityId id setter and by
+                                                // DaoImpl's EntityId default-id test (ClassCastException). A label that names no id property
+                                                // (e.g. MySQL's GENERATED_KEY) is kept as-is instead of being guessed onto an id property here:
+                                                // the id setter resolves it against the entity (setSingleUnlabeledGeneratedKey).
+                                                final String columnLabel = columnLabels.get(0);
+                                                final String propName = columnPropNameMap.get(columnLabel);
+                                                final PropInfo propInfo = propName == null ? null : entityInfo.getPropInfo(propName);
+                                                final Seid id = Seid.of(ClassUtil.getSimpleClassName(entityClass));
+
+                                                return propInfo != null && idPropNameList.contains(propInfo.name)
+                                                        ? id.set(propInfo.name, propInfo.dbType.get(rs, 1))
+                                                        : id.set(columnLabel, JdbcUtil.getColumnValue(rs, 1));
+                                            } else if (columnLabels.size() == 1) {
                                                 return idPropInfo.dbType.get(rs, 1);
                                             } else if (isEntityId) {
                                                 final int columnCount = columnLabels.size();
@@ -13501,6 +13697,82 @@ public final class JdbcUtil {
         }
 
         return (Tuple3) map.get(namingPolicy);
+    }
+
+    /**
+     * Returns the only ID property declared as database-generated: marked {@code @ReadOnlyId} (or {@code @Id} plus
+     * {@code @ReadOnly}), or annotated with JPA's {@code @GeneratedValue} ({@code jakarta.persistence} or
+     * {@code javax.persistence}).
+     *
+     * @param idPropInfoList The entity's ID properties.
+     * @return The single declared generated ID property, or {@code null} if none or more than one is declared.
+     */
+    private static PropInfo getDeclaredGeneratedIdProp(final List<PropInfo> idPropInfoList) {
+        PropInfo result = null;
+
+        for (final PropInfo propInfo : idPropInfoList) {
+            if (propInfo.isMarkedAsReadOnlyId || hasGeneratedValueAnnotation(propInfo)) {
+                if (result != null) {
+                    return null;
+                }
+
+                result = propInfo;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Returns whether {@code propInfo} carries a JPA {@code @GeneratedValue} annotation, matched by name so that
+     * neither {@code jakarta.persistence} nor {@code javax.persistence} is required on the class path.
+     *
+     * @param propInfo The property to inspect.
+     * @return {@code true} if the property is annotated with {@code jakarta.persistence.GeneratedValue} or
+     *         {@code javax.persistence.GeneratedValue}.
+     */
+    private static boolean hasGeneratedValueAnnotation(final PropInfo propInfo) {
+        for (final Class<?> annotationType : propInfo.annotations.keySet()) {
+            final String name = annotationType.getName();
+
+            if ("jakarta.persistence.GeneratedValue".equals(name) || "javax.persistence.GeneratedValue".equals(name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Assigns a single generated key whose label names no entity property (e.g. MySQL's {@code GENERATED_KEY} or SQL
+     * Server's {@code GENERATED_KEYS}, returned for a composite ID) to the ID property declared as database-generated
+     * (see {@link #getDeclaredGeneratedIdProp(List)}). Without exactly one such declaration the target cannot be
+     * identified reliably, so the key is left unassigned and a warning is logged.
+     *
+     * @param entityClass The entity class, for logging.
+     * @param generatedIdPropInfo The declared database-generated ID property, or {@code null} if there is none.
+     * @param generatedKey The single-entry generated key.
+     * @param entity The entity to update.
+     * @throws IllegalArgumentException if {@code entity} is {@code null}.
+     */
+    private static void setSingleUnlabeledGeneratedKey(final Class<?> entityClass, final PropInfo generatedIdPropInfo, final EntityId generatedKey,
+            final Object entity) throws IllegalArgumentException {
+        N.checkArgNotNull(entity, cs.entity);
+
+        final String keyName = generatedKey.keySet().iterator().next();
+
+        // Only declared metadata identifies the generated column reliably. Guessing from the entity's current values
+        // (e.g. "the ID property still holding a default value") can overwrite a valid component: for
+        // (tenantId = 0, entityId = 9 supplied explicitly) the driver still reports GENERATED_KEY = 9, and tenantId
+        // would become 9, so later updates/deletes would target the wrong row.
+        if (generatedIdPropInfo == null) {
+            logger.warn(
+                    "Cannot tell which ID property of {} the generated key {} belongs to. Mark the database-generated ID property with"
+                            + " @ReadOnlyId (or @GeneratedValue), or register an ID extractor with JdbcUtil.setIdExtractorForDao",
+                    ClassUtil.getSimpleClassName(entityClass), keyName);
+        } else {
+            generatedIdPropInfo.setPropValue(entity, generatedKey.get(keyName));
+        }
     }
 
     /**
@@ -14250,6 +14522,21 @@ public final class JdbcUtil {
         }
 
         return Strings.concat(fullClassMethodName, CACHE_KEY_SEPARATOR, tableName, CACHE_KEY_SEPARATOR, paramKey);
+    }
+
+    /**
+     * Returns {@code true} if {@code value} is a JDBC value object ({@link java.sql.Array}, {@link java.sql.Ref},
+     * {@link java.sql.RowId}, {@link java.sql.SQLXML} or {@link java.sql.Struct}) that must be passed to the driver unchanged.
+     *
+     * @param value the non-null parameter value
+     * @return {@code true} if the value should be bound through {@code setObject} as-is
+     */
+    static boolean isJdbcValueObject(final Object value) {
+        // The Abacus Type lookup by runtime class resolves driver implementation classes of these JDBC value
+        // interfaces (e.g. H2's JdbcSQLXML) to a generic bean/object Type, which binds a JSON string such as
+        // {"string": "<a/>"} instead of the value itself. Callers let the driver bind them natively.
+        return value instanceof java.sql.SQLXML || value instanceof java.sql.Array || value instanceof java.sql.Ref || value instanceof java.sql.RowId
+                || value instanceof java.sql.Struct;
     }
 
     // ==============================================Jdbc Context=======================================================>>

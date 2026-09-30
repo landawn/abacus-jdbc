@@ -757,6 +757,30 @@ public class DaoImplTest extends TestBase {
         assertTrue(((Optional<?>) result).isEmpty());
     }
 
+    interface IdLessMergedByIdDao extends Dao<DaoImplTest.NameOnlyEntity, IdLessMergedByIdDao> {
+        @Query("SELECT name FROM name_only_entity")
+        @MergedById
+        List<DaoImplTest.NameOnlyEntity> listMerged() throws SQLException;
+    }
+
+    interface BlankMergedIdDao extends Dao<TestEntity, BlankMergedIdDao> {
+        @Query("SELECT id, name FROM test")
+        @MergedById("id, ")
+        List<TestEntity> listMerged() throws SQLException;
+    }
+
+    // Regression: splitting an empty @MergedById id list produced [""], so an id-less entity got the misleading
+    // "No method found by merged id: " instead of the intended "can't be null or empty" error, and a trailing comma
+    // ("id, ") was rejected as an unknown property "".
+    @Test
+    public void testMergedByIdIgnoresEmptyIdNames() throws SQLException {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> DaoImpl.createDao(IdLessMergedByIdDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertTrue(thrown.getMessage().contains("can't be null or empty"), thrown.getMessage());
+
+        assertNotNull(DaoImpl.createDao(BlankMergedIdDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+    }
+
     @Test
     void testProcedureBindRequiresAllParamsBound() throws Exception {
         Method daoMethod = ProcedureDao.class.getMethod("callProc", String.class, String.class);
@@ -952,6 +976,23 @@ public class DaoImplTest extends TestBase {
 
         assertNotNull(dao);
         assertEquals(0, dao.update(new IdOnlyEntity()));
+    }
+
+    interface NoCacheAnnotationNonUpdateDao extends com.landawn.abacus.jdbc.dao.UncheckedNonUpdateDao<TestEntity, NoCacheAnnotationNonUpdateDao> {
+    }
+
+    // A DefaultDaoCache owns a pool that registers a JVM shutdown hook and a periodic eviction task which are never
+    // released, so createDao must allocate one only when the DAO declares result caching.
+    @Test
+    void testCreateDaoAllocatesDefaultDaoCacheOnlyWhenCacheAnnotationsAreDeclared() throws Exception {
+        try (org.mockito.MockedConstruction<Jdbc.DefaultDaoCache> constructed = Mockito.mockConstruction(Jdbc.DefaultDaoCache.class)) {
+            assertNotNull(DaoImpl.createDao(IdOnlyCrudDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+            assertNotNull(DaoImpl.createDao(NoCacheAnnotationNonUpdateDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+            assertEquals(0, constructed.constructed().size());
+
+            assertNotNull(DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+            assertEquals(1, constructed.constructed().size());
+        }
     }
 
     @Test
@@ -1979,6 +2020,214 @@ public class DaoImplTest extends TestBase {
         assertEquals(firstClockReading.getTime(), dates.getValue().getTime());
     }
 
+    static class NameOnlyEntity {
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    interface NameOnlyInsertDao extends Dao<NameOnlyEntity, NameOnlyInsertDao> {
+        @Query("INSERT INTO name_only_entity (name) VALUES (:name)")
+        void insertOne(NameOnlyEntity entity) throws SQLException;
+
+        @Query(value = "INSERT INTO name_only_entity (name) VALUES (:name)", batch = true)
+        void insertAll(List<NameOnlyEntity> entities) throws SQLException;
+    }
+
+    // Regression: a custom @Query INSERT that did not request generated keys (an entity without id) still read
+    // them back through getGeneratedKeys(), which drivers such as MySQL Connector/J reject when keys were not
+    // requested ("Generated keys not requested").
+    @Test
+    public void testCustomInsertWithoutRequestedKeysDoesNotReadGeneratedKeys() throws SQLException {
+        final DataSource ds = mock(DataSource.class);
+        final Connection conn = mock(Connection.class);
+        final DatabaseMetaData meta = mock(DatabaseMetaData.class);
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+
+        Mockito.when(ds.getConnection()).thenReturn(conn);
+        Mockito.when(conn.getMetaData()).thenReturn(meta);
+        Mockito.when(meta.getDatabaseProductName()).thenReturn("MySQL");
+        Mockito.when(meta.getDatabaseProductVersion()).thenReturn("8.0");
+        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+        Mockito.when(stmt.executeUpdate()).thenReturn(1);
+        Mockito.when(stmt.executeBatch()).thenReturn(new int[] { 1, 1 });
+        Mockito.when(stmt.getGeneratedKeys()).thenThrow(new SQLException("Generated keys not requested"));
+
+        final NameOnlyInsertDao dao = DaoImpl.createDao(NameOnlyInsertDao.class, null, ds, PSC, null, null, null);
+        final NameOnlyEntity first = new NameOnlyEntity();
+        first.setName("first");
+        final NameOnlyEntity second = new NameOnlyEntity();
+        second.setName("second");
+
+        assertDoesNotThrow(() -> dao.insertOne(first));
+        assertDoesNotThrow(() -> dao.insertAll(List.of(first, second)));
+
+        Mockito.verify(stmt).executeUpdate();
+        Mockito.verify(stmt).executeBatch();
+        Mockito.verify(stmt, Mockito.never()).getGeneratedKeys();
+    }
+
+    public static class TenantRow {
+        @Id
+        private long tenantId;
+        // Declares the database-generated component the unlabeled GENERATED_KEY belongs to.
+        @com.landawn.abacus.annotation.ReadOnlyId
+        private long rowId;
+        private String name;
+
+        public long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final long rowId) {
+            this.rowId = rowId;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    public interface TenantRowDao extends CrudDao<TenantRow, com.landawn.abacus.util.EntityId, TenantRowDao> {
+    }
+
+    private static java.sql.ResultSet generatedKeyResultSet(final long... keys) throws SQLException {
+        final java.sql.ResultSet rs = mock(java.sql.ResultSet.class);
+        final java.sql.ResultSetMetaData rsMeta = mock(java.sql.ResultSetMetaData.class);
+        final int[] cursor = { -1 };
+
+        Mockito.when(rs.getMetaData()).thenReturn(rsMeta);
+        Mockito.when(rsMeta.getColumnCount()).thenReturn(1);
+        Mockito.when(rsMeta.getColumnLabel(1)).thenReturn("GENERATED_KEY");
+        Mockito.when(rsMeta.getColumnName(1)).thenReturn("GENERATED_KEY");
+        Mockito.when(rsMeta.getColumnType(1)).thenReturn(Types.BIGINT);
+        Mockito.when(rsMeta.getColumnClassName(1)).thenReturn(Long.class.getName());
+        Mockito.when(rs.next()).thenAnswer(inv -> ++cursor[0] < keys.length);
+        Mockito.when(rs.getObject(1)).thenAnswer(inv -> keys[cursor[0]]);
+        Mockito.when(rs.getLong(1)).thenAnswer(inv -> keys[cursor[0]]);
+
+        return rs;
+    }
+
+    // Regression: with a composite id where the driver returns only the auto-increment column under an unmapped label
+    // (MySQL GENERATED_KEY), insert/batchInsert returned that partial key (Seid{GENERATED_KEY: n}) instead of the
+    // entity's full id. The generated value is merged into the entity, so the full composite id is returned.
+    @Test
+    public void testCrudInsertReturnsFullCompositeIdWhenDriverReturnsOnlyGeneratedColumn() throws SQLException {
+        final DataSource ds = mockDataSourceForDaoCreation();
+        final Connection conn = ds.getConnection();
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+
+        Mockito.when(conn.prepareStatement(Mockito.anyString(), Mockito.any(String[].class))).thenReturn(stmt);
+        Mockito.when(conn.prepareStatement(Mockito.anyString(), Mockito.anyInt())).thenReturn(stmt);
+        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+        Mockito.when(stmt.executeUpdate()).thenReturn(1);
+        Mockito.when(stmt.executeBatch()).thenReturn(new int[] { 1, 1 });
+        Mockito.when(stmt.getGeneratedKeys()).thenAnswer(inv -> generatedKeyResultSet(7L)).thenAnswer(inv -> generatedKeyResultSet(8L, 9L));
+
+        final TenantRowDao dao = DaoImpl.createDao(TenantRowDao.class, null, ds, PSC, null, null, null);
+
+        final TenantRow row = new TenantRow();
+        row.setTenantId(5L);
+        row.setName("single");
+
+        final com.landawn.abacus.util.EntityId id = dao.insert(row);
+
+        assertEquals(7L, row.getRowId());
+        assertEquals(5L, ((Number) id.get("tenantId")).longValue());
+        assertEquals(7L, ((Number) id.get("rowId")).longValue());
+
+        final TenantRow first = new TenantRow();
+        first.setTenantId(5L);
+        final TenantRow second = new TenantRow();
+        second.setTenantId(6L);
+
+        final List<com.landawn.abacus.util.EntityId> ids = dao.batchInsert(List.of(first, second));
+
+        assertEquals(8L, first.getRowId());
+        assertEquals(9L, second.getRowId());
+        assertEquals(2, ids.size());
+        assertEquals(6L, ((Number) ids.get(1).get("tenantId")).longValue());
+        assertEquals(9L, ((Number) ids.get(1).get("rowId")).longValue());
+    }
+
+    interface ProcedureWriteCacheDao extends Dao<TestEntity, ProcedureWriteCacheDao> {
+        // "get" is a query-method name prefix, but op DEFAULT with an int return executes the procedure as an update.
+        @Query(value = "call bump_counter(?)", procedure = true)
+        int getAndBumpCounter(String counterName) throws SQLException;
+
+        // A procedure run as a query (op DEFAULT with a result-set return type) stays classified by its name.
+        @Query(value = "call list_counters()", procedure = true)
+        List<TestEntity> getCounters() throws SQLException;
+    }
+
+    // Regression (thread-local DAO cache scope): a procedure executed as an update (op DEFAULT with an update-count
+    // return type) was classified only by its "get" name prefix, so it was served from the scope cache instead of
+    // being executed again, and it never invalidated the cached query results.
+    @Test
+    public void testLocalThreadCache_ProcedureExecutedAsUpdateIsClassifiedAsWrite() throws Exception {
+        final DataSource ds = mockDataSourceForDaoCreation();
+        final Connection conn = ds.getConnection();
+        final java.sql.CallableStatement stmt = mock(java.sql.CallableStatement.class);
+
+        Mockito.when(conn.prepareCall(Mockito.anyString())).thenReturn(stmt);
+        Mockito.when(stmt.executeUpdate()).thenReturn(1);
+        Mockito.when(stmt.getUpdateCount()).thenReturn(-1);
+
+        final ProcedureWriteCacheDao dao = DaoImpl.createDao(ProcedureWriteCacheDao.class, null, ds, PSC, null, null, null);
+        final Jdbc.DaoCache localCache = mock(Jdbc.DaoCache.class);
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(localCache)) {
+            assertEquals(1, dao.getAndBumpCounter("c"));
+            assertEquals(1, dao.getAndBumpCounter("c"));
+        }
+
+        Mockito.verify(stmt, Mockito.times(2)).executeUpdate();
+        Mockito.verify(localCache, Mockito.times(2)).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(localCache, Mockito.never()).get(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(localCache, Mockito.never()).put(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    }
+
+    // Guard: a procedure executed as a query is still classified by its "get" name prefix.
+    @Test
+    public void testLocalThreadCache_ProcedureExecutedAsQueryKeepsNameClassification() throws Exception {
+        final DataSource ds = mockDataSourceForDaoCreation();
+        final Connection conn = ds.getConnection();
+        final java.sql.CallableStatement stmt = mock(java.sql.CallableStatement.class);
+
+        Mockito.when(conn.prepareCall(Mockito.anyString())).thenReturn(stmt);
+
+        final ProcedureWriteCacheDao dao = DaoImpl.createDao(ProcedureWriteCacheDao.class, null, ds, PSC, null, null, null);
+        final Jdbc.DaoCache localCache = mock(Jdbc.DaoCache.class);
+        final List<TestEntity> cached = new java.util.ArrayList<>();
+        Mockito.when(localCache.get(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(cached);
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(localCache)) {
+            assertEquals(cached, dao.getCounters());
+        }
+
+        Mockito.verify(localCache, Mockito.never()).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(conn, Mockito.never()).prepareCall(Mockito.anyString());
+    }
+
     @Test
     public void testPrepareQueryWithConditionDoesNotConfigureLargeResultStatement() throws SQLException {
         DataSource ds = mockDataSourceForDaoCreation();
@@ -2114,6 +2363,24 @@ public class DaoImplTest extends TestBase {
         SqlExpression limitExpr = Filters.expr("id > 0 LIMIT 10");
         Object out2 = invokeHandleLimit(limitExpr, 5);
         assertSame(limitExpr, out2, "SqlExpression already containing LIMIT must not be re-wrapped");
+    }
+
+    // Regression: a LIMIT/FETCH keyword inside a subquery, a quoted literal or a comment is not the condition's own
+    // limit. It used to suppress the framework limit, so e.g. a paginate page silently became unbounded.
+    @Test
+    public void testHandleLimit_NestedOrQuotedLimitKeywordDoesNotSuppressFrameworkLimit() throws Exception {
+        for (final String literal : List.of("id IN (SELECT id FROM other_table ORDER BY id LIMIT 100) ORDER BY id",
+                "id IN (SELECT id FROM other_table FETCH FIRST 100 ROWS ONLY) ORDER BY id", "name = 'NO LIMIT ' ORDER BY id",
+                "id > 0 /* LIMIT 5 */ ORDER BY id")) {
+            final Condition limited = invokeHandleLimit(Filters.expr(literal), 5);
+
+            assertTrue(limited instanceof Criteria, literal);
+            assertEquals(5, ((Criteria) limited).limit().count(), literal);
+        }
+
+        // A top-level limit clause spelled out in the literal is still preserved.
+        final SqlExpression ownLimit = Filters.expr("id IN (SELECT id FROM other_table) ORDER BY id LIMIT 10");
+        assertSame(ownLimit, invokeHandleLimit(ownLimit, 5));
     }
 
     // skipLimitWithoutOrderBy marks a best-effort limit on a dialect (SQL Server) whose LIMIT renders

@@ -489,6 +489,51 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
     }
 
     @Test
+    public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_InvalidNameRejectedBeforeAnyTaskSubmitted() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        List<Runnable> submitted = new ArrayList<>();
+        Executor executor = submitted::add;
+
+        assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "noSuchProp"), executor));
+        assertTrue(submitted.isEmpty(), "no load task may be left running after the invalid name is rejected");
+
+        List<String> withNull = new ArrayList<>();
+        withNull.add("orders");
+        withNull.add(null);
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entity, withNull, executor));
+        assertTrue(e.getMessage().contains("joinEntityPropName"), e.getMessage());
+        assertTrue(submitted.isEmpty(), "no load task may be left running after the null name is rejected");
+        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.any(TestEntity.class), ArgumentMatchers.anyString());
+    }
+
+    @Test
+    public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_EmptyNameRejectedAndLoadedPropSkipped() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        entity.setAddresses("already-loaded");
+        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
+        List<Runnable> submitted = new ArrayList<>();
+        Executor executor = command -> {
+            submitted.add(command);
+            command.run();
+        };
+
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", ""), executor));
+        assertTrue(e.getMessage().contains("joinEntityPropName"), e.getMessage());
+        assertTrue(submitted.isEmpty());
+        verify(dao, Mockito.never()).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
+
+        // Valid names: only the property that is still null gets a task.
+        dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"), executor);
+        assertEquals(1, submitted.size());
+        verify(dao).loadJoinEntities(entity, "orders", null);
+        verify(dao, Mockito.never()).loadJoinEntities(entity, "addresses", null);
+    }
+
+    @Test
     public void testloadJoinEntitiesIfAbsent_Entities_PropNames_LoopsEach() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
         List<TestEntity> entities = List.of(new TestEntity());

@@ -1200,6 +1200,75 @@ public class SqlTransactionTest extends TestBase {
         tran.rollbackIfNotCommitted();
     }
 
+    // Regression: an outer DEFAULT scope runs at the connection's original level (READ_COMMITTED here). A
+    // nested scope explicitly requesting that same level compared DEFAULT != READ_COMMITTED and re-issued
+    // setTransactionIsolation on entry and exit, which drivers that reject isolation changes once the
+    // transaction has started (e.g. PostgreSQL) turn into a spurious failure of the nested begin.
+    @Test
+    public void testNestedExplicitLevelEqualToOuterDefaultDoesNotTouchConnectionIsolation() throws SQLException {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT);
+
+        clearInvocations(connection);
+        doThrow(new SQLException("cannot change isolation in the middle of a transaction")).when(connection)
+                .setTransactionIsolation(ArgumentMatchers.anyInt());
+
+        try {
+            final SqlTransaction nested = assertDoesNotThrow(() -> JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED));
+            assertSame(outer, nested);
+            assertEquals(IsolationLevel.READ_COMMITTED, nested.isolationLevel());
+
+            assertDoesNotThrow(() -> nested.commit());
+            nested.rollbackIfNotCommitted();
+            assertEquals(IsolationLevel.DEFAULT, outer.isolationLevel());
+            verify(connection, never()).setTransactionIsolation(ArgumentMatchers.anyInt());
+        } finally {
+            doNothing().when(connection).setTransactionIsolation(ArgumentMatchers.anyInt());
+            outer.rollbackIfNotCommitted();
+        }
+    }
+
+    // Guard for the resolved (physical) comparison: under an outer DEFAULT scope (connection original =
+    // READ_COMMITTED), only a scope whose level differs from the level the connection is PHYSICALLY at is
+    // applied. A deeper READ_COMMITTED under SERIALIZABLE must still be applied and SERIALIZABLE restored on
+    // its exit; leaving SERIALIZABLE for the READ_COMMITTED scope needs a call, leaving that scope for the
+    // DEFAULT outer does not; and the final close still restores the original level exactly once.
+    @Test
+    public void testNestedLevelsUnderOuterDefaultApplyOnlyPhysicalChanges() throws SQLException {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT);
+        clearInvocations(connection);
+
+        final SqlTransaction n1 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED); // physically RC already: no call
+        final SqlTransaction n2 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE); // RC -> SER
+        final SqlTransaction n3 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED); // SER -> RC
+        final SqlTransaction n4 = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT); // inherits RC: no call
+        assertSame(outer, n4);
+        assertEquals(IsolationLevel.READ_COMMITTED, n4.isolationLevel());
+
+        n4.commit(); // RC -> RC: no call
+        n4.rollbackIfNotCommitted();
+        n3.commit(); // RC -> SER
+        n3.rollbackIfNotCommitted();
+        assertEquals(IsolationLevel.SERIALIZABLE, outer.isolationLevel());
+        n2.commit(); // SER -> RC
+        n2.rollbackIfNotCommitted();
+        n1.commit(); // RC -> DEFAULT (= RC): no call
+        n1.rollbackIfNotCommitted();
+        assertEquals(IsolationLevel.DEFAULT, outer.isolationLevel());
+
+        outer.rollbackIfNotCommitted(); // rollback, then the final reset to the original level
+
+        final InOrder order = inOrder(connection);
+        order.verify(connection).setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+        order.verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        order.verify(connection).setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+        order.verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        order.verify(connection).rollback();
+        order.verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        verify(connection, times(2)).setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
+        verify(connection, times(3)).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
+    }
+
     // Regression: incrementAndGetRef on a NESTED scope pre-fix called conn.setTransactionIsolation
     // BEFORE pushing recovery state onto the isolation/forUpdateOnly stacks. If the JDBC call
     // failed, the outer scope's recovery state was never preserved (no push happened on this

@@ -44,8 +44,9 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *
  * <p><strong>Restriction:</strong> {@code @Cache}, {@code @CacheResult}, and {@code @RefreshCache}
  * (whether declared at the type or method level) are only honored on cacheable DAOs &mdash; that is,
- * {@code NonUpdateDao} or {@code ReadOnlyDao} subtypes (and their {@code Unchecked} variants). Applying
- * any of them to a DAO that supports update/delete operations fails with
+ * {@code NonUpdateDao} or {@code ReadOnlyDao} subtypes (and their {@code Unchecked} variants). Declaring
+ * {@code @Cache}, or a type-level {@code @CacheResult}/{@code @RefreshCache}, on a DAO that supports
+ * update/delete operations, or enabling a method-level one there, fails with
  * {@code UnsupportedOperationException} at DAO initialization time.</p>
  *
  * <p>The configured {@link #capacity()} and {@link #evictDelayMillis()} must both be non-negative;
@@ -94,7 +95,9 @@ public @interface Cache {
      *
      * <p>The default value is {@link JdbcUtil#DEFAULT_CACHE_CAPACITY} (1000 entries), which is
      * typically suitable for most use cases. For DAOs handling large amounts
-     * of frequently accessed data, consider increasing this value.</p>
+     * of frequently accessed data, consider increasing this value. With the default
+     * {@link Jdbc.DefaultDaoCache}, a capacity of {@code 0} passes DAO initialization but stores no
+     * entries, so every call executes its query.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

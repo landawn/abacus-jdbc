@@ -525,6 +525,8 @@ public final class JdbcCodeGenerationUtil {
      * Generates an entity class from the column metadata of the given result set.
      * Primary keys are auto-detected from database metadata when no configured id field matches.
      * SQL identifier delimiters are decoded before the lookup; unquoted parts follow the database's identifier case-folding rules.
+     * A two-part name is looked up as {@code schema.table}, or as {@code catalog.table} on databases that support catalogs but not
+     * schemas in table definitions (for example MySQL).
      *
      * @param entityName the name of the entity class to generate; also used to look up primary key metadata when no id fields are configured
      * @param rs the result set whose column metadata defines the generated fields
@@ -737,7 +739,16 @@ public final class JdbcCodeGenerationUtil {
                         }
                         pkTable = parts[parts.length - 1];
                         if (parts.length == 2) {
-                            pkSchema = parts[0];
+                            // On catalog-only databases (MySQL/MariaDB with the default CATALOG database term) a two-part
+                            // name is database.table and getPrimaryKeys ignores its schema argument, so the qualifier
+                            // belongs in the catalog slot; otherwise the lookup silently targets the current database.
+                            if (!metadata.supportsSchemasInTableDefinitions() && metadata.supportsCatalogsInTableDefinitions()) {
+                                pkCatalog = parts[0];
+                                pkSchema = null;
+                            } else {
+                                pkSchema = parts[0];
+                            }
+
                             pkTable = parts[1];
                         } else if (parts.length >= 3) {
                             pkCatalog = parts[0];
@@ -794,16 +805,31 @@ public final class JdbcCodeGenerationUtil {
             // List<...> fields) must not emit the same import line twice.
             final Set<String> importedJavaUtilTypes = new HashSet<>();
 
+            // A simple name that classNamesToImport already imports must not also be auto-imported from java.util: two
+            // single-type imports of the same simple name don't compile (JLS 7.5.1), e.g. Optional<String> together with
+            // classNamesToImport "com.landawn.abacus.util.u.Optional".
+            final Set<String> explicitlyImportedSimpleNames = new HashSet<>();
+
+            for (final String classNameToImport : N.nullToEmpty(configToUse.getClassNamesToImport())) {
+                if (Strings.isNotEmpty(classNameToImport)) {
+                    explicitlyImportedSimpleNames.add(classNameToImport.substring(classNameToImport.lastIndexOf('.') + 1).trim());
+                }
+            }
+
             for (final Tuple3<String, String, Boolean> tp : additionalFields) {
                 if (tp._1.indexOf('<') > 0) { //NOSONAR
-                    final String clsName = tp._1.substring(0, tp._1.indexOf('<'));
-
-                    try { //NOSONAR
-                        if (ClassUtil.forName("java.util." + clsName) != null && importedJavaUtilTypes.add(clsName)) {
-                            headPartBuilder.append(LINE_SEPARATOR).append("import java.util.").append(clsName).append(';');
+                    for (final String clsName : getParameterizedTypeFirstNameSegments(tp._1)) {
+                        if (explicitlyImportedSimpleNames.contains(clsName)) {
+                            continue;
                         }
-                    } catch (final Exception e) {
-                        // ignore.
+
+                        try { //NOSONAR
+                            if (ClassUtil.forName("java.util." + clsName) != null && importedJavaUtilTypes.add(clsName)) {
+                                headPartBuilder.append(LINE_SEPARATOR).append("import java.util.").append(clsName).append(';');
+                            }
+                        } catch (final Exception e) {
+                            // ignore: not a java.util type.
+                        }
                     }
                 }
             }
@@ -872,12 +898,7 @@ public final class JdbcCodeGenerationUtil {
                 }
             }
 
-            if (N.isEmpty(nonUpdatableFields)
-                    || (N.intersection(nonUpdatableFields, fieldNameList).isEmpty() && N.intersection(nonUpdatableFields, columnNameList).isEmpty())) {
-                headPart = headPart.replace("import com.landawn.abacus.annotation.NonUpdatable;\n", "");
-            }
-
-            // Note: unused imports for @ReadOnly/@Type/@JsonXmlConfig/NamingPolicy/EnumType are pruned later,
+            // Note: unused imports for @NonUpdatable/@ReadOnly/@Type/@JsonXmlConfig/NamingPolicy/EnumType are pruned later,
             // after the whole class is generated, by scanning the emitted lines for the corresponding annotations
             // (see the N.noneMatch(...) blocks near the end of this method).
 
@@ -1132,6 +1153,54 @@ public final class JdbcCodeGenerationUtil {
             logger.warn(e, "Failed to write generated entity class(entityName={}, className={}, srcDir={})", entityName, finalClassName, srcDir);
             throw new UncheckedIOException(e);
         }
+    }
+
+    /**
+     * Returns the name that must be in scope for each parameterized type referenced by a field type: for every
+     * (possibly dotted) type name directly followed by {@code <}, its first segment. For example,
+     * {@code Map<String, List<String>>} yields {@code Map} and {@code List}; {@code Map.Entry<K, V>} yields {@code Map}
+     * (importing {@code java.util.Map.Entry} would leave the qualifier {@code Map} unresolved); and a fully qualified
+     * {@code java.util.List<String>} yields only {@code java}, which never names a {@code java.util} type.
+     * Annotation names are ignored.
+     *
+     * @param type the field type source
+     * @return the first name segments of the parameterized types, in order of appearance
+     */
+    private static List<String> getParameterizedTypeFirstNameSegments(final String type) {
+        final List<String> result = new ArrayList<>();
+        final int len = type.length();
+        int i = 0;
+
+        while (i < len) {
+            if (!Character.isJavaIdentifierStart(type.charAt(i))) {
+                i++;
+                continue;
+            }
+
+            final int start = i;
+            final boolean isAnnotation = start > 0 && type.charAt(start - 1) == '@';
+            int firstSegmentEnd = -1;
+
+            while (i < len && (Character.isJavaIdentifierPart(type.charAt(i)) || type.charAt(i) == '.')) {
+                if (type.charAt(i) == '.' && firstSegmentEnd < 0) {
+                    firstSegmentEnd = i;
+                }
+
+                i++;
+            }
+
+            int next = i;
+
+            while (next < len && Character.isWhitespace(type.charAt(next))) {
+                next++;
+            }
+
+            if (!isAnnotation && next < len && type.charAt(next) == '<') {
+                result.add(type.substring(start, firstSegmentEnd < 0 ? i : firstSegmentEnd));
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -2408,7 +2477,8 @@ public final class JdbcCodeGenerationUtil {
      * @param ds the data source used to resolve database-specific behavior
      * @param insertSql the INSERT SQL statement to convert
      * @return an UPDATE SQL statement derived from the INSERT statement
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the INSERT SQL is null/empty, invalid, or cannot be converted
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, if the INSERT SQL is null/empty, invalid, or cannot be converted, or if
+     *         the database metadata reports a {@code null} or blank product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
      * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
      *         database product info
@@ -2438,6 +2508,7 @@ public final class JdbcCodeGenerationUtil {
      *       (the supplied INSERT is assumed to already contain valid SQL expressions).</li>
      *   <li>The parser recognizes doubled quote escapes, backslash-escaped characters, bracketed identifiers,
      *       PostgreSQL dollar-quoted strings, and SQL line/block comments while locating commas and parentheses in the column and value lists.
+     *       A {@code $} directly after an identifier character (as in {@code a$b$c}) is part of that identifier, not a dollar quote.
      *       Comments in the column list are removed before the column names are validated. Comments in the value list are kept;
      *       a terminating line break is retained after a trailing line comment so it cannot hide the next assignment or WHERE clause.</li>
      *   <li>For MySQL/MariaDB, {@code #} also starts a line comment, a {@code --} line comment must be followed by whitespace or a
@@ -2461,7 +2532,8 @@ public final class JdbcCodeGenerationUtil {
      * @param insertSql the INSERT SQL statement to convert
      * @param whereClause the WHERE clause to append (without the {@code WHERE} keyword). Ignored when {@code null} or blank.
      * @return an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if the INSERT SQL is null/empty, invalid, or cannot be converted
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, if the INSERT SQL is null/empty, invalid, or cannot be converted, or if
+     *         the database metadata reports a {@code null} or blank product name
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
      * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
      *         database product info
@@ -2738,13 +2810,24 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Returns the PostgreSQL dollar-quote delimiter starting at the {@code $} at {@code startIndex} (for
      * example {@code $$} or {@code $func$}), or {@code null} if that character does not begin a valid
-     * dollar-quote tag.
+     * dollar-quote tag, including when it directly follows an identifier character (it is then part of that identifier).
      *
      * @param sql the SQL text to inspect
      * @param startIndex the index of the opening {@code $}
      * @return the delimiter including both {@code $} characters, or {@code null}
      */
     private static String findDollarQuoteDelimiter(final String sql, final int startIndex) {
+        // '$' is an identifier character in PostgreSQL, Oracle and MySQL, so the "$b$" in a$b$c is not a dollar quote
+        // (PostgreSQL requires whitespace between an identifier and a dollar-quoted string, as SqlParser also assumes).
+        // Treating it as one would swallow the rest of the statement and reject valid SQL.
+        if (startIndex > 0) {
+            final char previous = sql.charAt(startIndex - 1);
+
+            if (previous == '_' || previous == '$' || Character.isLetterOrDigit(previous)) {
+                return null;
+            }
+        }
+
         final int endIndex = sql.indexOf('$', startIndex + 1);
 
         if (endIndex < 0) {
@@ -3567,7 +3650,9 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Ensures every column label maps to a valid and unique named parameter: the camelCase parameter name must
-     * be a valid Java identifier, and no two distinct columns may map to the same parameter name.
+     * be a valid Java identifier that ParsedSql reads as one complete named parameter (so it must not contain {@code $} or another
+     * currency symbol),
+     * and no two distinct columns may map to the same parameter name.
      *
      * @param columnLabelList the column labels to check
      * @param tableName the table name, used only in error messages
@@ -3579,7 +3664,7 @@ public final class JdbcCodeGenerationUtil {
         for (final String columnLabel : columnLabelList) {
             final String parameterName = Strings.toCamelCase(columnLabel);
 
-            if (!Strings.isValidJavaIdentifier(parameterName)) {
+            if (!Strings.isValidJavaIdentifier(parameterName) || !isParsableNamedParameterName(parameterName)) {
                 throw new IllegalArgumentException(
                         "Column '" + columnLabel + "' in table '" + tableName + "' does not map to a valid named parameter: " + parameterName);
             }
@@ -3591,6 +3676,28 @@ public final class JdbcCodeGenerationUtil {
                         + "' both map to named parameter ':" + parameterName + "'");
             }
         }
+    }
+
+    /**
+     * Checks that ParsedSql reads {@code :parameterName} as one complete named parameter. Its parameter names use
+     * Unicode (not Java) identifier characters, so a Java-legal name containing {@code $} or another currency symbol
+     * would be cut short: {@code :price$usd} parses as {@code :price} followed by the literal text {@code $usd}.
+     *
+     * @param parameterName the non-empty parameter name, without the leading colon
+     * @return {@code true} if every code point is accepted in a ParsedSql named parameter
+     */
+    private static boolean isParsableNamedParameterName(final String parameterName) {
+        for (int i = 0, len = parameterName.length(); i < len;) {
+            final int codePoint = parameterName.codePointAt(i);
+
+            if (codePoint != '_' && !(i == 0 ? Character.isUnicodeIdentifierStart(codePoint) : Character.isUnicodeIdentifierPart(codePoint))) {
+                return false;
+            }
+
+            i += Character.charCount(codePoint);
+        }
+
+        return true;
     }
 
     /**
@@ -3822,7 +3929,8 @@ public final class JdbcCodeGenerationUtil {
          * Maps a database column to an optional generated field name and Java field type.
          * A {@code null} field name or type leaves that part to the configured/default converter.
          *
-         * @param columnName database column name used to select this mapping; must not be {@code null} or blank
+         * @param columnName database column name used to select this mapping, matched case-insensitively against either the column
+         *            name or its camelCase form; must not be {@code null} or blank
          * @param fieldName generated Java field name, or {@code null} to use the field-name converter
          * @param fieldType generated Java field type, or {@code null} to use the field-type converter
          */

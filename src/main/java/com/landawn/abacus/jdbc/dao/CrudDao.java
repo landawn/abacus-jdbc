@@ -105,7 +105,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * }</pre>
      *
      * @param entity the entity to insert or update (must not be {@code null})
-     * @return the saved entity (either newly inserted or updated)
+     * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or an existing row is updated and {@code entity}
      *                                  has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
@@ -195,7 +195,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param entities the collection of entities to upsert
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or an existing row is updated
+     *                                  and an entity has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
@@ -228,7 +229,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                     large collections into chunks of this size for optimal performance.
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive
+     * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive,
+     *                                  or an existing row is updated and an entity has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
@@ -279,7 +281,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty
-     *                                  and a name in {@code matchPropNames} is not a property of the entity class
+     *                                  and a name in {@code matchPropNames} is not a property of the entity class,
+     *                                  or an existing row is updated and an entity has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
@@ -323,7 +326,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
-     *                                  or if any name in {@code matchPropNames} is not a property of the entity class
+     *                                  or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class,
+     *                                  or an existing row is updated and an entity has a property the loaded entity does not
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
@@ -383,10 +387,12 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         // De-duplicate lookup keys before splitting them into query batches. Without this, equal
         // keys that landed in different batches returned the same database row more than once,
         // and the throwing merger below incorrectly reported a duplicate database result.
+        // Query by the resolved property name (as the composite-key path does via Seid): getPropInfo also
+        // accepts non-canonical spellings (e.g. "FIRSTNAME") that the SQL builder cannot map to a column.
         final List<T> dbEntities = uniquePropNameList.size() == 1
                 ? Seq.of(N.distinct(N.map(entities, singleKeyExtractor)), SQLException.class)
                         .split(batchSize)
-                        .flatmap(it -> list(DaoUtil.singlePropValuesToCondition(uniquePropNameList.get(0), it)))
+                        .flatmap(it -> list(DaoUtil.singlePropValuesToCondition(uniquePropInfo.name, it)))
                         .toList()
                 : Seq.of(N.distinct(N.map(entities, entityIdExtractor)), SQLException.class) //
                         .split(batchSize)

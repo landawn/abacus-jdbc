@@ -31,6 +31,10 @@ import java.lang.annotation.Target;
  * {@code @Handler}/{@code @OutParameter} instances). It is an independent parameter annotation
  * applied to a single collection/array parameter whose elements are joined into one SQL fragment.</p>
  *
+ * <p>Each element is rendered verbatim with {@code N.stringOf} (no quoting or escaping) and the elements are joined
+ * with {@code ", "}; a {@code null} element renders as {@code null}, and a {@code null} or empty collection/array
+ * renders as an empty string.</p>
+ *
  * <p>Unlike {@link BindList} — which expands a collection into a comma-separated list of JDBC
  * placeholders (with parentheses supplied by the SQL template) — {@code @SqlFragmentList} rewrites the SQL text itself
  * with the comma-joined elements (with no surrounding parentheses and no value binding). Use it

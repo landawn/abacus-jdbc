@@ -382,6 +382,78 @@ public class JdbcUtilIntegrationTest extends TestBase {
         }
     }
 
+    // BUG FIX: the SQL Server driver rejects getMoreResults(KEEP_CURRENT_RESULT) with a plain SQLException and reports
+    // supportsMultipleOpenResults() == false. iterateAllResultSets used to close the first result set and throw; it must
+    // defer the advance (getMoreResults()) to the next hasNext() and still deliver every result set.
+    @Test
+    public void testIterateAllResultSets_DriverRejectingKeepCurrentResult_DeliversAllResultSets() throws SQLException {
+        final DataSource hsqlDs = JdbcUtil.createHikariDataSource("jdbc:hsqldb:mem:iter_multi_no_keep", "SA", "");
+
+        try (Connection conn = hsqlDs.getConnection()) {
+            try (Statement st = conn.createStatement()) {
+                st.execute("CREATE TABLE t (id INT, name VARCHAR(20))");
+                st.execute("INSERT INTO t VALUES (1,'a'),(2,'b'),(3,'c')");
+                st.execute("CREATE PROCEDURE two_rs() READS SQL DATA DYNAMIC RESULT SETS 2 " + "BEGIN ATOMIC "
+                        + "  DECLARE r1 CURSOR WITH RETURN FOR SELECT name FROM t WHERE id = 1; "
+                        + "  DECLARE r2 CURSOR WITH RETURN FOR SELECT name FROM t WHERE id IN (2,3) ORDER BY id; " + "  OPEN r1; OPEN r2; " + "END");
+            }
+
+            try (CallableStatement cs = conn.prepareCall("{call two_rs()}")) {
+                final boolean isFirstResultSet = cs.execute();
+
+                final ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(rejectKeepCurrentResult(cs), isFirstResultSet);
+
+                assertTrue(iter.hasNext());
+                assertEquals(List.of("a"), drainNames(iter.next()));
+                assertTrue(iter.hasNext());
+                assertEquals(List.of("b", "c"), drainNames(iter.next()));
+                assertFalse(iter.hasNext());
+
+                iter.closeResource();
+            }
+        } finally {
+            try (Connection c = hsqlDs.getConnection();
+                 Statement st = c.createStatement()) {
+                st.execute("DROP PROCEDURE two_rs");
+                st.execute("DROP TABLE t");
+            }
+        }
+    }
+
+    /**
+     * Wraps {@code delegate} so it behaves like the SQL Server driver: {@code getMoreResults(KEEP_CURRENT_RESULT)} throws
+     * a plain {@link SQLException} and its connection metadata reports {@code supportsMultipleOpenResults() == false}.
+     */
+    private static CallableStatement rejectKeepCurrentResult(final CallableStatement delegate) throws SQLException {
+        final Connection realConn = delegate.getConnection();
+        final java.sql.DatabaseMetaData realMetadata = realConn.getMetaData();
+
+        final java.sql.DatabaseMetaData metadata = (java.sql.DatabaseMetaData) java.lang.reflect.Proxy.newProxyInstance(
+                java.sql.DatabaseMetaData.class.getClassLoader(), new Class<?>[] { java.sql.DatabaseMetaData.class },
+                (proxy, method, args) -> "supportsMultipleOpenResults".equals(method.getName()) ? Boolean.FALSE : invokeDelegate(method, realMetadata, args));
+
+        final Connection conn = (Connection) java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(), new Class<?>[] { Connection.class },
+                (proxy, method, args) -> "getMetaData".equals(method.getName()) ? metadata : invokeDelegate(method, realConn, args));
+
+        return (CallableStatement) java.lang.reflect.Proxy.newProxyInstance(CallableStatement.class.getClassLoader(),
+                new Class<?>[] { CallableStatement.class }, (proxy, method, args) -> {
+                    if ("getMoreResults".equals(method.getName()) && args != null && args.length == 1
+                            && Integer.valueOf(Statement.KEEP_CURRENT_RESULT).equals(args[0])) {
+                        throw new SQLException("This operation is not supported.");
+                    }
+
+                    return "getConnection".equals(method.getName()) ? conn : invokeDelegate(method, delegate, args);
+                });
+    }
+
+    private static Object invokeDelegate(final java.lang.reflect.Method method, final Object target, final Object[] args) throws Throwable {
+        try {
+            return method.invoke(target, args);
+        } catch (final java.lang.reflect.InvocationTargetException e) {
+            throw e.getCause();
+        }
+    }
+
     // Single result set against real H2: exercises the first-result-set branch and the
     // end-of-results path (getUpdateCount() == -1 -> noMoreResult).
     @Test
@@ -935,6 +1007,20 @@ public class JdbcUtilIntegrationTest extends TestBase {
             }
         }
         assertEquals(3L, widgetCount("pos"));
+    }
+
+    // BUG FIX: a driver-created SQLXML parameter was bound through Type.of(<driver impl class>), which resolves to a
+    // generic bean type and stored the JSON of its bean properties ({"string": "<a>3</a>"}) instead of the XML text.
+    @Test
+    public void testExecuteUpdate_SqlXmlParameter_BoundAsXmlText() throws SQLException {
+        try (Connection conn = ds.getConnection()) {
+            final java.sql.SQLXML xml = conn.createSQLXML();
+            xml.setString("<a>3</a>");
+
+            assertEquals(1, JdbcUtil.executeUpdate(conn, "INSERT INTO widget (name, qty) VALUES (?, ?)", xml, 31));
+        }
+
+        assertEquals("<a>3</a>", JdbcUtil.prepareQuery(ds, "SELECT name FROM widget WHERE qty = 31").queryForString().orElseNull());
     }
 
     // setParameters on a no-parameter SQL returns immediately (no-op).

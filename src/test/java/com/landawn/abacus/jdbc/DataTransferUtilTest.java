@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -130,7 +131,7 @@ public class DataTransferUtilTest extends TestBase {
         // Setup
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1", "col2"));
         when(mockDataset.size()).thenReturn(2);
-        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockDataset.get(anyInt(), anyInt())).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1, 1 });
 
         String insertSql = "INSERT INTO test_table (col1, col2) VALUES (?, ?)";
@@ -151,7 +152,7 @@ public class DataTransferUtilTest extends TestBase {
         // Setup
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1", "col2"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockDataset.get(anyInt(), anyInt())).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         String insertSql = "INSERT INTO test_table (col1, col2) VALUES (?, ?)";
@@ -172,7 +173,7 @@ public class DataTransferUtilTest extends TestBase {
         List<String> selectColumnNames = Arrays.asList("col1");
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1", "col2"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockDataset.get(anyInt(), anyInt())).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
@@ -192,7 +193,7 @@ public class DataTransferUtilTest extends TestBase {
         List<String> selectColumnNames = Arrays.asList("col1");
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(5);
-        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockDataset.get(anyInt(), anyInt())).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1, 1 });
 
@@ -214,7 +215,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(3);
-        when(mockDataset.get(0)).thenReturn("valid", "invalid", "valid");
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("valid", "invalid", "valid");
 
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
@@ -237,7 +238,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockDataset.get(anyInt(), anyInt())).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
@@ -259,7 +260,7 @@ public class DataTransferUtilTest extends TestBase {
         selectedColumns.add("missing");
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockDataset.get(anyInt(), anyInt())).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         assertEquals(1, builder.to(mockPreparedStatement));
@@ -274,7 +275,7 @@ public class DataTransferUtilTest extends TestBase {
         columnTypes.put("missing", N.typeOf(String.class));
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockDataset.get(anyInt(), anyInt())).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
@@ -369,13 +370,13 @@ public class DataTransferUtilTest extends TestBase {
 
     @Test
     public void testImportDataNullColumnTypeMapIsTreatedAsEmpty() throws SQLException {
-        // Regression: a null columnTypeMap must be tolerated (treated like an empty map, i.e. the default Object type
-        // is used for every column), consistent with the up-front validation that already skips a null/empty map.
+        // Regression: a null columnTypeMap must be tolerated (treated like an empty map, i.e. every column is bound
+        // by its value's runtime type), consistent with the up-front validation that already skips a null/empty map.
         // Previously the per-row setter dereferenced columnTypeMap unconditionally -> NPE on the first row of a
         // non-empty dataset.
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(anyInt())).thenReturn("value");
+        when(mockDataset.get(anyInt(), anyInt())).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         final String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
@@ -393,7 +394,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(0)).thenReturn("value");
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         String insertSql = "INSERT INTO test_table (col1) VALUES (?)";
@@ -410,7 +411,7 @@ public class DataTransferUtilTest extends TestBase {
     public void testImportDataWithDatasetAndPreparedStatement() throws SQLException {
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(0)).thenReturn("value");
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         final int result = DataTransferUtil.importData(mockDataset, mockPreparedStatement);
@@ -424,7 +425,7 @@ public class DataTransferUtilTest extends TestBase {
     public void testImportDataWithSelectedColumnsAndPreparedStatementBatchConfig() throws SQLException {
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(2);
-        when(mockDataset.get(0)).thenReturn("first", "second");
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("first", "second");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
 
@@ -1176,7 +1177,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(0)).thenReturn("value");
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
@@ -1187,16 +1188,16 @@ public class DataTransferUtilTest extends TestBase {
         verify(mockPreparedStatement).executeBatch();
     }
 
-    // importData with columnTypeMap that doesn't include all dataset columns → default Object type used (L805)
+    // importData with columnTypeMap that doesn't include all dataset columns → unmapped columns bound by runtime type
     @Test
     public void testImportDataWithColumnTypeMap_DefaultsToObjectType() throws SQLException {
         Map<String, Type> columnTypeMap = new HashMap<>();
         columnTypeMap.put("col1", N.typeOf(String.class));
-        // Dataset has col1 AND col2; columnTypeMap only has col1 → col2 gets Object type (L805)
+        // Dataset has col1 AND col2; columnTypeMap only has col1 → col2 is bound by its runtime type
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1", "col2"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(0)).thenReturn("value1"); // col1 value
-        when(mockDataset.get(1)).thenReturn(42); // col2 value (gets Object type)
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("value1"); // col1 value
+        when(mockDataset.get(anyInt(), eq(1))).thenReturn(42); // col2 value (bound by runtime type)
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         int result = DataTransferUtil.importData(mockDataset, mockPreparedStatement, columnTypeMap);
@@ -1212,7 +1213,7 @@ public class DataTransferUtilTest extends TestBase {
         // Dataset only has col1
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(0)).thenReturn("value");
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("value");
         when(mockDataset.getColumnIndex("col1")).thenReturn(0);
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
@@ -1305,7 +1306,7 @@ public class DataTransferUtilTest extends TestBase {
      * redundant {@code result < size} clause so the loop always visits every row.</p>
      *
      * <p>This test verifies that when a filter rejects some rows in a dataset all rows
-     * are still examined (moveToRow is called for every index) and only the accepted rows
+     * are still examined (every row index is read) and only the accepted rows
      * are batched.</p>
      */
     @Test
@@ -1314,8 +1315,8 @@ public class DataTransferUtilTest extends TestBase {
         // row 0 -> "keep" (accepted), row 1 -> "skip", row 2 -> "skip", row 3 -> "keep" (accepted)
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(4);
-        // get(0) is called once per iteration (column index 0 in the inner loop)
-        when(mockDataset.get(0)).thenReturn("keep", "skip", "skip", "keep");
+        // get(row, 0) is called once per iteration (column index 0 in the inner loop)
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("keep", "skip", "skip", "keep");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
 
         Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (pq, row) -> pq.setString(1, (String) row[0]);
@@ -1328,11 +1329,13 @@ public class DataTransferUtilTest extends TestBase {
         assertEquals(2, result);
         // addBatch must be called exactly twice (once per accepted row)
         verify(mockPreparedStatement, times(2)).addBatch();
-        // moveToRow must be called for every row index (0, 1, 2, 3) — proves all rows were examined
-        verify(mockDataset).moveToRow(0);
-        verify(mockDataset).moveToRow(1);
-        verify(mockDataset).moveToRow(2);
-        verify(mockDataset).moveToRow(3);
+        // every row index (0, 1, 2, 3) must be read — proves all rows were examined
+        verify(mockDataset).get(0, 0);
+        verify(mockDataset).get(1, 0);
+        verify(mockDataset).get(2, 0);
+        verify(mockDataset).get(3, 0);
+        // rows are read by index, so the caller's Dataset cursor is never moved
+        verify(mockDataset, never()).moveToRow(anyInt());
     }
 
     // copy(Connection, String, Connection, String) - delegates to full copy with default sizes (line 3007-3008)
@@ -1577,7 +1580,7 @@ public class DataTransferUtilTest extends TestBase {
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (q, row) -> q.setString(1, (String) row[0]);
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(1);
-        when(mockDataset.get(0)).thenReturn("value");
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("value");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
         final int result = DataTransferUtil.importData(mockDataset, mockPreparedStatement, stmtSetter);
@@ -1593,7 +1596,7 @@ public class DataTransferUtilTest extends TestBase {
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> stmtSetter = (q, row) -> q.setString(1, (String) row[0]);
         when(mockDataset.columnNames()).thenReturn(ImmutableList.of("col1"));
         when(mockDataset.size()).thenReturn(2);
-        when(mockDataset.get(0)).thenReturn("a", "b");
+        when(mockDataset.get(anyInt(), eq(0))).thenReturn("a", "b");
         when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 }, new int[] { 1 });
 
         final int result = DataTransferUtil.importData(mockDataset, mockPreparedStatement, 1, 0L, stmtSetter);
@@ -1882,6 +1885,42 @@ public class DataTransferUtilTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.exportCsvFrom(mockDataSource, "   ").to(new StringWriter()));
 
         verify(mockDataSource, never()).getConnection();
+    }
+
+    // A directory passed as the CSV file is an illegal argument, so it is rejected before the positional overloads acquire a
+    // connection or prepare a statement.
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testImportCsvFromDirectory_RejectedBeforeConnectionAcquiredOrStatementPrepared() throws IOException {
+        final File probe = File.createTempFile("dir_probe", ".csv");
+        final File directory = probe.getAbsoluteFile().getParentFile();
+        assertTrue(probe.delete());
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection connection = mock(Connection.class);
+        final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
+
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importCsv(directory, dataSource, "INSERT INTO t VALUES (?)", stmtSetter));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importCsv(directory, connection, "INSERT INTO t VALUES (?)", 10, 0, stmtSetter));
+
+        verifyNoInteractions(dataSource, connection);
+    }
+
+    @Test
+    public void testImportCsvFromDirectoryBuilder_RejectedBeforeConnectionAcquiredOrStatementPrepared() throws IOException {
+        final File probe = File.createTempFile("dir_probe", ".csv");
+        final File directory = probe.getAbsoluteFile().getParentFile();
+        assertTrue(probe.delete());
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection connection = mock(Connection.class);
+        final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importCsvFrom(directory).parameterSetter(stmtSetter).to(dataSource, "INSERT INTO t VALUES (?)"));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.importCsvFrom(directory).parameterSetter(stmtSetter).to(connection, "INSERT INTO t VALUES (?)"));
+
+        verifyNoInteractions(dataSource, connection);
     }
 
     // A CSV file that cannot be opened is reported with the java.io.UncheckedIOException the importCsv methods declare (IOUtil's

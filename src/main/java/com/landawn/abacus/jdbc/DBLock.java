@@ -234,8 +234,10 @@ public final class DBLock implements AutoCloseable {
      *   <li><b>Table Creation:</b> Ensures the lock table exists in the database. If not, it attempts
      *       to create it with a predefined schema including columns for host name, target resource,
      *       lock code, status, expiry time, update time, and creation time.</li>
-     *   <li><b>Dead Lock Cleanup:</b> Removes any locks that were held by previous instances of the
-     *       application running on the same host and that were not properly released (e.g., due to crashes).</li>
+     *   <li><b>Dead Lock Cleanup:</b> Removes locks that were held by previous instances of the
+     *       application running on the same host and that were not properly released (e.g., due to crashes):
+     *       rows of this host created before the current JVM started and not refreshed within the last minute.
+     *       Rows still being refreshed (e.g., by another JVM on the same host) are kept.</li>
      *   <li><b>Background Refresh Task:</b> Initiates a scheduled task that periodically refreshes
      *       the {@code update_time} and {@code expiry_time} of all currently held locks. This prevents
      *       long-running operations from losing their locks prematurely.</li>

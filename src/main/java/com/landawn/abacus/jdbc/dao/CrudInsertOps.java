@@ -37,6 +37,12 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * methods return {@code void}; they do not retrieve database-generated IDs or write them back to the entities.
  * Use {@code insert} when subsequent operations need the generated ID.</p>
  *
+ * <p><b>Composite IDs:</b> some drivers (e.g. MySQL, SQL Server) return only the auto-generated column of a composite
+ * key, under a label such as {@code GENERATED_KEY} that names no property. That value is assigned only to the ID
+ * property declared as database-generated ({@code @ReadOnlyId}, {@code @Id} with {@code @ReadOnly}, or JPA
+ * {@code @GeneratedValue}); without exactly one such declaration it is not assigned (a warning is logged). Register
+ * a custom extractor with {@code JdbcUtil.setIdExtractorForDao} for other layouts.</p>
+ *
  * @param <T> entity type
  * @param <ID> id type
  * @param <TD> self DAO type
