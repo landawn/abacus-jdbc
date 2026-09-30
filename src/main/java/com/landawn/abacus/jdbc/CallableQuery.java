@@ -92,10 +92,6 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * therefore validated by the driver. OUT-parameter registration rejects a {@code null} name with
  * {@link IllegalArgumentException}; the named value setters leave null-name validation to the driver.</p>
  *
- * <p>As with every argument-validation failure in {@link AbstractQuery}, an {@link IllegalArgumentException}
- * raised by this class for a {@code null}, non-positive or otherwise invalid argument closes this query
- * (the statement is closed and registered close handlers run) before it is thrown.</p>
- *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Example retrieving only OUT parameters

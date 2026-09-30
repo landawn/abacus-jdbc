@@ -1541,23 +1541,9 @@ final class DaoImpl {
      *         the argument cannot be resolved to a class
      */
     private static Class<?> getFirstReturnEleType(final Method method) {
-        return getFirstTypeArgumentAsClass(method.getGenericReturnType());
-    }
+        final java.lang.reflect.Type genericReturnType = method.getGenericReturnType();
 
-    /**
-     * Resolves the first type argument of the parameter at {@code paramIndex} (for example {@code EventLog} for
-     * {@code List<EventLog>}) as a class, or {@code null} when the parameter is raw, a wildcard or a type variable.
-     *
-     * @param method the method whose parameter type is inspected
-     * @param paramIndex the index of the parameter
-     * @return the first type argument as a class, or {@code null} if it cannot be resolved
-     */
-    private static Class<?> getFirstParamEleType(final Method method, final int paramIndex) {
-        return getFirstTypeArgumentAsClass(method.getGenericParameterTypes()[paramIndex]);
-    }
-
-    private static Class<?> getFirstTypeArgumentAsClass(final java.lang.reflect.Type genericType) {
-        final ParameterizedType parameterizedReturnType = genericType instanceof ParameterizedType ? (ParameterizedType) genericType : null;
+        final ParameterizedType parameterizedReturnType = genericReturnType instanceof ParameterizedType ? (ParameterizedType) genericReturnType : null;
 
         final java.lang.reflect.Type firstActualTypeArgument = parameterizedReturnType == null || N.isEmpty(parameterizedReturnType.getActualTypeArguments())
                 ? null
@@ -2440,7 +2426,7 @@ final class DaoImpl {
      * otherwise the entity's declared table name, otherwise the entity class's simple name converted with
      * {@code namingPolicy}.
      *
-     * @param entityClass the entity class whose simple name is converted when no explicit or declared table name exists
+     * @param entityClass
      * @param entityInfo the entity's bean metadata
      * @param namingPolicy the naming policy used to derive the table name from the class name
      * @param targetTableName the explicit table name override, or {@code null}/empty
@@ -3257,9 +3243,7 @@ final class DaoImpl {
                 sqlList = new ArrayList<>(Stream.of(queryAnno.value())
                         .map(Fn.strip())
                         .filter(Fn.notEmpty())
-                        // Default methods receive mapper SQL as written (named parameters preserved) so they can bind it
-                        // either by name or by position; the parameterized form would silently drop the names.
-                        .map(it -> newSqlMapper.get(it) == null ? it : newSqlMapper.get(it).originalSql())
+                        .map(it -> newSqlMapper.get(it) == null ? it : newSqlMapper.get(it).parameterizedSql())
                         .toList());
 
                 for (final String id : queryAnno.id()) {
@@ -3267,11 +3251,11 @@ final class DaoImpl {
                         throw new IllegalArgumentException("Invalid query identifier. Query ID doesn't match Java identifier specification: " + id);
                     }
 
-                    if (newSqlMapper.get(id) == null || Strings.isEmpty(newSqlMapper.get(id).originalSql())) {
+                    if (newSqlMapper.get(id) == null || Strings.isEmpty(newSqlMapper.get(id).parameterizedSql())) {
                         throw new IllegalArgumentException("No predefined SQL found by id: " + id);
                     }
 
-                    sqlList.add(newSqlMapper.get(id).originalSql());
+                    sqlList.add(newSqlMapper.get(id).parameterizedSql());
                 }
 
                 sqlList.replaceAll(sql -> sql.endsWith(";") ? sql.substring(0, sql.length() - 1) : sql);
@@ -3294,9 +3278,6 @@ final class DaoImpl {
             }
 
             Throwables.BiFunction<DaoBase, Object[], ?, Throwable> call = null;
-            // Set for an annotated @Query whose SQL is an INSERT/UPDATE/DELETE, so the thread-local DAO cache is
-            // invalidated by the SQL kind and not only by the method-name prefix convention.
-            boolean isCustomWriteQuery = false;
 
             // Centralized SQL-kind gate for read-only / non-update DAOs: the prepareQuery/prepareNamedQuery (and
             // *ForLargeResult) overloads whose first argument is a raw SQL String or ParsedSql must be restricted to
@@ -4906,11 +4887,6 @@ final class DaoImpl {
                             N.checkArgNotEmpty(propNamesToUpdate, cs.propNamesToUpdate);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            for (final String propName : propNamesToUpdate) {
-                                N.checkArgument(entityInfo.getPropInfo(propName) != null, "No property found by name: {} in entity class: {}", propName,
-                                        entityClass);
-                            }
-
                             final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass).set(propNamesToUpdate).append(cond).build();
 
                             final Jdbc.BiParametersSetter<AbstractQuery, Object> parametersSetter = (pq, p) -> {
@@ -6076,9 +6052,9 @@ final class DaoImpl {
                             || (isProcedure && !(queryOperation == QueryOperation.update || queryOperation == QueryOperation.largeUpdate)
                                     && (queryOperation != QueryOperation.DEFAULT || !isUpdateReturnType));
 
-                    final boolean isNamedQuery = queryInfo.isNamedQuery;
+                    final boolean returnGeneratedKeys = !isNoId && queryInfo.isInsert;
 
-                    isCustomWriteQuery = isUpdate || queryInfo.isInsert;
+                    final boolean isNamedQuery = queryInfo.isNamedQuery;
 
                     // Custom annotated methods execute through JdbcUtil.prepareQuery/prepareNamedQuery directly,
                     // bypassing the proxy's prepareSqlGate, so enforce the read-only/non-update SQL-kind
@@ -6318,17 +6294,6 @@ final class DaoImpl {
 
                     final int stmtParamLen = stmtParamIndexes.length;
 
-                    // A custom INSERT asks the driver for the DAO entity's generated-key columns only when the keys can be
-                    // consumed: the method returns them, or its (single) argument may be the DAO entity whose id must be
-                    // populated. Requesting them unconditionally made an INSERT into another table fail on drivers that
-                    // validate the requested column names (H2, PostgreSQL's RETURNING).
-                    final boolean hasSingleInsertParam = stmtParamLen == 1 || (isBatch && stmtParamLen == 2);
-                    final Class<?> insertedParamType = !hasSingleInsertParam ? null
-                            : (isBatch ? getFirstParamEleType(method, stmtParamIndexes[0]) : paramTypes[stmtParamIndexes[0]]);
-                    final boolean mayInsertDaoEntity = entityClass != null && hasSingleInsertParam
-                            && (insertedParamType == null || insertedParamType.isAssignableFrom(entityClass) || entityClass.isAssignableFrom(insertedParamType));
-                    final boolean returnGeneratedKeys = !isNoId && queryInfo.isInsert && (!void.class.equals(returnType) || mayInsertDaoEntity);
-
                     if (stmtParamLen == 1
                             && (Beans.isBeanClass(paramTypes[stmtParamIndexes[0]]) || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
                                     || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || Beans.isRecordClass(paramTypes[stmtParamIndexes[0]]))
@@ -6467,7 +6432,6 @@ final class DaoImpl {
                     final List<String> mergedByIds = mergedByIdAnno == null ? null
                             : Splitter.with(',')
                                     .trimResults()
-                                    .omitEmptyStrings()
                                     .split(Strings.isNotEmpty(mergedByIdAnno.value()) ? mergedByIdAnno.value()
                                             : (Strings.isNotEmpty(mappedByKey) ? mappedByKey : Strings.join(idPropNameList, ",")));
 
@@ -6589,9 +6553,8 @@ final class DaoImpl {
 
                             call = (proxy, args) -> {
                                 final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
-                                // Only the DAO entity carries the id property the generated key is written to; any other bean
-                                // (an INSERT into another table) must be left untouched.
-                                final boolean isEntity = stmtParamLen == 1 && entityClass != null && entityClass.isInstance(args[stmtParamIndexes[0]]);
+                                final boolean isEntity = stmtParamLen == 1 && args[stmtParamIndexes[0]] != null
+                                        && Beans.isBeanClass(args[stmtParamIndexes[0]].getClass());
                                 final Object entity = isEntity ? args[stmtParamIndexes[0]] : null;
 
                                 final Optional<Object> id = prepareQuery(proxy, queryInfo, mergedByIdAnno, returnType, args, fragmentParamIndexes,
@@ -6683,7 +6646,7 @@ final class DaoImpl {
                                 }
 
                                 final Object firstElement = N.firstOrNullIfEmpty(batchParameters);
-                                final boolean isEntity = entityClass != null && entityClass.isInstance(firstElement);
+                                final boolean isEntity = firstElement != null && Beans.isBeanClass(firstElement.getClass());
 
                                 if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
                                     ids = new ArrayList<>();
@@ -7161,7 +7124,7 @@ final class DaoImpl {
                 final long cacheMaxIdleTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxIdleTimeMillis();
 
                 final boolean isQueryMethod = JdbcUtil.IS_QUERY_METHOD.test(method);
-                final boolean isUpdateMethod = JdbcUtil.IS_UPDATE_METHOD.test(method) || isCustomWriteQuery;
+                final boolean isUpdateMethod = JdbcUtil.IS_UPDATE_METHOD.test(method);
                 // Live or single-use results (streams, iterators) and void can't be cached by the local thread cache
                 // either: cloning them for the cache fails (or consumes the stream) and a cached stream can't be re-read.
                 final boolean isLocalThreadCacheableQueryMethod = isQueryMethod

@@ -391,7 +391,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
             final List<String> idPropNameList = QueryUtil.idPropNames(cls);
 
             if (N.isEmpty(idPropNameList)) {
-                Beans.mergeInto(entity, dbEntity, false, N.emptySet());
+                Beans.mergeInto(entity, dbEntity);
                 update(dbEntity, cond);
             } else {
                 Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));

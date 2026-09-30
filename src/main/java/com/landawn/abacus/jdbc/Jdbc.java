@@ -7280,11 +7280,9 @@ public final class Jdbc {
          *
          * @param handler the handler instance to register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
-         * @throws IllegalArgumentException if {@code handler} is {@code null}. The qualifier is
-         *         {@link ClassUtil#getCanonicalClassName(Class)} of the handler's runtime class; for anonymous or
-         *         lambda-built handlers this falls back to the binary class name (e.g. {@code Foo$1}), which is not
-         *         stable across builds or JVM runs. Use {@link #register(String, Handler)} when an explicit, stable
-         *         qualifier is required.
+         * @throws IllegalArgumentException if {@code handler} is {@code null}, or if the qualifier derived by
+         *         {@link ClassUtil#getCanonicalClassName(Class)} is empty. Use {@link #register(String, Handler)}
+         *         when an explicit, stable qualifier is required (particularly for anonymous or lambda-built handlers).
          */
         public static boolean register(final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotNull(handler, cs.handler);
@@ -7621,13 +7619,11 @@ public final class Jdbc {
      * <p>Two built-in implementations are provided:</p>
      * <ul>
      *   <li>{@link DefaultDaoCache} - uses a {@link KeyedObjectPool} with TTL and idle time-based eviction.</li>
-     *   <li>a map-backed cache (obtained via {@link #createByMap()}, {@link #createByMap(int)} or {@link #createByMap(Map)})
-     *       - uses a {@code ConcurrentHashMap} (or the supplied map) without automatic eviction.</li>
+     *   <li>{@link DaoCacheByMap} - uses a simple {@code ConcurrentHashMap} without automatic eviction.</li>
      * </ul>
      *
      * @see DefaultDaoCache
-     * @see #createByMap()
-     * @see #createByMap(Map)
+     * @see DaoCacheByMap
      */
     public interface DaoCache {
 
@@ -7740,7 +7736,7 @@ public final class Jdbc {
          *
          * <p><b>Implementation Note:</b> This method MUST NOT modify the input arguments. A {@code null} {@code result}
          * is typically rejected (and not cached). Whether {@code liveTime}/{@code maxIdleTime} are honored depends on
-         * the implementation; the map-backed caches returned by {@link #createByMap()} / {@link #createByMap(Map)} ignore them.</p>
+         * the implementation; map-backed caches such as {@link DaoCacheByMap} ignore them.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code

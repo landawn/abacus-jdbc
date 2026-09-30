@@ -40,8 +40,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import javax.sql.DataSource;
 
@@ -187,9 +185,6 @@ public final class JdbcCodeGenerationUtil {
      * Line separator used in the generated source code; always the Unix {@code '\n'} regardless of the host platform.
      */
     private static final String LINE_SEPARATOR = IOUtil.LINE_SEPARATOR_UNIX;
-
-    /** Capitalized identifiers inside a (generic) field type, e.g. {@code Map}, {@code String} and {@code List} in {@code Map<String, List<String>>}. */
-    private static final Pattern GENERIC_TYPE_NAME_PATTERN = Pattern.compile("\\b([A-Z][A-Za-z0-9_]*)\\b");
 
     /**
      * Import statements emitted at the top of every generated entity class: the Jakarta Persistence
@@ -742,15 +737,7 @@ public final class JdbcCodeGenerationUtil {
                         }
                         pkTable = parts[parts.length - 1];
                         if (parts.length == 2) {
-                            // On catalog-only databases (MySQL/MariaDB with the default CATALOG term) a two-part name
-                            // is catalog.table and getPrimaryKeys ignores the schema argument, so the qualifier must
-                            // go into the catalog slot to look up the right table.
-                            if (!metadata.supportsSchemasInTableDefinitions() && metadata.supportsCatalogsInTableDefinitions()) {
-                                pkCatalog = parts[0];
-                                pkSchema = null;
-                            } else {
-                                pkSchema = parts[0];
-                            }
+                            pkSchema = parts[0];
                             pkTable = parts[1];
                         } else if (parts.length >= 3) {
                             pkCatalog = parts[0];
@@ -809,25 +796,14 @@ public final class JdbcCodeGenerationUtil {
 
             for (final Tuple3<String, String, Boolean> tp : additionalFields) {
                 if (tp._1.indexOf('<') > 0) { //NOSONAR
-                    // Import every java.util type referenced anywhere in the generic type, including nested type
-                    // arguments (e.g. List in "Map<String, List<String>>"); only the raw type before the first '<'
-                    // used to be considered, which left nested java.util types unimported.
-                    final Matcher typeNameMatcher = GENERIC_TYPE_NAME_PATTERN.matcher(tp._1);
+                    final String clsName = tp._1.substring(0, tp._1.indexOf('<'));
 
-                    while (typeNameMatcher.find()) {
-                        final String clsName = typeNameMatcher.group(1);
-
-                        if (tp._1.contains("." + clsName)) {
-                            continue; // already qualified, e.g. java.util.List or javax.sql.DataSource
+                    try { //NOSONAR
+                        if (ClassUtil.forName("java.util." + clsName) != null && importedJavaUtilTypes.add(clsName)) {
+                            headPartBuilder.append(LINE_SEPARATOR).append("import java.util.").append(clsName).append(';');
                         }
-
-                        try { //NOSONAR
-                            if (ClassUtil.forName("java.util." + clsName) != null && importedJavaUtilTypes.add(clsName)) {
-                                headPartBuilder.append(LINE_SEPARATOR).append("import java.util.").append(clsName).append(';');
-                            }
-                        } catch (final Exception e) {
-                            // ignore: not a java.util type.
-                        }
+                    } catch (final Exception e) {
+                        // ignore.
                     }
                 }
             }

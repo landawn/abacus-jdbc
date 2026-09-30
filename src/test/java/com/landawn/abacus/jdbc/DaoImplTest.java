@@ -683,17 +683,6 @@ public class DaoImplTest extends TestBase {
         }
     }
 
-    interface NamedSqlIdDefaultMethodDao extends Dao<TestEntity, NamedSqlIdDefaultMethodDao> {
-        @SqlScript(id = "selectById")
-        String SELECT_BY_ID = "SELECT * FROM test WHERE id = :id";
-
-        @Query(id = "selectById")
-        @NonDBOperation
-        default String firstSql(final String... sqls) {
-            return sqls[0];
-        }
-    }
-
     interface MissingSqlIdDefaultMethodDao extends Dao<TestEntity, MissingSqlIdDefaultMethodDao> {
         @Query(id = "missingSql")
         @NonDBOperation
@@ -1866,16 +1855,6 @@ public class DaoImplTest extends TestBase {
         assertEquals("SELECT 1", dao.firstSql());
     }
 
-    // BUG FIX: mapper SQL handed to a default method's String[] parameter used to be the parameterized form, with
-    // named parameters rewritten to '?', so prepareNamedQuery(sqls[0]).setLong("id", ...) failed in the default method.
-    @Test
-    public void testCreateDao_DefaultMethodReceivesMapperSqlWithNamedParametersPreserved() throws Exception {
-        final NamedSqlIdDefaultMethodDao dao = DaoImpl.createDao(NamedSqlIdDefaultMethodDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null,
-                null);
-
-        assertEquals("SELECT * FROM test WHERE id = :id", dao.firstSql());
-    }
-
     @Test
     public void testCreateDao_DefaultMethodRejectsMissingOrInvalidQueryId() throws SQLException {
         assertThrows(IllegalArgumentException.class,
@@ -2358,36 +2337,5 @@ public class DaoImplTest extends TestBase {
         final com.landawn.abacus.exception.UncheckedSQLException namedThrown = assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
                 () -> dao.prepareNamedQuery(List.of("id", "name"), Filters.eq("name", "x")));
         assertSame(bindingFailure, namedThrown.getCause());
-    }
-
-    static class NoIdBean {
-        private String name;
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-    }
-
-    interface EmptyMergedByIdDao extends Dao<NoIdBean, EmptyMergedByIdDao> {
-        @Query("select * from no_id_bean")
-        @MergedById
-        List<NoIdBean> findMerged() throws SQLException;
-    }
-
-    // BUG FIX: @MergedById without a value on an entity that has no id properties resolved to [""] because the
-    // splitter kept the empty string, so the intended "can't be null or empty" guard never fired and a misleading
-    // "No method found by merged id:  in entity class" was thrown instead.
-    @Test
-    public void testMergedByIdWithoutValueOnIdLessEntityReportsEmptyMergedId() throws SQLException {
-        final DataSource ds = mockDataSourceForDaoCreation();
-
-        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> DaoImpl.createDao(EmptyMergedByIdDao.class, null, ds, PSC, null, null, null));
-
-        assertTrue(failure.getMessage().contains("can't be null or empty"));
     }
 }
