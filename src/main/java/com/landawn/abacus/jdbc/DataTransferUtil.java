@@ -2689,6 +2689,7 @@ public final class DataTransferUtil {
         final boolean isBufferedWriter = output instanceof BufferedCsvWriter;
         final BufferedCsvWriter bw = isBufferedWriter ? (BufferedCsvWriter) output : Objectory.createBufferedCsvWriter(output);
         long result = 0;
+        Throwable primaryFailure = null;
 
         logger.debug("Exporting ResultSet to CSV(columnNames={})", columnNames == null ? null : columnNames.size());
 
@@ -2756,10 +2757,27 @@ public final class DataTransferUtil {
 
             logger.info("Exported CSV rows(exported={}, columns={})", result, exportedColumnCount);
         } catch (final IOException e) {
-            throw new UncheckedIOException(e);
+            primaryFailure = new UncheckedIOException(e);
+            throw (UncheckedIOException) primaryFailure;
+        } catch (final SQLException | RuntimeException | Error e) {
+            primaryFailure = e;
+            throw e;
         } finally {
             if (!isBufferedWriter) {
-                Objectory.recycle(bw);
+                try {
+                    Objectory.recycle(bw);
+                } catch (final RuntimeException recycleFailure) {
+                    // Recycling flushes any output still buffered. After a failed export (typically the destination's
+                    // own write error) that flush fails again and throws abacus-common's UncheckedIOException, which
+                    // is not a java.io.UncheckedIOException; it must not replace the primary failure.
+                    if (primaryFailure == null) {
+                        throw recycleFailure;
+                    }
+
+                    if (recycleFailure != primaryFailure) {
+                        primaryFailure.addSuppressed(recycleFailure);
+                    }
+                }
             }
         }
 

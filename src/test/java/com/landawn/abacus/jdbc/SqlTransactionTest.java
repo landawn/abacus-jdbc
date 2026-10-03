@@ -1329,7 +1329,7 @@ public class SqlTransactionTest extends TestBase {
         final SqlTransaction inner = JdbcUtil.beginTransaction(dataSource);
         assertSame(outer, inner);
 
-        inner.commit(); // nested: deferred to the outer scope; arms the latch for inner's cleanup
+        inner.commit(); // nested: deferred to the outer scope; records the no-op for inner's cleanup
 
         doThrow(new SQLException("nested-isolation-fail")).when(connection).setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
         assertThrows(UncheckedSQLException.class, () -> JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE));
@@ -1344,6 +1344,151 @@ public class SqlTransactionTest extends TestBase {
         assertEquals(Transaction.Status.COMMITTED, outer.status());
         verify(connection).commit();
         verify(connection, never()).rollback();
+    }
+
+    // Regression: the post-commit cleanup no-op was one latch shared by all scopes. A nested scope opened
+    // AND completed between a scope's commit() and its finally block (e.g. a transactional DAO call made
+    // after commit()) consumed the latch, so that finally block exited - and rolled back - the whole
+    // transaction, after which the outermost commit() was silently ignored.
+    @Test
+    public void testScopeCompletedAfterNestedCommitKeepsThatCommitsCleanupNoOp() throws Exception {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        try {
+            final SqlTransaction inner = JdbcUtil.beginTransaction(dataSource);
+            assertSame(outer, inner);
+
+            try {
+                inner.commit(); // nested: deferred to the outer scope
+
+                // More work in inner's try block, running its own properly paired scope on the same transaction.
+                JdbcUtil.runInTransaction(dataSource, () -> {
+                });
+            } finally {
+                inner.rollbackIfNotCommitted(); // must stay the no-op paired with inner.commit()
+            }
+
+            assertEquals(Transaction.Status.ACTIVE, outer.status());
+            assertSame(outer, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+            verify(connection, never()).rollback();
+
+            outer.commit();
+        } finally {
+            outer.rollbackIfNotCommitted();
+        }
+
+        assertEquals(Transaction.Status.COMMITTED, outer.status());
+        verify(connection).commit();
+        verify(connection, never()).rollback();
+    }
+
+    // A paired scope that FAILS after a nested commit() marks the transaction rollback-only, but the committed
+    // scope's finally block must still be its no-op so the rollback is left to the outermost scope. Pre-fix
+    // that finally block exited the outer scope and rolled back early.
+    @Test
+    public void testScopeFailedAfterNestedCommitLeavesRollbackToOutermostScope() throws Exception {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final RuntimeException failure = new RuntimeException("work after nested commit failed");
+
+        try {
+            final SqlTransaction inner = JdbcUtil.beginTransaction(dataSource);
+            assertSame(outer, inner);
+
+            final RuntimeException thrown = assertThrows(RuntimeException.class, () -> {
+                try {
+                    inner.commit();
+
+                    JdbcUtil.runInTransaction(dataSource, () -> {
+                        throw failure;
+                    });
+                } finally {
+                    inner.rollbackIfNotCommitted(); // must stay the no-op paired with inner.commit()
+                }
+            });
+            assertSame(failure, thrown);
+
+            assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+            assertSame(outer, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+            verify(connection, never()).rollback();
+        } finally {
+            outer.rollbackIfNotCommitted(); // the outer scope's failure-path cleanup performs the real rollback
+        }
+
+        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertTrue(SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL) == null);
+        verify(connection).rollback();
+        verify(connection, never()).commit();
+    }
+
+    // The cleanup no-op is tracked per nesting level, so at every level it survives scopes opened and completed
+    // after that level's commit() - including through try-with-resources close().
+    @Test
+    public void testCleanupNoOpsSurviveScopesCompletedAfterCommitAtEveryLevel() throws Exception {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        try (outer) {
+            try (SqlTransaction middle = JdbcUtil.beginTransaction(dataSource)) {
+                try (SqlTransaction inner = JdbcUtil.beginTransaction(dataSource)) {
+                    assertSame(outer, middle);
+                    assertSame(outer, inner);
+
+                    inner.commit();
+                    JdbcUtil.runInTransaction(dataSource, () -> {
+                    });
+                } // inner.close(): the no-op paired with inner.commit()
+
+                middle.commit();
+                JdbcUtil.callInTransaction(dataSource, () -> { // two nested levels after middle.commit()
+                    JdbcUtil.runInTransaction(dataSource, () -> {
+                    });
+                    return null;
+                });
+            } // middle.close(): the no-op paired with middle.commit()
+
+            assertEquals(Transaction.Status.ACTIVE, outer.status());
+            assertSame(outer, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+            verify(connection, never()).rollback();
+
+            outer.commit();
+        }
+
+        assertEquals(Transaction.Status.COMMITTED, outer.status());
+        verify(dataSource, times(1)).getConnection();
+        verify(connection).commit();
+        verify(connection, never()).rollback();
+    }
+
+    // Guard (passes before and after the fix): the marker left by a nested commit() whose paired cleanup never
+    // runs (misuse) is dropped when the enclosing scope exits, so a later scope failing at that depth still
+    // really exits and marks the transaction rollback-only instead of leaving its scope open.
+    @Test
+    public void testUnpairedNestedCommitMarkerIsDroppedWhenEnclosingScopeExits() throws Exception {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        try {
+            final SqlTransaction middle = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                JdbcUtil.beginTransaction(dataSource).commit(); // no paired rollbackIfNotCommitted()
+                middle.commit();
+            } finally {
+                middle.rollbackIfNotCommitted();
+            }
+
+            final RuntimeException failure = new RuntimeException("later scope failed");
+            assertSame(failure, assertThrows(RuntimeException.class, () -> JdbcUtil.runInTransaction(dataSource, () -> {
+                throw failure;
+            })));
+
+            assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+            verify(connection, never()).rollback();
+        } finally {
+            outer.rollbackIfNotCommitted();
+        }
+
+        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertTrue(SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL) == null);
+        verify(connection).rollback();
     }
 
     @Test

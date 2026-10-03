@@ -23,13 +23,19 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -41,6 +47,7 @@ import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.query.Dsl;
+import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.BiFunction;
@@ -391,18 +398,100 @@ public class JoinInfoTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> manyToManyJoin.batchDeleteSqlPlan(PSC)._1.apply(-1));
     }
 
-    // Test that selectSqlPlan throws for unsupported SqlBuilder
+    // Test that selectSqlPlan throws for unsupported (non-parameterized) SqlBuilder. Guard test: passes both
+    // before and after the custom-dialect fix (these DSLs were rejected before and must stay rejected).
     @Test
     public void testGetSelectSqlPlan_UnsupportedBuilder() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        assertThrows(IllegalArgumentException.class, () -> joinInfo.selectSqlPlan(Dsl.PSB));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.selectSqlPlan(Dsl.NSC));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.selectSqlPlan(null));
+        // A dialect without a SQL policy renders raw SQL (inlined values), so it is rejected as well.
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.selectSqlPlan(Dsl.forDialect(PSC.sqlDialect().toBuilder().sqlPolicy(null).build())));
     }
 
-    // Test that batchSelectSqlPlan throws for unsupported SqlBuilder
+    // Test that batchSelectSqlPlan throws for unsupported (non-parameterized) SqlBuilder
     @Test
     public void testGetBatchSelectSqlPlan_UnsupportedBuilder() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        assertThrows(IllegalArgumentException.class, () -> joinInfo.batchSelectSqlPlan(Dsl.PSB));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.batchSelectSqlPlan(Dsl.NSC));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.batchSelectSqlPlan(null));
+    }
+
+    // Regression: the plans existed only for the PSC/PAC/PLC Dsl instances (Dsl has identity equality), so
+    // every loadJoinEntities/deleteJoinEntities of a DAO created with any other parameterized-SQL dialect
+    // (a custom SqlDialect with productInfo, NO_CHANGE naming, ...) failed with "Not supported SQL builder DSL".
+    @Test
+    public void testPlansBuiltForNonPredefinedParameterizedDsl() {
+        final JoinInfo directJoin = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
+        final JoinInfo manyToManyJoin = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
+        final SqlDialect dialect = PSC.sqlDialect().toBuilder().productInfo(new SqlDialect.ProductInfo("Microsoft SQL Server", "16.0")).build();
+        final Dsl dsl = Dsl.forDialect(dialect);
+        final Dsl sameDialectDsl = Dsl.forDialect(dialect);
+
+        assertNotSame(dsl, sameDialectDsl);
+
+        for (final JoinInfo joinInfo : List.of(directJoin, manyToManyJoin)) {
+            assertEquals(joinInfo.selectSqlPlan(PSC)._1.apply(null), joinInfo.selectSqlPlan(dsl)._1.apply(null));
+            assertEquals(joinInfo.batchSelectSqlPlan(PSC)._1.apply(null, 3), joinInfo.batchSelectSqlPlan(dsl)._1.apply(null, 3));
+            assertEquals(joinInfo.deleteSqlPlan(PSC)._1, joinInfo.deleteSqlPlan(dsl)._1);
+            assertEquals(joinInfo.batchDeleteSqlPlan(PSC)._1.apply(3), joinInfo.batchDeleteSqlPlan(dsl)._1.apply(3));
+            // An equal dialect reached through another Dsl instance reuses the plans built for the first one.
+            assertSame(joinInfo.selectSqlPlan(dsl), joinInfo.selectSqlPlan(sameDialectDsl));
+            assertSame(joinInfo.batchDeleteSqlPlan(dsl), joinInfo.batchDeleteSqlPlan(sameDialectDsl));
+        }
+
+        // NO_CHANGE naming renders property names as-is.
+        assertTrue(directJoin.selectSqlPlan(Dsl.PSB)._1.apply(null).endsWith("WHERE userId = ?"), directJoin.selectSqlPlan(Dsl.PSB)._1.apply(null));
+        // Many-to-many with NO_CHANGE naming: no "AS alias" column slots, so the middle/left SELECT token anchors and the
+        // "?, ?, ?" sub-query splice must still produce valid SQL.
+        assertEquals("SELECT roleId, name FROM RoleLookupEntity WHERE roleId IN (SELECT roleId FROM UserRoleLink WHERE userId = ?)",
+                manyToManyJoin.selectSqlPlan(Dsl.PSB)._1.apply(null));
+        assertEquals("SELECT RoleLookupEntity.roleId, RoleLookupEntity.name, UserRoleLink.userId FROM RoleLookupEntity INNER JOIN UserRoleLink"
+                + " ON RoleLookupEntity.roleId = UserRoleLink.roleId WHERE UserRoleLink.userId IN (?, ?)", manyToManyJoin.batchSelectSqlPlan(Dsl.PSB)._1.apply(null, 2));
+        assertEquals("DELETE FROM RoleLookupEntity WHERE roleId IN (SELECT roleId FROM UserRoleLink WHERE userId IN (?, ?))",
+                manyToManyJoin.batchDeleteSqlPlan(Dsl.PSB)._1.apply(2));
+    }
+
+    // Concurrent first use of a non-predefined DSL must build its plans once and never expose a partially built plan
+    // set: every thread (each with its own Dsl instance of the same dialect) gets the same complete plans.
+    @Test
+    public void testPlansForNonPredefinedDsl_ConcurrentFirstUse() throws Exception {
+        final SqlDialect dialect = PSC.sqlDialect().toBuilder().productInfo(SqlDialect.ProductInfo.of("H2", "2.5")).build();
+        final int threadCount = 8;
+        final ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+
+        try {
+            for (int round = 0; round < 20; round++) {
+                final JoinInfo joinInfo = new JoinInfo(UserRoleUserEntity.class, "user_role_user_entity", "roles", true);
+                final CountDownLatch start = new CountDownLatch(1);
+                final List<Future<Object[]>> futures = new ArrayList<>(threadCount);
+
+                for (int i = 0; i < threadCount; i++) {
+                    final Dsl dsl = Dsl.forDialect(dialect);
+
+                    futures.add(executor.submit(() -> {
+                        start.await();
+                        return new Object[] { joinInfo.selectSqlPlan(dsl), joinInfo.batchSelectSqlPlan(dsl), joinInfo.deleteSqlPlan(dsl),
+                                joinInfo.batchDeleteSqlPlan(dsl) };
+                    }));
+                }
+
+                start.countDown();
+
+                final Object[] first = futures.get(0).get();
+
+                for (final Future<Object[]> future : futures) {
+                    final Object[] plans = future.get();
+
+                    for (int j = 0; j < plans.length; j++) {
+                        assertNotNull(plans[j]);
+                        assertSame(first[j], plans[j]);
+                    }
+                }
+            }
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     // Test setJoinPropEntities populates join properties
@@ -960,14 +1049,16 @@ public class JoinInfoTest extends TestBase {
     @Test
     public void testGetDeleteSqlPlan_UnsupportedBuilder() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        assertThrows(IllegalArgumentException.class, () -> joinInfo.deleteSqlPlan(Dsl.PSB));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.deleteSqlPlan(Dsl.NSC));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.deleteSqlPlan(null));
     }
 
     // batchDeleteSqlPlan throws on unsupported SqlBuilder (L894)
     @Test
     public void testGetBatchDeleteSqlPlan_UnsupportedBuilder() {
         JoinInfo joinInfo = JoinInfo.getPropJoinInfo(UserDao.class, UserEntity.class, "user_entity", "orders");
-        assertThrows(IllegalArgumentException.class, () -> joinInfo.batchDeleteSqlPlan(Dsl.PSB));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.batchDeleteSqlPlan(Dsl.NSC));
+        assertThrows(IllegalArgumentException.class, () -> joinInfo.batchDeleteSqlPlan(null));
     }
 
     // getJoinPropValue throws when join value is null/default and allowNullOrDefaultJoinKeys=false (L1026-1028)

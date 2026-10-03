@@ -177,6 +177,25 @@ public class UncheckedCrudReadOpsTest extends TestBase {
         assertThrows(DuplicateResultException.class, () -> dao.batchGet(List.of(1L)));
     }
 
+    // Mirrors CrudReadOpsTest: a null single id leaves that entity unrefreshed instead of failing the batch with an NPE.
+    @Test
+    public void testBatchRefresh_NullSingleIdEntity_LeftUnrefreshedInsteadOfNpe() {
+        final IdAnnotatedUncheckedCrudDao dao = newDao();
+        final IdAnnotatedEntity saved = new IdAnnotatedEntity(1L);
+        saved.setName("stale");
+        final IdAnnotatedEntity unsaved = new IdAnnotatedEntity(null);
+        unsaved.setName("new");
+        final IdAnnotatedEntity dbEntity = new IdAnnotatedEntity(1L);
+        dbEntity.setName("fresh");
+        Mockito.doReturn(List.of(dbEntity)).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+
+        assertEquals(1, dao.batchRefresh(List.of(saved, unsaved), List.of("name")));
+        assertEquals("fresh", saved.getName());
+        assertEquals("new", unsaved.getName());
+        assertEquals(0, dao.batchRefresh(List.of(unsaved), 5));
+        verify(dao, Mockito.times(1)).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+    }
+
     @Test
     public void testCount_SumsAcrossChunksAndDeduplicates() {
         final IdAnnotatedUncheckedCrudDao dao = newDao();

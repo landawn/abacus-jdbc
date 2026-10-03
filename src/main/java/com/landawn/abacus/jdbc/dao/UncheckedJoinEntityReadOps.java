@@ -36,7 +36,6 @@ import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -929,9 +928,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor));
 
         DaoUtil.uncheckedComplete(futures);
     }
@@ -1059,9 +1057,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor));
 
         DaoUtil.uncheckedComplete(futures);
     }
@@ -1747,9 +1744,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             }
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(absentJoinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entity, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(absentJoinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entity, joinEntityPropName), executor));
 
         DaoUtil.uncheckedComplete(futures);
     }
@@ -1880,9 +1876,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entities, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entities, joinEntityPropName), executor));
 
         DaoUtil.uncheckedComplete(futures);
     }

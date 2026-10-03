@@ -616,44 +616,17 @@ public final class JdbcCodeGenerationUtil {
                     + " can't be read-only and non-updatable at the same time in entity class: " + finalClassName);
         }
 
-        // (type, fieldName, skipInCopy): static/final fields can't be re-assigned by the generated copy().
-        final List<Tuple3<String, String, Boolean>> additionalFields = Strings.isEmpty(configToUse.getAdditionalClassBodySource()) ? new ArrayList<>()
-                : Stream.split(configToUse.getAdditionalClassBodySource(), "\n")
-                        // Strip trailing line comments so a declaration written as "private Set<X> s; // note"
-                        // still parses (and gets its import + copy() assignment). stripLineComment ignores any
-                        // "//" inside a string/char literal, so initializers like "https://..." are preserved.
-                        .map(JdbcCodeGenerationUtil::stripLineComment)
-                        .map(Strings::strip)
-                        // .peek(Fn.println())
-                        .filter(Fn.notEmpty())
-                        .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
-                        // One physical line may contain multiple declarations. Split only at top-level
-                        // semicolons so literals and nested initializer expressions remain intact.
-                        .flatMap(line -> Stream.of(splitJavaFieldDeclarations(line)))
-                        .map(Strings::strip)
-                        .filter(declaration -> Strings.startsWithAny(declaration, "private ", "protected ", "public "))
-                        .map(declaration -> {
-                            String decl = declaration.substring(declaration.indexOf(' ') + 1).trim();
-                            boolean skipInCopy = false;
+        final String additionalClassBodySource = configToUse.getAdditionalClassBodySource();
 
-                            // Strip remaining modifiers so the parsed "type" is the bare type ("private static
-                            // final long serialVersionUID = 1L;" would otherwise parse as type "static final long"
-                            // and, worse, get a copy.serialVersionUID assignment that doesn't compile).
-                            while (true) {
-                                if (Strings.startsWithAny(decl, "static ", "final ")) {
-                                    skipInCopy = true;
-                                    decl = decl.substring(decl.indexOf(' ') + 1).trim();
-                                } else if (Strings.startsWithAny(decl, "transient ", "volatile ")) {
-                                    decl = decl.substring(decl.indexOf(' ') + 1).trim();
-                                } else {
-                                    break;
-                                }
-                            }
+        // (type, fieldName, skipInCopy): static/final fields can't be re-assigned by the generated copy(). java.util imports
+        // are derived from every recognized declaration outside comments and text blocks (fields of a nested type need them
+        // too), but copy() may only assign top-level fields: an assignment to a member of a nested type or anonymous class
+        // body doesn't compile.
+        final List<Tuple3<String, String, Boolean>> additionalFields = Strings.isEmpty(additionalClassBodySource) ? new ArrayList<>()
+                : parseAdditionalFields(Stream.of(getSourceCodeLines(additionalClassBodySource, false)));
 
-                            return Tuple.of(decl, skipInCopy);
-                        })
-                        .flatMap(declAndSkip -> Stream.of(parseAdditionalFieldDeclaration(declAndSkip._1, declAndSkip._2)))
-                        .toList();
+        final List<Tuple3<String, String, Boolean>> copyableAdditionalFields = Strings.isEmpty(additionalClassBodySource) ? new ArrayList<>()
+                : parseAdditionalFields(Stream.of(getSourceCodeLines(additionalClassBodySource, true)));
 
         final Collection<String> excludedFields = configToUse.getExcludedFields();
         final List<String> columnNameList = new ArrayList<>();
@@ -729,7 +702,9 @@ public final class JdbcCodeGenerationUtil {
                         unqualifiedTable = parts.length == 1;
                         final boolean[] delimitedParts = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(entityName, parts.length);
                         for (int i = 0; i < parts.length; i++) {
-                            if (!delimitedParts[i]) {
+                            // Fold only a part the metadata query left unquoted: renderTableName delimits a part that is not a
+                            // simple identifier (e.g. order-history), so the database resolved it case-exactly, not folded.
+                            if (!delimitedParts[i] && SqlIdentifierUtil.isSimpleSqlIdentifier(parts[i])) {
                                 if (metadata.storesUpperCaseIdentifiers()) {
                                     parts[i] = parts[i].toUpperCase(Locale.ROOT);
                                 } else if (metadata.storesLowerCaseIdentifiers()) {
@@ -824,7 +799,11 @@ public final class JdbcCodeGenerationUtil {
                         }
 
                         try { //NOSONAR
-                            if (ClassUtil.forName("java.util." + clsName) != null && importedJavaUtilTypes.add(clsName)) {
+                            final Class<?> javaUtilClass = ClassUtil.forName("java.util." + clsName);
+
+                            // Class.forName also loads package-private classes (e.g. java.util.TaskQueue), which can't be
+                            // imported: a same-package TaskQueue<T> must not be shadowed by an uncompilable import.
+                            if (javaUtilClass != null && Modifier.isPublic(javaUtilClass.getModifiers()) && importedJavaUtilTypes.add(clsName)) {
                                 headPartBuilder.append(LINE_SEPARATOR).append("import java.util.").append(clsName).append(';');
                             }
                         } catch (final Exception e) {
@@ -855,8 +834,12 @@ public final class JdbcCodeGenerationUtil {
 
             headPart += LINE_SEPARATOR + lombokImports + LINE_SEPARATOR + eccClassAnnos;
 
+            // An import requested through classNamesToImport is never pruned as unused (see removeUnrequestedImport). Only an
+            // import whose simple name clashes with the configured Table/Column/Id annotation in use is still removed.
+            final Set<String> requestedImports = new HashSet<>(N.nullToEmpty(configToUse.getClassNamesToImport()));
+
             if (fieldNameList.isEmpty() && hasOnlyFieldsExcludedFromAllArgsConstructor(configToUse.getAdditionalClassBodySource())) {
-                headPart = headPart.replace("import lombok.AllArgsConstructor;\n", "").replace("@AllArgsConstructor\n", "");
+                headPart = removeUnrequestedImport(headPart, "lombok.AllArgsConstructor", requestedImports).replace("@AllArgsConstructor\n", "");
             }
 
             if (isJavaPersistenceTable) {
@@ -885,8 +868,8 @@ public final class JdbcCodeGenerationUtil {
             // particularly when auto-detected from JDBC metadata via getPrimaryKeys(). Match against both lists so the
             // import is preserved whenever the field-emission pass below will actually emit @Id.
             if (N.isEmpty(idFields) || (N.intersection(idFields, fieldNameList).isEmpty() && N.intersection(idFields, columnNameList).isEmpty())) {
-                headPart = headPart.replace("import jakarta.persistence.Id;\n", "");
-                headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
+                headPart = removeUnrequestedImport(headPart, "jakarta.persistence.Id", requestedImports);
+                headPart = removeUnrequestedImport(headPart, "com.landawn.abacus.annotation.Id", requestedImports);
             } else if (isJavaPersistenceId) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
                 headPart = headPart.replace("jakarta.persistence.Id", idAnnotationClassName);
@@ -903,11 +886,11 @@ public final class JdbcCodeGenerationUtil {
             // (see the N.noneMatch(...) blocks near the end of this method).
 
             if (!configToUse.isGenerateBuilder()) {
-                headPart = headPart.replace("import lombok.Builder;\n", "").replace("@Builder\n", "");
+                headPart = removeUnrequestedImport(headPart, "lombok.Builder", requestedImports).replace("@Builder\n", "");
             }
 
             if (!configToUse.isGenerateChainAccessors()) {
-                headPart = headPart.replace("import lombok.experimental.Accessors;\n", "").replace("@Accessors(chain = true)\n", "");
+                headPart = removeUnrequestedImport(headPart, "lombok.experimental.Accessors", requestedImports).replace("@Accessors(chain = true)\n", "");
             }
 
             if (headPart.contains("jakarta.persistence.")) {
@@ -1036,7 +1019,7 @@ public final class JdbcCodeGenerationUtil {
                     sb.append("        copy.").append(fieldName).append(" = this.").append(fieldName).append(";").append(LINE_SEPARATOR);
                 }
 
-                for (final Tuple3<String, String, Boolean> tp : additionalFields) {
+                for (final Tuple3<String, String, Boolean> tp : copyableAdditionalFields) {
                     if (tp._3) { // static/final fields can't be re-assigned.
                         continue;
                     }
@@ -1087,35 +1070,36 @@ public final class JdbcCodeGenerationUtil {
             final String[] lines = Strings.split(result, LINE_SEPARATOR);
 
             if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@NonUpdatable"))) {
-                result = result.replace("import com.landawn.abacus.annotation.NonUpdatable;\n", "");
+                result = removeUnrequestedImport(result, "com.landawn.abacus.annotation.NonUpdatable", requestedImports);
             }
 
             if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@ReadOnly"))) {
-                result = result.replace("import com.landawn.abacus.annotation.ReadOnly;\n", "");
+                result = removeUnrequestedImport(result, "com.landawn.abacus.annotation.ReadOnly", requestedImports);
             }
 
             if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@JoinedBy"))) {
-                result = result.replace("import com.landawn.abacus.annotation.JoinedBy;\n", "");
+                result = removeUnrequestedImport(result, "com.landawn.abacus.annotation.JoinedBy", requestedImports);
             }
 
             if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@Type"))) {
-                result = result.replace("import com.landawn.abacus.annotation.Type;\n", "");
+                result = removeUnrequestedImport(result, "com.landawn.abacus.annotation.Type", requestedImports);
             }
 
             if (N.noneMatch(lines, e -> Strings.startsWithAny(e.trim(), "@Type", "@JsonXmlConfig") && Strings.contains(e, "EnumType"))) {
-                result = result.replace("import com.landawn.abacus.util.EnumType;\n", "");
+                result = removeUnrequestedImport(result, "com.landawn.abacus.util.EnumType", requestedImports);
             }
 
             if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@JsonXmlConfig"))) {
-                result = result.replace("import com.landawn.abacus.annotation.JsonXmlConfig;\n", "");
+                result = removeUnrequestedImport(result, "com.landawn.abacus.annotation.JsonXmlConfig", requestedImports);
             }
 
             if (N.noneMatch(lines, e -> Strings.startsWith(e.trim(), "@JsonXmlConfig") && Strings.contains(e, "NamingPolicy"))) {
-                result = result.replace("import com.landawn.abacus.util.NamingPolicy;\n", "");
+                result = removeUnrequestedImport(result, "com.landawn.abacus.util.NamingPolicy", requestedImports);
             }
 
             // Checked on the final (pruned) import list, before anything is written to srcDir.
             checkGeneratedClassNameCollision(finalClassName, Strings.split(result, LINE_SEPARATOR), configToUse.isGeneratePropNameTable());
+            checkGeneratedClassNameShadowsJavaLangType(finalClassName, fieldNameList, columnClassNameList, configToUse.isGeneratePropNameTable());
 
             if (Strings.isNotEmpty(srcDir)) {
                 String packageDir = srcDir;
@@ -1153,6 +1137,21 @@ public final class JdbcCodeGenerationUtil {
             logger.warn(e, "Failed to write generated entity class(entityName={}, className={}, srcDir={})", entityName, finalClassName, srcDir);
             throw new UncheckedIOException(e);
         }
+    }
+
+    /**
+     * Removes the import of the given type from the generated source, unless {@code classNamesToImport} requested it. A
+     * requested import that duplicates a default import is not emitted on its own line, and the additional class body may
+     * use the type in a way the unused-import checks don't detect (e.g. {@code private NamingPolicy policy;}, an annotation
+     * that doesn't start its line, or {@code @Builder} on a nested class).
+     *
+     * @param source the generated source
+     * @param className the fully qualified name of the imported type
+     * @param requestedImports the class names listed in {@code classNamesToImport}
+     * @return the source without the import, or {@code source} itself if the import was requested
+     */
+    private static String removeUnrequestedImport(final String source, final String className, final Set<String> requestedImports) {
+        return requestedImports.contains(className) ? source : source.replace("import " + className + ";" + LINE_SEPARATOR, "");
     }
 
     /**
@@ -1204,6 +1203,134 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Recognizes the field declarations in the given lines of a class body source; see
+     * {@link EntityCodeConfig#getAdditionalClassBodySource()} for the declarations that are recognized.
+     *
+     * @param lines the class body source lines
+     * @return one tuple of (type, field name, skipInCopy) per recognized field, in source order
+     */
+    private static List<Tuple3<String, String, Boolean>> parseAdditionalFields(final Stream<String> lines) {
+        return lines
+                // Strip trailing line comments so a declaration written as "private Set<X> s; // note"
+                // still parses (and gets its import + copy() assignment). stripLineComment ignores any
+                // "//" inside a string/char literal, so initializers like "https://..." are preserved.
+                .map(JdbcCodeGenerationUtil::stripLineComment)
+                .map(Strings::strip)
+                // .peek(Fn.println())
+                .filter(Fn.notEmpty())
+                .filter(it -> Strings.startsWithAny(it, "private ", "protected ", "public ") && it.endsWith(";"))
+                // One physical line may contain multiple declarations. Split only at top-level
+                // semicolons so literals and nested initializer expressions remain intact.
+                .flatMap(line -> Stream.of(splitJavaFieldDeclarations(line)))
+                .map(Strings::strip)
+                .filter(declaration -> Strings.startsWithAny(declaration, "private ", "protected ", "public "))
+                .map(declaration -> {
+                    String decl = declaration.substring(declaration.indexOf(' ') + 1).trim();
+                    boolean skipInCopy = false;
+
+                    // Strip remaining modifiers so the parsed "type" is the bare type ("private static
+                    // final long serialVersionUID = 1L;" would otherwise parse as type "static final long"
+                    // and, worse, get a copy.serialVersionUID assignment that doesn't compile).
+                    while (true) {
+                        if (Strings.startsWithAny(decl, "static ", "final ")) {
+                            skipInCopy = true;
+                            decl = decl.substring(decl.indexOf(' ') + 1).trim();
+                        } else if (Strings.startsWithAny(decl, "transient ", "volatile ")) {
+                            decl = decl.substring(decl.indexOf(' ') + 1).trim();
+                        } else {
+                            break;
+                        }
+                    }
+
+                    return Tuple.of(decl, skipInCopy);
+                })
+                .flatMap(declAndSkip -> {
+                    try {
+                        return Stream.of(parseAdditionalFieldDeclaration(declAndSkip._1, declAndSkip._2));
+                    } catch (final IllegalArgumentException e) {
+                        // Not a field if a parameter list or body precedes any initializer: a one-line type or method
+                        // declaration followed by an (empty) ';' member, e.g. "public enum Status { A, B };", or a bodiless
+                        // interface/abstract/native method or annotation element (e.g. "public String value() default "";").
+                        // Recognition is best effort, so such valid source is skipped; a malformed field declaration such as
+                        // "private int;" is still rejected.
+                        final String declarationHead = stripJavaInitializer(declAndSkip._1);
+
+                        if (declarationHead.indexOf('(') >= 0 || declarationHead.indexOf('{') >= 0) {
+                            return Stream.<Tuple3<String, String, Boolean>> empty();
+                        }
+
+                        throw e;
+                    }
+                })
+                .toList();
+    }
+
+    /**
+     * Returns the lines of a class body source that begin in code. A line that begins inside a block comment or a
+     * text block is left out, so its content is not mistaken for a field declaration; with {@code topLevelOnly}, so
+     * is a line that begins inside a brace-delimited body (a nested type, method, initializer block, or anonymous
+     * class), whose members are not fields of the enclosing class.
+     *
+     * @param source the class body source
+     * @param topLevelOnly whether to also leave out the lines that begin inside a brace-delimited body
+     * @return the selected lines, in source order
+     */
+    private static List<String> getSourceCodeLines(final String source, final boolean topLevelOnly) {
+        final List<String> result = new ArrayList<>();
+        int braceDepth = 0;
+        boolean inBlockComment = false;
+        boolean inTextBlock = false;
+
+        for (final String line : source.split("\n", -1)) {
+            if ((braceDepth == 0 || !topLevelOnly) && !inBlockComment && !inTextBlock) {
+                result.add(line);
+            }
+
+            char quote = 0; // String and character literals end on their line; only text blocks span lines.
+
+            for (int i = 0, len = line.length(); i < len; i++) {
+                final char ch = line.charAt(i);
+
+                if (inBlockComment) {
+                    if (ch == '*' && i + 1 < len && line.charAt(i + 1) == '/') {
+                        inBlockComment = false;
+                        i++;
+                    }
+                } else if (inTextBlock) {
+                    if (ch == '\\') {
+                        i++;
+                    } else if (line.startsWith("\"\"\"", i)) {
+                        inTextBlock = false;
+                        i += 2;
+                    }
+                } else if (quote != 0) {
+                    if (ch == '\\') {
+                        i++;
+                    } else if (ch == quote) {
+                        quote = 0;
+                    }
+                } else if (ch == '/' && i + 1 < len && line.charAt(i + 1) == '/') {
+                    break;
+                } else if (ch == '/' && i + 1 < len && line.charAt(i + 1) == '*') {
+                    inBlockComment = true;
+                    i++;
+                } else if (line.startsWith("\"\"\"", i)) {
+                    inTextBlock = true;
+                    i += 2;
+                } else if (ch == '"' || ch == '\'') {
+                    quote = ch;
+                } else if (ch == '{') {
+                    braceDepth++;
+                } else if (ch == '}' && braceDepth > 0) {
+                    braceDepth--;
+                }
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Builds a metadata-only query for the specified table, resolving the database product from the connection.
      *
      * @param conn the connection used to resolve the database product info
@@ -1235,7 +1362,7 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Resolves the Java type name for a result-set column. Driver-specific date/time classes are normalized to
-     * the corresponding {@code java.sql} types, a leading {@code "java.lang."} prefix is stripped, and wrapper
+     * the corresponding {@code java.sql} types, the {@code "java.lang."} prefix of a {@code java.lang} type is stripped, and wrapper
      * classes are mapped to their primitive names. An unresolvable class name is kept as reported, and
      * {@code Object} is used when the metadata reports none.
      *
@@ -1270,16 +1397,109 @@ public final class JdbcCodeGenerationUtil {
 
         // Strip only a LEADING "java.lang." package prefix: a global replace would corrupt any
         // (pathological) type whose qualified name merely contains that substring.
-        columnClassName = Strings.removeStart(columnClassName, "java.lang.");
+        columnClassName = removeJavaLangPackage(columnClassName);
 
         return eccClassNameMap.getOrDefault(columnClassName, columnClassName);
     }
 
     /**
+     * Removes the {@code java.lang.} package prefix from a type name when the type is implicitly imported, that is,
+     * declared in {@code java.lang} itself (including its nested types, such as {@code Character.UnicodeScript}).
+     * A type of a {@code java.lang} subpackage keeps its qualified name: {@code java.lang.annotation.ElementType}
+     * shortened to {@code annotation.ElementType} would not compile.
+     *
+     * @param className the type name
+     * @return the type name without the {@code java.lang.} prefix when that prefix is redundant
+     */
+    private static String removeJavaLangPackage(final String className) {
+        final String name = Strings.removeStart(className, "java.lang.");
+
+        // Package names are lower case and java.lang declares no lower-case type, so a lower-case qualifier is a subpackage.
+        return name.indexOf('.') > 0 && Character.isLowerCase(name.charAt(0)) ? className : name;
+    }
+
+    /**
+     * Rejects a generated class name that shadows a {@code java.lang} type which the generated source references by its
+     * simple name: a field type such as {@code String}, {@code Object} or {@code Integer} (emitted without its
+     * {@code java.lang.} prefix), or the {@code String} constants of the property-name interface. A table named
+     * {@code string} would otherwise generate {@code public class String { private String name; }}, whose fields silently
+     * take the type of the entity itself.
+     *
+     * @param className the generated class name
+     * @param fieldNames the generated field names
+     * @param fieldTypes the generated field types, in the same order as {@code fieldNames}
+     * @param generatePropNameTable whether the nested property-name interface {@link #X} is generated
+     * @throws IllegalArgumentException if the class name shadows a {@code java.lang} type referenced by the generated source
+     */
+    private static void checkGeneratedClassNameShadowsJavaLangType(final String className, final List<String> fieldNames, final List<String> fieldTypes,
+            final boolean generatePropNameTable) throws IllegalArgumentException {
+        if (!isPublicJavaLangType(className)) {
+            return;
+        }
+
+        final String suggestion = ". Configure EntityCodeConfig.className with a different name";
+
+        if (generatePropNameTable && "String".equals(className)) {
+            throw new IllegalArgumentException(
+                    "Generated class name 'String' shadows java.lang.String, the type of the generated property-name constants" + suggestion);
+        }
+
+        for (int i = 0, size = fieldTypes.size(); i < size; i++) {
+            if (referencesUnqualifiedName(fieldTypes.get(i), className)) {
+                throw new IllegalArgumentException("Generated class name '" + className + "' shadows java.lang." + className
+                        + ", which the type of generated field '" + fieldNames.get(i) + "' refers to" + suggestion);
+            }
+        }
+    }
+
+    /**
+     * Tests whether {@code simpleName} names a public type declared in {@code java.lang}, without initializing it.
+     *
+     * @param simpleName a valid Java type identifier
+     * @return {@code true} if {@code java.lang.simpleName} is a public type
+     */
+    private static boolean isPublicJavaLangType(final String simpleName) {
+        try {
+            return Modifier.isPublic(Class.forName("java.lang." + simpleName, false, null).getModifiers());
+        } catch (final ClassNotFoundException | LinkageError e) {
+            return false;
+        }
+    }
+
+    /**
+     * Tests whether a type source refers to {@code simpleName} as an unqualified name: {@code String} is referenced by
+     * {@code String[]} and {@code Map<String, Integer>}, but not by {@code java.lang.String}.
+     *
+     * @param type the type source
+     * @param simpleName the simple name to look for
+     * @return {@code true} if a name in {@code type} that is not preceded by a {@code .} qualifier equals {@code simpleName}
+     */
+    private static boolean referencesUnqualifiedName(final String type, final String simpleName) {
+        for (int i = 0, len = type.length(); i < len;) {
+            if (!Character.isJavaIdentifierStart(type.charAt(i))) {
+                i++;
+                continue;
+            }
+
+            final int start = i;
+
+            while (i < len && Character.isJavaIdentifierPart(type.charAt(i))) {
+                i++;
+            }
+
+            if ((start == 0 || type.charAt(start - 1) != '.') && type.substring(start, i).equals(simpleName)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Maps a column class name to the field type name used in generated source, applying the configured
      * conversions ({@code BigInteger} to {@code long}, {@code BigDecimal} to {@code double}, and boxing of
-     * primitives). A customized type is returned unchanged apart from stripping a leading {@code "java.lang."}
-     * prefix.
+     * primitives). A customized type is returned unchanged apart from stripping the {@code "java.lang."} prefix of a
+     * {@code java.lang} type.
      *
      * @param columnClassName the column class name; {@code Object} is returned when empty
      * @param isCustomizedType whether a customized type is configured for the column
@@ -1291,7 +1511,7 @@ public final class JdbcCodeGenerationUtil {
             return ClassUtil.getCanonicalClassName(Object.class);
         }
 
-        String className = Strings.removeStart(columnClassName, "java.lang.");
+        String className = removeJavaLangPackage(columnClassName);
 
         if (isCustomizedType) {
             return className;
@@ -4068,7 +4288,9 @@ public final class JdbcCodeGenerationUtil {
          * during recognition. Within recognized multi-variable declarations (e.g., {@code "private int width, height;"}),
          * each variable receives its own {@code copy()} assignment when that method is generated;
          * {@code static}/{@code final} fields are skipped. Package-private, multiline, and annotated source
-         * is not guaranteed to receive inferred imports or copy assignments.
+         * is not guaranteed to receive inferred imports or copy assignments. Source in block comments and text
+         * blocks is ignored, and the members of a nested type, method, initializer, or anonymous class body
+         * receive imports but no {@code copy()} assignment.
          *
          * <p>When no database fields are generated, {@code @AllArgsConstructor} is omitted only if the
          * additional body is blank or consists entirely of recognized static or initialized final fields

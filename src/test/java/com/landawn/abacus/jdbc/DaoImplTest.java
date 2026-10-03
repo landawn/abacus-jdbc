@@ -21,6 +21,7 @@ import java.sql.Types;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.sql.DataSource;
 
@@ -755,6 +756,75 @@ public class DaoImplTest extends TestBase {
 
         assertTrue(result instanceof Optional);
         assertTrue(((Optional<?>) result).isEmpty());
+    }
+
+    interface RowMapperImmutableReturnDao {
+        ImmutableList<Integer> list(Jdbc.RowMapper<Integer> rowMapper);
+
+        ImmutableList<Integer> list(Jdbc.RowFilter rowFilter, Jdbc.RowMapper<Integer> rowMapper);
+
+        ImmutableList<Integer> list(Jdbc.BiRowMapper<Integer> rowMapper);
+
+        ImmutableList<Integer> list(Jdbc.BiRowFilter rowFilter, Jdbc.BiRowMapper<Integer> rowMapper);
+
+        com.landawn.abacus.util.ImmutableSet<Integer> set(Jdbc.RowMapper<Integer> rowMapper);
+    }
+
+    /** Returns the rows 3, 1, 2 from every row-mapper stream overload, ignoring the mapper and filter. */
+    @SuppressWarnings("unchecked")
+    static final class RowStreamStubQuery extends AbstractQuery<PreparedStatement, RowStreamStubQuery> {
+        RowStreamStubQuery() {
+            super(mock(PreparedStatement.class));
+        }
+
+        @Override
+        public <T> com.landawn.abacus.util.stream.Stream<T> stream(final Jdbc.RowMapper<? extends T> rowMapper) {
+            return (com.landawn.abacus.util.stream.Stream<T>) com.landawn.abacus.util.stream.Stream.of(3, 1, 2);
+        }
+
+        @Override
+        public <T> com.landawn.abacus.util.stream.Stream<T> stream(final Jdbc.BiRowMapper<? extends T> rowMapper) {
+            return (com.landawn.abacus.util.stream.Stream<T>) com.landawn.abacus.util.stream.Stream.of(3, 1, 2);
+        }
+
+        @Override
+        public <T> com.landawn.abacus.util.stream.Stream<T> stream(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper) {
+            return (com.landawn.abacus.util.stream.Stream<T>) com.landawn.abacus.util.stream.Stream.of(3, 1, 2);
+        }
+
+        @Override
+        public <T> com.landawn.abacus.util.stream.Stream<T> stream(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper) {
+            return (com.landawn.abacus.util.stream.Stream<T>) com.landawn.abacus.util.stream.Stream.of(3, 1, 2);
+        }
+    }
+
+    // The RowMapper/BiRowMapper branches of custom query methods (createDao doesn't let users reach them at present) wrap an
+    // Immutable* collection return type like the automatic-mapping branch, instead of returning the mutable collection that
+    // Suppliers.ofCollection creates, which failed with ClassCastException at the proxy boundary.
+    @Test
+    public void testRowMapperBranchesWrapImmutableCollectionReturnTypes() throws Exception {
+        final Method factory = DaoImpl.class.getDeclaredMethod("createQueryFunctionByMethod", Class.class, Method.class, String.class, List.class, Map.class,
+                boolean.class, boolean.class, boolean.class, QueryOperation.class, boolean.class, String.class);
+        factory.setAccessible(true);
+
+        final Object[][] cases = { { "list", new Class<?>[] { Jdbc.RowMapper.class } },
+                { "list", new Class<?>[] { Jdbc.RowFilter.class, Jdbc.RowMapper.class } }, { "list", new Class<?>[] { Jdbc.BiRowMapper.class } },
+                { "list", new Class<?>[] { Jdbc.BiRowFilter.class, Jdbc.BiRowMapper.class } }, { "set", new Class<?>[] { Jdbc.RowMapper.class } } };
+
+        for (final Object[] c : cases) {
+            final Class<?>[] paramTypes = (Class<?>[]) c[1];
+            final Method daoMethod = RowMapperImmutableReturnDao.class.getMethod((String) c[0], paramTypes);
+
+            @SuppressWarnings("unchecked")
+            final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> func = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
+                    .invoke(null, TestEntity.class, daoMethod, null, null, null, false, true, paramTypes.length == 2, QueryOperation.DEFAULT, false,
+                            daoMethod.toString());
+
+            final Object result = func.apply(new RowStreamStubQuery(), new Object[paramTypes.length]);
+
+            assertTrue(daoMethod.getReturnType().isInstance(result), daoMethod + " returned " + result.getClass());
+            assertEquals(Set.of(1, 2, 3), new java.util.HashSet<>((Collection<?>) result), daoMethod.toString());
+        }
     }
 
     interface IdLessMergedByIdDao extends Dao<DaoImplTest.NameOnlyEntity, IdLessMergedByIdDao> {

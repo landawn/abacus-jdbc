@@ -1673,6 +1673,94 @@ public class DataTransferUtilTest extends TestBase {
         verify(mockResultSet, never()).getInt(1);
     }
 
+    /**
+     * A Writer whose every write fails, as a full disk or a closed socket would.
+     */
+    private static Writer newAlwaysFailingWriter(final IOException writeFailure) {
+        return new Writer() {
+            @Override
+            public void write(final char[] cbuf, final int off, final int len) throws IOException {
+                throw writeFailure;
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+    }
+
+    // Recycling the internal CSV writer flushes its buffer to the destination again; the second write failure used to
+    // escape from the finally block as abacus-common's UncheckedIOException (not a java.io.UncheckedIOException),
+    // replacing the declared java.io.UncheckedIOException.
+    @Test
+    public void testExportCsv_WriterFailureIsReportedAsDeclaredJavaIoUncheckedIOException() throws Exception {
+        final IOException writeFailure = new IOException("disk full");
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("value");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn("x");
+
+        final java.io.UncheckedIOException e = assertThrows(java.io.UncheckedIOException.class,
+                () -> DataTransferUtil.exportCsv(mockResultSet, newAlwaysFailingWriter(writeFailure)));
+
+        assertTrue(e.getCause() == writeFailure);
+    }
+
+    // A failure reading the ResultSet must not be replaced by the writer failure raised while recycling the CSV writer.
+    @Test
+    public void testExportCsv_ResultSetFailureIsNotMaskedByWriterFailureWhileRecycling() throws Exception {
+        final SQLException readFailure = new SQLException("read failed");
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("value");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenThrow(readFailure);
+
+        final SQLException e = assertThrows(SQLException.class,
+                () -> DataTransferUtil.exportCsv(mockResultSet, newAlwaysFailingWriter(new IOException("disk full"))));
+
+        assertTrue(e == readFailure);
+        assertEquals(1, e.getSuppressed().length);
+    }
+
+    // Guard (passes before and after the fix): a destination that throws the same unchecked exception instance on every
+    // write makes recycling fail with the primary failure itself; it must be rethrown as is, not turned into the
+    // IllegalArgumentException of a self-suppression.
+    @Test
+    public void testExportCsv_WriterRethrowingSameRuntimeExceptionWhileRecyclingIsNotSelfSuppressed() throws Exception {
+        final IllegalStateException writeFailure = new IllegalStateException("closed");
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("value");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn("x");
+
+        final Writer writer = new Writer() {
+            @Override
+            public void write(final char[] cbuf, final int off, final int len) {
+                throw writeFailure;
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+
+        final IllegalStateException e = assertThrows(IllegalStateException.class, () -> DataTransferUtil.exportCsv(mockResultSet, writer));
+
+        assertTrue(e == writeFailure);
+        assertEquals(0, e.getSuppressed().length);
+    }
+
     @Test
     public void testExportCsv_FileOpenDoesNotUseRacyExistsThenCreateCheck() throws Exception {
         final File actualOutput = File.createTempFile("data-transfer-race", ".csv");

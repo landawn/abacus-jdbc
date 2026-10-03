@@ -18,6 +18,7 @@ package com.landawn.abacus.jdbc.dao;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +40,6 @@ import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalBoolean;
@@ -781,7 +781,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         // De-duplicated (like count(Collection)) so the result doesn't depend on how duplicate ids
         // happen to fall across chunk boundaries: duplicates inside one chunk collapse via the IN
         // list, but duplicates straddling chunks would return the same entity twice.
-        final List<ID> idList = ids instanceof Set ? new ArrayList<>(ids) : N.distinct(ids);
+        final List<ID> idList = distinctIds(ids, idPropNameList, isEntity);
 
         if (firstId != null && !isEntityId && idPropNameList.size() > 1) {
             // A null composite (Map/entity) id matches nothing and is skipped by the condition, but a chunk holding
@@ -890,7 +890,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
 
         N.checkArgument(idPropNameList.size() > 1 || !(isEntity || isMap || isEntityId), "Input 'ids' can not be EntityIds/Maps or entities for single id");
 
-        final List<ID> idList = ids instanceof Set ? new ArrayList<>(ids) : N.distinct(ids);
+        final List<ID> idList = distinctIds(ids, idPropNameList, isEntity);
 
         if (firstId != null && !isEntityId && idPropNameList.size() > 1) {
             // Same as batchGet: drop the null composite id so a trailing chunk holding only it isn't rejected as "all null".
@@ -906,6 +906,32 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         }
 
         return Math.toIntExact(result);
+    }
+
+    // De-duplicates the ids for batchGet/count(Collection). Composite ids given as beans/entities usually don't override
+    // equals() (or compare non-id properties too), so equal ids straddling a chunk boundary weren't collapsed and the same
+    // row was returned/counted twice; they are compared by their id property values instead (by content, so a byte[]
+    // component still matches as the id class's own equals would). Elements that are null or not beans are passed through
+    // unchanged for DaoUtil.idsToCondition to skip or reject.
+    private static <ID> List<ID> distinctIds(final Collection<? extends ID> ids, final List<String> idPropNameList, final boolean isEntity) {
+        if (!isEntity || idPropNameList.size() <= 1) {
+            return ids instanceof Set ? new ArrayList<>(ids) : N.distinct(ids);
+        }
+
+        return N.distinctBy(ids, id -> {
+            if (id == null || !Beans.isBeanClass(id.getClass())) {
+                return id;
+            }
+
+            final BeanInfo idInfo = ParserUtil.getBeanInfo(id.getClass());
+            final Object[] idPropValues = new Object[idPropNameList.size()];
+
+            for (int i = 0; i < idPropValues.length; i++) {
+                idPropValues[i] = idInfo.getPropValue(id, idPropNameList.get(i));
+            }
+
+            return new DaoUtil.IdValuesKey(idPropValues);
+        });
     }
 
     /**
@@ -1169,7 +1195,18 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
 
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
-        final Map<ID, List<T>> idEntityMap = Stream.of(entities).groupTo(idExtractorFunc, Fn.identity());
+        // An entity whose single id is null matches no row (as a composite id with a null component doesn't), so it is
+        // left unrefreshed; grouping it under a null key used to fail the whole batch with a NullPointerException.
+        final Map<ID, List<T>> idEntityMap = new HashMap<>();
+
+        for (final T entity : entities) {
+            final ID id = idExtractorFunc.apply(entity);
+
+            if (id != null) {
+                idEntityMap.computeIfAbsent(id, k -> new ArrayList<>()).add(entity);
+            }
+        }
+
         final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
         final List<T> dbEntities = batchGet(idEntityMap.keySet(), selectPropNames, batchSize);

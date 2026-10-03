@@ -2,15 +2,19 @@ package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
 
@@ -29,6 +33,9 @@ import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.query.SqlDialect;
+import com.landawn.abacus.util.N;
+import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -300,6 +307,47 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         assertEquals(2, users2.get(0).getOrders().size());
     }
 
+    // Regression: JoinInfo had join SQL plans only for the PSC/PAC/PLC Dsl instances, so every join operation of
+    // a DAO created with a custom SqlDialect (its own Dsl instance) failed with "Not supported SQL builder DSL".
+    @Test
+    public void testJoinEntitiesOfDaoCreatedWithCustomSqlDialect() throws Exception {
+        final JoinUser a = seedUser("DialectA", 1.0, 2.0);
+        final JoinUser b = seedUser("DialectB", 3.0);
+        final JoinUserDao dialectDao = JdbcUtil.createDao(JoinUserDao.class, ds, SqlDialect.builder().productInfo(SqlDialect.ProductInfo.of("H2", "2.5")).build());
+        final JoinUserDao snakeCaseDialectDao = JdbcUtil.createDao(JoinUserDao.class, ds,
+                SqlDialect.builder().namingPolicy(NamingPolicy.SNAKE_CASE).sqlPolicy(SqlDialect.SqlPolicy.PARAMETERIZED_SQL).productInfo(SqlDialect.ProductInfo.of("H2", "2.5")).build());
+
+        final JoinUser loadedBySnakeCaseDao = snakeCaseDialectDao.getOrNull(a.getId());
+        snakeCaseDialectDao.loadJoinEntities(loadedBySnakeCaseDao, "orders");
+        assertEquals(2, loadedBySnakeCaseDao.getOrders().size());
+
+        final JoinUser single = dialectDao.getOrNull(a.getId());
+        dialectDao.loadJoinEntities(single, "orders");
+        assertEquals(2, single.getOrders().size());
+
+        final List<JoinUser> users = new ArrayList<>(List.of(dialectDao.getOrNull(a.getId()), dialectDao.getOrNull(b.getId())));
+        dialectDao.loadJoinEntities(users, "orders");
+        assertEquals(2, users.get(0).getOrders().size());
+        assertEquals(1, users.get(1).getOrders().size());
+
+        assertEquals(1, dialectDao.deleteJoinEntities(users.get(1), "orders"));
+        assertEquals(0, orderCountForUser(b.getId()));
+        assertEquals(2, orderCountForUser(a.getId()));
+
+        // Checked twin, same custom dialect.
+        final CheckedJoinUserDao checkedDialectDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds,
+                SqlDialect.builder().productInfo(SqlDialect.ProductInfo.of("H2", "2.5")).build());
+        final JoinUser loadedByCheckedDao = checkedDialectDao.getOrNull(a.getId());
+        checkedDialectDao.loadJoinEntities(loadedByCheckedDao, "orders");
+        assertEquals(2, loadedByCheckedDao.getOrders().size());
+
+        // Multi-entity delete goes through the batch delete plan.
+        final JoinUser c = seedUser("DialectC", 4.0);
+        assertEquals(3, dialectDao.deleteJoinEntities(List.of(users.get(0), dialectDao.getOrNull(c.getId())), "orders"));
+        assertEquals(0, orderCountForUser(a.getId()));
+        assertEquals(0, orderCountForUser(c.getId()));
+    }
+
     @Test
     public void testLoadMapJoinWithNoMatchReplacesStaleValue() {
         final JoinUser persisted = seedUser("NoProfile");
@@ -412,6 +460,110 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         assertEquals(2, usersExec.get(0).getOrders().size());
     }
 
+    /** Runs the first task on its own thread after a short delay and rejects every later task, like a saturated pool. */
+    private static final class RejectAfterFirstExecutor implements Executor {
+        private final AtomicInteger submitted = new AtomicInteger();
+        private final List<Thread> threads = new ArrayList<>();
+
+        @Override
+        public void execute(final Runnable task) {
+            if (submitted.getAndIncrement() > 0) {
+                throw new RejectedExecutionException("saturated");
+            }
+
+            final Thread thread = new Thread(() -> {
+                N.sleepUninterruptibly(200);
+                task.run();
+            });
+
+            threads.add(thread);
+            thread.start();
+        }
+
+        void awaitTasks() throws InterruptedException {
+            for (final Thread thread : threads) {
+                thread.join();
+            }
+        }
+    }
+
+    private interface ParallelJoinCall {
+        void apply(JoinUser user, Executor executor) throws Exception;
+    }
+
+    // A rejected submission must not be reported while an already-submitted load task is still running (and still
+    // writing the entity); that task's own failure must not be lost either.
+    @Test
+    public void testParallelLoad_ExecutorRejection_AwaitsSubmittedTasksBeforeThrowing() throws Exception {
+        final JoinUser seeded = seedUser("LoadRejected", 1.0, 2.0);
+        final CheckedJoinUserDao checkedDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds);
+        final List<String> propNames = List.of("orders", "backupOrders");
+        final Map<String, ParallelJoinCall> calls = new LinkedHashMap<>();
+        calls.put("unchecked loadJoinEntities(entity)", (user, executor) -> userDao.loadJoinEntities(user, propNames, executor));
+        calls.put("unchecked loadJoinEntities(entities)", (user, executor) -> userDao.loadJoinEntities(List.of(user), propNames, executor));
+        calls.put("unchecked loadJoinEntitiesIfAbsent(entity)", (user, executor) -> userDao.loadJoinEntitiesIfAbsent(user, propNames, executor));
+        calls.put("unchecked loadJoinEntitiesIfAbsent(entities)",
+                (user, executor) -> userDao.loadJoinEntitiesIfAbsent(List.of(user), propNames, executor));
+        calls.put("checked loadJoinEntities(entity)", (user, executor) -> checkedDao.loadJoinEntities(user, propNames, executor));
+        calls.put("checked loadJoinEntities(entities)", (user, executor) -> checkedDao.loadJoinEntities(List.of(user), propNames, executor));
+        calls.put("checked loadJoinEntitiesIfAbsent(entity)", (user, executor) -> checkedDao.loadJoinEntitiesIfAbsent(user, propNames, executor));
+        calls.put("checked loadJoinEntitiesIfAbsent(entities)",
+                (user, executor) -> checkedDao.loadJoinEntitiesIfAbsent(List.of(user), propNames, executor));
+
+        for (final Map.Entry<String, ParallelJoinCall> call : calls.entrySet()) {
+            final JoinUser user = userDao.getOrNull(seeded.getId());
+            final RejectAfterFirstExecutor executor = new RejectAfterFirstExecutor();
+
+            try {
+                assertThrows(RejectedExecutionException.class, () -> call.getValue().apply(user, executor), call.getKey());
+                assertNotNull(user.getOrders(), call.getKey());
+                assertEquals(2, user.getOrders().size(), call.getKey());
+            } finally {
+                executor.awaitTasks();
+            }
+        }
+
+        final RejectAfterFirstExecutor executor = new RejectAfterFirstExecutor();
+
+        try {
+            final RejectedExecutionException rejected = assertThrows(RejectedExecutionException.class,
+                    () -> userDao.loadJoinEntities(userDao.getOrNull(seeded.getId()), List.of("noSuchJoinProp", "orders"), executor));
+            assertEquals(1, rejected.getSuppressed().length);
+            assertTrue(rejected.getSuppressed()[0] instanceof IllegalArgumentException, String.valueOf(rejected.getSuppressed()[0]));
+        } finally {
+            executor.awaitTasks();
+        }
+    }
+
+    // BUG FIX: the wait for already-submitted tasks must survive an interrupt of the calling thread. getAsResult() returned
+    // at once when interrupted (and restored the flag, so every later wait returned at once too), so the rejection escaped
+    // while the submitted load was still running. The caller's interrupt status must still be set afterwards.
+    @Test
+    public void testParallelLoad_ExecutorRejection_InterruptedCallerStillAwaitsSubmittedTasks() throws Exception {
+        final JoinUser seeded = seedUser("LoadRejectedInterrupted", 1.0, 2.0);
+        final CheckedJoinUserDao checkedDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds);
+        final List<String> propNames = List.of("orders", "backupOrders");
+        final Map<String, ParallelJoinCall> calls = new LinkedHashMap<>();
+        calls.put("unchecked loadJoinEntities(entity)", (user, executor) -> userDao.loadJoinEntities(user, propNames, executor));
+        calls.put("checked loadJoinEntities(entities)", (user, executor) -> checkedDao.loadJoinEntities(List.of(user), propNames, executor));
+
+        for (final Map.Entry<String, ParallelJoinCall> call : calls.entrySet()) {
+            final JoinUser user = userDao.getOrNull(seeded.getId());
+            final RejectAfterFirstExecutor executor = new RejectAfterFirstExecutor();
+
+            try {
+                Thread.currentThread().interrupt();
+                assertThrows(RejectedExecutionException.class, () -> call.getValue().apply(user, executor), call.getKey());
+                assertTrue(Thread.interrupted(), call.getKey() + ": the interrupt status must be restored");
+                assertNotNull(user.getOrders(), call.getKey() + ": the submitted load must have finished");
+                assertEquals(2, user.getOrders().size(), call.getKey());
+            } finally {
+                Thread.interrupted(); // never leak the interrupt into later tests
+                executor.awaitTasks();
+            }
+        }
+    }
+
     // findFirst / findOnlyOne / list with a join-entity class (single, collection, includeAll overloads).
     @Test
     public void testFindAndList_WithJoinClass() {
@@ -516,6 +668,31 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         final JoinUser u5 = seedUser("DelExec", 1.0);
         userDao.deleteJoinEntities(u5, List.of("orders"), DIRECT_EXECUTOR);
         assertEquals(0, orderCountForUser(u5.getId()));
+    }
+
+    // A rejected submission must not be reported while an already-submitted DELETE task is still running.
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testParallelDelete_ExecutorRejection_AwaitsSubmittedTasksBeforeThrowing() throws Exception {
+        final CheckedJoinUserDao checkedDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds);
+        final List<String> propNames = List.of("orders", "backupOrders");
+        final Map<String, ParallelJoinCall> calls = new LinkedHashMap<>();
+        calls.put("unchecked deleteJoinEntities(entity)", (user, executor) -> userDao.deleteJoinEntities(user, propNames, executor));
+        calls.put("unchecked deleteJoinEntities(entities)", (user, executor) -> userDao.deleteJoinEntities(List.of(user), propNames, executor));
+        calls.put("checked deleteJoinEntities(entity)", (user, executor) -> checkedDao.deleteJoinEntities(user, propNames, executor));
+        calls.put("checked deleteJoinEntities(entities)", (user, executor) -> checkedDao.deleteJoinEntities(List.of(user), propNames, executor));
+
+        for (final Map.Entry<String, ParallelJoinCall> call : calls.entrySet()) {
+            final JoinUser user = seedUser("DelRejected", 1.0, 2.0);
+            final RejectAfterFirstExecutor executor = new RejectAfterFirstExecutor();
+
+            try {
+                assertThrows(RejectedExecutionException.class, () -> call.getValue().apply(user, executor), call.getKey());
+                assertEquals(0, orderCountForUser(user.getId()), call.getKey());
+            } finally {
+                executor.awaitTasks();
+            }
+        }
     }
 
     // deleteJoinEntities over a collection of entities: by class, by prop-name collection, deprecated overloads.

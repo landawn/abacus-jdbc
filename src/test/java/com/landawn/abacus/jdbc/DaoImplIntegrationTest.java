@@ -645,6 +645,56 @@ public class DaoImplIntegrationTest extends TestBase {
         return row;
     }
 
+    // The entity class itself declared as the (composite) ID type.
+    public interface EntityAsCompositeIdDao extends CrudDao<CompositeKeyRow, CompositeKeyRow, EntityAsCompositeIdDao> {
+    }
+
+    public interface UncheckedEntityAsCompositeIdDao extends UncheckedCrudDao<CompositeKeyRow, CompositeKeyRow, UncheckedEntityAsCompositeIdDao> {
+    }
+
+    // update(Map, id) matched a bean/record composite id on EVERY property of the id object (Filters.allEqual(id)): with the
+    // entity class as the ID type its non-id property (name) joined the WHERE clause, so the row was missed. Like
+    // getOrNull/exists/deleteById and batchGet, only the id properties may locate the row.
+    @Test
+    public void testUpdateByCompositeBeanIdMatchesOnlyIdProperties() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS composite_key_row (tenant_id BIGINT, row_id BIGINT, name VARCHAR(64), PRIMARY KEY (tenant_id, row_id))");
+            st.execute("DELETE FROM composite_key_row");
+            st.execute("INSERT INTO composite_key_row VALUES (1, 2, 'current')");
+        }
+
+        try {
+            final EntityAsCompositeIdDao entityAsIdDao = JdbcUtil.createDao(EntityAsCompositeIdDao.class, ds);
+            final CompositeKeyRow id = newCompositeKeyRow(1, 2, null);
+
+            assertTrue(entityAsIdDao.exists(id));
+            assertEquals(1, entityAsIdDao.update(Map.of("name", "renamed"), id));
+            assertEquals("renamed", entityAsIdDao.getOrNull(id).getName());
+
+            // A stale non-id value on the id object must not change which row is updated.
+            assertEquals(1, entityAsIdDao.update("name", "renamed again", newCompositeKeyRow(1, 2, "stale")));
+            assertEquals("renamed again", entityAsIdDao.getOrNull(id).getName());
+            assertEquals(0, entityAsIdDao.update(Map.of("name", "missing"), newCompositeKeyRow(2, 2, null)));
+
+            final UncheckedEntityAsCompositeIdDao uncheckedEntityAsIdDao = JdbcUtil.createDao(UncheckedEntityAsCompositeIdDao.class, ds);
+            assertEquals(1, uncheckedEntityAsIdDao.update(Map.of("name", "unchecked"), newCompositeKeyRow(1, 2, "stale")));
+            assertEquals("unchecked", uncheckedEntityAsIdDao.getOrNull(id).getName());
+
+            // A dedicated ID class (id properties only) keeps working.
+            final GeneratedKeyRowId keyId = new GeneratedKeyRowId();
+            keyId.setTenantId(1L);
+            keyId.setRowId(2L);
+            assertEquals(1, JdbcUtil.createDao(CompositeRefreshDao.class, ds).update(Map.of("name", "by id class"), keyId));
+            assertEquals("by id class", entityAsIdDao.getOrNull(id).getName());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS composite_key_row");
+            }
+        }
+    }
+
     // save/batchSave on a plain Dao whose entity has a composite @Id used to fail with a NullPointerException: with no
     // declared ID type, the composite ID was built as an instance of the (null) ID class.
     @Test
@@ -923,6 +973,100 @@ public class DaoImplIntegrationTest extends TestBase {
         // Still exactly one "Dup" row: the three duplicate-key entities all updated the same existing row.
         assertEquals(1, dao.count(Filters.eq("firstName", "Dup")));
         assertEquals(existingId, dao.list(Filters.eq("firstName", "Dup")).get(0).getId());
+    }
+
+    // Regression: batchUpsert inserts the new entities and then updates the matched ones in one transaction, and
+    // batchInsert writes the generated IDs onto the new entities immediately. When the update then failed, the rollback
+    // discarded the inserted rows but those entities kept the IDs of rows that no longer existed (so a retry inserted
+    // them with those IDs as explicit values). Covers CrudDao and the UncheckedCrudDao delegation.
+    @Test
+    public void testBatchUpsert_FailedUpdateDoesNotLeaveRolledBackIdsOnInsertedEntities() throws SQLException {
+        final Long existingId = dao.insert(newUser("UpsertKeep", "Before", 40));
+        final String tooLongLastName = "x".repeat(65); // last_name is VARCHAR(64)
+
+        final UserAccount fresh = newUser("UpsertFresh", "New", 41);
+        assertThrows(SQLException.class, () -> dao.batchUpsert(List.of(fresh, newUser("UpsertKeep", tooLongLastName, 42)), List.of("firstName"), 10));
+
+        assertEquals(null, fresh.getId(), "an ID of a rolled-back row must not be written back");
+        assertEquals(0, dao.count(Filters.eq("firstName", "UpsertFresh")));
+        assertEquals("Before", dao.getOrNull(existingId).getLastName());
+
+        final UncheckedUserAccountCrudDao uncheckedCrudDao = JdbcUtil.createDao(UncheckedUserAccountCrudDao.class, ds);
+        final UserAccount uncheckedFresh = newUser("UpsertFresh", "New", 43);
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                () -> uncheckedCrudDao.batchUpsert(List.of(uncheckedFresh, newUser("UpsertKeep", tooLongLastName, 44)), List.of("firstName"), 10));
+
+        assertEquals(null, uncheckedFresh.getId(), "an ID of a rolled-back row must not be written back");
+        assertEquals(0, dao.count(Filters.eq("firstName", "UpsertFresh")));
+
+        // The restored entity can be upserted again once the conflicting update is fixed.
+        final List<UserAccount> result = dao.batchUpsert(List.of(fresh, newUser("UpsertKeep", "After", 45)), List.of("firstName"), 10);
+        assertEquals(2, result.size());
+        assertNotNull(fresh.getId());
+        assertEquals("UpsertFresh", dao.getOrNull(fresh.getId()).getFirstName());
+        assertEquals("After", dao.getOrNull(existingId).getLastName());
+    }
+
+    // Joined to the caller's transaction, the failed upsert marks that transaction rollback-only, so the inserted rows are
+    // discarded with it and the IDs are restored as well.
+    @Test
+    public void testBatchUpsert_FailureInsideOuterTransactionRestoresInsertedIds() throws SQLException {
+        dao.insert(newUser("UpsertKeep", "Before", 40));
+        final UserAccount fresh = newUser("UpsertFresh", "New", 41);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+
+        try {
+            assertThrows(SQLException.class, () -> dao.batchUpsert(List.of(fresh, newUser("UpsertKeep", "x".repeat(65), 42)), List.of("firstName"), 10));
+            assertEquals(null, fresh.getId(), "an ID of a row that will be rolled back must not be written back");
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(0, dao.count(Filters.eq("firstName", "UpsertFresh")));
+    }
+
+    // SqlTransaction.commit() rethrows an unchecked failure from resetting/releasing the connection after the rows were
+    // committed; the generated IDs of those committed rows must then be kept, not restored. (Also passes on pass9-baseline,
+    // which never restored IDs.)
+    @Test
+    public void testBatchUpsert_ConnectionCleanupFailureAfterCommitKeepsInsertedIds() throws SQLException {
+        final Long existingId = dao.insert(newUser("UpsertKeep", "Before", 40));
+        final java.util.concurrent.atomic.AtomicBoolean failNextAutoCommitReset = new java.util.concurrent.atomic.AtomicBoolean();
+        final DataSource cleanupFailingDs = org.mockito.Mockito.mock(DataSource.class, org.mockito.AdditionalAnswers.delegatesTo(ds));
+
+        org.mockito.Mockito.doAnswer(dsInvocation -> {
+            final Connection conn = ds.getConnection();
+            final Connection failingConn = org.mockito.Mockito.mock(Connection.class, org.mockito.AdditionalAnswers.delegatesTo(conn));
+
+            org.mockito.Mockito.doAnswer(invocation -> {
+                conn.commit();
+                failNextAutoCommitReset.set(true);
+                return null;
+            }).when(failingConn).commit();
+
+            org.mockito.Mockito.doAnswer(invocation -> {
+                final boolean autoCommit = invocation.getArgument(0);
+
+                if (autoCommit && failNextAutoCommitReset.getAndSet(false)) {
+                    throw new IllegalStateException("connection cleanup failed after commit");
+                }
+
+                conn.setAutoCommit(autoCommit);
+                return null;
+            }).when(failingConn).setAutoCommit(org.mockito.ArgumentMatchers.anyBoolean());
+
+            return failingConn;
+        }).when(cleanupFailingDs).getConnection();
+
+        final UserAccountDao cleanupFailingDao = JdbcUtil.createDao(UserAccountDao.class, cleanupFailingDs);
+        final UserAccount fresh = newUser("UpsertFresh", "New", 41);
+
+        assertThrows(IllegalStateException.class,
+                () -> cleanupFailingDao.batchUpsert(List.of(fresh, newUser("UpsertKeep", "After", 42)), List.of("firstName"), 10));
+
+        assertNotNull(fresh.getId(), "the rows were committed, so the generated ID must be kept");
+        assertEquals("UpsertFresh", dao.getOrNull(fresh.getId()).getFirstName());
+        assertEquals("After", dao.getOrNull(existingId).getLastName());
     }
 
     // getOrNull with an unknown id returns null and exists is false (no-row branch).
@@ -1215,6 +1359,60 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(0, dao.count(Filters.eq("lastName", "Mut")));
     }
 
+    // Every property is @ReadOnly (e.g. an entity mapped to a database view), so the entity has no insertable property.
+    @Table("user_account")
+    public static class UserAccountView {
+        @Id
+        @ReadOnly
+        private Long id;
+        @ReadOnly
+        private String firstName;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getFirstName() {
+            return firstName;
+        }
+
+        public void setFirstName(final String firstName) {
+            this.firstName = firstName;
+        }
+    }
+
+    public interface UserAccountViewDao extends com.landawn.abacus.jdbc.dao.ReadOnlyDao<UserAccountView, UserAccountViewDao> {
+    }
+
+    public interface UserAccountViewCrudDao extends com.landawn.abacus.jdbc.dao.ReadOnlyCrudDao<UserAccountView, Long, UserAccountViewCrudDao> {
+    }
+
+    public interface UncheckedUserAccountViewCrudDao
+            extends com.landawn.abacus.jdbc.dao.UncheckedReadOnlyCrudDao<UserAccountView, Long, UncheckedUserAccountViewCrudDao> {
+    }
+
+    // A read-only DAO never inserts: createDao used to fail with "No insertable properties remain after exclusions are applied"
+    // while eagerly building the unused INSERT statement for such an entity.
+    @Test
+    public void testReadOnlyDaoForEntityWithoutInsertableProperty() throws SQLException {
+        final Long id = dao.insert(newUser("View", "Only", 30));
+
+        final UserAccountViewDao viewDao = JdbcUtil.createDao(UserAccountViewDao.class, ds);
+        assertEquals("View", viewDao.findOnlyOne(Filters.eq("id", id)).get().getFirstName());
+
+        final UserAccountViewCrudDao viewCrudDao = JdbcUtil.createDao(UserAccountViewCrudDao.class, ds);
+        assertEquals("View", viewCrudDao.get(id).get().getFirstName());
+        assertTrue(viewCrudDao.exists(id));
+
+        final UncheckedUserAccountViewCrudDao uncheckedViewCrudDao = JdbcUtil.createDao(UncheckedUserAccountViewCrudDao.class, ds);
+        assertEquals("View", uncheckedViewCrudDao.get(id).get().getFirstName());
+        assertEquals(1, uncheckedViewCrudDao.batchGet(List.of(id)).size());
+    }
+
     // Custom @Query SELECT/COUNT/DELETE methods with scalar, entity-list, and int return types.
     public interface CustomQueryDao extends CrudDao<UserAccount, Long, CustomQueryDao> {
         @Query("SELECT first_name FROM user_account WHERE id = ?")
@@ -1241,6 +1439,44 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(2, cqDao.countByLastName("Query"));
         assertEquals(2, cqDao.deleteByLastName("Query"));
         assertEquals(0, cqDao.countByLastName("Query"));
+    }
+
+    public interface ThrowsExceptionQueryDao extends CrudDao<UserAccount, Long, ThrowsExceptionQueryDao> {
+        @Query("SELECT COUNT(*) FROM user_account WHERE last_name = ?")
+        int countByLastName(String lastName) throws Exception;
+
+        @Query("SELECT no_such_column FROM user_account")
+        List<String> selectMissingColumn() throws Exception;
+
+        @Query("SELECT no_such_column FROM user_account")
+        List<String> selectMissingColumnThrowsThrowable() throws Throwable;
+
+        // Guard (same behavior before and after the fix): only 'throws UncheckedSQLException' is declared, so a
+        // SQLException is still wrapped.
+        @Query("SELECT no_such_column FROM user_account")
+        List<String> selectMissingColumnUnchecked() throws com.landawn.abacus.exception.UncheckedSQLException;
+    }
+
+    // Guard (rejected before and after the fix): declaring both is still contradictory.
+    public interface ThrowsBothQueryDao extends CrudDao<UserAccount, Long, ThrowsBothQueryDao> {
+        @Query("SELECT COUNT(*) FROM user_account")
+        int countAll() throws SQLException, com.landawn.abacus.exception.UncheckedSQLException;
+    }
+
+    // 'throws Exception' covers SQLException, but it was also counted as 'throws UncheckedSQLException', so createDao
+    // rejected the method as declaring both.
+    @Test
+    public void testCustomQueryMethodDeclaringThrowsException() throws Throwable {
+        final ThrowsExceptionQueryDao teDao = JdbcUtil.createDao(ThrowsExceptionQueryDao.class, ds);
+        dao.insert(newUser("Te", "Throws", 40));
+
+        assertEquals(1, teDao.countByLastName("Throws"));
+        // The declared 'throws Exception' (or 'throws Throwable') covers the checked SQLException, so it propagates unwrapped.
+        assertThrows(SQLException.class, teDao::selectMissingColumn);
+        assertThrows(SQLException.class, teDao::selectMissingColumnThrowsThrowable);
+        assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, teDao::selectMissingColumnUnchecked);
+
+        assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao(ThrowsBothQueryDao.class, ds));
     }
 
     // queryFor* accessors for char/date/time/timestamp/byte[] against the fixed type_probe row,
@@ -1456,6 +1692,54 @@ public class DaoImplIntegrationTest extends TestBase {
 
         final Dataset dataset = aqDao.datasetByLastName("Ds");
         assertEquals(2, dataset.size());
+    }
+
+    // Collection results are created by Suppliers.ofCollection/N.newCollection, which return the plain mutable
+    // counterpart for an Immutable* type (ArrayList for ImmutableList, HashSet for ImmutableSet, TreeSet for
+    // ImmutableSortedSet); returned as-is, every call of these methods failed with ClassCastException.
+    public interface ImmutableCollectionReturnDao extends CrudDao<UserAccount, Long, ImmutableCollectionReturnDao> {
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        ImmutableList<UserAccount> listImmutableByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query("SELECT first_name FROM user_account WHERE last_name = :ln ORDER BY id")
+        com.landawn.abacus.util.ImmutableSet<String> firstNameSetByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query("SELECT first_name FROM user_account WHERE last_name = :ln ORDER BY id")
+        com.landawn.abacus.util.ImmutableSortedSet<String> sortedFirstNamesByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln)
+                throws SQLException;
+
+        // An ImmutableNavigableSet is also an ImmutableSortedSet: it must not be wrapped as a plain ImmutableSortedSet.
+        @Query("SELECT first_name FROM user_account WHERE last_name = :ln ORDER BY id")
+        com.landawn.abacus.util.ImmutableNavigableSet<String> navigableFirstNamesByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln)
+                throws SQLException;
+
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MergedById
+        ImmutableList<UserAccount> listMergedImmutableByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    @Test
+    public void testCustomSelect_ImmutableCollectionReturnTypesAreWrapped() throws SQLException {
+        final ImmutableCollectionReturnDao immutableDao = JdbcUtil.createDao(ImmutableCollectionReturnDao.class, ds);
+        dao.insert(newUser("Imm2", "Imm", 20));
+        dao.insert(newUser("Imm1", "Imm", 10));
+
+        final ImmutableList<UserAccount> list = immutableDao.listImmutableByLastName("Imm");
+        assertEquals(List.of("Imm2", "Imm1"), list.stream().map(UserAccount::getFirstName).toList());
+
+        final com.landawn.abacus.util.ImmutableSet<String> nameSet = immutableDao.firstNameSetByLastName("Imm");
+        assertEquals(2, nameSet.size());
+        assertTrue(nameSet.containsAll(List.of("Imm1", "Imm2")));
+
+        final com.landawn.abacus.util.ImmutableSortedSet<String> sortedNames = immutableDao.sortedFirstNamesByLastName("Imm");
+        assertEquals(List.of("Imm1", "Imm2"), new ArrayList<>(sortedNames));
+
+        final com.landawn.abacus.util.ImmutableNavigableSet<String> navigableNames = immutableDao.navigableFirstNamesByLastName("Imm");
+        assertEquals(List.of("Imm1", "Imm2"), new ArrayList<>(navigableNames));
+        assertEquals("Imm1", navigableNames.lower("Imm2"));
+
+        final ImmutableList<UserAccount> merged = immutableDao.listMergedImmutableByLastName("Imm");
+        assertEquals(List.of("Imm2", "Imm1"), merged.stream().map(UserAccount::getFirstName).toList());
     }
 
     @Test
@@ -2200,6 +2484,116 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals("J1", cachedFirst.get().getFirstName());
     }
 
+    @com.landawn.abacus.jdbc.annotation.Cache(capacity = 100, evictDelayMillis = 60000)
+    @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, serialization = com.landawn.abacus.jdbc.annotation.CacheSerialization.JSON, filter = {
+            "findFirst", "get", "query" })
+    public interface JsonCachedBuiltInUserDao extends NonUpdateCrudDao<UserAccount, Long, JsonCachedBuiltInUserDao> {
+        // Only a default method can return a java.util.Optional (abstract DAO methods reject it); "get" puts it under the cache.
+        default java.util.Optional<UserAccount> getAsJdkOptional(final long id) throws SQLException {
+            return get(id).toJdkOptional();
+        }
+    }
+
+    // Regression: built-in methods declare value holders over type variables (Optional<T> get(ID), Optional<T>
+    // findFirst(Condition), <V> Nullable<V> queryForSingleValue(...)). The JSON cache copy deserialized them through
+    // that unresolved declared type, so a cache hit held the entity's JSON String instead of the loaded entity.
+    @Test
+    public void testCachedQuery_JsonSerialization_BuiltInValueHoldersKeepValueType() throws SQLException {
+        final JsonCachedBuiltInUserDao cachedDao = JdbcUtil.createDao(JsonCachedBuiltInUserDao.class, ds);
+        final long id = dao.insert(newUser("JB1", "JsonBuiltIn", 10));
+
+        cachedDao.get(id);
+        final Optional<UserAccount> cachedById = cachedDao.get(id);
+        assertEquals(UserAccount.class, ((Optional<?>) cachedById).get().getClass());
+        assertEquals("JB1", cachedById.get().getFirstName());
+
+        cachedDao.findFirst(Filters.eq("lastName", "JsonBuiltIn"));
+        final Optional<UserAccount> cachedFirst = cachedDao.findFirst(Filters.eq("lastName", "JsonBuiltIn"));
+        assertEquals(UserAccount.class, ((Optional<?>) cachedFirst).get().getClass());
+        assertEquals(id, cachedFirst.get().getId());
+
+        cachedDao.queryForSingleValue("id", Filters.eq("lastName", "JsonBuiltIn"), Long.class);
+        final Nullable<Long> cachedValue = cachedDao.queryForSingleValue("id", Filters.eq("lastName", "JsonBuiltIn"), Long.class);
+        assertEquals(Long.class, ((Nullable<?>) cachedValue).get().getClass());
+        assertEquals(id, cachedValue.get().longValue());
+
+        cachedDao.queryForSingleValue("firstName", Filters.eq("lastName", "JsonBuiltIn"), String.class);
+        assertEquals("JB1", cachedDao.queryForSingleValue("firstName", Filters.eq("lastName", "JsonBuiltIn"), String.class).get());
+    }
+
+    // A row whose value is SQL NULL is a present null, distinct from no row at all; the cached copy must keep that.
+    @Test
+    public void testCachedQuery_JsonSerialization_NullableKeepsPresentNull() throws SQLException {
+        final JsonCachedBuiltInUserDao cachedDao = JdbcUtil.createDao(JsonCachedBuiltInUserDao.class, ds);
+        dao.insert(newUser(null, "JsonBuiltInNull", 11));
+
+        cachedDao.queryForSingleValue("firstName", Filters.eq("lastName", "JsonBuiltInNull"), String.class);
+        final Nullable<String> cachedNullValue = cachedDao.queryForSingleValue("firstName", Filters.eq("lastName", "JsonBuiltInNull"), String.class);
+        assertTrue(cachedNullValue.isPresent());
+        assertTrue(cachedNullValue.isNull());
+    }
+
+    // Regression: a Dataset was JSON-copied without its column types, so a cache hit read its values back untyped
+    // (the BIGINT id column came back holding an Integer).
+    @Test
+    public void testCachedQuery_JsonSerialization_DatasetKeepsColumnValueTypes() throws SQLException {
+        final JsonCachedBuiltInUserDao cachedDao = JdbcUtil.createDao(JsonCachedBuiltInUserDao.class, ds);
+        dao.insert(newUser("JD1", "JsonDataset", 10));
+
+        final Dataset first = cachedDao.query(Filters.eq("lastName", "JsonDataset"));
+        final Dataset cached = cachedDao.query(Filters.eq("lastName", "JsonDataset"));
+
+        assertEquals(first.columnNames(), cached.columnNames());
+        assertEquals(1, cached.size());
+
+        for (final String columnName : first.columnNames()) {
+            final Object expected = first.getColumn(columnName).get(0);
+            final Object actual = cached.getColumn(columnName).get(0);
+
+            assertEquals(expected == null ? null : expected.getClass(), actual == null ? null : actual.getClass(), columnName);
+            assertEquals(expected, actual, columnName);
+        }
+    }
+
+    // The thread-local cache of openDaoCacheScope() copies with the method's serialization too (JSON here), so a hit
+    // inside the scope must also hold the loaded entity rather than its JSON String.
+    @Test
+    public void testCachedQuery_JsonSerialization_LocalThreadCacheKeepsValueType() throws SQLException {
+        final JsonCachedBuiltInUserDao cachedDao = JdbcUtil.createDao(JsonCachedBuiltInUserDao.class, ds);
+        final long id = dao.insert(newUser("JL1", "JsonLocal", 13));
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
+            cachedDao.get(id);
+            final Optional<UserAccount> cached = cachedDao.get(id);
+            assertEquals(UserAccount.class, ((Optional<?>) cached).get().getClass());
+            assertEquals("JL1", cached.get().getFirstName());
+        }
+    }
+
+    // Guard (passes before and after the value-holder fix): primitive optionals, empty holders and a declared
+    // java.util.Optional keep their values on a hit. Data changed through another DAO after the first calls proves the
+    // second calls are served from the cache.
+    @Test
+    public void testCachedQuery_JsonSerialization_PrimitiveEmptyAndJdkHoldersRoundTrip() throws SQLException {
+        final JsonCachedBuiltInUserDao cachedDao = JdbcUtil.createDao(JsonCachedBuiltInUserDao.class, ds);
+        final long id = dao.insert(newUser("JP1", "JsonPrimitive", 12));
+
+        assertEquals(12, cachedDao.queryForInt("age", Filters.eq("lastName", "JsonPrimitive")).get());
+        assertEquals(id, cachedDao.queryForLong("id", Filters.eq("lastName", "JsonPrimitive")).get());
+        assertEquals("JP1", cachedDao.getAsJdkOptional(id).get().getFirstName());
+        assertFalse(cachedDao.queryForString("firstName", Filters.eq("lastName", "JsonNoRowYet")).isPresent());
+
+        assertEquals(1, dao.update(Map.of("age", 99, "firstName", "JP2"), id));
+        dao.insert(newUser("JN1", "JsonNoRowYet", 1));
+
+        assertEquals(12, cachedDao.queryForInt("age", Filters.eq("lastName", "JsonPrimitive")).get());
+        assertEquals(id, cachedDao.queryForLong("id", Filters.eq("lastName", "JsonPrimitive")).get());
+        final java.util.Optional<UserAccount> cachedJdk = cachedDao.getAsJdkOptional(id);
+        assertEquals(UserAccount.class, ((java.util.Optional<?>) cachedJdk).get().getClass());
+        assertEquals("JP1", cachedJdk.get().getFirstName());
+        assertFalse(cachedDao.queryForString("firstName", Filters.eq("lastName", "JsonNoRowYet")).isPresent());
+    }
+
     // =====================================================================================
     // @MappedByKey (Map-returning query keyed by a column) and @MergedById (row merge by id).
     // =====================================================================================
@@ -2280,6 +2674,50 @@ public class DaoImplIntegrationTest extends TestBase {
         assertThrows(DuplicateResultException.class, mergedDao::uniqueMerged);
         // An explicit operation takes precedence over a uniqueness-style method name.
         assertEquals(firstId, mergedDao.queryForUniqueMergedFirst().get().getId());
+    }
+
+    public interface PrefixMappedObjectListDao extends CrudDao<UserAccount, Long, PrefixMappedObjectListDao> {
+        // Object is a supertype of the entity, so DAO creation accepts it, but the prefix-mapping row mapper requires a bean class
+        // and fails with IllegalArgumentException when it is built, i.e. after the query was prepared but before it executes.
+        @Query("SELECT id, first_name FROM user_account ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.PrefixFieldMapping("u=user")
+        List<Object> listWithPrefixMapping() throws SQLException;
+
+        // An abstract collection type has no result collection supplier: the lazy row stream is already created when
+        // the supplier lookup fails with IllegalArgumentException, and that stream is never consumed or closed.
+        @Query("SELECT id, first_name FROM user_account ORDER BY id")
+        AbstractUserBag<UserAccount> listIntoAbstractCollection() throws SQLException;
+    }
+
+    public abstract static class AbstractUserBag<E> extends java.util.AbstractCollection<E> {
+    }
+
+    // Regression: a custom @Query method whose result mapping failed before the query executed threw without closing
+    // the prepared query, so every call leaked its statement and its pooled connection.
+    @Test
+    public void testCustomQuery_ResultMappingSetupFailureReleasesConnection() throws SQLException {
+        final DataSource scratchDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:daoimpl_query_leak;DB_CLOSE_DELAY=-1", "sa", "");
+
+        try {
+            try (Connection conn = scratchDs.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("CREATE TABLE IF NOT EXISTS user_account (id BIGINT AUTO_INCREMENT PRIMARY KEY, first_name VARCHAR(64), "
+                        + "last_name VARCHAR(64), age INT, active BOOLEAN)");
+            }
+
+            final PrefixMappedObjectListDao prefixDao = JdbcUtil.createDao(PrefixMappedObjectListDao.class, scratchDs);
+            final com.zaxxer.hikari.HikariPoolMXBean pool = ((com.zaxxer.hikari.HikariDataSource) scratchDs).getHikariPoolMXBean();
+
+            for (int i = 0; i < 3; i++) {
+                assertThrows(IllegalArgumentException.class, prefixDao::listWithPrefixMapping);
+                assertEquals(0, pool.getActiveConnections(), "the prepared query's connection must be released after the failure");
+
+                assertThrows(IllegalArgumentException.class, prefixDao::listIntoAbstractCollection);
+                assertEquals(0, pool.getActiveConnections(), "the prepared query's connection must be released after the failure");
+            }
+        } finally {
+            ((com.zaxxer.hikari.HikariDataSource) scratchDs).close();
+        }
     }
 
     public interface CustomWriteCacheDao extends CrudDao<UserAccount, Long, CustomWriteCacheDao> {

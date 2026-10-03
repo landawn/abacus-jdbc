@@ -30,6 +30,7 @@ import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
+import com.landawn.abacus.jdbc.Transaction;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -405,9 +406,17 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         final List<T> entitiesToInsert = map.get(false);
 
         final List<T> result = new ArrayList<>(entities.size());
-        final SqlTransaction tran = (N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate))
+        final List<String> idPropNameList = QueryUtil.idPropNames(cls);
+        final boolean isInTransaction = (N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate))
                 || (N.notEmpty(entitiesToInsert) && entitiesToInsert.size() > batchSize)
-                || (N.notEmpty(entitiesToUpdate) && entitiesToUpdate.size() > batchSize) ? JdbcUtil.beginTransaction(dataSource()) : null;
+                || (N.notEmpty(entitiesToUpdate) && entitiesToUpdate.size() > batchSize);
+        // batchInsert writes the generated IDs back onto the inserted entities before this transaction commits. If the
+        // updates or the commit then fail, the rollback discards those rows, so the pre-insert IDs are put back: otherwise
+        // the entities keep IDs of rows that no longer exist, and a retry inserts them with those IDs as explicit values.
+        final Runnable insertedIdRestorer = isInTransaction && N.notEmpty(entitiesToInsert)
+                ? DaoUtil.captureIdValues(entitiesToInsert, idPropNameList, entityInfo)
+                : null;
+        final SqlTransaction tran = isInTransaction ? JdbcUtil.beginTransaction(dataSource()) : null;
         Throwable failure = null;
 
         try {
@@ -417,8 +426,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
 
             if (N.notEmpty(entitiesToUpdate)) {
                 final Set<String> ignoredPropNames = N.newHashSet(matchPropNames);
-
-                final List<String> idPropNameList = QueryUtil.idPropNames(cls);
 
                 if (N.notEmpty(idPropNameList)) {
                     ignoredPropNames.addAll(idPropNameList);
@@ -436,6 +443,16 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             }
         } catch (final Throwable e) { //NOSONAR
             failure = e;
+
+            // Not once the commit went through: commit() can still throw from the connection cleanup after it.
+            if (insertedIdRestorer != null && tran.status() != Transaction.Status.COMMITTED) {
+                try {
+                    insertedIdRestorer.run();
+                } catch (final RuntimeException | Error restoreFailure) {
+                    DaoUtil.addSuppressedIfDifferent(e, restoreFailure);
+                }
+            }
+
             throw e;
         } finally {
             if (tran != null) {

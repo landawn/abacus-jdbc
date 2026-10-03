@@ -47,15 +47,15 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
- * // Custom handler implementation
- * public class LoggingHandler implements Jdbc.Handler<UserDao> {
+ * // Custom handler implementation, typed for DaoBase<?, ?> so that it can be applied to any DAO
+ * public class LoggingHandler implements Jdbc.Handler<DaoBase<?, ?>> {
  *     @Override
- *     public void beforeInvoke(UserDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+ *     public void beforeInvoke(DaoBase<?, ?> proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
  *         logger.info("Calling method: {}", methodSignature._1.getName());
  *     }
  *
  *     @Override
- *     public void afterInvoke(Object result, UserDao proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+ *     public void afterInvoke(Object result, DaoBase<?, ?> proxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
  *         logger.info("Method completed: {}", methodSignature._1.getName());
  *     }
  * }
@@ -128,7 +128,11 @@ public @interface Handler {
 
     /**
      * Specifies the handler implementation class.
-     * The class must implement {@link Jdbc.Handler} with the appropriate DAO type parameter.
+     * The class must implement {@link Jdbc.Handler} with the appropriate DAO type parameter: the
+     * proxy is passed to its typed {@code beforeInvoke}/{@code afterInvoke} methods, so a handler typed
+     * for one DAO interface fails with {@code ClassCastException} when applied to another DAO type. A
+     * handler shared by several DAO types should be typed for a common supertype such as
+     * {@code DaoBase<?, ?>}.
      * It is resolved through {@code Jdbc.HandlerFactory} at DAO initialization time and shared by
      * declarations referencing the same class. If no instance is already registered, the class
      * must be concrete and have a usable no-argument constructor; invalid construction requirements

@@ -18,8 +18,10 @@ package com.landawn.abacus.jdbc.dao;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.Function;
 import java.util.List;
 
 import org.springframework.jdbc.CannotGetJdbcConnectionException;
@@ -1005,9 +1007,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Void>> futures = submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor));
 
         DaoUtil.complete(futures);
     }
@@ -1125,9 +1126,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Void>> futures = submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor));
 
         DaoUtil.complete(futures);
     }
@@ -1797,9 +1797,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
             }
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(absentJoinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entity, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Void>> futures = submitJoinTasks(absentJoinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entity, joinEntityPropName), executor));
 
         DaoUtil.complete(futures);
     }
@@ -1921,9 +1920,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entities, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Void>> futures = submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entities, joinEntityPropName), executor));
 
         DaoUtil.complete(futures);
     }
@@ -2136,6 +2134,61 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
         }
 
         loadJoinEntitiesIfAbsent(entities, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet(), executor);
+    }
+
+    /**
+     * Submits one parallel join task per property name, as used by the executor-based join load/delete methods.
+     * If submitting a task fails (typically a {@link RejectedExecutionException} from a saturated or shut-down executor),
+     * the tasks already submitted are awaited before that failure is rethrown, with their failures attached as suppressed.
+     * The wait is not cut short by an interrupt of the calling thread; its interrupt status is restored before the failure
+     * is rethrown.
+     *
+     * @param <R> the task result type
+     * @param joinEntityPropNames the join property names, one task per name
+     * @param taskSubmitter submits the task for one property name to the executor
+     * @return the futures of all submitted tasks, in iteration order of {@code joinEntityPropNames}
+     */
+    static <R> List<ContinuableFuture<R>> submitJoinTasks(final Collection<String> joinEntityPropNames,
+            final Function<? super String, ContinuableFuture<R>> taskSubmitter) {
+        final List<ContinuableFuture<R>> futures = new ArrayList<>(joinEntityPropNames.size());
+
+        try {
+            for (final String joinEntityPropName : joinEntityPropNames) {
+                futures.add(taskSubmitter.apply(joinEntityPropName));
+            }
+        } catch (final RuntimeException | Error submitFailure) {
+            // Don't surface the rejection while the tasks already submitted may still be running: they would keep
+            // writing the entities (or deleting rows) after the caller has seen the failure, and their own failures
+            // would be lost. The wait must survive an interrupt: getAsResult() returns at once when interrupted (and
+            // restores the flag, so every later wait would return at once as well), which let the rejection escape
+            // while a task was still running.
+            boolean interrupted = false;
+
+            for (final ContinuableFuture<R> future : futures) {
+                while (true) {
+                    try {
+                        future.get();
+                        break;
+                    } catch (final InterruptedException e) {
+                        interrupted = true;
+                    } catch (final ExecutionException e) {
+                        DaoUtil.addSuppressedIfDifferent(submitFailure, e.getCause() == null ? e : e.getCause());
+                        break;
+                    } catch (final RuntimeException e) { // e.g. CancellationException
+                        DaoUtil.addSuppressedIfDifferent(submitFailure, e);
+                        break;
+                    }
+                }
+            }
+
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+
+            throw submitFailure;
+        }
+
+        return futures;
     }
 
 }

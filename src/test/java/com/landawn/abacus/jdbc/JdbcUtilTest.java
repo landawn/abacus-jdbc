@@ -295,6 +295,40 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(new RecordId(3, 7), accessors._2.apply(entity));
     }
 
+    // BUG FIX: the generated-key extractor for a composite ID class matched the generated-key column labels only
+    // against the ID class's property names, so an ID column whose @Column name differs from its property name was
+    // skipped and its generated value lost. The labels are now resolved through the entity's column mapping first.
+    @Test
+    public void testGeneratedKeyExtractorResolvesColumnMappedCompositeIdClassProperties() throws SQLException {
+        final var accessors = JdbcUtil.<RecordId> getIdGeneratorGetterSetter(CrudDao.class, ColumnMappedCompositeIdEntity.class,
+                com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, RecordId.class);
+        final ResultSet rs = mock(ResultSet.class);
+        when(rs.getLong("TENANT_NO")).thenReturn(3L);
+        when(rs.getLong("SEQ_NO")).thenReturn(42L);
+
+        final RecordId generatedId = accessors._1.apply(rs, List.of("TENANT_NO", "SEQ_NO"));
+        assertEquals(new RecordId(3, 42), generatedId);
+
+        final ColumnMappedCompositeIdEntity entity = new ColumnMappedCompositeIdEntity();
+        entity.setTenantId(3);
+        accessors._3.accept(generatedId, entity);
+        assertEquals(3, entity.getTenantId());
+        assertEquals(42, entity.getEntityId());
+
+        // Lower-case labels (as PostgreSQL reports them) resolve too; a generated column that is no ID part is ignored.
+        final ResultSet lowerCaseRs = mock(ResultSet.class);
+        when(lowerCaseRs.getLong("tenant_no")).thenReturn(5L);
+        when(lowerCaseRs.getLong("seq_no")).thenReturn(43L);
+        assertEquals(new RecordId(5, 43), accessors._1.apply(lowerCaseRs, List.of("tenant_no", "seq_no", "created_at")));
+        verify(lowerCaseRs, never()).getLong("created_at");
+
+        // A label naming an ID-class property directly (no column mapping) still resolves, as before.
+        final ResultSet propNameRs = mock(ResultSet.class);
+        when(propNameRs.getLong("TENANT_NO")).thenReturn(6L);
+        when(propNameRs.getLong("entityId")).thenReturn(44L);
+        assertEquals(new RecordId(6, 44), accessors._1.apply(propNameRs, List.of("TENANT_NO", "entityId")));
+    }
+
     @Test
     public void testGeneratedKeyExtractorWrapsSingleCompositeKeyColumnAsEntityId() throws SQLException {
         final var accessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class, CompositeIdEntity.class,
@@ -397,6 +431,17 @@ public class JdbcUtilTest extends TestBase {
                 () -> JdbcUtil.createHikariDataSource("jdbc:unsupported:test", null, null, -1, 0)).getMessage().contains("minIdle"));
         assertTrue(assertThrows(IllegalArgumentException.class,
                 () -> JdbcUtil.createHikariDataSource("jdbc:unsupported:test", null, null, 0, 0)).getMessage().contains("maxPoolSize"));
+    }
+
+    @Test
+    public void testC3p0NonPositiveMaxPoolSizeIsRejectedInsteadOfCreatingAPoolThatNeverHandsOutConnections() {
+        // C3P0 itself accepts maxPoolSize <= 0; getConnection() on such a pool then blocks forever.
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createC3p0DataSource("jdbc:h2:mem:c3p0_zero_max", "sa", "", 0, 0))
+                .getMessage()
+                .contains("maxPoolSize"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createC3p0DataSource("jdbc:h2:mem:c3p0_negative_max", "sa", "", 1, -1))
+                .getMessage()
+                .contains("maxPoolSize"));
     }
 
     @Test
@@ -967,6 +1012,55 @@ public class JdbcUtilTest extends TestBase {
         verify(mockConnection, never()).prepareStatement("SELECT * FROM mixedCase WHERE 1 > 2");
     }
 
+    // BUG FIX: like the tableExists probe, the SELECT fallback quotes case-folded name parts. Unquoted, PostgreSQL runs
+    // "SELECT * FROM user" as the CURRENT_USER function, so a missing table "user" reported the single column [user].
+    @Test
+    public void testGetColumnNames_FallbackQuotesCaseFoldedReservedWord() throws SQLException {
+        when(mockDatabaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+        // Any other fallback text reaches the default mock statement, which (like PostgreSQL's "FROM user") reports [user].
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnName(1)).thenReturn("user");
+        when(mockConnection.prepareStatement("SELECT * FROM \"user\" WHERE 1 > 2")).thenThrow(new SQLException("relation \"user\" does not exist", "42P01"));
+        when(mockConnection.prepareStatement("SELECT * FROM \"public\".\"user\" WHERE 1 > 2"))
+                .thenThrow(new SQLException("relation \"public.user\" does not exist", "42P01"));
+
+        assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "User"));
+        assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "public.user"));
+
+        verify(mockConnection, never()).prepareStatement("SELECT * FROM user WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement("SELECT * FROM public.user WHERE 1 > 2");
+    }
+
+    // Guard (passes before and after the quoting fix): without a canonical identifier case (e.g. MySQL, SQL Server), the
+    // fallback keeps the unquoted name and does not read the quote string.
+    @Test
+    public void testGetColumnNames_FallbackUnquotedWithoutCanonicalCase() throws SQLException {
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("`");
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnName(1)).thenReturn("id");
+
+        assertEquals(List.of("id"), JdbcUtil.getColumnNames(mockConnection, "plain_tbl"));
+
+        verify(mockConnection).prepareStatement("SELECT * FROM plain_tbl WHERE 1 > 2");
+        verify(mockDatabaseMetaData, never()).getIdentifierQuoteString();
+    }
+
+    // The quoted fallback keeps the caller's qualification: every case-folded part of a three-part name is quoted,
+    // catalog included.
+    @Test
+    public void testGetColumnNames_FallbackQuotesEveryPartOfThreePartName() throws SQLException {
+        when(mockDatabaseMetaData.storesUpperCaseIdentifiers()).thenReturn(true);
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnName(1)).thenReturn("ID");
+
+        assertEquals(List.of("ID"), JdbcUtil.getColumnNames(mockConnection, "appdb.sales.order"));
+
+        verify(mockConnection).prepareStatement("SELECT * FROM \"APPDB\".\"SALES\".\"ORDER\" WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement("SELECT * FROM APPDB.SALES.ORDER WHERE 1 > 2");
+    }
+
     @Test
     public void testGetColumnLabel() throws SQLException {
         when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("label");
@@ -1347,6 +1441,74 @@ public class JdbcUtilTest extends TestBase {
 
         verify(mockPreparedStatement).setString(1, "Ada");
         verify(mockPreparedStatement).setString(2, "Lovelace");
+    }
+
+    @Test
+    public void testSetParameters_NamedSingleValueCalendarIsBoundDirectlyNotAsBean() throws SQLException {
+        // GregorianCalendar passes Beans.isBeanClass (getter/setter pairs such as getTimeInMillis/setTimeInMillis), but it is a
+        // single value in the Abacus type system: with one named placeholder it must be bound directly (as with '?' SQL and
+        // NamedQuery) instead of failing with "No property found with name: since".
+        final ParsedSql parsedSql = JdbcUtil.parseSql("SELECT * FROM users WHERE created_at > :since");
+        final java.util.GregorianCalendar since = new java.util.GregorianCalendar();
+        since.setTimeInMillis(1_000L);
+
+        JdbcUtil.setParameters(parsedSql, mockPreparedStatement, new Object[] { since });
+
+        verify(mockPreparedStatement).setTimestamp(1, new java.sql.Timestamp(1_000L));
+    }
+
+    @Test
+    public void testSetParameters_NamedSingleValueMutableBooleanIsBoundDirectlyNotAsBean() throws SQLException {
+        // MutableBoolean passes Beans.isBeanClass via getValue/setValue, but it is a single value in the Abacus type system.
+        // (MutableInt and the other Number subclasses are never bean classes, so they were always bound directly.)
+        final ParsedSql parsedSql = JdbcUtil.parseSql("SELECT * FROM users WHERE active = :active");
+
+        JdbcUtil.setParameters(parsedSql, mockPreparedStatement, new Object[] { com.landawn.abacus.util.MutableBoolean.of(true) });
+
+        verify(mockPreparedStatement).setBoolean(1, true);
+    }
+
+    // Guard (passes before and after the fix): a value class is bound directly only when it is the value of exactly one
+    // placeholder, and a real bean keeps the bean binding, so a property that does not exist is still reported.
+    @Test
+    public void testSetParameters_NamedBeanBindingKeptForRealBeansAndMultiplePlaceholders() {
+        final java.util.GregorianCalendar since = new java.util.GregorianCalendar();
+        final ParsedSql twoPlaceholders = JdbcUtil.parseSql("SELECT * FROM users WHERE created_at > :since AND updated_at > :since");
+
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.setParameters(twoPlaceholders, mockPreparedStatement, new Object[] { since }))
+                .getMessage()
+                .contains("No property found with name: since"));
+
+        final ParsedSql onePlaceholder = JdbcUtil.parseSql("SELECT * FROM users WHERE email = :email");
+
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.setParameters(onePlaceholder, mockPreparedStatement, new Object[] { new TestEntity() })).getMessage()
+                .contains("No property found with name: email"));
+    }
+
+    // Guard (passes before and after the fix): with one placeholder a record is still bound property-by-property.
+    @Test
+    public void testSetParameters_NamedSingleParameterRecordStillBindsProperty() throws SQLException {
+        final ParsedSql parsedSql = JdbcUtil.parseSql("SELECT * FROM users WHERE first_name = :firstName");
+
+        JdbcUtil.setParameters(parsedSql, mockPreparedStatement, new Object[] { new NamedRecordParameter("Ada", "Lovelace") });
+
+        verify(mockPreparedStatement).setString(1, "Ada");
+    }
+
+    @Test
+    public void testExecuteBatchUpdate_NamedSingleValueCalendarElementsAreBoundDirectly() throws SQLException {
+        final java.util.GregorianCalendar first = new java.util.GregorianCalendar();
+        first.setTimeInMillis(1_000L);
+        final java.util.GregorianCalendar second = new java.util.GregorianCalendar();
+        second.setTimeInMillis(2_000L);
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1, 1 });
+
+        assertEquals(2, JdbcUtil.executeBatchUpdate(mockConnection, "INSERT INTO events (created_at) VALUES (:createdAt)", List.of(first, second)));
+
+        verify(mockPreparedStatement).setTimestamp(1, new java.sql.Timestamp(1_000L));
+        verify(mockPreparedStatement).setTimestamp(1, new java.sql.Timestamp(2_000L));
+        verify(mockPreparedStatement, org.mockito.Mockito.times(2)).addBatch();
     }
 
     @Test
@@ -2598,6 +2760,425 @@ public class JdbcUtilTest extends TestBase {
         // The transaction's connection should be the one from the mock data source
         assertEquals(mockConnection, tran.connection(), "transaction should use the connection from the data source");
         tran.rollbackIfNotCommitted();
+    }
+
+    // A for-update-only transaction is skipped for plain SELECTs, but a SELECT embedding a data-modifying
+    // statement (PostgreSQL data-modifying CTE, DB2/H2 data-change delta table) writes data and must join it.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyJoinsSelectWithDataModifyingSection() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT * FROM account", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT coalesce(update_time, created) FROM account WHERE note <> '(delete x'", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT id FROM account WHERE id IN (SELECT id FROM t) /* (update */", by));
+            // Keywords inside quoted identifiers, bracket identifiers, dollar-quoted text and line comments, and identifiers
+            // that merely start with a keyword, are not data-modifying sections.
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT \"(update\", [(delete], $$(insert$$, $tag$(merge$tag$ FROM account", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT id -- (update\nFROM account WHERE (update_flag = 1 OR (insert_count > $1))", by));
+
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "WITH u AS (UPDATE account SET active = FALSE RETURNING id) SELECT id FROM u", by));
+            assertSame(tran,
+                    JdbcUtil.getTransaction(mockDataSource, "WITH d AS MATERIALIZED ( /* purge */ delete FROM account RETURNING id) SELECT count(*) FROM d", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT id FROM FINAL TABLE (INSERT INTO account (name) VALUES ('x'))", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource,
+                    "SELECT id FROM FINAL TABLE (MERGE INTO account a USING (VALUES (1)) s (id) ON a.id = s.id WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id))",
+                    by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource,
+                    "SELECT * FROM ((SELECT id FROM a) UNION ALL (SELECT id FROM OLD TABLE ( -- archive\n  Delete FROM account))) t", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "UPDATE account SET active = TRUE", by));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // A SELECT with an INTO clause writes too: PostgreSQL/SQL Server "SELECT ... INTO new_table" creates and fills a table
+    // (a SQL Server #temp table would land on the separate connection), MySQL "SELECT ... INTO @var" sets a session variable.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyJoinsSelectInto() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT * INTO account_backup FROM account", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "select id into #recent from account where created > ?", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT max(id) FROM account INTO @max_id", by));
+
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT into_date, 'copy into' AS \"into\" FROM account /* into */", by));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: a parameter, variable or qualified name spelled like a keyword is a name, not an INTO clause or a data-modifying
+    // section. prepareNamedQuery passes the original named SQL, so ":into" used to make an ordinary SELECT join the
+    // for-update-only transaction (and read its uncommitted writes).
+    @Test
+    public void testGetTransaction_ForUpdateOnlyIgnoresKeywordSpelledParameterAndVariableNames() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT * FROM account WHERE id = :into", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT * FROM account WHERE id = #{into} OR id = ${into}", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT @into AS v, a.into_flag, a.\"into\" FROM account a", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT a.into FROM account a WHERE a.id = ?::into", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT * FROM account WHERE id IN (:update, :delete, #{insert}, ${merge})", by));
+
+            // Guards (pass before and after the fix): real INTO clauses and data-modifying sections still join.
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT id INTO :into_table FROM account WHERE id = :into", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT max(id) FROM account WHERE id > :id INTO @max_id", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "WITH u AS (UPDATE account SET active = :into RETURNING id) SELECT id FROM u", by));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: a qualifier '.' may be separated from the qualified word by whitespace or comments ("a. into" is the column
+    // "into" of "a"), so that word is a name too; only the character right before the word used to be checked. A '.' after a
+    // number is a decimal point, though: "SELECT 1.INTO @x" (like "SELECT 1. INTO @x") has an INTO clause.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyRecognizesQualifiedNamesAcrossWhitespaceAndComments() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT a. into FROM account a", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT a . /* column */ into FROM account a", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT a.\n  -- the column\n  INTO FROM account a", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT \"t\". into, [t] .into, `t` . into FROM account t", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT (r). into FROM account r", by));
+
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT 1.INTO @x", by));
+            // Guards (pass before and after the fix).
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT 1. INTO @x", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT a.id, 2. /* two */ INTO @x, @y FROM account a", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT a.id INTO @x FROM account a", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT a.id FROM FINAL TABLE (UPDATE account a SET a.active = TRUE)", by));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: MySQL identifiers may start with a digit ("1a"), so whether a '.' is a decimal point must be decided from the
+    // whole preceding token (all digits), not its first character: "1a.into" is the column "into" of the alias "1a".
+    @Test
+    public void testGetTransaction_ForUpdateOnlyDigitPrefixedQualifierIsAName() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT 1a.into FROM account 1a", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT 1a. into FROM account 1a", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT 1a /* alias */ . into FROM account 1a", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT 2b_x.into, 9e.into FROM account 2b_x, account 9e", by));
+            // Guards (pass before and after the fix): a quoted digit-prefixed qualifier is a name, and an all-digit token
+            // before '.' is a number, so INTO there is a real clause.
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT `1a`.into, `1a`. into FROM account `1a`", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT 1.INTO @x", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT 12. INTO @x", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT 3. /* three */ INTO @x", by));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: INSERT(str, pos, len, newstr) is a string function (MySQL, H2), not an embedded INSERT statement: a
+    // parenthesized call made an ordinary SELECT join the for-update-only transaction.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyInsertFunctionCallIsNotAWrite() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT (INSERT(name, 1, 1, 'X')) FROM account", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT ( insert /* fn */ (name, 1, 1, 'X')) FROM account", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT concat((INSERT(name, 1, 1, 'X')), (lower(INSERT\n (name, 2, 0, 'y')))) FROM account", by));
+            // Guards (pass before and after the fix): embedded INSERT statements still join, and so does UPDATE followed by
+            // '(' (an updatable subquery on Oracle/DB2).
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT id FROM FINAL TABLE (INSERT INTO account (name) VALUES ('x'))", by));
+            assertSame(tran,
+                    JdbcUtil.getTransaction(mockDataSource, "WITH i AS (insert /* c */ INTO account (name) VALUES ('x') RETURNING id) SELECT id FROM i", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT * FROM FINAL TABLE (UPDATE (SELECT * FROM account WHERE id = 1) SET name = 'x')", by));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // Cost: the database dialect is only read for SQL whose scan can depend on it, and then once per transaction (the
+    // connection is fixed for the transaction's lifetime), also when it can't be read; a new transaction reads it again.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyReadsTheDialectOncePerTransaction() throws SQLException {
+        final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+        SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            org.mockito.Mockito.clearInvocations(mockDatabaseMetaData);
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT name, updated_at FROM account WHERE id = ?", by));
+            verify(mockDatabaseMetaData, never()).getDatabaseProductName();
+
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT name, 1_000 /* note */ FROM account # x -- y", by));
+
+            // setUp reports MySQL (version "8", unparseable, so executable comments count as run).
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT name FROM account -- copied into archive", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT id FROM account WHERE id = 1 /*!50100 INTO @x */", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT updated_at FROM account # into", by));
+            verify(mockDatabaseMetaData, org.mockito.Mockito.times(1)).getDatabaseProductName();
+            verify(mockDatabaseMetaData, org.mockito.Mockito.times(1)).getDatabaseProductVersion();
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            org.mockito.Mockito.clearInvocations(mockDatabaseMetaData);
+            org.mockito.Mockito.doThrow(new SQLException("no metadata")).when(mockDatabaseMetaData).getDatabaseProductName();
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT 1 # don't parse this\nINTO @x", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT name FROM account /* plain */ -- into nothing", by));
+            verify(mockDatabaseMetaData, org.mockito.Mockito.times(1)).getDatabaseProductName();
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    /**
+     * Routes {@code sql} through a new for-update-only transaction and returns whether it joined it. The database dialect is
+     * read once per transaction, so a test that changes the mocked product between checks uses a new transaction for each.
+     */
+    private boolean joinsNewForUpdateOnlyTransaction(final String sql) throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction joined = JdbcUtil.getTransaction(mockDataSource, sql, SqlTransaction.CreatedBy.JDBC_UTIL);
+            assertTrue(joined == null || joined == tran);
+            return joined != null;
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: on MySQL/MariaDB '#' starts a line comment, so words in it ("# copied into archive") are not an INTO clause.
+    // Elsewhere '#' is part of a name (SQL Server #temp tables) or an operator (PostgreSQL #, #>), so it is not skipped there:
+    // treating "#t.id" as a comment would hide the INTO of "SELECT #t.id INTO #t2 FROM #t" and let that write escape.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyHashLineCommentsOnlyOnMySqlFamily() throws SQLException {
+
+        // The product name is only read for SQL that contains '#'.
+        org.mockito.Mockito.clearInvocations(mockDatabaseMetaData);
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account"));
+        verify(mockDatabaseMetaData, never()).getDatabaseProductName();
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account # copied into archive"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account #into\nWHERE id = 1"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT (name) FROM account WHERE id IN ( # (insert\n 1)"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT (INSERT # function\n (name, 1, 1, 'X')) FROM account"));
+        // A real INTO after a '#' comment still joins, and a #{name} placeholder is not a comment.
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account # note\nINTO OUTFILE '/tmp/names.csv'"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT id FROM account WHERE id = #{id} INTO @x"));
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MariaDB");
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account # copied into archive"));
+
+        // Guards (pass before and after the fix): elsewhere '#' is not a comment.
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("Microsoft SQL Server");
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT #t.id INTO #t2 FROM #t"));
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT a # b INTO t2 FROM t"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT data #> '{a,b}' FROM t"));
+        // With an unreadable product name, a write seen under either rule set joins.
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenThrow(new SQLException("metadata unavailable"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT #t.id INTO #t2 FROM #t"));
+    }
+
+    // BUG FIX: when the product name can't be read, scanning with the standard rules alone could miss a write: on MySQL the
+    // apostrophe in "# don't parse this" belongs to a comment, but read as code it opened a string that hid the real INTO
+    // on the next line. A write seen under either the MySQL or the standard rules now joins; at worst a plain read joins.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyUnknownDialectJoinsWhenEitherRuleSetSeesAWrite() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+            when(mockDatabaseMetaData.getDatabaseProductName()).thenThrow(new SQLException("metadata unavailable"));
+
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT 1 # don't parse this\nINTO @x", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT 5--3 INTO @x", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT 1 /*! INTO @x */", by));
+            // Guards (pass before and after the fix): standard-rule writes still join, and a read whose comments hide nothing
+            // under either rule set still runs separately.
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT #t.id INTO #t2 FROM #t", by));
+            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT name FROM account /* plain comment */ -- trailing", by));
+            // The accepted cost: a plain read whose comment mentions INTO joins, because '#' might not be a comment.
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT name FROM account # copied into archive", by));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: PostgreSQL 16 accepts digit groups separated by underscores ("1_000"), so the '.' after such a number is a
+    // decimal point and "SELECT 1_000. INTO new_table" creates a table; the digits-only check read "1_000" as a qualifier. On
+    // MySQL/MariaDB "1_000" is an identifier, so there "1_000.into" stays a qualified column.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyUnderscoreSeparatedNumberBeforeDecimalPoint() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL"); // setUp's default is MySQL
+
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT 1_000. INTO new_table"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT 1_000_000.INTO new_table"));
+        // Guards (pass before and after the fix): not numbers in any dialect, so still qualifiers, and an INTO after a
+        // fractional part is a keyword anyway.
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT 1__0.into, 1_.into, 1a_2.into, _1.into FROM account"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT 1_000_000.5 INTO new_table"));
+
+        final String qualifiedByUnderscoreName = "SELECT 1_000.into FROM account 1_000 -- alias";
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        assertFalse(joinsNewForUpdateOnlyTransaction(qualifiedByUnderscoreName));
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        assertTrue(joinsNewForUpdateOnlyTransaction(qualifiedByUnderscoreName));
+    }
+
+    // BUG FIX: MySQL/MariaDB comment rules differ from the standard ones, and a comment hid a real INTO clause, letting a
+    // write run outside the for-update-only transaction: "--" starts a comment only before whitespace or a control character
+    // ("5--3" is arithmetic), block comments don't nest, and the content of an executable "/*! ... */" comment is run as
+    // code. Other databases keep the standard rules.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyMySqlDashFlatAndExecutableCommentRules() throws SQLException {
+        final String dashArithmetic = "SELECT 5--3 INTO @x";
+        final String nestedLookingComment = "SELECT id FROM account WHERE id = 1 /* outer /* inner */ INTO @x";
+        final String executableInto = "SELECT id FROM account WHERE id = 1 /*!50100 INTO @x */";
+        final String mariaDbExecutableInto = "SELECT id FROM account WHERE id = 1 /*M!100100 INTO @x */";
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        assertTrue(joinsNewForUpdateOnlyTransaction(dashArithmetic));
+        assertTrue(joinsNewForUpdateOnlyTransaction(nestedLookingComment));
+        assertTrue(joinsNewForUpdateOnlyTransaction(executableInto));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT id FROM account WHERE id = 1 /*! INTO @x */"));
+        // Ordinary MySQL comments still hide their words; an executable comment's content is code, but its end is not.
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account -- copied into archive"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account --\tcopied into archive\nWHERE id = 1"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account --"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name /*!40000 , id */ FROM account /* copied into archive */"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT (INSERT /*! (name, 1, 1, 'X') */) FROM account"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT (/*+ BKA(t) */ INSERT(name, 1, 1, 'X')) FROM account"));
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MariaDB");
+        assertTrue(joinsNewForUpdateOnlyTransaction(mariaDbExecutableInto));
+        assertTrue(joinsNewForUpdateOnlyTransaction(dashArithmetic));
+
+        // Guards (pass before and after the fix): the standard rules elsewhere, where "--" always starts a comment,
+        // block comments nest and "/*! ... */" is an ordinary comment.
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        assertFalse(joinsNewForUpdateOnlyTransaction(dashArithmetic));
+        assertFalse(joinsNewForUpdateOnlyTransaction(nestedLookingComment));
+        assertFalse(joinsNewForUpdateOnlyTransaction(executableInto));
+        assertFalse(joinsNewForUpdateOnlyTransaction(mariaDbExecutableInto));
+    }
+
+    // BUG FIX: an executable comment the server ignores is a plain comment. MySQL ignores MariaDB-only "/*M! ... */", and
+    // "/*!NNNNN ... */" runs only on servers of at least version NNNNN; scanning ignored content made plain reads join. Only a
+    // certain "ignored" counts: an unknown vendor or an unparseable version keeps the content as code, so no write is missed.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyExecutableCommentsCountOnlyWhenTheServerRunsThem() throws SQLException {
+        final String mariaDbOnly = "SELECT name FROM account /*M! INTO @x */";
+        final String futureVersion = "SELECT name FROM account /*!999999 INTO @x */";
+
+        org.mockito.Mockito.doReturn("MySQL").when(mockDatabaseMetaData).getDatabaseProductName();
+        org.mockito.Mockito.doReturn("8.0.33").when(mockDatabaseMetaData).getDatabaseProductVersion();
+        assertFalse(joinsNewForUpdateOnlyTransaction(mariaDbOnly));
+        assertFalse(joinsNewForUpdateOnlyTransaction(futureVersion));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!80034 INTO @x */ WHERE id = 1"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!80033 INTO @x */"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!50110 INTO @x */"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*! INTO @x */"));
+
+        org.mockito.Mockito.doReturn("5.5.5-log").when(mockDatabaseMetaData).getDatabaseProductVersion(); // MySQL 5.5.5
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!50506 INTO @x */"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!50505 INTO @x */"));
+
+        // MariaDB 10.6.12, reported as such or (through the MySQL driver) as "MySQL" with the "5.5.5-" compatibility prefix.
+        for (final String[] mariaDb : new String[][] { { "MariaDB", "10.6.12-MariaDB-1:10.6.12+maria~ubu2004" }, { "MySQL", "5.5.5-10.6.12-MariaDB" } }) {
+            org.mockito.Mockito.doReturn(mariaDb[0]).when(mockDatabaseMetaData).getDatabaseProductName();
+            org.mockito.Mockito.doReturn(mariaDb[1]).when(mockDatabaseMetaData).getDatabaseProductVersion();
+            assertTrue(joinsNewForUpdateOnlyTransaction(mariaDbOnly), mariaDb[1]);
+            assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*M!100100 INTO @x */"), mariaDb[1]);
+            assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*M!100700 INTO @x */"), mariaDb[1]);
+            assertFalse(joinsNewForUpdateOnlyTransaction(futureVersion), mariaDb[1]);
+            // MariaDB ignores MySQL-style comments gated on 5.7+ (50700..99999), but runs its own "/*M!" ones in that range.
+            assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!50699 INTO @x */"), mariaDb[1]);
+            assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!50700 INTO @x */"), mariaDb[1]);
+            assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!80000 INTO @x */"), mariaDb[1]);
+            assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!99999 INTO @x */"), mariaDb[1]);
+            assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!100000 INTO @x */"), mariaDb[1]);
+            assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*M!50700 INTO @x */"), mariaDb[1]);
+            assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*M!99999 INTO @x */"), mariaDb[1]);
+        }
+
+        // MySQL runs its own 5.7+ comments (a guard: passes before and after the MariaDB fix).
+        org.mockito.Mockito.doReturn("MySQL").when(mockDatabaseMetaData).getDatabaseProductName();
+        org.mockito.Mockito.doReturn("8.0.33").when(mockDatabaseMetaData).getDatabaseProductVersion();
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!50700 INTO @x */"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!80000 INTO @x */"));
+
+        // Guards (pass before and after the fix): an unknown vendor or version keeps executable content as code.
+        org.mockito.Mockito.doReturn("MySQL").when(mockDatabaseMetaData).getDatabaseProductName();
+        org.mockito.Mockito.doReturn("8.0").when(mockDatabaseMetaData).getDatabaseProductVersion(); // a missing patch counts as 99
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!80050 INTO @x */"));
+        org.mockito.Mockito.doReturn("unknown").when(mockDatabaseMetaData).getDatabaseProductVersion();
+        assertTrue(joinsNewForUpdateOnlyTransaction(futureVersion));
+        org.mockito.Mockito.doThrow(new SQLException("no version")).when(mockDatabaseMetaData).getDatabaseProductVersion();
+        assertTrue(joinsNewForUpdateOnlyTransaction(mariaDbOnly));
+        assertTrue(joinsNewForUpdateOnlyTransaction(futureVersion));
+        // "MySQL" without a readable version might be MariaDB behind the MySQL driver: its 5.7+ comments still count as run.
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!80000 INTO @x */"));
+        // A server named MariaDB is known to be MariaDB even without a version, so the 50700..99999 range is ignored.
+        org.mockito.Mockito.doReturn("MariaDB").when(mockDatabaseMetaData).getDatabaseProductName();
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!80000 INTO @x */"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*M!80000 INTO @x */"));
+        org.mockito.Mockito.doThrow(new SQLException("no metadata")).when(mockDatabaseMetaData).getDatabaseProductName();
+        assertTrue(joinsNewForUpdateOnlyTransaction(mariaDbOnly));
+        assertTrue(joinsNewForUpdateOnlyTransaction(futureVersion));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT name FROM account /*!80000 INTO @x */"));
+    }
+
+    // BUG FIX: whether "1_000" is a number depends on the database also without comments. The product used to be looked up
+    // only for SQL with comment-like text, so on MySQL the comment-free "SELECT 1_000.into FROM account 1_000" read "1_000"
+    // as a PostgreSQL number and joined; a digit followed by '_' now triggers the lookup too.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyUnderscoreDigitsLookUpTheDialectWithoutComments() throws SQLException {
+        final String sql = "SELECT 1_000.into FROM account 1_000";
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        assertFalse(joinsNewForUpdateOnlyTransaction(sql));
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        assertTrue(joinsNewForUpdateOnlyTransaction(sql));
+
+        // Guard (passes before and after the fix): other SQL still doesn't read the product name.
+        org.mockito.Mockito.clearInvocations(mockDatabaseMetaData);
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT name_1, a_b, 10 FROM account WHERE x = 'y'"));
+        verify(mockDatabaseMetaData, never()).getDatabaseProductName();
+    }
+
+    // Guard (passes before and after the fix): only a for-update-only transaction is ever skipped, and only for a SELECT.
+    @Test
+    public void testGetTransaction_NoTransactionOrNotForUpdateOnly() throws SQLException {
+        assertNull(JdbcUtil.getTransaction(mockDataSource, "WITH u AS (UPDATE account SET active = FALSE RETURNING id) SELECT id FROM u",
+                SqlTransaction.CreatedBy.JDBC_UTIL));
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, false);
+
+        try {
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT * FROM account", SqlTransaction.CreatedBy.JDBC_UTIL));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
     }
 
     @Test
@@ -4370,6 +4951,88 @@ public class JdbcUtilTest extends TestBase {
         verify(mockConnection).releaseSavepoint(savepoint);
     }
 
+    // Regression: on PostgreSQL the unquoted probe "SELECT 1 FROM user WHERE 1 > 2" succeeds (USER is parsed as the
+    // CURRENT_USER function), so a missing table named "user" was reported as present (and createTableIfNotExists skipped
+    // creating it). When the driver reports a canonical identifier case, the probe now quotes the case-folded parts.
+    @Test
+    public void testTableExists_FallbackProbeQuotesCaseFoldedReservedWord() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        // Any other probe text reaches the default mock statement, which succeeds like PostgreSQL's "FROM user".
+        when(mockConnection.prepareStatement("SELECT 1 FROM \"user\" WHERE 1 > 2"))
+                .thenThrow(new SQLException("relation \"user\" does not exist", "42P01"));
+        when(mockConnection.prepareStatement("SELECT 1 FROM \"public\".\"user\" WHERE 1 > 2"))
+                .thenThrow(new SQLException("relation \"public.user\" does not exist", "42P01"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "User"));
+        assertFalse(JdbcUtil.tableExists(mockConnection, "public.user"));
+
+        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM user WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM public.user WHERE 1 > 2");
+    }
+
+    // Guard (passes before and after the quoting fix): without a canonical identifier case (e.g. MySQL, SQL Server), the
+    // probe keeps the unquoted name so the database applies its own identifier rules, and does not read the quote string.
+    @Test
+    public void testTableExists_FallbackProbeUnquotedWithoutCanonicalCase() throws SQLException {
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("`");
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
+                .thenThrow(new SQLException("Table 'missing_tbl' doesn't exist", "42S02"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+
+        verify(mockConnection).prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2");
+        verify(mockDatabaseMetaData, never()).getIdentifierQuoteString();
+    }
+
+    // The quoted probe keeps the caller's qualification: every case-folded part of a three-part name is quoted
+    // (catalog included), an unqualified name never gains the connection's current catalog, and on PostgreSQL in a
+    // transaction the quoted probe still runs under the savepoint that is rolled back when the table is missing.
+    @Test
+    public void testTableExists_FallbackProbeQuotesEveryPartOfThreePartNameUnderSavepoint() throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockDatabaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+        when(mockConnection.getCatalog()).thenReturn("appdb");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        // Any other probe text reaches the default mock statement, which succeeds.
+        when(mockConnection.prepareStatement("SELECT 1 FROM \"appdb\".\"public\".\"order\" WHERE 1 > 2"))
+                .thenThrow(new SQLException("relation \"public.order\" does not exist", "42P01"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "AppDb.Public.Order"));
+        verify(mockConnection).rollback(savepoint);
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "Order"));
+        verify(mockConnection).prepareStatement("SELECT 1 FROM \"order\" WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM \"appdb\".\"order\" WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM appdb.public.order WHERE 1 > 2");
+    }
+
+    // Guard (passes before and after the quoting fix): a driver that reports a canonical identifier case but no usable
+    // identifier quote string (null, or " " meaning delimited identifiers are unsupported) keeps the unquoted case-folded
+    // probe; an explicitly delimited name runs no probe and does not even read the quote string.
+    @Test
+    public void testTableExists_FallbackProbeUnquotedWhenQuotingUnsupported() throws SQLException {
+        when(mockDatabaseMetaData.storesUpperCaseIdentifiers()).thenReturn(true);
+        when(mockConnection.prepareStatement("SELECT 1 FROM MISSING_TBL WHERE 1 > 2"))
+                .thenThrow(new SQLException("Table \"MISSING_TBL\" not found", "42S02"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "\"Missing\""));
+        verify(mockDatabaseMetaData, never()).getIdentifierQuoteString();
+
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn(" ");
+        assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn(null);
+        assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+
+        verify(mockConnection, org.mockito.Mockito.times(2)).prepareStatement("SELECT 1 FROM MISSING_TBL WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM Missing WHERE 1 > 2");
+    }
+
     // BUG FIX: JDBC allows DatabaseMetaData.getTables rows with a null TABLE_CAT (older pgjdbc reports none). A
     // delimited catalog part must only reject a row whose reported catalog differs, not one that reports no catalog.
     @Test
@@ -5384,6 +6047,31 @@ public class JdbcUtilTest extends TestBase {
 
         public void setName(final String name) {
             this.name = name;
+        }
+    }
+
+    public static class ColumnMappedCompositeIdEntity {
+        @com.landawn.abacus.annotation.Id
+        @com.landawn.abacus.annotation.Column("TENANT_NO")
+        private long tenantId;
+        @com.landawn.abacus.annotation.Id
+        @com.landawn.abacus.annotation.Column("SEQ_NO")
+        private long entityId;
+
+        public long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public long getEntityId() {
+            return entityId;
+        }
+
+        public void setEntityId(final long entityId) {
+            this.entityId = entityId;
         }
     }
 

@@ -33,7 +33,6 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Delete-side view of {@link JoinEntityHelper}: declares the join-entity <i>delete</i> operations
@@ -462,9 +461,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
             return 0;
         }
 
-        final List<ContinuableFuture<Integer>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entity, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Integer>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entity, joinEntityPropName), executor));
 
         return DaoUtil.completeSum(futures);
     }
@@ -622,9 +620,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
             return 0;
         }
 
-        final List<ContinuableFuture<Integer>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entities, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Integer>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entities, joinEntityPropName), executor));
 
         return DaoUtil.completeSum(futures);
     }

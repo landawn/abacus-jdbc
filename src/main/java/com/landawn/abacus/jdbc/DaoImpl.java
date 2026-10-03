@@ -1241,6 +1241,8 @@ final class DaoImpl {
         final MappedByKey mappedByKeyAnno = method.getAnnotation(MappedByKey.class);
         final Class<? extends Map> targetMapClass = Strings.isEmpty(mappedByKey) ? null : mappedByKeyAnno.mapClass();
 
+        // Not reachable at present: createDao rejects RowMapper/BiRowMapper/ResultExtractor parameters on custom query methods
+        // ("not enabled at present"). Kept consistent with the automatic-mapping branches (e.g. Immutable* collection returns).
         if (hasRowMapperOrExtractor) {
             if (Strings.isNotEmpty(mappedByKey) || N.notEmpty(mergedByIds) || N.notEmpty(prefixFieldMap)) {
                 throw new UnsupportedOperationException(
@@ -1272,11 +1274,14 @@ final class DaoImpl {
                         }
                     } else {
                         if (hasRowFilter) {
-                            return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1])
-                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
+                            return (preparedQuery,
+                                    args) -> (R) toDeclaredCollectionType(
+                                            preparedQuery.stream((Jdbc.RowFilter) args[paramLen - 2], (Jdbc.RowMapper) args[paramLen - 1])
+                                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType)),
+                                            returnType);
                         } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.RowMapper) args[paramLen - 1])
-                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
+                            return (preparedQuery, args) -> (R) toDeclaredCollectionType(preparedQuery.stream((Jdbc.RowMapper) args[paramLen - 1])
+                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType)), returnType);
                         }
                     }
                 } else if (u.Optional.class.isAssignableFrom(returnType)) {
@@ -1337,11 +1342,13 @@ final class DaoImpl {
                     } else {
                         if (hasRowFilter) {
                             return (preparedQuery,
-                                    args) -> (R) preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1])
-                                            .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
+                                    args) -> (R) toDeclaredCollectionType(
+                                            preparedQuery.stream((Jdbc.BiRowFilter) args[paramLen - 2], (Jdbc.BiRowMapper) args[paramLen - 1])
+                                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType)),
+                                            returnType);
                         } else {
-                            return (preparedQuery, args) -> (R) preparedQuery.stream((Jdbc.BiRowMapper) args[paramLen - 1])
-                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
+                            return (preparedQuery, args) -> (R) toDeclaredCollectionType(preparedQuery.stream((Jdbc.BiRowMapper) args[paramLen - 1])
+                                    .toCollection(Suppliers.ofCollection((Class<Collection>) returnType)), returnType);
                         }
                     }
                 } else if (u.Optional.class.isAssignableFrom(returnType)) {
@@ -1447,7 +1454,7 @@ final class DaoImpl {
                             final Collection<Object> c = N.newCollection((Class<Collection>) returnType);
                             c.addAll(mergedEntities);
 
-                            return (R) c;
+                            return (R) toDeclaredCollectionType(c, returnType);
                         }
                     } else {
                         if ((isFindOnlyOne(method, queryOperation) || isQueryForUnique(method, queryOperation)) && N.size(mergedEntities) > 1) {
@@ -1473,8 +1480,8 @@ final class DaoImpl {
             if (returnType.equals(List.class)) {
                 return (preparedQuery, args) -> (R) preparedQuery.list(BiRowMapper.to(firstReturnEleType, prefixFieldMap));
             } else {
-                return (preparedQuery, args) -> (R) preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap))
-                        .toCollection(Suppliers.ofCollection((Class<Collection>) returnType));
+                return (preparedQuery, args) -> (R) toDeclaredCollectionType(preparedQuery.stream(BiRowMapper.to(firstReturnEleType, prefixFieldMap))
+                        .toCollection(Suppliers.ofCollection((Class<Collection>) returnType)), returnType);
             }
         } else if (Dataset.class.isAssignableFrom(returnType)) {
             if (fetchColumnByEntityClass) {
@@ -1555,6 +1562,36 @@ final class DaoImpl {
     private static boolean isFindOrListTargetClass(final Class<?> cls) {
         return Beans.isBeanClass(cls) || Map.class.isAssignableFrom(cls) || List.class.isAssignableFrom(cls) || Object[].class.isAssignableFrom(cls)
                 || Beans.isRecordClass(cls);
+    }
+
+    /**
+     * Adapts a collection created by {@link Suppliers#ofCollection(Class)} (or {@code N.newCollection(Class)}) for
+     * the declared return type to an instance of that type.
+     *
+     * <p>For an {@code Immutable*} type those factories create the plain mutable JDK counterpart (e.g. an
+     * {@code ArrayList} for {@code ImmutableList}), meant to be filled and then wrapped; returned unwrapped, the
+     * proxy would fail every call with {@link ClassCastException}.</p>
+     *
+     * @param c the filled collection
+     * @param returnType the declared collection return type of the DAO method
+     * @return {@code c} itself if it is already an instance of {@code returnType}, otherwise its matching
+     *         {@code Immutable*} wrapper (or {@code c} unchanged if there is none)
+     */
+    @SuppressWarnings({ "unchecked" })
+    private static Collection<?> toDeclaredCollectionType(final Collection<?> c, final Class<?> returnType) {
+        if (returnType.isInstance(c)) {
+            return c;
+        } else if (ImmutableList.class.isAssignableFrom(returnType) && c instanceof final List list) {
+            return ImmutableList.wrap(list);
+        } else if (com.landawn.abacus.util.ImmutableNavigableSet.class.isAssignableFrom(returnType) && c instanceof final java.util.NavigableSet set) {
+            return com.landawn.abacus.util.ImmutableNavigableSet.wrap(set);
+        } else if (com.landawn.abacus.util.ImmutableSortedSet.class.isAssignableFrom(returnType) && c instanceof final java.util.SortedSet set) {
+            return com.landawn.abacus.util.ImmutableSortedSet.wrap(set);
+        } else if (ImmutableSet.class.isAssignableFrom(returnType) && c instanceof final Set set) {
+            return ImmutableSet.wrap(set);
+        } else {
+            return c;
+        }
     }
 
     /**
@@ -3067,10 +3104,14 @@ final class DaoImpl {
         final PropInfo idPropInfo = isNoId ? null : entityInfo.getPropInfo(oneIdPropName);
         final boolean isOneId = !isNoId && idPropNameList.size() == 1;
         final Condition idCond = isNoId ? null : isOneId ? Filters.eq(oneIdPropName) : Filters.and(Stream.of(idPropNameList).map(Filters::eq).toList());
+        // A bean/record id is matched on the id properties only, as idParamSetter (getOrNull/exists/deleteById) and batchGet do:
+        // Filters.allEqual(id) used every property of the id object, so e.g. with the entity class as the ID type its non-id
+        // properties joined the WHERE clause of update(Map, id) and the row was missed.
         final Function<Object, Condition> id2CondFunc = isNoId || idClass == null ? null
                 : (isEntityId ? id -> Filters.id2Cond((EntityId) id)
                         : Map.class.isAssignableFrom(idClass) ? id -> Filters.allEqual((Map<String, ?>) id)
-                                : Beans.isBeanClass(idClass) || Beans.isRecordClass(idClass) ? Filters::allEqual : id -> Filters.eq(oneIdPropName, id));
+                                : Beans.isBeanClass(idClass) || Beans.isRecordClass(idClass) ? id -> Filters.allEqual(id, idPropNameList)
+                                        : id -> Filters.eq(oneIdPropName, id));
 
         N.checkArgument(idPropNameList.size() > 1 || !(isEntityId || (idClass != null && (Beans.isBeanClass(idClass) || Map.class.isAssignableFrom(idClass)))),
                 "Id type/class cannot be EntityId/Map or Entity for single id");
@@ -3091,10 +3132,12 @@ final class DaoImpl {
                 : hasJoinedByProperties ? namedDsl.select(defaultSelectPropNames).from(tableName, entityClass).where(idCond).build().query()
                         : namedDsl.select(entityClass).from(tableName).where(idCond).build().query();
         sql_existsById = isNoId ? null : namedDsl.select(_1).from(tableName, entityClass).where(idCond).build().query();
-        sql_insertWithId = entityClass == null ? null
+        // A read-only DAO never inserts, and its entity may have no insertable property at all (e.g. a database view whose
+        // properties are all @ReadOnly). Building the INSERT eagerly would then make createDao fail for a DAO that never uses it.
+        sql_insertWithId = entityClass == null || isReadOnlyDao ? null
                 : hasJoinedByProperties ? namedDsl.insert(defaultInsertPropNames).into(tableName, entityClass).build().query()
                         : namedDsl.insert(entityClass).into(tableName).build().query();
-        sql_insertWithoutId = entityClass == null ? null
+        sql_insertWithoutId = entityClass == null || isReadOnlyDao ? null
                 : noOtherInsertPropNameExceptIdPropNames ? sql_insertWithId
                         : hasJoinedByProperties
                                 ? namedDsl.insert(JdbcUtil.getInsertPropNames(entityClass, idPropNameSet)).into(tableName, entityClass).build().query()
@@ -3444,8 +3487,10 @@ final class DaoImpl {
             } else {
                 final boolean isStreamReturn = Stream.class.isAssignableFrom(returnType);
                 final boolean throwsSQLException = Stream.of(method.getExceptionTypes()).anyMatch(e -> e.isAssignableFrom(SQLException.class));
+                // A declared common supertype of both (Exception/Throwable) already counts as 'throws SQLException'; counting it
+                // as 'throws UncheckedSQLException' too made 'throws Exception' fail as declaring both.
                 final boolean throwsUncheckedSQLException = Stream.of(method.getExceptionTypes())
-                        .anyMatch(e -> e.isAssignableFrom(UncheckedSQLException.class));
+                        .anyMatch(e -> e.isAssignableFrom(UncheckedSQLException.class) && !e.isAssignableFrom(SQLException.class));
                 final Annotation sqlAnno = Stream.of(method.getAnnotations())
                         .filter(anno -> sqlAnnoMap.containsKey(anno.annotationType()))
                         .first()
@@ -6652,10 +6697,22 @@ final class DaoImpl {
                                 mappedByKey, mergedByIds, prefixFieldMap, fetchColumnByEntityClass, hasRowMapperOrResultExtractor, hasRowFilter, queryOperation,
                                 isProcedure, fullClassMethodName);
 
-                        call = (proxy,
-                                args) -> queryFunc.apply(prepareQuery(proxy, queryInfo, mergedByIdAnno, returnType, args, fragmentParamIndexes, fragmentAnnos,
-                                        fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames, outParameterList, parametersSetter, isExistsQueryMethod,
-                                        isSingleReturnTypeMethod, isListQueryMethod), args);
+                        call = (proxy, args) -> {
+                            final AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, returnType, args, fragmentParamIndexes,
+                                    fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames, outParameterList, parametersSetter,
+                                    isExistsQueryMethod, isSingleReturnTypeMethod, isListQueryMethod);
+
+                            try {
+                                return queryFunc.apply(preparedQuery, args);
+                            } catch (final SQLException | RuntimeException | Error e) {
+                                // The query function can fail before it reaches the execution method that closes the query, e.g. while
+                                // building its row mapper (a @PrefixFieldMapping target that is not a bean class) or its result
+                                // collection supplier. Close the query so its statement and connection are not leaked; closing a
+                                // query that the execution method already closed is a no-op.
+                                preparedQuery.closeSuppressingFailure(e);
+                                throw e;
+                            }
+                        };
                     } else if (queryInfo.isInsert) {
                         if (isNoId && !returnType.isAssignableFrom(void.class)) {
                             throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
@@ -7345,6 +7402,10 @@ final class DaoImpl {
                     }
 
                     final com.landawn.abacus.type.Type<?> declaredReturnType = tmpDeclaredReturnType;
+                    // The declared value type of a single-value holder return type (Optional<User> -> User), if any.
+                    final com.landawn.abacus.type.Type<?> declaredHeldValueType = declaredReturnType != null && N.size(declaredReturnType.parameterTypes()) == 1
+                            ? declaredReturnType.parameterTypes().get(0)
+                            : null;
 
                     final Function<Object, Object> cloneFunc = switch (serialization) {
                         case NONE -> Fn.identity();
@@ -7365,7 +7426,23 @@ final class DaoImpl {
                                 return r;
                             }
 
-                            final String json = jsonParser.serialize(r);
+                            // A value holder is copied by its value and re-wrapped. Built-in methods declare holders over type
+                            // variables (Optional<T> get(ID), <V> Nullable<V> queryForSingleValue(...)), so a round trip of the
+                            // whole holder read the value back untyped (a cached entity came back as its JSON String), and it
+                            // also turned a Nullable holding a present null (a row with a SQL NULL) into an empty one (no row).
+                            if (r instanceof final u.Optional<?> opt) {
+                                return opt.isPresent() ? u.Optional.of(copyHeldValue(opt.get(), declaredHeldValueType)) : r;
+                            } else if (r instanceof final u.Nullable<?> nullable) {
+                                return nullable.isPresent() ? u.Nullable.of(copyHeldValue(nullable.get(), declaredHeldValueType)) : r;
+                            } else if (r instanceof final java.util.Optional<?> jdkOpt) {
+                                return jdkOpt.isPresent() ? java.util.Optional.of(copyHeldValue(jdkOpt.get(), declaredHeldValueType)) : r;
+                            }
+
+                            // A Dataset is written with its column types: without them its values were read back untyped
+                            // (e.g. a BIGINT id came back as an Integer).
+                            final String json = r instanceof Dataset
+                                    ? jsonParser.serialize(r, com.landawn.abacus.parser.JsonSerConfig.create().setWriteColumnType(true))
+                                    : jsonParser.serialize(r);
 
                             // Built-in DAO methods declare generic returns such as List<T> whose type variables resolve
                             // to Object only, so an unresolved element (or key/value) type is derived from the runtime
@@ -7773,6 +7850,26 @@ final class DaoImpl {
         daoLogger.info("Created Dao proxy(interface={}, targetTableName={}, methods={})", daoClassName, targetTableName, methodInvokerMap.size());
 
         return daoInstance;
+    }
+
+    /**
+     * Copies the value held by an {@code Optional}/{@code Nullable} result for the JSON-serialized DAO cache, through
+     * {@code declaredValueType} when it is resolved, otherwise through the value's runtime class.
+     *
+     * @param value the held value; may be {@code null} (a present {@code null} of a {@code Nullable})
+     * @param declaredValueType the declared value type of the holder, or {@code null} if unknown
+     * @return a copy of {@code value}, or {@code null} if {@code value} is {@code null}
+     */
+    @SuppressWarnings("unchecked")
+    private static Object copyHeldValue(final Object value, final com.landawn.abacus.type.Type<?> declaredValueType) {
+        if (value == null) {
+            return null;
+        }
+
+        final com.landawn.abacus.type.Type<Object> valueType = (com.landawn.abacus.type.Type<Object>) resolvedOrRuntimeType(declaredValueType,
+                java.util.Collections.singletonList(value));
+
+        return valueType.valueOf(valueType.stringOf(value));
     }
 
     /**

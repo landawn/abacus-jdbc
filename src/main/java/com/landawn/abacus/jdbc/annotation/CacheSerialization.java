@@ -40,10 +40,17 @@ public enum CacheSerialization {
      *
      * <p>The copy is rebuilt as the value's runtime class, using the element, key/value or wrapped types
      * declared by the DAO method's generic return type (for example {@code List<User>},
-     * {@code Map<Long, User>} or {@code u.Optional<User>}). If the declared return type cannot be resolved
-     * (for example, it uses a type variable), collection elements and map keys/values use their common runtime
-     * class when all non-null values have the same class. Otherwise the unresolved types fall back to the
-     * serializer's defaults; nested generic type arguments cannot be recovered from runtime classes alone.</p>
+     * {@code Map<Long, User>} or {@code u.Optional<User>}). Where the declared return type does not resolve these
+     * types beyond {@code Object} (for example, it uses a type variable), the value held by an optional/nullable
+     * wrapper uses its runtime class, and collection elements and map keys/values use their common runtime class
+     * when all non-null values have the same class. Otherwise the unresolved types fall back to the serializer's
+     * defaults; nested generic type arguments cannot be recovered from runtime classes alone.</p>
+     *
+     * <p>A {@code Dataset} is copied together with its column types (the common class of each column's non-null
+     * values). Other values typed only as {@code Object}, such as the values of a {@code Map<String, Object>} row,
+     * are read back with the JSON parser's default types (for example, a {@code Long} id may come back as an
+     * {@code Integer}) unless the runtime-class fallback above applies to them. Use {@link #KRYO} or {@link #NONE}
+     * when such values must keep their exact Java types.</p>
      */
     JSON
 }

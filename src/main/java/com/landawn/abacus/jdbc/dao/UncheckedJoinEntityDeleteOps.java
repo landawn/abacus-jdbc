@@ -33,7 +33,6 @@ import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.stream.Stream;
 
 /**
  * Delete-side view of {@link UncheckedJoinEntityHelper}: the join-entity <i>delete</i> operations
@@ -443,9 +442,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
             return 0;
         }
 
-        final List<ContinuableFuture<Integer>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entity, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Integer>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entity, joinEntityPropName), executor));
 
         return DaoUtil.uncheckedCompleteSum(futures);
     }
@@ -659,9 +657,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
             return 0;
         }
 
-        final List<ContinuableFuture<Integer>> futures = Stream.of(joinEntityPropNames)
-                .map(joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entities, joinEntityPropName), executor))
-                .toList();
+        final List<ContinuableFuture<Integer>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.call(() -> deleteJoinEntities(entities, joinEntityPropName), executor));
 
         return DaoUtil.uncheckedCompleteSum(futures);
     }

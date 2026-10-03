@@ -304,6 +304,85 @@ public class JdbcUtilIntegrationTest extends TestBase {
         assertEquals(0, count.getAsInt());
     }
 
+    // A for-update-only transaction runs plain SELECTs on a separate connection, but a SELECT that embeds a
+    // data-modifying statement (H2 data-change delta table) writes data: it must join the transaction so that
+    // rolling the transaction back also undoes that write.
+    @Test
+    public void testForUpdateOnlyTransaction_DataModifyingSelectIsRolledBack() throws SQLException {
+        final long id = insertWidget("delta-table", 1);
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
+        try {
+            final OptionalInt updatedQty = JdbcUtil.prepareQuery(ds, "SELECT qty FROM FINAL TABLE (UPDATE widget SET qty = 42 WHERE id = ?)")
+                    .setLong(1, id)
+                    .queryForInt();
+            assertEquals(42, updatedQty.getAsInt());
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        final OptionalInt qty = JdbcUtil.prepareQuery(ds, "SELECT qty FROM widget WHERE id = ?").setLong(1, id).queryForInt();
+        assertEquals(1, qty.getAsInt(), "the UPDATE embedded in the SELECT must be rolled back with the transaction");
+    }
+
+    // BUG FIX: a named parameter spelled like a keyword (":into") must not be read as an INTO clause. The plain SELECT keeps
+    // running outside the for-update-only transaction, so it sees the committed value, not the transaction's uncommitted write.
+    @Test
+    public void testForUpdateOnlyTransaction_NamedParameterSpelledIntoDoesNotJoin() throws SQLException {
+        final long id = insertWidget("named-into", 1);
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
+        try {
+            assertEquals(1, JdbcUtil.prepareQuery(ds, "UPDATE widget SET qty = 42 WHERE id = ?").setLong(1, id).update());
+
+            final OptionalInt qty = JdbcUtil.prepareNamedQuery(ds, "SELECT qty FROM widget WHERE id = :into").setLong("into", id).queryForInt();
+            assertEquals(1, qty.getAsInt(), "the SELECT must run outside the for-update-only transaction");
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: a qualifier '.' may be followed by whitespace or comments ("k. into" is MySQL's column "into" of "k"), so
+    // the qualified word is a name, not an INTO clause: the plain SELECT keeps running outside the for-update-only
+    // transaction and reads the committed value.
+    @Test
+    public void testForUpdateOnlyTransaction_QualifiedKeywordColumnAfterWhitespaceDoesNotJoin() throws SQLException {
+        final DataSource mysqlModeDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:qualified_into;MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
+        JdbcUtil.execute(mysqlModeDs, "CREATE TABLE kw_into (id INT PRIMARY KEY, `into` INT)");
+        JdbcUtil.execute(mysqlModeDs, "INSERT INTO kw_into VALUES (1, 1)");
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mysqlModeDs, IsolationLevel.DEFAULT, true);
+        try {
+            assertEquals(1, JdbcUtil.prepareQuery(mysqlModeDs, "UPDATE kw_into SET `into` = 42 WHERE id = 1").update());
+
+            for (final String sql : List.of("SELECT k. into FROM kw_into k WHERE id = 1", "SELECT k . /* column */ into FROM kw_into k WHERE id = 1")) {
+                assertEquals(1, JdbcUtil.prepareQuery(mysqlModeDs, sql).queryForInt().getAsInt(), sql);
+            }
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: a parenthesized call of the INSERT(str, pos, len, newstr) string function is not an embedded INSERT statement,
+    // so the plain SELECT keeps running outside the for-update-only transaction and reads the committed value.
+    @Test
+    public void testForUpdateOnlyTransaction_InsertStringFunctionDoesNotJoin() throws SQLException {
+        final long id = insertWidget("insert-fn", 1);
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
+        try {
+            assertEquals(1, JdbcUtil.prepareQuery(ds, "UPDATE widget SET name = 'changed' WHERE id = ?").setLong(1, id).update());
+
+            final String name = JdbcUtil.prepareQuery(ds, "SELECT (INSERT(name, 1, 1, 'I')) FROM widget WHERE id = ?")
+                    .setLong(1, id)
+                    .queryForString()
+                    .orElseNull();
+            assertEquals("Insert-fn", name, "the SELECT must run outside the for-update-only transaction");
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
     // queryForInt on an empty result set is absent (no-row branch).
     @Test
     public void testQueryForInt_NoRow_IsEmpty() throws SQLException {
@@ -916,6 +995,26 @@ public class JdbcUtilIntegrationTest extends TestBase {
             final boolean dropped = JdbcUtil.dropTableIfExists(conn, "TMP_COV_TBL");
             assertTrue(dropped);
             assertFalse(JdbcUtil.tableExists(conn, "TMP_COV_TBL"));
+        }
+    }
+
+    // Regression: the tableExists fallback probe embedded the name unquoted, so for a missing table named after a reserved
+    // word H2 failed "SELECT 1 FROM ORDER WHERE 1 > 2" with a syntax error (42001) that was thrown instead of returning
+    // false, which also broke createTableIfNotExists for such a table.
+    @Test
+    public void testTableExists_ReservedWordTableName_CreateAndDrop() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:tableexists_reserved_word", "sa", "")) {
+            for (final String name : new String[] { "order", "user", "value", "year", "PUBLIC.order" }) {
+                assertFalse(JdbcUtil.tableExists(conn, name), name);
+            }
+
+            assertTrue(JdbcUtil.createTableIfNotExists(conn, "order", "CREATE TABLE \"ORDER\" (id INT)"));
+            assertTrue(JdbcUtil.tableExists(conn, "order"));
+            assertTrue(JdbcUtil.tableExists(conn, "public.order"));
+            assertFalse(JdbcUtil.createTableIfNotExists(conn, "order", "CREATE TABLE \"ORDER\" (id INT)"));
+            assertTrue(JdbcUtil.dropTableIfExists(conn, "order"));
+            assertFalse(JdbcUtil.tableExists(conn, "order"));
+            assertFalse(JdbcUtil.dropTableIfExists(conn, "order"));
         }
     }
 

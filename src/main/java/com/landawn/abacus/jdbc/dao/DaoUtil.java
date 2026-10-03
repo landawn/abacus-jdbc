@@ -19,6 +19,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -354,6 +355,74 @@ public final class DaoUtil {
                 return (ID) entityId;
             };
         }
+    }
+
+    /**
+     * Equality key over the property values of a composite id, used to de-duplicate ids by value. Array values (e.g. a
+     * {@code byte[]} binary UUID component) are compared by content, as an id class's own {@code equals} would compare them;
+     * a {@code List} key would compare them by reference and keep equal ids apart.
+     *
+     * @param values the id property values, in id property order
+     */
+    record IdValuesKey(Object[] values) {
+        @Override
+        public boolean equals(final Object obj) {
+            return obj instanceof final IdValuesKey other && Arrays.deepEquals(values, other.values);
+        }
+
+        @Override
+        public int hashCode() {
+            return Arrays.deepHashCode(values);
+        }
+
+        @Override
+        public String toString() {
+            return Arrays.deepToString(values);
+        }
+    }
+
+    /**
+     * Captures the current ID property values of the specified entities and returns an action that puts them back.
+     * <p>
+     * An insert writes generated IDs onto its entities as soon as its statements run. When it runs inside a
+     * transaction that is later rolled back, those rows no longer exist, so the returned action is used to undo
+     * the assignment instead of leaving the entities with the IDs of rolled-back rows.
+     * </p>
+     *
+     * @param entities the entities whose ID values are captured
+     * @param idPropNameList the ID property names of the entity class
+     * @param entityInfo the bean information for the entity class
+     * @return an action that writes back every captured ID value that has changed since the capture
+     */
+    static Runnable captureIdValues(final Collection<?> entities, final List<String> idPropNameList, final BeanInfo entityInfo) {
+        final List<PropInfo> idPropInfos = N.map(idPropNameList, entityInfo::getPropInfo);
+        final List<Object> entityList = new ArrayList<>(entities);
+        final List<Object[]> idValueList = new ArrayList<>(entityList.size());
+
+        for (final Object entity : entityList) {
+            final Object[] idValues = new Object[idPropInfos.size()];
+
+            for (int i = 0; i < idValues.length; i++) {
+                idValues[i] = idPropInfos.get(i).getPropValue(entity);
+            }
+
+            idValueList.add(idValues);
+        }
+
+        return () -> {
+            for (int i = 0, size = entityList.size(); i < size; i++) {
+                final Object entity = entityList.get(i);
+                final Object[] idValues = idValueList.get(i);
+
+                for (int j = 0; j < idValues.length; j++) {
+                    final PropInfo idPropInfo = idPropInfos.get(j);
+
+                    if (!N.equals(idPropInfo.getPropValue(entity), idValues[j])) {
+                        idPropInfo.setPropValue(entity, idValues[j]);
+                    }
+                }
+            }
+        };
     }
 
     /**

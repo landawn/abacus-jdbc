@@ -725,6 +725,35 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(result.contains("public class Id {"), result);
     }
 
+    // A java.lang field type is emitted by its simple name, so a class of the same name (derived from a table named "object"
+    // or "string") shadowed it: the fields silently took the entity type, and the property-name constants did not compile.
+    @Test
+    public void testGenerateEntityClass_RejectsClassNameShadowingReferencedJavaLangType() {
+        // The default mock reports no column class names, so every generated field is an Object.
+        final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass("object", resultSet, null));
+        assertTrue(ex.getMessage().contains("java.lang.Object"), ex.getMessage());
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("string", resultSet,
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().generatePropNameTable(true).build()));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet,
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("Integer").customFieldMappings(List.of(new FieldMapping("id", null, Integer.class))).build()));
+
+        // A java.lang name the generated source doesn't refer to by its simple name is not shadowed.
+        assertTrue(JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet,
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("Integer").customFieldMappings(List.of(new FieldMapping("id", null, java.math.BigInteger.class))).build())
+                .contains("public class Integer {"));
+
+        // A type argument refers to the name as well; a qualified name doesn't (this last case passed before the fix too).
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet,
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("String").fieldTypeConverter((entity, field, column, type) -> "java.util.List<String>").build()));
+        final String qualified = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("String")
+                .fieldTypeConverter((entity, field, column, type) -> "java.util.List<java.lang.String>")
+                .build());
+        assertTrue(qualified.contains("    private java.util.List<java.lang.String> status;"), qualified);
+    }
+
     @Test
     public void testGenerateEntityClass_RejectsInvalidConfiguredPackageName() throws SQLException {
         setupFullGenerateEntityClassMock();
@@ -1218,6 +1247,29 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
             final String quotedSource = JdbcCodeGenerationUtil.generateEntityClass(conn, "\"MixedSchema\".\"MixedTable\"");
             assertTrue(quotedSource.contains("    @Id\n"), quotedSource);
             assertTrue(quotedSource.contains("@Column(name = \"customKey\")"), quotedSource);
+        }
+    }
+
+    // A table name that is not a simple identifier (order-history) is delimited in the generated metadata query, so the
+    // database resolved it case-exactly; the primary-key lookup still folded it to ORDER-HISTORY and found no key on H2.
+    @Test
+    public void testGenerateEntityClassPrimaryKeysOfSpecialTableNameAreNotCaseFolded() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:codegen_primary_key_special_" + System.nanoTime(), "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE \"order-history\" (order_key INT PRIMARY KEY, note VARCHAR(20))");
+
+            final String source = JdbcCodeGenerationUtil.generateEntityClass(conn, "order-history");
+
+            assertTrue(source.contains("public class OrderHistory"), source);
+            assertTrue(source.contains("    @Id\n    @Column(name = \"ORDER_KEY\")"), source);
+
+            // Folding is decided per part: the simple schema name is still folded (to SPECIAL_SCHEMA), the table name is not.
+            stmt.execute("CREATE SCHEMA special_schema");
+            stmt.execute("CREATE TABLE special_schema.\"order-history\" (other_key INT PRIMARY KEY, note VARCHAR(20))");
+
+            final String qualifiedSource = JdbcCodeGenerationUtil.generateEntityClass(conn, "special_schema.order-history");
+
+            assertTrue(qualifiedSource.contains("    @Id\n    @Column(name = \"OTHER_KEY\")"), qualifiedSource);
         }
     }
 
@@ -1762,6 +1814,65 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(result.contains("import com.landawn.abacus.annotation.Read;"));
     }
 
+    // A requested import that equals a default import was skipped as a duplicate, and the default import was then pruned
+    // as unused (the scans only recognize annotation lines), so a body using the type did not compile.
+    @Test
+    public void testGenerateEntityClass_RequestedDefaultImportIsNotPrunedAsUnused(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .classNamesToImport(List.of("com.landawn.abacus.util.NamingPolicy", "com.landawn.abacus.annotation.ReadOnly"))
+                .additionalClassBodySource("    private NamingPolicy namingPolicy = NamingPolicy.CAMEL_CASE;\n    @Deprecated @ReadOnly private String note;")
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        assertTrue(code.contains("import com.landawn.abacus.util.NamingPolicy;\n"), code);
+        assertTrue(code.contains("import com.landawn.abacus.annotation.ReadOnly;\n"), code);
+
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
+                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
+                source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
+    // The same holds for the imports pruned up front: Id when no generated field gets @Id (here the key column is excluded and
+    // re-declared in the body), and Builder/Accessors when the class-level annotations are disabled (here used by a nested class).
+    @Test
+    public void testGenerateEntityClass_RequestedIdAndLombokImportsAreNotPrunedAsUnused(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .excludedFields(List.of("id"))
+                .classNamesToImport(List.of("com.landawn.abacus.annotation.Id", "lombok.Builder", "lombok.experimental.Accessors"))
+                .additionalClassBodySource(String.join("\n", //
+                        "    @Id", //
+                        "    @Column(name = \"id\")", //
+                        "    private long id;", //
+                        "    @Builder", //
+                        "    @Accessors(fluent = true)", //
+                        "    public static class Item {", //
+                        "        private String name;", //
+                        "    }"))
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        assertTrue(code.contains("import com.landawn.abacus.annotation.Id;\n"), code);
+        assertTrue(code.contains("import lombok.Builder;\n"), code);
+        assertTrue(code.contains("import lombok.experimental.Accessors;\n"), code);
+        // The disabled class-level annotations are still left out.
+        assertFalse(code.contains("\n@Builder\n"), code);
+        assertFalse(code.contains("\n@Accessors(chain = true)\n"), code);
+
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
+                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
+                source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
     // Jakarta annotation in headPart triggers extra LINE_SEPARATOR (L597)
     // and custom tableAnnotationClass = jakarta.persistence.Table covers L542 path
     @Test
@@ -2259,6 +2370,21 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertFalse(code.contains("import java.util.com;"), code);
     }
 
+    // Class.forName also loads package-private java.util classes, so a generic type named like one of them (for example
+    // a same-package TaskQueue<T>) got an inaccessible "import java.util.TaskQueue;" that does not compile.
+    @Test
+    public void testGenerateEntityClass_AdditionalGenericFieldDoesNotImportNonPublicJavaUtilClass() {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .additionalClassBodySource("    private TaskQueue<String> tasks;\n    private KeyValueHolder<String, Integer> pair;\n    private List<String> tags;")
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        assertFalse(code.contains("import java.util.TaskQueue;"), code);
+        assertFalse(code.contains("import java.util.KeyValueHolder;"), code);
+        assertTrue(code.contains("import java.util.List;"), code);
+    }
+
     // BUG FIX: the NonUpdatable import was dropped up front whenever no configured non-updatable field matched a
     // column, so an additionalClassBodySource using @NonUpdatable did not compile. It is now pruned only by the final
     // scan of the emitted lines, like the other annotation imports.
@@ -2337,6 +2463,19 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final String result = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2", config);
         assertNotNull(result);
         assertTrue(result.contains("String status"));
+    }
+
+    // Only types declared in java.lang itself are implicitly imported: a java.lang subpackage type such as
+    // java.lang.annotation.ElementType was shortened to the uncompilable "annotation.ElementType".
+    @Test
+    public void testGenerateEntityClass_CustomizedFieldTypeKeepsJavaLangSubpackageQualifier() {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .customFieldMappings(List.of(new FieldMapping("status", null, ElementType.class), new FieldMapping("created_at", null, Character.UnicodeScript.class)))
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        assertTrue(code.contains("    private java.lang.annotation.ElementType status;"), code);
+        assertTrue(code.contains("    private Character.UnicodeScript createdAt;"), code);
     }
 
     // idFields non-null in config — L416
@@ -3259,6 +3398,136 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         assertTrue(result.contains("copy.factory = this.factory;"), result);
         assertTrue(result.contains("copy.other = this.other;"), result);
+    }
+
+    // Members of a nested type body (and block-commented declarations) were recognized as fields of the generated class,
+    // so copy() assigned copy.street = this.street and the source did not compile. A nested body's generic fields still get
+    // their java.util imports.
+    @Test
+    public void testGenerateEntityClass_CopyMethodSkipsMembersOfNestedBodies(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .generateCopyMethod(true)
+                .additionalClassBodySource(String.join("\n", //
+                        "    private Address address;", //
+                        "    /*", //
+                        "    private String legacyNote;", //
+                        "    */", //
+                        "    @lombok.Data", //
+                        "    public static class Address {", //
+                        "        private String street;", //
+                        "        private List<String> lines;", //
+                        "    }"))
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        assertTrue(code.contains("copy.address = this.address;"), code);
+        assertFalse(code.contains("copy.street"), code);
+        assertFalse(code.contains("copy.lines"), code);
+        assertFalse(code.contains("copy.legacyNote"), code);
+        assertTrue(code.contains("import java.util.List;"), code);
+
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
+                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
+                source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
+    // Edge cases of the top-level detection: braces in char/string literals, an escaped quote and "//" inside a string, braces
+    // of an annotation and an array initializer closed on their line, a text block holding braces, an escaped """ and a
+    // field-like line, an anonymous class body spanning lines, and CRLF line ends.
+    @Test
+    public void testGenerateEntityClass_CopyMethodTopLevelDetectionHandlesLiteralsAndCrlf(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .generateCopyMethod(true)
+                .additionalClassBodySource(String.join("\r\n", //
+                        "    private char open = '{';", //
+                        "    private String close = \"}\\\" // {\";", //
+                        "    @SuppressWarnings({ \"unused\", \"rawtypes\" })", //
+                        "    private int[] codes = { 1, 2 };", //
+                        "    private Runnable task = new Runnable() {", //
+                        "        private int runs;", //
+                        "        public void run() { runs++; }", //
+                        "    };", //
+                        "    private String sql = \"\"\"", //
+                        "        } \\\"\"\" {", //
+                        "        private String fake;", //
+                        "        \"\"\";", //
+                        "    private String note;"))
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        for (final String field : List.of("open", "close", "codes", "note")) {
+            assertTrue(code.contains("copy." + field + " = this." + field + ";"), code);
+        }
+
+        assertFalse(code.contains("copy.runs"), code);
+        assertFalse(code.contains("copy.fake"), code);
+
+        final Path source = directory.resolve("OrderHistory.java");
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
+                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
+                source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
+    // A one-line type or method declaration followed by a stray ';' (an empty member) is valid source, but it was parsed
+    // as a field declaration and rejected with "Cannot parse field declaration".
+    @Test
+    public void testGenerateEntityClass_AdditionalTypeOrMethodDeclarationWithStraySemicolonIsAccepted() {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .generateCopyMethod(true)
+                .additionalClassBodySource("    public enum Kind { ONLINE, STORE }; private Kind kind;\n    public String label() { return \"x\"; };")
+                .build();
+
+        final String code = assertDoesNotThrow(() -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config));
+
+        assertTrue(code.contains("copy.kind = this.kind;"), code);
+        assertFalse(code.contains("copy.label"), code);
+    }
+
+    // Only a declaration with a parameter list or body (before any initializer) is skipped as a non-field: a malformed field
+    // declaration is still rejected with the parse error, as before. Bodiless methods and annotation elements (here of nested
+    // types) are skipped, and source in a block comment or text block is not parsed at all (before, it was parsed: "private
+    // int;" failed and Deque got imported).
+    @Test
+    public void testGenerateEntityClass_MalformedAdditionalFieldDeclarationIsStillRejected() {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("OrderHistory").build();
+
+        for (final String malformed : List.of("    private int;", "    private int a, int b;", "    private int = 1;", "    private int = foo();")) {
+            config.setAdditionalClassBodySource(malformed);
+
+            final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config), malformed);
+            assertTrue(ex.getMessage().contains("Cannot parse field declaration"), ex.getMessage());
+        }
+
+        config.setAdditionalClassBodySource(String.join("\n", //
+                "    public interface Visitor {", //
+                "        public void visit(String value);", //
+                "    }", //
+                "    public @interface Marker {", //
+                "        public String value() default \"\";", //
+                "        public int order() default 1;", //
+                "    }", //
+                "    /*", //
+                "    private int;", //
+                "    private Deque<String> legacy;", //
+                "    */", //
+                "    private static final String SQL = \"\"\"", //
+                "        public select;", //
+                "        \"\"\";"));
+
+        final String code = assertDoesNotThrow(() -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config));
+
+        assertFalse(code.contains("import java.util.Deque;"), code);
     }
 
     // entityName that is not a parseable SQL identifier (4-part "a.b.c.d") makes

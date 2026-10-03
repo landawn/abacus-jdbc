@@ -55,6 +55,8 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
@@ -767,9 +769,9 @@ public final class JdbcUtil {
      * @param user The username for database authentication.
      * @param password The password for database authentication.
      * @param minPoolSize The minimum number of connections the pool will maintain.
-     * @param maxPoolSize The maximum number of connections the pool will allow.
+     * @param maxPoolSize The maximum number of connections the pool will allow; must be positive.
      * @return A {@code javax.sql.DataSource} instance configured with C3P0 and custom pool settings.
-     * @throws IllegalArgumentException if {@code url} is {@code null} or empty.
+     * @throws IllegalArgumentException if {@code url} is {@code null} or empty, or {@code maxPoolSize} is not positive.
      * @throws RuntimeException if constructing or configuring the C3P0 connection pool fails.
      * @see #createC3p0DataSource(String, String, String)
      * @see com.mchange.v2.c3p0.ComboPooledDataSource
@@ -778,6 +780,9 @@ public final class JdbcUtil {
     public static javax.sql.DataSource createC3p0DataSource(final String url, final String user, final String password, final int minPoolSize,
             final int maxPoolSize) throws IllegalArgumentException, RuntimeException {
         N.checkArgNotEmpty(url, cs.url);
+        // C3P0 accepts a non-positive max pool size without complaint, and getConnection() then waits forever
+        // (default checkoutTimeout 0) for a connection the pool may never create. HikariCP rejects it eagerly.
+        N.checkArgPositive(maxPoolSize, cs.maxPoolSize);
 
         try {
             final com.mchange.v2.c3p0.ComboPooledDataSource cpds = new com.mchange.v2.c3p0.ComboPooledDataSource();
@@ -2029,7 +2034,9 @@ public final class JdbcUtil {
      * matched case-sensitively. If the metadata lookup yields no match and all name parts
      * are simple identifiers (letters, digits, {@code _} and {@code $}), it falls back to running an
      * empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column
-     * names from the result set metadata; quoted or otherwise exotic names have no such fallback.</p>
+     * names from the result set metadata (when the driver reports a canonical identifier case, the case-folded
+     * name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as a
+     * keyword); quoted or otherwise exotic names have no such fallback.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like
      * {@code schema.table} or {@code catalog.schema.table}. Schema and table parts are literal
@@ -2060,7 +2067,7 @@ public final class JdbcUtil {
         final String[] nameParts = splitQualifiedSqlIdentifier(tableName, cs.tableName);
         final boolean[] delimitedNameParts = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(tableName, nameParts.length);
         final DatabaseMetaData metadata = conn.getMetaData();
-        normalizeMetadataIdentifierParts(metadata, nameParts, delimitedNameParts);
+        final boolean caseFolded = normalizeMetadataIdentifierParts(metadata, nameParts, delimitedNameParts);
         final String catalog;
         final String schema;
         final String table;
@@ -2140,7 +2147,13 @@ public final class JdbcUtil {
         }
 
         if (N.isEmpty(columnNameList) && !hasDelimitedIdentifierPart(tableName) && Strings.isNotEmpty(fallbackQualifiedTableName)) {
-            columnNameList = getColumnNamesBySelect(conn, fallbackQualifiedTableName);
+            // As in tableExists: when the database reports a canonical identifier case, every part was folded to it above, so
+            // quoting the parts names the same table. Unquoted, a reserved word is parsed as a keyword: PostgreSQL runs
+            // "SELECT * FROM user" as the CURRENT_USER function (a missing table then yields the column [user]).
+            final String probeQuote = caseFolded ? normalizeIdentifierQuote(metadata) : null;
+
+            columnNameList = getColumnNamesBySelect(conn, probeQuote == null ? fallbackQualifiedTableName
+                    : buildSimpleQualifiedTableName(nameParts.length == 3 ? catalog : null, schema, table, probeQuote));
         }
 
         if (N.isEmpty(columnNameList)) {
@@ -3276,6 +3289,378 @@ public final class JdbcUtil {
     }
 
     /**
+     * Returns {@code true} if {@code sql} writes data although it may be classified as a {@code SELECT}: a parenthesized
+     * section starts with {@code INSERT}, {@code UPDATE}, {@code DELETE} or {@code MERGE}, as in a PostgreSQL
+     * data-modifying CTE ({@code WITH u AS (UPDATE ... RETURNING ...) SELECT ...}) or a DB2/H2 data-change delta
+     * table ({@code SELECT ... FROM FINAL TABLE (UPDATE ...)}), or the statement has an {@code INTO} clause
+     * ({@code SELECT ... INTO new_table FROM ...} creates a table on PostgreSQL and SQL Server; MySQL's
+     * {@code SELECT ... INTO @var} sets a session variable). Quoted text/identifiers, comments, parameter placeholders
+     * ({@code :name}, {@code #{name}}, {@code ${name}}), variables ({@code @name}) and qualified name parts (also when
+     * whitespace or comments follow the qualifier {@code .}, as in {@code a. into}) are ignored, and so is a call of the
+     * {@code INSERT(str, pos, len, newstr)} string function.
+     *
+     * <p>On MySQL/MariaDB ({@link ScanDialect#mySql()}) their rules apply: {@code #} starts a line comment;
+     * {@code --} starts one only when followed by whitespace or a control character ({@code 5--3} is arithmetic);
+     * block comments don't nest; and the content of an executable comment ({@code /*! ... *}{@code /}, optionally
+     * version-gated, or MariaDB's {@code /*M! ... *}{@code /}) is scanned as code when the server runs it (see
+     * {@link #executableCommentContentStart(String, int, ScanDialect)}). Otherwise {@code --} always starts a line comment
+     * and block comments nest. A {@code .} after a number is a decimal point; besides plain digits, digit groups separated
+     * by single underscores ({@code 1_000}) are a number (PostgreSQL 16), except on MySQL/MariaDB, where {@code 1_000} is an
+     * identifier. Elsewhere {@code #} is part of a name (SQL Server {@code #temp} tables) or an operator (PostgreSQL
+     * {@code #}, {@code #>}), not a comment.</p>
+     *
+     * @param sql The SQL text to scan.
+     * @param dialect The dialect facts the scan depends on.
+     * @return {@code true} if a parenthesized section begins with a data-modifying keyword or an {@code INTO} keyword occurs.
+     */
+    private static boolean isDataModifyingSelect(final String sql, final ScanDialect dialect) {
+        final boolean mySqlDialect = dialect.mySql();
+        boolean atSectionStart = false;
+        // Whether the last significant token (whitespace and comments don't count) can be qualified by a following '.'
+        // (an identifier, a quoted identifier or a closing parenthesis, but not a number), and whether it is such a '.'.
+        boolean lastTokenIsName = false;
+        boolean afterQualifierDot = false;
+        // An INSERT that starts a parenthesized section is an INSERT statement unless the next significant token is '(':
+        // INSERT(str, pos, len, newstr) is a string function (MySQL, H2), and an INSERT statement never continues with '('.
+        boolean pendingInsert = false;
+        // Inside a MySQL executable comment ("/*! ... */"), whose content the server runs as code.
+        boolean inExecutableComment = false;
+
+        for (int i = 0, len = sql.length(); i < len;) {
+            final char ch = sql.charAt(i);
+
+            if (Character.isWhitespace(ch)) {
+                i++;
+                continue;
+            }
+
+            if (ch == '-' && i + 1 < len && sql.charAt(i + 1) == '-' && (!mySqlDialect || i + 2 >= len || isMySqlDashCommentSeparator(sql.charAt(i + 2)))) {
+                i = skipLineComment(sql, i + 2);
+                continue;
+            }
+
+            if (ch == '/' && i + 1 < len && sql.charAt(i + 1) == '*') {
+                final int executableContentStart = mySqlDialect && !inExecutableComment ? executableCommentContentStart(sql, i, dialect) : -1;
+
+                if (executableContentStart >= 0) {
+                    // The server runs the content of this "/*! ... */", so it is scanned as code (an INTO there is a real
+                    // clause). A comment the server ignores (MariaDB-only, or gated on a newer version) is a plain comment.
+                    inExecutableComment = true;
+                    i = executableContentStart;
+                } else if (mySqlDialect) {
+                    // MySQL block comments don't nest: "/* a /* b */ INTO @x" ends the comment at the first "*/".
+                    final int closing = sql.indexOf("*/", i + 2);
+                    i = closing < 0 ? len : closing + 2;
+                } else {
+                    i = skipBlockComment(sql, i + 2);
+                }
+
+                continue;
+            }
+
+            if (inExecutableComment && ch == '*' && i + 1 < len && sql.charAt(i + 1) == '/') {
+                inExecutableComment = false;
+                i += 2;
+                continue;
+            }
+
+            if (mySqlDialect && ch == '#' && !(i + 1 < len && sql.charAt(i + 1) == '{')) {
+                // A MySQL/MariaDB '#' line comment (a #{name} placeholder is not one).
+                i = skipLineComment(sql, i + 1);
+                continue;
+            }
+
+            // A significant token starts here.
+            if (pendingInsert) {
+                if (ch != '(') {
+                    return true;
+                }
+
+                pendingInsert = false;
+            }
+
+            if (ch == '(') {
+                atSectionStart = true;
+                lastTokenIsName = false;
+                afterQualifierDot = false;
+                i++;
+                continue;
+            }
+
+            boolean isName = false;
+            boolean isQualifierDot = false;
+
+            if (ch == '\'') {
+                i = skipQuotedSqlText(sql, i, ch);
+            } else if (ch == '"' || ch == '`') {
+                i = skipQuotedSqlText(sql, i, ch);
+                isName = true;
+            } else if (ch == '[') {
+                i = skipBracketQuotedSqlText(sql, i);
+                isName = true;
+            } else if (ch == '$' && skipDollarQuotedSqlText(sql, i) > i) {
+                i = skipDollarQuotedSqlText(sql, i);
+            } else if ((ch == '#' || ch == '$') && i + 1 < len && sql.charAt(i + 1) == '{') {
+                // A #{name} / ${name} placeholder names a parameter, never a keyword.
+                final int closingBrace = sql.indexOf('}', i + 2);
+                i = closingBrace < 0 ? len : closingBrace + 1;
+            } else if (isSqlIdentifierPart(ch)) {
+                int end = i + 1;
+
+                while (end < len && isSqlIdentifierPart(sql.charAt(end))) {
+                    end++;
+                }
+
+                // A word directly after ':' (a named parameter such as ":into", or a "::type" cast) or '@' (a variable),
+                // or after a qualifier '.' (which may be separated from it by whitespace or comments, e.g. "a. into"), is
+                // a name, not a keyword: reading it as an INTO clause made an ordinary SELECT join the for-update-only
+                // transaction (prepareNamedQuery passes the original named SQL). A '.' after a number is a decimal point,
+                // so "SELECT 1. INTO @x" still has an INTO clause.
+                final char prev = i > 0 ? sql.charAt(i - 1) : ' ';
+                final boolean isKeywordPosition = !(afterQualifierDot || prev == ':' || prev == '@');
+
+                if (isKeywordPosition && end - i == 4 && sql.regionMatches(true, i, "into", 0, 4)) {
+                    return true;
+                }
+
+                if (isKeywordPosition && atSectionStart) {
+                    final String token = sql.substring(i, end);
+
+                    // UPDATE/DELETE/MERGE count even when '(' follows: "UPDATE (SELECT ...) SET ..." updates a subquery on
+                    // Oracle/DB2, and missing a write is worse than a read joining. INSERT is decided by the next token.
+                    if (token.equalsIgnoreCase("update") || token.equalsIgnoreCase("delete") || token.equalsIgnoreCase("merge")) {
+                        return true;
+                    }
+
+                    pendingInsert = token.equalsIgnoreCase("insert");
+                }
+
+                // Only an integer literal is followed by a decimal point; MySQL identifiers may start with a digit ("1a"),
+                // and such a qualifier still qualifies the next word. "1_000" is a number on PostgreSQL 16 but an
+                // identifier on MySQL.
+                isName = !isIntegerLiteral(sql, i, end, mySqlDialect);
+                i = end;
+            } else {
+                isQualifierDot = ch == '.' && lastTokenIsName;
+                isName = ch == ')';
+                i++;
+            }
+
+            atSectionStart = false;
+            lastTokenIsName = isName;
+            afterQualifierDot = isQualifierDot;
+        }
+
+        // A trailing INSERT keyword is not a function call.
+        return pendingInsert;
+    }
+
+    /**
+     * Returns whether {@code ch}, following {@code --}, makes it a MySQL/MariaDB line comment: MySQL requires whitespace
+     * or a control character there, so {@code 5--3} is {@code 5 - (-3)}.
+     *
+     * @param ch The character after {@code --}.
+     * @return {@code true} if {@code ch} is whitespace or a control character.
+     */
+    private static boolean isMySqlDashCommentSeparator(final char ch) {
+        return ch <= ' ' || Character.isWhitespace(ch) || Character.isISOControl(ch);
+    }
+
+    /**
+     * Returns the index where the content of an executable comment starting at {@code index} begins, if the server runs
+     * that content: {@code /*!} (MySQL and MariaDB) or {@code /*M!} (MariaDB only), optionally followed by a 5- or 6-digit
+     * version {@code Mmmpp}/{@code MMmmpp}, below which the server ignores the comment. A comment is treated as ignored
+     * only when that is certain ({@code /*M!} on a server known not to be MariaDB, a version above a known server version,
+     * or, on a server known to be MariaDB, a MySQL-style {@code /*!} version in {@code 50700..99999}, which MariaDB
+     * ignores): skipping content the server does run could hide a write.
+     *
+     * @param sql The SQL text.
+     * @param index The position of {@code /*}.
+     * @param dialect The dialect facts (vendor and server version, where known).
+     * @return The index after the opener and its version number, or {@code -1} if no executable comment starts there or the
+     *         server ignores it.
+     */
+    private static int executableCommentContentStart(final String sql, final int index, final ScanDialect dialect) {
+        final boolean mariaDbOnly;
+        final int afterOpener;
+
+        if (sql.startsWith("/*!", index)) {
+            mariaDbOnly = false;
+            afterOpener = index + 3;
+        } else if (sql.startsWith("/*M!", index)) {
+            mariaDbOnly = true;
+            afterOpener = index + 4;
+        } else {
+            return -1;
+        }
+
+        if (mariaDbOnly && Boolean.FALSE.equals(dialect.mariaDb())) {
+            return -1; // MySQL ignores MariaDB-only comments.
+        }
+
+        int versionEnd = afterOpener;
+
+        while (versionEnd < sql.length() && sql.charAt(versionEnd) >= '0' && sql.charAt(versionEnd) <= '9') {
+            versionEnd++;
+        }
+
+        final int versionLength = versionEnd - afterOpener;
+
+        if (versionLength != 5 && versionLength != 6) {
+            return afterOpener; // no version: everything after the opener is code
+        }
+
+        final int requiredVersion = Integer.parseInt(sql, afterOpener, versionEnd, 10);
+
+        // MariaDB ignores MySQL-style comments gated on 5.7+ ("/*!50700" .. "/*!99999", MySQL-only features), but still runs
+        // its own "/*M!" comments in that range.
+        if (!mariaDbOnly && versionLength == 5 && requiredVersion >= 50700 && Boolean.TRUE.equals(dialect.mariaDb())) {
+            return -1;
+        }
+
+        return dialect.serverVersion() >= 0 && requiredVersion > dialect.serverVersion() ? -1 : versionEnd;
+    }
+
+    /**
+     * The database facts {@link #isDataModifyingSelect(String, ScanDialect)} depends on.
+     *
+     * @param mySql Whether MySQL/MariaDB rules apply.
+     * @param mariaDb Whether the server is MariaDB, or {@code null} if unknown; MariaDB-only executable comments run only
+     *        there.
+     * @param serverVersion The server version as {@code major * 10000 + minor * 100 + patch}, or {@code -1} if unknown.
+     */
+    record ScanDialect(boolean mySql, Boolean mariaDb, int serverVersion) {
+        /** Standard rules (any database other than MySQL/MariaDB). */
+        static final ScanDialect STANDARD = new ScanDialect(false, false, -1);
+
+        /** MySQL/MariaDB rules with unknown vendor and version: every executable comment counts as run. */
+        static final ScanDialect MYSQL_UNKNOWN_SERVER = new ScanDialect(true, null, -1);
+    }
+
+    /** Leading {@code major.minor[.patch]} of a database product version. */
+    private static final Pattern SERVER_VERSION_PATTERN = Pattern.compile("^\\s*(\\d{1,3})\\.(\\d{1,2})(?:\\.(\\d{1,2}))?(?!\\d)");
+
+    /**
+     * Returns whether the scan of {@code sql} can depend on the database: on its comment rules ({@code #}, {@code --},
+     * {@code /*}) or on whether a digit-leading word with underscores ({@code 1_000}) is a number or an identifier.
+     * The database product only needs to be looked up for such SQL.
+     *
+     * @param sql The SQL text.
+     * @return {@code true} if the SQL contains {@code #}, {@code --}, {@code /*}, or a digit followed by {@code _}.
+     */
+    private static boolean dependsOnDialect(final String sql) {
+        if (sql.indexOf('#') >= 0 || sql.contains("--") || sql.contains("/*")) {
+            return true;
+        }
+
+        for (int i = sql.indexOf('_'); i > 0; i = sql.indexOf('_', i + 1)) {
+            final char prev = sql.charAt(i - 1);
+
+            if (prev >= '0' && prev <= '9') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns the scan dialect of the database {@code conn} is connected to. Called at most once per transaction (see
+     * {@link SqlTransaction#scanDialect(java.util.function.Function)}).
+     *
+     * @param conn The connection the SQL runs on.
+     * @return The dialect, or {@code null} if the database product name cannot be read.
+     */
+    private static ScanDialect scanDialectOf(final Connection conn) {
+        final DatabaseMetaData metadata;
+        final String productName;
+
+        try {
+            metadata = conn.getMetaData();
+            productName = metadata.getDatabaseProductName();
+        } catch (final SQLException | RuntimeException e) {
+            logger.debug(e, "Failed to read the database product name to apply MySQL rules");
+            return null;
+        }
+
+        if (!Strings.containsAnyIgnoreCase(productName, "MySQL", "MariaDB")) {
+            return ScanDialect.STANDARD;
+        }
+
+        final String productVersion;
+
+        try {
+            productVersion = metadata.getDatabaseProductVersion();
+        } catch (final SQLException | RuntimeException e) {
+            logger.debug(e, "Failed to read the database product version");
+            return new ScanDialect(true, Strings.containsIgnoreCase(productName, "MariaDB") ? Boolean.TRUE : null, -1);
+        }
+
+        // A MariaDB server may report itself as "MySQL" (through the MySQL driver), but its version says "...-MariaDB".
+        final Boolean mariaDb = Strings.containsIgnoreCase(productName, "MariaDB") || Strings.containsIgnoreCase(productVersion, "MariaDB") ? Boolean.TRUE
+                : productVersion == null ? null : Boolean.FALSE;
+
+        return new ScanDialect(true, mariaDb, parseServerVersion(productVersion, Boolean.TRUE.equals(mariaDb)));
+    }
+
+    /**
+     * Parses a database product version into {@code major * 10000 + minor * 100 + patch}, the form executable comments are
+     * gated on. A missing patch counts as {@code 99}: overestimating the version only treats more comments as run.
+     *
+     * @param productVersion The version reported by the driver, e.g. {@code 8.0.33}, {@code 10.6.12-MariaDB-1:10.6.12} or
+     *        {@code 5.5.5-10.6.12-MariaDB} (MariaDB's compatibility prefix for MySQL clients).
+     * @param mariaDb Whether the server is MariaDB.
+     * @return The version number, or {@code -1} if it cannot be parsed.
+     */
+    private static int parseServerVersion(final String productVersion, final boolean mariaDb) {
+        if (productVersion == null) {
+            return -1;
+        }
+
+        final String version = mariaDb && productVersion.startsWith("5.5.5-") ? productVersion.substring(6) : productVersion;
+        final Matcher matcher = SERVER_VERSION_PATTERN.matcher(version);
+
+        if (!matcher.find()) {
+            return -1;
+        }
+
+        final int major = Integer.parseInt(matcher.group(1));
+        final int minor = Integer.parseInt(matcher.group(2));
+        final int patch = matcher.group(3) == null ? 99 : Integer.parseInt(matcher.group(3));
+
+        return major * 10000 + minor * 100 + patch;
+    }
+
+    /**
+     * Returns whether {@code sql.substring(fromIndex, toIndex)} is an unsigned integer literal, so that a {@code .} after
+     * it is a decimal point: ASCII digits, which (except on MySQL/MariaDB) may be grouped by single underscores between
+     * digits, as PostgreSQL 16 accepts in {@code 1_000}. On MySQL/MariaDB {@code 1_000} is an identifier.
+     *
+     * @param sql The SQL text.
+     * @param fromIndex The start index of the token, inclusive.
+     * @param toIndex The end index of the token, exclusive.
+     * @param mySqlDialect Whether the SQL runs on MySQL/MariaDB.
+     * @return {@code true} if the token is an unsigned integer literal.
+     */
+    private static boolean isIntegerLiteral(final String sql, final int fromIndex, final int toIndex, final boolean mySqlDialect) {
+        boolean afterDigit = false;
+
+        for (int i = fromIndex; i < toIndex; i++) {
+            final char ch = sql.charAt(i);
+
+            if (ch >= '0' && ch <= '9') {
+                afterDigit = true;
+            } else if (ch == '_' && !mySqlDialect && afterDigit && i + 1 < toIndex) {
+                afterDigit = false; // a single underscore between digits
+            } else {
+                return false;
+            }
+        }
+
+        return afterDigit;
+    }
+
+    /**
      * Statement configurer for queries expected to return a large result set: sets the forward fetch-direction hint
      * and raises the fetch size to at least {@link #DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET}.
      */
@@ -3312,7 +3697,9 @@ public final class JdbcUtil {
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
-     * A {@code SqlTransaction} begun with {@code isForUpdateOnly = true} is not used for a {@code SELECT} statement.</p>
+     * A {@code SqlTransaction} begun with {@code isForUpdateOnly = true} is not used for a {@code SELECT} statement,
+     * unless the statement embeds a data-modifying {@code INSERT}/{@code UPDATE}/{@code DELETE}/{@code MERGE} section
+     * (for example, {@code WITH u AS (UPDATE ... RETURNING ...) SELECT ...}) or has an {@code INTO} clause.</p>
      *
      * <p><b>Key Features:</b></p>
      * <ul>
@@ -5750,7 +6137,7 @@ public final class JdbcUtil {
     /**
      * Returns the transaction active on the current thread for the given {@link javax.sql.DataSource} and
      * eligible for the given SQL statement, or {@code null} if there is none (or the transaction is for
-     * update operations only and the statement is a {@code SELECT}).
+     * update operations only and the statement is a {@code SELECT} that does not write data).
      *
      * @param ds The {@link javax.sql.DataSource} whose transaction to look up.
      * @param sql The SQL statement to be executed within the transaction.
@@ -5758,14 +6145,30 @@ public final class JdbcUtil {
      * @return The active transaction, or {@code null} if none applies.
      */
     static SqlTransaction getTransaction(final javax.sql.DataSource ds, final String sql, final CreatedBy createdBy) {
-        final SqlOperation sqlOperation = JdbcUtil.getSqlOperation(sql);
         final SqlTransaction tran = SqlTransaction.getTransaction(ds, createdBy);
 
-        if (tran == null || (tran.isForUpdateOnly() && sqlOperation == SqlOperation.SELECT)) {
-            return null;
-        } else {
+        if (tran == null || !tran.isForUpdateOnly() || JdbcUtil.getSqlOperation(sql) != SqlOperation.SELECT) {
             return tran;
         }
+
+        // A SELECT that embeds an INSERT/UPDATE/DELETE/MERGE (PostgreSQL data-modifying CTE, DB2/H2
+        // "FINAL TABLE (UPDATE ...)") or has an INTO clause (SELECT ... INTO new_table / @var) writes data: running it on
+        // a separate auto-commit connection would let the write escape a for-update-only transaction's rollback (or block
+        // on the transaction's own row locks, or leave a temp table/session variable on the wrong connection).
+        // Comment rules (MySQL: '#' comments, "--" only before whitespace, flat and executable block comments) and whether
+        // "1_000" is a number depend on the database, which is only looked up for SQL where they can matter, and at most once
+        // per transaction. If it can't be read, the SQL counts as writing when either rule set says so: under the wrong rules
+        // a quote inside a MySQL '#' comment ("# don't") would open a string that hides a real INTO on the next line.
+        if (!dependsOnDialect(sql)) {
+            return isDataModifyingSelect(sql, ScanDialect.STANDARD) ? tran : null;
+        }
+
+        final ScanDialect dialect = tran.scanDialect(JdbcUtil::scanDialectOf);
+        final boolean writes = dialect == null
+                ? isDataModifyingSelect(sql, ScanDialect.MYSQL_UNKNOWN_SERVER) || isDataModifyingSelect(sql, ScanDialect.STANDARD)
+                : isDataModifyingSelect(sql, dialect);
+
+        return writes ? tran : null;
     }
 
     /**
@@ -7369,7 +7772,9 @@ public final class JdbcUtil {
      *
      * @param parsedSql The parsed SQL statement containing parameter information.
      * @param parameters The parameters provided.
-     * @return {@code true} if the SQL has named parameters and exactly one non-null entity, {@code Map}, or {@code EntityId} parameter is provided.
+     * @return {@code true} if the SQL has named parameters and exactly one non-null entity, {@code Map}, or {@code EntityId} parameter is provided;
+     *         {@code false} for a value whose class is not a bean in the Abacus type system and has no property named after the SQL's only
+     *         placeholder, which is then bound directly.
      */
     static boolean isEntityOrMapParameter(final ParsedSql parsedSql, final Object... parameters) {
         if (N.isEmpty(parsedSql.namedParameters()) || N.isEmpty(parameters) || (parameters.length != 1) || (parameters[0] == null)) {
@@ -7378,7 +7783,15 @@ public final class JdbcUtil {
 
         final Class<?> cls = parameters[0].getClass();
 
-        return Beans.isBeanClass(cls) || Beans.isRecordClass(cls) || Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
+        if (Beans.isBeanClass(cls) || Beans.isRecordClass(cls)) {
+            // Some value classes pass Beans.isBeanClass only because they expose getter/setter pairs (GregorianCalendar,
+            // MutableBoolean, a class with a registered Type). With exactly one named placeholder, bind such a value directly,
+            // as '?' SQL and NamedQuery do, instead of failing to find a property named after the parameter.
+            return parsedSql.parameterCount() != 1 || N.typeOf(cls).isBean()
+                    || ParserUtil.getBeanInfo(cls).getPropInfo(parsedSql.namedParameters().get(0)) != null;
+        }
+
+        return Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
     }
 
     /**
@@ -9846,7 +10259,9 @@ public final class JdbcUtil {
      * are tried only when the driver reports no canonical identifier case).
      * Schema and table parts are treated as literal names, with metadata search-pattern characters escaped.
      * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
-     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
+     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} (when the driver reports a canonical identifier case, the
+     * case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as
+     * a keyword) — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated. On PostgreSQL and PostgreSQL-compatible databases (where a
      * failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query
@@ -9899,7 +10314,9 @@ public final class JdbcUtil {
      * Delimited and case-folded parts are matched case-sensitively; upper- and lower-case table variants
      * are tried only when the driver reports no canonical identifier case).
      * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
-     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} — a SQL error from that query
+     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} (when the driver reports a canonical identifier case, the
+     * case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as
+     * a keyword) — a SQL error from that query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated. On PostgreSQL and PostgreSQL-compatible databases (where a
      * failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query
@@ -9935,7 +10352,7 @@ public final class JdbcUtil {
             final String[] nameParts = splitQualifiedSqlIdentifier(tableName, cs.tableName);
             final boolean[] delimitedNameParts = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(tableName, nameParts.length);
             final DatabaseMetaData metadata = conn.getMetaData();
-            normalizeMetadataIdentifierParts(metadata, nameParts, delimitedNameParts);
+            final boolean caseFolded = normalizeMetadataIdentifierParts(metadata, nameParts, delimitedNameParts);
             final String catalog;
             final String schema;
             final String table;
@@ -10006,7 +10423,12 @@ public final class JdbcUtil {
             // Use the current catalog only to scope metadata lookup. The fallback SQL must retain the
             // caller's original qualification: on databases such as PostgreSQL and SQL Server,
             // "catalog.table" is not equivalent to an unqualified table in the current catalog.
-            final String safeQualifiedTableName = buildSimpleQualifiedTableName(nameParts.length == 3 ? catalog : null, schema, table);
+            // When the database reports a canonical identifier case, every part was folded to it above, so the quoted parts
+            // name the same table as the unquoted name would. Quoting keeps a reserved word (e.g. order, user) from being
+            // parsed as a keyword: unquoted, H2 rejects "FROM order" as a syntax error (thrown instead of returning false),
+            // and PostgreSQL runs "FROM user" as the CURRENT_USER function, reporting a missing table as present.
+            final String probeQuote = caseFolded && !hasDelimitedIdentifierPart(tableName) ? normalizeIdentifierQuote(metadata) : null;
+            final String safeQualifiedTableName = buildSimpleQualifiedTableName(nameParts.length == 3 ? catalog : null, schema, table, probeQuote);
 
             // splitQualifiedSqlIdentifier removes delimiters. Never feed those stripped parts to
             // unquoted fallback SQL: "mixedCase" and mixedCase can identify different tables.
@@ -10205,10 +10627,27 @@ public final class JdbcUtil {
      *         (so callers skip the SQL-based existence probe).
      */
     private static String buildSimpleQualifiedTableName(final String catalog, final String schema, final String tableName) {
+        return buildSimpleQualifiedTableName(catalog, schema, tableName, null);
+    }
+
+    /**
+     * Assembles a dotted {@code catalog.schema.table} name from the non-empty parts, optionally wrapping each part in
+     * {@code identifierQuote}.
+     *
+     * @param catalog The catalog part, or {@code null}/empty to omit.
+     * @param schema The schema part, or {@code null}/empty to omit.
+     * @param tableName The table name part; required.
+     * @param identifierQuote The quote string to wrap each part in, or {@code null} to leave the parts unquoted. The parts
+     *        are unquoted-safe identifiers, so they cannot contain the quote string.
+     * @return The qualified name, or {@code null} if any present part cannot be embedded in SQL safely without quoting
+     *         (so callers skip the SQL-based existence probe).
+     */
+    private static String buildSimpleQualifiedTableName(final String catalog, final String schema, final String tableName, final String identifierQuote) {
         if (!isUnquotedSafeIdentifier(tableName)) {
             return null;
         }
 
+        final String quote = identifierQuote == null ? "" : identifierQuote;
         final StringBuilder sb = new StringBuilder(64);
 
         if (Strings.isNotEmpty(catalog)) {
@@ -10216,7 +10655,7 @@ public final class JdbcUtil {
                 return null;
             }
 
-            sb.append(catalog).append('.');
+            sb.append(quote).append(catalog).append(quote).append('.');
         }
 
         if (Strings.isNotEmpty(schema)) {
@@ -10224,10 +10663,10 @@ public final class JdbcUtil {
                 return null;
             }
 
-            sb.append(schema).append('.');
+            sb.append(quote).append(schema).append(quote).append('.');
         }
 
-        sb.append(tableName);
+        sb.append(quote).append(tableName).append(quote);
 
         return sb.toString();
     }
@@ -10432,15 +10871,17 @@ public final class JdbcUtil {
      * @param metadata the database metadata describing identifier storage
      * @param parts decoded identifier parts, updated in place
      * @param exactMatches explicit-delimiter flags, updated to require exact matching after case folding
+     * @return {@code true} if the database reports a canonical (upper- or lower-case) identifier storage case, so every
+     *         undelimited part has been folded to it; {@code false} if the parts were left unchanged
      * @throws SQLException if the driver cannot report its identifier storage rules
      */
-    private static void normalizeMetadataIdentifierParts(final DatabaseMetaData metadata, final String[] parts, final boolean[] exactMatches)
+    private static boolean normalizeMetadataIdentifierParts(final DatabaseMetaData metadata, final String[] parts, final boolean[] exactMatches)
             throws SQLException {
         final boolean upperCase = metadata.storesUpperCaseIdentifiers();
         final boolean lowerCase = !upperCase && metadata.storesLowerCaseIdentifiers();
 
         if (!upperCase && !lowerCase) {
-            return;
+            return false;
         }
 
         for (int i = 0; i < parts.length; i++) {
@@ -10449,6 +10890,8 @@ public final class JdbcUtil {
                 exactMatches[i] = true;
             }
         }
+
+        return true;
     }
 
     /**
@@ -12657,7 +13100,10 @@ public final class JdbcUtil {
      * @param isolationLevel The isolation level for the transaction.
      * @param isForUpdateOnly Whether this transaction is only for update operations. While this scope is the
      *        innermost one, {@code SELECT} statements prepared from {@code ds} on this thread do not join the
-     *        transaction and run on a separate connection; other statements still use the transaction's connection.
+     *        transaction and run on a separate connection (unless the {@code SELECT} embeds a data-modifying
+     *        {@code INSERT}/{@code UPDATE}/{@code DELETE}/{@code MERGE} section, e.g. a PostgreSQL data-modifying CTE,
+     *        or has an {@code INTO} clause);
+     *        other statements still use the transaction's connection.
      * @return A {@link SqlTransaction} object representing the transaction.
      * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}, or if
      *         {@code isolationLevel} is {@link IsolationLevel#NONE}, which is not a usable transaction isolation level.
@@ -13698,10 +14144,16 @@ public final class JdbcUtil {
 
                                                 return id;
                                             } else {
-                                                final List<Tuple2<String, PropInfo>> tpList = Stream.of(columnLabels)
-                                                        .filter(it -> idBeanInfo.getPropInfo(it) != null)
-                                                        .map(it -> Tuple.of(it, idBeanInfo.getPropInfo(it)))
-                                                        .toList();
+                                                // Resolve each label through the entity's column-to-property mapping first, as the EntityId
+                                                // branches above do: matching the label only against the ID class's property names misses an
+                                                // ID column whose name differs from its property (e.g. @Column("SEQ_NO") long entityId), whose
+                                                // generated value was then silently dropped (left at the ID class's default).
+                                                final List<Tuple2<String, PropInfo>> tpList = Stream.of(columnLabels).map(it -> {
+                                                    final String propName = columnPropNameMap.get(it);
+                                                    final PropInfo idBeanPropInfo = propName == null ? null : idBeanInfo.getPropInfo(propName);
+
+                                                    return Tuple.of(it, idBeanPropInfo == null ? idBeanInfo.getPropInfo(it) : idBeanPropInfo);
+                                                }).filter(tp -> tp._2 != null).toList();
                                                 final Object id = idBeanInfo.createBeanResult();
 
                                                 for (final Tuple2<String, PropInfo> tp : tpList) {

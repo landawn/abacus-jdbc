@@ -28,6 +28,7 @@ import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -214,6 +215,268 @@ public class CrudReadOpsTest extends TestBase {
         @SuppressWarnings({ "unchecked", "rawtypes" })
         final IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> dao.batchGet((Collection) ids, null, 5));
         assertTrue(e.getMessage().contains("single id"));
+    }
+
+    interface CompositeIdCrudDao extends CrudDao<CompositeIdEntity, CompositeId, CompositeIdCrudDao> {
+    }
+
+    static final class CompositeIdEntity {
+        @Id
+        private Long tenantId;
+        @Id
+        private Long rowId;
+
+        CompositeIdEntity() {
+        }
+
+        CompositeIdEntity(final Long tenantId, final Long rowId) {
+            this.tenantId = tenantId;
+            this.rowId = rowId;
+        }
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public Long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final Long rowId) {
+            this.rowId = rowId;
+        }
+    }
+
+    // Like most hand-written composite id classes, this one does not override equals/hashCode.
+    static final class CompositeId {
+        private Long tenantId;
+        private Long rowId;
+
+        CompositeId() {
+        }
+
+        CompositeId(final Long tenantId, final Long rowId) {
+            this.tenantId = tenantId;
+            this.rowId = rowId;
+        }
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public Long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final Long rowId) {
+            this.rowId = rowId;
+        }
+    }
+
+    // Equal composite ids given as beans without equals() were only de-duplicated by identity, so duplicates straddling a
+    // chunk boundary returned (and counted) the same row twice, contradicting "duplicate ids are treated as one".
+    @Test
+    public void testBatchGetAndCount_CompositeBeanIdsWithoutEquals_DeduplicatedByIdValues() throws SQLException {
+        final CompositeIdCrudDao dao = Mockito.mock(CompositeIdCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(CompositeIdEntity.class).when(dao).targetEntityClass();
+        // One row per OR-branch of the chunk condition, whose parameters are the (tenantId, rowId) pairs.
+        Mockito.doAnswer(inv -> {
+            final List<Object> params = ((Condition) inv.getArgument(1)).parameters();
+            final List<CompositeIdEntity> result = new ArrayList<>();
+            for (int i = 0; i < params.size(); i += 2) {
+                result.add(new CompositeIdEntity((Long) params.get(i), (Long) params.get(i + 1)));
+            }
+            return result;
+        }).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+        Mockito.doAnswer(inv -> ((Condition) inv.getArgument(0)).parameters().size() / 2).when(dao).count(ArgumentMatchers.any(Condition.class));
+
+        final List<CompositeId> ids = List.of(new CompositeId(1L, 2L), new CompositeId(3L, 4L), new CompositeId(1L, 2L));
+
+        assertEquals(2, dao.batchGet(ids, null, 2).size());
+        verify(dao, Mockito.times(1)).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+
+        // A Set holding such ids (distinct by identity only) is de-duplicated by id values too.
+        assertEquals(2, dao.batchGet(new LinkedHashSet<>(ids), null, 2).size());
+        verify(dao, Mockito.times(2)).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+
+        final List<CompositeId> manyIds = new ArrayList<>();
+        for (long i = 0; i < JdbcUtil.DEFAULT_BATCH_SIZE; i++) {
+            manyIds.add(new CompositeId(i, i));
+        }
+        manyIds.add(new CompositeId(0L, 0L)); // equal to the first id, but would fall into a second chunk
+
+        assertEquals(JdbcUtil.DEFAULT_BATCH_SIZE, dao.count(manyIds));
+        verify(dao, Mockito.times(1)).count(ArgumentMatchers.any(Condition.class));
+    }
+
+    interface BinaryKeyCrudDao extends CrudDao<BinaryKeyEntity, BinaryKeyId, BinaryKeyCrudDao> {
+    }
+
+    static final class BinaryKeyEntity {
+        @Id
+        private Long tenantId;
+        @Id
+        private byte[] uid;
+
+        BinaryKeyEntity() {
+        }
+
+        BinaryKeyEntity(final Long tenantId, final byte[] uid) {
+            this.tenantId = tenantId;
+            this.uid = uid;
+        }
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public byte[] getUid() {
+            return uid;
+        }
+
+        public void setUid(final byte[] uid) {
+            this.uid = uid;
+        }
+    }
+
+    // A composite id with a binary (e.g. BINARY(16) UUID) component, whose equals/hashCode compare that component by content.
+    static final class BinaryKeyId {
+        private Long tenantId;
+        private byte[] uid;
+
+        BinaryKeyId() {
+        }
+
+        BinaryKeyId(final Long tenantId, final byte[] uid) {
+            this.tenantId = tenantId;
+            this.uid = uid;
+        }
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public byte[] getUid() {
+            return uid;
+        }
+
+        public void setUid(final byte[] uid) {
+            this.uid = uid;
+        }
+
+        @Override
+        public boolean equals(final Object obj) {
+            return obj instanceof final BinaryKeyId other && java.util.Objects.equals(tenantId, other.tenantId) && Arrays.equals(uid, other.uid);
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * java.util.Objects.hashCode(tenantId) + Arrays.hashCode(uid);
+        }
+    }
+
+    // BUG FIX: de-duplicating bean ids by their id property values compared a byte[] component by reference, so two equal
+    // binary ids (equal by the id class's own equals, and de-duplicated before the by-value change) stayed apart: a
+    // duplicate straddling a chunk boundary returned the same row twice and was counted twice.
+    @Test
+    public void testBatchGetAndCount_CompositeBeanIdsWithArrayComponent_DeduplicatedByContent() throws SQLException {
+        final BinaryKeyCrudDao dao = Mockito.mock(BinaryKeyCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(BinaryKeyEntity.class).when(dao).targetEntityClass();
+        // One row per OR-branch of the chunk condition, whose parameters are the (tenantId, uid) pairs.
+        Mockito.doAnswer(inv -> {
+            final List<Object> params = ((Condition) inv.getArgument(1)).parameters();
+            final List<BinaryKeyEntity> result = new ArrayList<>();
+            for (int i = 0; i < params.size(); i += 2) {
+                result.add(new BinaryKeyEntity((Long) params.get(i), (byte[]) params.get(i + 1)));
+            }
+            return result;
+        }).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+        Mockito.doAnswer(inv -> ((Condition) inv.getArgument(0)).parameters().size() / 2).when(dao).count(ArgumentMatchers.any(Condition.class));
+
+        // Separate but equal byte[] instances.
+        final List<BinaryKeyId> ids = List.of(new BinaryKeyId(1L, new byte[] { 1, 2 }), new BinaryKeyId(3L, new byte[] { 3 }),
+                new BinaryKeyId(1L, new byte[] { 1, 2 }));
+
+        assertEquals(2, dao.batchGet(ids, null, 2).size());
+        verify(dao, Mockito.times(1)).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+
+        final List<BinaryKeyId> manyIds = new ArrayList<>();
+        for (long i = 0; i < JdbcUtil.DEFAULT_BATCH_SIZE; i++) {
+            manyIds.add(new BinaryKeyId(i, new byte[] { (byte) i }));
+        }
+        manyIds.add(new BinaryKeyId(0L, new byte[] { 0 })); // equal to the first id, but would fall into a second chunk
+
+        assertEquals(JdbcUtil.DEFAULT_BATCH_SIZE, dao.count(manyIds));
+        verify(dao, Mockito.times(1)).count(ArgumentMatchers.any(Condition.class));
+    }
+
+    // Guard (passes before and after the bean-id de-duplication): EntityId and Map composite ids keep being
+    // de-duplicated by their own equals() and are not read as beans.
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    @Test
+    public void testBatchGet_CompositeEntityIdAndMapIds_DeduplicatedByEquals() throws SQLException {
+        final CompositeIdCrudDao dao = Mockito.mock(CompositeIdCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(CompositeIdEntity.class).when(dao).targetEntityClass();
+        Mockito.doAnswer(inv -> {
+            final List<Object> params = ((Condition) inv.getArgument(1)).parameters();
+            final List<CompositeIdEntity> result = new ArrayList<>();
+            for (int i = 0; i < params.size(); i += 2) {
+                result.add(new CompositeIdEntity((Long) params.get(i), (Long) params.get(i + 1)));
+            }
+            return result;
+        }).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+
+        final List entityIds = List.of(EntityId.of("tenantId", 1L, "rowId", 2L), EntityId.of("tenantId", 3L, "rowId", 4L),
+                EntityId.of("tenantId", 1L, "rowId", 2L));
+        assertEquals(2, dao.batchGet(entityIds, null, 2).size());
+
+        final List mapIds = List.of(Map.of("tenantId", 1L, "rowId", 2L), Map.of("tenantId", 3L, "rowId", 4L), Map.of("tenantId", 1L, "rowId", 2L));
+        assertEquals(2, dao.batchGet(mapIds, null, 2).size());
+
+        verify(dao, Mockito.times(2)).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+    }
+
+    // An entity whose single id is null matches no row. It used to abort the whole batch with a NullPointerException
+    // ("element cannot be mapped to a null key") from the id grouping instead of just being left unrefreshed.
+    @Test
+    public void testBatchRefresh_NullSingleIdEntity_LeftUnrefreshedInsteadOfNpe() throws SQLException {
+        final IdAnnotatedCrudDao dao = newDao();
+        final IdAnnotatedEntity saved = new IdAnnotatedEntity(1L);
+        saved.setName("stale");
+        final IdAnnotatedEntity unsaved = new IdAnnotatedEntity(null);
+        unsaved.setName("new");
+        final IdAnnotatedEntity dbEntity = new IdAnnotatedEntity(1L);
+        dbEntity.setName("fresh");
+        Mockito.doReturn(List.of(dbEntity)).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
+
+        assertEquals(1, dao.batchRefresh(List.of(saved, unsaved), List.of("name"), 10));
+        assertEquals("fresh", saved.getName());
+        assertEquals("new", unsaved.getName());
+
+        final ArgumentCaptor<Condition> condCaptor = ArgumentCaptor.forClass(Condition.class);
+        verify(dao).list(ArgumentMatchers.<Collection<String>> any(), condCaptor.capture());
+        assertEquals(List.of(1L), condCaptor.getValue().parameters());
+
+        // Only null ids: nothing can match, so nothing is queried.
+        assertEquals(0, dao.batchRefresh(List.of(unsaved)));
+        assertEquals("new", unsaved.getName());
+        verify(dao, Mockito.times(1)).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
     }
 
     @Test

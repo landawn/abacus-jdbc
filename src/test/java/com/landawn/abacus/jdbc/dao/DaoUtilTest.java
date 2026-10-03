@@ -275,6 +275,36 @@ public class DaoUtilTest extends TestBase {
         assertEquals(5L, (Long) id.get("orderId"));
     }
 
+    record CompositeKeyRecord(long orderId, int lineNum) {
+    }
+
+    // captureIdValues backs CrudDao.batchUpsert's restore of the IDs that a rolled-back insert wrote onto its entities: every
+    // changed part of a composite ID is put back, and an unchanged ID is not written (so immutable entities don't fail).
+    @Test
+    public void testCaptureIdValues_RestoresOnlyChangedCompositeIdParts() {
+        final CompositeKeyEntity changed = new CompositeKeyEntity();
+        changed.setOrderId(10L);
+        final CompositeKeyEntity unchanged = new CompositeKeyEntity();
+        unchanged.setOrderId(20L);
+        unchanged.setLineNum(2);
+
+        final Runnable restorer = DaoUtil.captureIdValues(List.of(changed, unchanged), Arrays.asList("orderId", "lineNum"),
+                ParserUtil.getBeanInfo(CompositeKeyEntity.class));
+        changed.setOrderId(11L);
+        changed.setLineNum(7);
+        restorer.run();
+
+        assertEquals(10L, changed.getOrderId());
+        assertEquals(0, changed.getLineNum());
+        assertEquals(20L, unchanged.getOrderId());
+        assertEquals(2, unchanged.getLineNum());
+
+        final BeanInfo recordInfo = ParserUtil.getBeanInfo(CompositeKeyRecord.class);
+        final CompositeKeyRecord immutable = new CompositeKeyRecord(30L, 3);
+        assertThrows(RuntimeException.class, () -> recordInfo.getPropInfo("orderId").setPropValue(immutable, 30L));
+        assertDoesNotThrow(() -> DaoUtil.captureIdValues(List.of(immutable), Arrays.asList("orderId", "lineNum"), recordInfo).run());
+    }
+
     @Test
     public void testIdExtractionRejectsEmptyIdPropertyList() {
         final BeanInfo beanInfo = ParserUtil.getBeanInfo(SimpleEntity.class);

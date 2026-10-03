@@ -40,6 +40,8 @@ import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlBuilder;
+import com.landawn.abacus.query.SqlDialect;
+import com.landawn.abacus.query.SqlDialect.SqlPolicy;
 import com.landawn.abacus.query.SqlParser;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.type.Type;
@@ -52,6 +54,7 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.Tuple.Tuple4;
 import com.landawn.abacus.util.function.BiFunction;
+import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.IntFunction;
 import com.landawn.abacus.util.stream.Stream;
@@ -120,10 +123,11 @@ public final class JoinInfo {
 
     // Per-SqlBuilder factory functions, keyed by builder DSL (PSC/PAC/PLC). The Tuple4 slots are:
     //   _1 = select(columns), _2 = selectFrom(entityClass), _3 = update(entityClass), _4 = deleteFrom(entityClass).
-    // Referenced as entry.getValue()._1.._4 throughout the constructor.
+    // Referenced as funcs._1.._4 in the constructor's plan builders (see sqlBuilderFuncs(Dsl) for other DSLs).
     /**
-     * Maps each supported {@link Dsl} ({@code PSC}, {@code PAC}, {@code PLC}) to the SQL builder
-     * factory functions used to generate this join's select, update, and delete statements.
+     * Maps each predefined {@link Dsl} ({@code PSC}, {@code PAC}, {@code PLC}) to the SQL builder
+     * factory functions used to generate this join's select, update, and delete statements. Plans for
+     * these DSLs are built eagerly; plans for any other parameterized-SQL DSL are built on first use.
      */
     static final Map<Dsl, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> sqlBuilderFuncMap = new HashMap<>();
 
@@ -201,35 +205,48 @@ public final class JoinInfo {
      * Per-{@link Dsl} cache backing {@link #selectSqlPlan(Dsl)}: {@code _1} builds the single-entity
      * SELECT SQL from the requested select property names, {@code _2} binds one source entity's join key(s).
      */
-    private final Map<Dsl, Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>> selectSqlBuilderAndParamSetterPool = new HashMap<>();
+    private final Map<Dsl, Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>>> selectSqlBuilderAndParamSetterPool = new ConcurrentHashMap<>();
 
     /**
      * Per-{@link Dsl} cache backing {@link #batchSelectSqlPlan(Dsl)}: {@code _1} builds the multi-entity
      * SELECT SQL from the select property names and batch size, {@code _2} binds the join keys of every
      * source entity in the batch.
      */
-    private final Map<Dsl, Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchSelectSqlBuilderAndParamSetterPool = new HashMap<>();
+    private final Map<Dsl, Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchSelectSqlBuilderAndParamSetterPool = new ConcurrentHashMap<>();
 
     /**
      * Per-{@link Dsl} cache of the UPDATE statement that resets the referenced join-key column(s) to
      * their type default (unlinking the joined entities), paired with the parameter setter that binds
      * one source entity's join key(s).
      */
-    private final Map<Dsl, Tuple2<String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> setNullSqlAndParamSetterPool = new HashMap<>();
+    private final Map<Dsl, Tuple2<String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> setNullSqlAndParamSetterPool = new ConcurrentHashMap<>();
 
     /**
      * Per-{@link Dsl} cache backing {@link #deleteSqlPlan(Dsl)}: {@code _1} is the single-entity delete SQL,
      * {@code _2} the middle (join) table delete SQL ({@code null} in the current implementation), {@code _3}
      * the parameter setter that binds one source entity's join key(s).
      */
-    private final Map<Dsl, Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new HashMap<>();
+    private final Map<Dsl, Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> deleteSqlAndParamSetterPool = new ConcurrentHashMap<>();
 
     /**
      * Per-{@link Dsl} cache backing {@link #batchDeleteSqlPlan(Dsl)}: {@code _1} builds the delete SQL for a
      * given batch size, {@code _2} builds the middle (join) table delete SQL ({@code null} in the current
      * implementation), {@code _3} binds the join keys of every source entity in the batch.
      */
-    private final Map<Dsl, Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchDeleteSqlBuilderAndParamSetterPool = new HashMap<>();
+    private final Map<Dsl, Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchDeleteSqlBuilderAndParamSetterPool = new ConcurrentHashMap<>();
+
+    /**
+     * Maps each {@link SqlDialect} whose plans have been built to the {@link Dsl} key under which they are stored in
+     * the plan pools above. {@code Dsl} has identity equality and a DAO created with a custom dialect gets its own
+     * {@code Dsl} instance, so plans are resolved by dialect rather than by {@code Dsl} instance.
+     */
+    private final Map<SqlDialect, Dsl> planDslPool = new ConcurrentHashMap<>();
+
+    /**
+     * Builds the select, batch-select, set-null, delete, and batch-delete plans of this join for one {@link Dsl}
+     * and stores them in the plan pools under that {@code Dsl}.
+     */
+    private final Consumer<Dsl> planBuilder;
 
     /**
      * Constructs a new JoinInfo instance for managing join relationships between entities.
@@ -238,7 +255,8 @@ public final class JoinInfo {
      * and building optimized SQL statements for join operations.
      *
      * <p>The constructor processes the join configuration and prepares SQL builders and parameter setters
-     * for the supported SQL builder DSLs (PSC, PAC, PLC). It supports two main join patterns:</p>
+     * for the predefined SQL builder DSLs (PSC, PAC, PLC); those of any other parameterized-SQL DSL are
+     * prepared on first use. It supports two main join patterns:</p>
      * <ul>
      *   <li><b>One-to-Many Join:</b> Direct foreign key relationship (e.g., "employeeId" or "employeeId = id")</li>
      *   <li><b>Many-to-Many Join:</b> Relationship through intermediate table (e.g., "employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId")</li>
@@ -459,16 +477,17 @@ public final class JoinInfo {
                 srcPropInfos[0].dbType.set(stmt, 2, getJoinPropValue(srcPropInfos[0], entity));
             };
 
-            for (final Map.Entry<Dsl, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> entry : sqlBuilderFuncMap
-                    .entrySet()) {
+            planBuilder = dsl -> {
+                final Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(
+                        dsl);
 
-                final String middleSelectSql = entry.getValue()._1.apply(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).build().query();
-                final String leftSelectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).build().query();
+                final String middleSelectSql = funcs._1.apply(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).build().query();
+                final String leftSelectSql = funcs._2.apply(referencedEntityClass).where(cond).build().query();
 
                 final int whereIndex = leftSelectSql.lastIndexOf(" WHERE ");
                 N.checkState(whereIndex >= 0, "SQL query does not contain ' WHERE ' clause: %s", leftSelectSql);
                 final String middleSelectSqlWhereIn = leftSelectSql.substring(whereIndex).replace(inCondToReplace, middleSelectSql);
-                final String selectSql = entry.getValue()._2.apply(referencedEntityClass).build().query() + middleSelectSqlWhereIn;
+                final String selectSql = funcs._2.apply(referencedEntityClass).build().query() + middleSelectSqlWhereIn;
 
                 final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                     if (N.isEmpty(selectPropNames)) {
@@ -479,14 +498,14 @@ public final class JoinInfo {
                             newSelectPropNames.add(referencedPropInfos[0].name);
                             newSelectPropNames.addAll(selectPropNames);
 
-                            return entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).build().query();
+                            return funcs._1.apply(newSelectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).build().query();
                         } else {
-                            return entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).build().query();
+                            return funcs._1.apply(selectPropNames).from(referencedEntityClass).append(middleSelectSqlWhereIn).build().query();
                         }
                     }
                 };
 
-                selectSqlBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(sqlBuilder, paramSetter));
+                selectSqlBuilderAndParamSetterPool.put(dsl, Tuple.of(sqlBuilder, paramSetter));
 
                 final List<String> middleSelectWords = SqlParser.tokenize(middleSelectSql);
                 // Anchor token extraction on SELECT/FROM/WHERE keywords rather than fixed offsets.
@@ -528,10 +547,7 @@ public final class JoinInfo {
                 // Always qualify the referenced entity's columns with its table name/alias: the batch SQL
                 // INNER JOINs the middle table, so ANY column name the two tables share (the middle FK
                 // column, but equally a surrogate "id" or an audit column) would otherwise be ambiguous.
-                final String leftSelectSqlForBatch = entry.getValue()._1.apply(defaultSelectPropNames)
-                        .from(referencedEntityClass, leftTableQualifier)
-                        .build()
-                        .query();
+                final String leftSelectSqlForBatch = funcs._1.apply(defaultSelectPropNames).from(referencedEntityClass, leftTableQualifier).build().query();
 
                 final int fromIndexInBatch = leftSelectSqlForBatch.lastIndexOf(" FROM ");
                 N.checkState(fromIndexInBatch >= 0, "SQL query does not contain ' FROM ' clause: %s", leftSelectSqlForBatch);
@@ -557,7 +573,7 @@ public final class JoinInfo {
 
                         final StringBuilder sb = Objectory.createStringBuilder();
 
-                        final String tmpSql = entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass, leftTableQualifier).build().query();
+                        final String tmpSql = funcs._1.apply(newSelectPropNames).from(referencedEntityClass, leftTableQualifier).build().query();
 
                         sb.append(tmpSql, 0, tmpSql.length() - fromLength).append(", ").append(middleCondPropName).append(batchSelectFromToJoinOn);
 
@@ -569,24 +585,24 @@ public final class JoinInfo {
                     }
                 };
 
-                batchSelectSqlBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(batchSqlBuilder, batchParaSetter));
+                batchSelectSqlBuilderAndParamSetterPool.put(dsl, Tuple.of(batchSqlBuilder, batchParaSetter));
 
                 final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
                 // middleSelectSqlWhereIn inherits the SELECT's table alias (e.g. "ar.role_id") when the referenced
                 // entity declares @Table(alias = ...); that alias is unbound in an UPDATE/DELETE statement, so those
                 // statements use an unqualified WHERE fragment built from DELETE ... WHERE (like batchDeleteSqlHeader).
-                final String deleteAllSql = entry.getValue()._4.apply(referencedEntityClass).where(cond).build().query();
+                final String deleteAllSql = funcs._4.apply(referencedEntityClass).where(cond).build().query();
                 final int whereIndexInDelete = deleteAllSql.lastIndexOf(" WHERE ");
                 N.checkState(whereIndexInDelete >= 0, "SQL query does not contain ' WHERE ' clause: %s", deleteAllSql);
                 final String whereInForUpdateDelete = deleteAllSql.substring(whereIndexInDelete).replace(inCondToReplace, middleSelectSql);
-                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).build().query() + whereInForUpdateDelete;
-                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).build().query() + whereInForUpdateDelete;
-                final String middleDeleteSql = entry.getValue()._4.apply(middleEntityClass).where(middleEntityCond).build().query();
+                final String setNullSql = funcs._3.apply(referencedEntityClass).set(referencedPropNames).build().query() + whereInForUpdateDelete;
+                final String deleteSql = funcs._4.apply(referencedEntityClass).build().query() + whereInForUpdateDelete;
+                final String middleDeleteSql = funcs._4.apply(middleEntityClass).where(middleEntityCond).build().query();
 
-                setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
-                deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, cascadeDeleteDefinedInDB ? null : middleDeleteSql, paramSetter));
+                setNullSqlAndParamSetterPool.put(dsl, Tuple.of(setNullSql, setNullParamSetterForUpdate));
+                deleteSqlAndParamSetterPool.put(dsl, Tuple.of(deleteSql, cascadeDeleteDefinedInDB ? null : middleDeleteSql, paramSetter));
 
-                final String batchDeleteSqlHeader = entry.getValue()._4.apply(referencedEntityClass)
+                final String batchDeleteSqlHeader = funcs._4.apply(referencedEntityClass)
                         .where(cond)
                         .build()
                         .query()
@@ -603,11 +619,7 @@ public final class JoinInfo {
                     }
                 };
 
-                final String batchMiddleDeleteSql = entry.getValue()._4.apply(middleEntityClass)
-                        .where(middleEntityCond)
-                        .build()
-                        .query()
-                        .replace(" = ?", " IN (");
+                final String batchMiddleDeleteSql = funcs._4.apply(middleEntityClass).where(middleEntityCond).build().query().replace(" = ?", " IN (");
 
                 final IntFunction<String> batchMiddleDeleteSqlBuilder = batchSize -> {
                     N.checkArgPositive(batchSize, cs.batchSize);
@@ -619,9 +631,9 @@ public final class JoinInfo {
                     }
                 };
 
-                batchDeleteSqlBuilderAndParamSetterPool.put(entry.getKey(),
+                batchDeleteSqlBuilderAndParamSetterPool.put(dsl,
                         Tuple.of(batchDeleteSqlBuilder, cascadeDeleteDefinedInDB ? null : batchMiddleDeleteSqlBuilder, batchParaSetter));
-            }
+            };
 
             srcEntityKeyExtractor = entity -> getJoinPropValue(srcPropInfos[0], entity);
             referencedEntityKeyExtractor = referencedPropInfos[0]::getPropValue;
@@ -721,20 +733,21 @@ public final class JoinInfo {
                 }
             });
 
-            for (final Map.Entry<Dsl, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> entry : sqlBuilderFuncMap
-                    .entrySet()) {
+            planBuilder = dsl -> {
+                final Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(
+                        dsl);
 
-                final String selectSql = entry.getValue()._2.apply(referencedEntityClass).where(cond).build().query();
+                final String selectSql = funcs._2.apply(referencedEntityClass).where(cond).build().query();
 
                 final Function<Collection<String>, String> sqlBuilder = selectPropNames -> {
                     if (N.isEmpty(selectPropNames)) {
                         return selectSql;
                     } else {
-                        return entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass).where(cond).build().query();
+                        return funcs._1.apply(selectPropNames).from(referencedEntityClass).where(cond).build().query();
                     }
                 };
 
-                selectSqlBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(sqlBuilder, paramSetter));
+                selectSqlBuilderAndParamSetterPool.put(dsl, Tuple.of(sqlBuilder, paramSetter));
 
                 final BiFunction<SqlBuilder, Integer, SqlBuilder> appendWhereFunc = referencedPropInfos.length == 1
                         ? (sb, batchSize) -> sb.append(Filters.expr(referencedPropInfos[0].name)) //
@@ -764,7 +777,7 @@ public final class JoinInfo {
                         return sqlBuilder.apply(selectPropNames);
                     } else {
                         if (N.isEmpty(selectPropNames)) {
-                            return appendWhereFunc.apply(entry.getValue()._2.apply(referencedEntityClass), batchSize).build().query();
+                            return appendWhereFunc.apply(funcs._2.apply(referencedEntityClass), batchSize).build().query();
                         } else {
                             if (!N.allMatch(referencedPropInfos, it -> selectPropNames.contains(it.name))) {
                                 final Collection<String> newSelectPropNames = N.newLinkedHashSet(referencedPropInfos.length + selectPropNames.size());
@@ -775,24 +788,22 @@ public final class JoinInfo {
 
                                 newSelectPropNames.addAll(selectPropNames);
 
-                                return appendWhereFunc.apply(entry.getValue()._1.apply(newSelectPropNames).from(referencedEntityClass), batchSize)
-                                        .build()
-                                        .query();
+                                return appendWhereFunc.apply(funcs._1.apply(newSelectPropNames).from(referencedEntityClass), batchSize).build().query();
                             }
 
-                            return appendWhereFunc.apply(entry.getValue()._1.apply(selectPropNames).from(referencedEntityClass), batchSize).build().query();
+                            return appendWhereFunc.apply(funcs._1.apply(selectPropNames).from(referencedEntityClass), batchSize).build().query();
                         }
                     }
                 };
 
-                batchSelectSqlBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(batchSelectSqlBuilder, batchParaSetter));
+                batchSelectSqlBuilderAndParamSetterPool.put(dsl, Tuple.of(batchSelectSqlBuilder, batchParaSetter));
 
                 final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
-                final String setNullSql = entry.getValue()._3.apply(referencedEntityClass).set(referencedPropNames).where(cond).build().query();
-                final String deleteSql = entry.getValue()._4.apply(referencedEntityClass).where(cond).build().query();
+                final String setNullSql = funcs._3.apply(referencedEntityClass).set(referencedPropNames).where(cond).build().query();
+                final String deleteSql = funcs._4.apply(referencedEntityClass).where(cond).build().query();
 
-                setNullSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(setNullSql, setNullParamSetterForUpdate));
-                deleteSqlAndParamSetterPool.put(entry.getKey(), Tuple.of(deleteSql, null, paramSetter));
+                setNullSqlAndParamSetterPool.put(dsl, Tuple.of(setNullSql, setNullParamSetterForUpdate));
+                deleteSqlAndParamSetterPool.put(dsl, Tuple.of(deleteSql, null, paramSetter));
 
                 final IntFunction<String> batchDeleteSqlBuilder = batchSize -> {
                     N.checkArgPositive(batchSize, cs.batchSize);
@@ -800,12 +811,12 @@ public final class JoinInfo {
                     if (batchSize == 1) {
                         return deleteSql;
                     } else {
-                        return appendWhereFunc.apply(entry.getValue()._4.apply(referencedEntityClass), batchSize).build().query();
+                        return appendWhereFunc.apply(funcs._4.apply(referencedEntityClass), batchSize).build().query();
                     }
                 };
 
-                batchDeleteSqlBuilderAndParamSetterPool.put(entry.getKey(), Tuple.of(batchDeleteSqlBuilder, null, batchParaSetter));
-            }
+                batchDeleteSqlBuilderAndParamSetterPool.put(dsl, Tuple.of(batchDeleteSqlBuilder, null, batchParaSetter));
+            };
 
             Function<Object, Object> srcEntityKeyExtractorTmp = null;
             Function<Object, Object> referencedEntityKeyExtractorTmp = null;
@@ -863,6 +874,13 @@ public final class JoinInfo {
             referencedEntityKeyExtractor = referencedEntityKeyExtractorTmp;
         }
 
+        // The predefined DSLs are built eagerly so a misconfigured join fails here; any other parameterized-SQL DSL
+        // (e.g. that of a DAO created with a custom SqlDialect) is built on first use by planDsl(Dsl).
+        for (final Dsl dsl : sqlBuilderFuncMap.keySet()) {
+            planBuilder.accept(dsl);
+            planDslPool.put(dsl.sqlDialect(), dsl);
+        }
+
         sourcePropNames = Collections.unmodifiableList(Stream.of(srcPropInfos).map(propInfo -> propInfo.name).toList());
     }
 
@@ -892,27 +910,25 @@ public final class JoinInfo {
      * String sql = plan._1.apply(Arrays.asList("id", "name", "description"));
      * }</pre>
      *
-     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
+     * @param dsl the SQL builder DSL to use; must render parameterized SQL ({@link SqlPolicy#PARAMETERIZED_SQL}), such as
+     *            {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}. Plans for any other such DSL (for example that of a
+     *            DAO created with a custom {@link SqlDialect}) are built on first use and cached per dialect.
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the SELECT SQL from a collection
      *         of selected property names (a {@code null} or empty collection yields the default all-columns SELECT;
      *         for a many-to-many join the referenced join-key property is prepended when the collection omits it),
      *         and whose {@code _2} is a parameter setter that binds the join key(s) of a single source entity onto a
      *         {@link PreparedStatement}.
-     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or does not render parameterized SQL.
+     * @throws IllegalStateException if the plans for {@code dsl}'s dialect are first built by this call and the generated
+     *                               join SQL lacks a clause required to build them.
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
     public Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> selectSqlPlan(final Dsl dsl)
-            throws IllegalArgumentException {
-        final Tuple2<Function<Collection<String>, String>, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = selectSqlBuilderAndParamSetterPool.get(dsl);
-
-        if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQL builder DSL: " + dsl);
-        }
-
-        return tp;
+            throws IllegalArgumentException, IllegalStateException {
+        return selectSqlBuilderAndParamSetterPool.get(planDsl(dsl));
     }
 
     /**
@@ -934,7 +950,9 @@ public final class JoinInfo {
      * String sql = batchPlan._1.apply(Arrays.asList("id", "name"), employees.size());
      * }</pre>
      *
-     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
+     * @param dsl the SQL builder DSL to use; must render parameterized SQL ({@link SqlPolicy#PARAMETERIZED_SQL}), such as
+     *            {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}. Plans for any other such DSL (for example that of a
+     *            DAO created with a custom {@link SqlDialect}) are built on first use and cached per dialect.
      * @return a non-{@code null} tuple whose {@code _1} is a function that builds the batch SELECT SQL from a collection
      *         of selected property names and the batch size (a {@code null} or empty collection yields the default
      *         all-columns SELECT; the referenced join-key property(ies) are prepended when the collection omits them,
@@ -942,22 +960,17 @@ public final class JoinInfo {
      *         and whose {@code _2} is a parameter setter that binds the join key(s) of every entity
      *         in the batch onto a {@link PreparedStatement}. The SQL-builder function requires a positive batch size
      *         and throws {@link IllegalArgumentException} if the boxed {@link Integer} is {@code null}, zero, or negative.
-     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or does not render parameterized SQL.
+     * @throws IllegalStateException if the plans for {@code dsl}'s dialect are first built by this call and the generated
+     *                               join SQL lacks a clause required to build them.
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
     public Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> batchSelectSqlPlan( //NOSONAR
-            final Dsl dsl) throws IllegalArgumentException {
-        final Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchSelectSqlBuilderAndParamSetterPool
-                .get(dsl);
-
-        if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQL builder DSL: " + dsl);
-        }
-
-        return tp;
+            final Dsl dsl) throws IllegalArgumentException, IllegalStateException {
+        return batchSelectSqlBuilderAndParamSetterPool.get(planDsl(dsl));
     }
 
     /**
@@ -985,25 +998,24 @@ public final class JoinInfo {
      * Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = deletePlan._3;
      * }</pre>
      *
-     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
+     * @param dsl the SQL builder DSL to use; must render parameterized SQL ({@link SqlPolicy#PARAMETERIZED_SQL}), such as
+     *            {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}. Plans for any other such DSL (for example that of a
+     *            DAO created with a custom {@link SqlDialect}) are built on first use and cached per dialect.
      * @return a non-{@code null} tuple containing the delete SQL ({@code _1}), the middle (join) table delete SQL
      *         ({@code _2}, always {@code null} in the current implementation — reserved for future
      *         use when per-entity cascade-delete control is supported), and the parameter setter ({@code _3}) that
      *         binds the join key(s) of a single source entity onto a {@link PreparedStatement}.
-     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or does not render parameterized SQL.
+     * @throws IllegalStateException if the plans for {@code dsl}'s dialect are first built by this call and the generated
+     *                               join SQL lacks a clause required to build them.
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
-    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteSqlPlan(final Dsl dsl) throws IllegalArgumentException {
-        final Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> tp = deleteSqlAndParamSetterPool.get(dsl);
-
-        if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQL builder DSL: " + dsl);
-        }
-
-        return tp;
+    public Tuple3<String, String, Jdbc.BiParametersSetter<PreparedStatement, Object>> deleteSqlPlan(final Dsl dsl)
+            throws IllegalArgumentException, IllegalStateException {
+        return deleteSqlAndParamSetterPool.get(planDsl(dsl));
     }
 
     /**
@@ -1030,28 +1042,83 @@ public final class JoinInfo {
      * Jdbc.BiParametersSetter<PreparedStatement, Collection<?>> paramSetter = batchDeletePlan._3;
      * }</pre>
      *
-     * @param dsl the SQL builder DSL to use; must be one of {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}.
+     * @param dsl the SQL builder DSL to use; must render parameterized SQL ({@link SqlPolicy#PARAMETERIZED_SQL}), such as
+     *            {@link Dsl#PSC}, {@link Dsl#PAC}, or {@link Dsl#PLC}. Plans for any other such DSL (for example that of a
+     *            DAO created with a custom {@link SqlDialect}) are built on first use and cached per dialect.
      * @return a non-{@code null} tuple of (main delete SQL builder ({@code _1}), middle/join table delete SQL builder
      *         ({@code _2}, always {@code null} in the current implementation — reserved for future use when per-entity
      *         cascade-delete control is supported), and parameter setter ({@code _3}) that binds the join key(s) of every
      *         entity in the batch onto a {@link PreparedStatement}). Each SQL-builder function requires a positive batch
      *         size and throws {@link IllegalArgumentException} for zero or a negative value.
-     * @throws IllegalArgumentException if {@code dsl} is {@code null} or not one of the supported builders (PSC, PAC, PLC).
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or does not render parameterized SQL.
+     * @throws IllegalStateException if the plans for {@code dsl}'s dialect are first built by this call and the generated
+     *                               join SQL lacks a clause required to build them.
      *
      * @see Dsl#PSC
      * @see Dsl#PAC
      * @see Dsl#PLC
      */
     public Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> batchDeleteSqlPlan( //NOSONAR
-            final Dsl dsl) throws IllegalArgumentException {
-        final Tuple3<IntFunction<String>, IntFunction<String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>> tp = batchDeleteSqlBuilderAndParamSetterPool
-                .get(dsl);
+            final Dsl dsl) throws IllegalArgumentException, IllegalStateException {
+        return batchDeleteSqlBuilderAndParamSetterPool.get(planDsl(dsl));
+    }
 
-        if (tp == null) {
-            throw new IllegalArgumentException("Not supported SQL builder DSL: " + dsl);
+    /**
+     * Returns the {@link Dsl} under which the plans for {@code dsl}'s {@link SqlDialect} are stored in the plan pools,
+     * building them first if no DSL with an equal dialect has been used with this join yet.
+     *
+     * @param dsl the SQL builder DSL requested by the caller.
+     * @return the key of the plans for {@code dsl}'s dialect, never {@code null}.
+     * @throws IllegalArgumentException if {@code dsl} is {@code null} or does not render parameterized SQL.
+     * @throws IllegalStateException if building the plans fails because the generated join SQL lacks a required clause.
+     */
+    private Dsl planDsl(final Dsl dsl) throws IllegalArgumentException, IllegalStateException {
+        N.checkArgNotNull(dsl, cs.dsl);
+
+        final SqlDialect sqlDialect = dsl.sqlDialect();
+        Dsl planDsl = planDslPool.get(sqlDialect);
+
+        if (planDsl == null) {
+            // The plans bind '?' placeholders by position, and the many-to-many SQL is assembled by
+            // replacing a rendered "?, ?, ?" list, so only parameterized-SQL DSLs can be supported
+            // (a null policy renders RAW_SQL).
+            if (sqlDialect.sqlPolicy() != SqlPolicy.PARAMETERIZED_SQL) {
+                throw new IllegalArgumentException(
+                        "Not supported SQL builder DSL with SQL policy: " + sqlDialect.sqlPolicy() + ". Only parameterized-SQL DSLs are supported");
+            }
+
+            synchronized (planDslPool) {
+                planDsl = planDslPool.get(sqlDialect);
+
+                if (planDsl == null) {
+                    // Publish the key only after all plans are stored: the lock-free lookup above treats a present key
+                    // as complete plans (and leaves no key behind if building throws).
+                    planBuilder.accept(dsl);
+                    planDslPool.put(sqlDialect, dsl);
+                    planDsl = dsl;
+                }
+            }
         }
 
-        return tp;
+        return planDsl;
+    }
+
+    /**
+     * Returns the select/selectFrom/update/deleteFrom factory functions of {@code dsl}.
+     *
+     * @param dsl a parameterized-SQL DSL.
+     * @return the predefined functions for PSC, PAC, or PLC, otherwise functions bound to {@code dsl}.
+     */
+    private static Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> sqlBuilderFuncs(
+            final Dsl dsl) {
+        final Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncMap
+                .get(dsl);
+
+        if (funcs != null) {
+            return funcs;
+        }
+
+        return Tuple.of(dsl::select, dsl::selectFrom, dsl::update, dsl::deleteFrom);
     }
 
     /**

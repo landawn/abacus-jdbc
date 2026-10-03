@@ -17,6 +17,7 @@ package com.landawn.abacus.jdbc;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -55,8 +56,11 @@ import com.landawn.abacus.util.Throwables;
  * not start a brand-new transaction; instead it re-enters this one and increments an internal
  * reference count. Each scope must be completed exactly once: call {@link #commit()} and pair it with
  * {@link #rollbackIfNotCommitted()} in a {@code finally} block (calling only one of them may leave
- * the scope open if the other path is skipped by an exception). Additional cleanup calls can consume
- * another nested scope and must not be used as a general idempotent close operation. The
+ * the scope open if the other path is skipped by an exception). A nested {@code commit()} or
+ * {@code rollback()} whose paired cleanup call never runs leaves that cleanup's no-op pending, where it
+ * can absorb the enclosing scope's {@code rollbackIfNotCommitted()} if that scope fails before it
+ * commits, leaving the transaction open. Additional cleanup calls can consume another nested scope
+ * and must not be used as a general idempotent close operation. The
  * underlying JDBC {@code COMMIT}/{@code ROLLBACK} is issued only when the outermost scope completes
  * (the reference count reaches zero). If any inner scope rolls back, the transaction is marked
  * rollback-only and the outermost commit is converted into a rollback. A nested scope may request a
@@ -244,14 +248,28 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      */
     private volatile boolean _isForUpdateOnly; //NOSONAR
 
-    // One-shot "skip the next cleanup" latch. Set by commit()/rollback() once they have settled
-    // the transaction; consumed (and reset) by the first rollbackIfNotCommitted()/close() so that
-    // call becomes a no-op after an explicit commit/rollback rather than decrementing the ref count.
     /**
-     * One-shot latch marking that {@code commit()}/{@code rollback()} has already settled this
-     * transaction, so the next {@code rollbackIfNotCommitted()}/{@code close()} becomes a no-op.
+     * The database facts {@link JdbcUtil}'s for-update-only {@code SELECT} routing depends on, read from {@link #_conn} at
+     * most once per transaction ({@code null} if they could not be read); valid once {@link #_scanDialectResolved} is set.
      */
-    private volatile boolean _isMarkedByCommitOrRollbackPreviously = false; //NOSONAR
+    private JdbcUtil.ScanDialect _scanDialect; //NOSONAR
+
+    /** Whether {@link #_scanDialect} has been resolved. */
+    private boolean _scanDialectResolved; //NOSONAR
+
+    // "Skip the paired cleanup" markers. Each explicit commit()/rollback() that exits a scope records
+    // the reference count it left behind; the scope's paired rollbackIfNotCommitted()/close() (normally
+    // in its finally block) runs at that same reference count and consumes the marker as a no-op
+    // instead of exiting another scope. A single boolean latch is not enough: a nested scope opened
+    // and completed between a scope's commit() and its finally block (e.g. a DAO call made after
+    // commit()) consumed the latch, so that finally block then exited - and rolled back - the
+    // enclosing scope, after which the outermost commit() was silently ignored.
+    /**
+     * Number of pending no-op {@code rollbackIfNotCommitted()}/{@code close()} calls left by explicit
+     * {@code commit()}/{@code rollback()} calls, keyed by the reference count at which each runs.
+     * Every key is at most the current reference count; keys above it are dropped as a scope exits.
+     */
+    private final Map<Integer, Integer> _pendingCleanupNoOps = new HashMap<>(); //NOSONAR
 
     /**
      * Constructs a new {@code SqlTransaction} backed by the given JDBC {@link Connection}.
@@ -425,6 +443,22 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     }
 
     /**
+     * Returns the database facts {@link JdbcUtil}'s for-update-only {@code SELECT} routing depends on, resolving them from
+     * this transaction's connection on the first call only: the connection is fixed for the transaction's lifetime.
+     *
+     * @param resolver Reads the facts from the connection; returns {@code null} if they cannot be read.
+     * @return The facts, or {@code null} if they could not be read.
+     */
+    JdbcUtil.ScanDialect scanDialect(final java.util.function.Function<Connection, JdbcUtil.ScanDialect> resolver) {
+        if (!_scanDialectResolved) {
+            _scanDialect = resolver.apply(_conn);
+            _scanDialectResolved = true;
+        }
+
+        return _scanDialect;
+    }
+
+    /**
      * Returns the current status of this transaction.
      * The status indicates whether the transaction is active, committed, rolled back, or marked for rollback.
      *
@@ -553,11 +587,11 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         assertOwnerThread();
         N.checkArgNotNull(actionAfterCommit, cs.actionAfterCommit);
 
-        // Set the latch only after the scope exit succeeds: decrementAndGetRef() can throw on a nested
-        // exit (isolation restore failure) and restores _refCount for a retry — a pre-set latch would
-        // turn the paired rollbackIfNotCommitted() into a no-op and leak the scope.
+        // Record the cleanup marker only after the scope exit succeeds: decrementAndGetRef() can throw on a
+        // nested exit (isolation restore failure) and restores _refCount for a retry, which the paired
+        // rollbackIfNotCommitted() must then perform - a marker recorded for the failed exit would leak the scope.
         final int refCount = decrementAndGetRef();
-        _isMarkedByCommitOrRollbackPreviously = true;
+        _pendingCleanupNoOps.merge(refCount, 1, Integer::sum);
 
         if (refCount > 0) {
             logger.debug("Deferred commit for nested transaction(id={}); remaining scopes={}", _timedId, refCount);
@@ -692,9 +726,9 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         assertOwnerThread();
         N.checkArgNotNull(actionAfterRollback, cs.actionAfterRollback);
 
-        // Latch after the scope exit succeeds — see commit(Runnable) for the failure-path reasoning.
+        // Mark after the scope exit succeeds — see commit(Runnable) for the failure-path reasoning.
         final int refCount = decrementAndGetRef();
-        _isMarkedByCommitOrRollbackPreviously = true;
+        _pendingCleanupNoOps.merge(refCount, 1, Integer::sum);
 
         if (refCount > 0) {
             _status = Status.MARKED_ROLLBACK;
@@ -723,11 +757,12 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * where you want to ensure a transaction is not left in an active state.
      * It will do nothing if the transaction has already been committed or rolled back.</p>
      *
-     * <p>Immediately after an explicit {@link #commit()} or {@link #rollback()} on this scope, the
-     * first call to this method is a deliberate no-op: it consumes a one-shot latch set by that
-     * commit/rollback rather than decrementing the scope reference count a second time. This is what
-     * makes the common idiom of {@code commit()} at the end of a {@code try} block followed by
-     * {@code rollbackIfNotCommitted()} in the {@code finally} block safe.</p>
+     * <p>After an explicit {@link #commit()} or {@link #rollback()} on this scope, the next call to
+     * this method made at that scope's nesting level is a deliberate no-op: it consumes a marker left by
+     * that commit/rollback rather than decrementing the scope reference count a second time. Nested
+     * scopes opened and completed in between (for example by work done after {@code commit()}) do not
+     * consume it. This is what makes the common idiom of {@code commit()} in a {@code try} block
+     * followed by {@code rollbackIfNotCommitted()} in the {@code finally} block safe.</p>
      *
      * <p>For a nested (non-outermost) scope this method marks the transaction
      * {@link Status#MARKED_ROLLBACK} and defers the actual rollback to the outermost scope.</p>
@@ -757,8 +792,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     public void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException {
         assertOwnerThread();
 
-        if (_isMarkedByCommitOrRollbackPreviously) { // Do nothing. It happened in finally block.
-            _isMarkedByCommitOrRollbackPreviously = false;
+        final int currentRefCount = _refCount.get();
+
+        if (_pendingCleanupNoOps.containsKey(currentRefCount)) { // Do nothing: paired with this scope's explicit commit()/rollback().
+            _pendingCleanupNoOps.computeIfPresent(currentRefCount, (k, pending) -> pending > 1 ? pending - 1 : null);
             return;
         }
 
@@ -1054,10 +1091,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             }
         }
 
-        // Clear the enclosing scope's one-shot cleanup latch only once this scope has actually been
-        // entered: a failed entry opens no scope, so it must not turn the enclosing scope's pending
-        // no-op cleanup (after its explicit commit/rollback) into a real scope exit.
-        _isMarkedByCommitOrRollbackPreviously = false;
+        // Entering a scope leaves _pendingCleanupNoOps untouched: an enclosing scope that already
+        // committed explicitly still owes its no-op cleanup once this scope has completed.
         _isolationLevel = effectiveIsolationLevel;
         _isForUpdateOnly = forUpdateOnly;
 
@@ -1166,6 +1201,10 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
             logger.debug("Left nested transaction scope(id={}, isolationLevel={}, forUpdateOnly={}, refCount={})", _timedId, _isolationLevel, _isForUpdateOnly,
                     res);
         }
+
+        // Markers above the new count belong to scopes nested in the one just exited whose paired
+        // cleanup never ran (commit() without a finally block); they can never be consumed correctly.
+        _pendingCleanupNoOps.keySet().removeIf(pendingRefCount -> pendingRefCount > res);
 
         return res;
     }
