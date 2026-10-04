@@ -29,10 +29,11 @@ import java.util.List;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
 
 @Tag("2025")
-class NamedQueryRepeatedStreamTest {
+public class NamedQueryRepeatedStreamTest extends TestBase {
 
     @Test
     void repeatedByteStreamsBindCompleteValuesWithAnEagerDriver() throws Exception {

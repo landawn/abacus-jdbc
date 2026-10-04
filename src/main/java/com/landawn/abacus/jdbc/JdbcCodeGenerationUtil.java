@@ -84,7 +84,12 @@ import lombok.experimental.Accessors;
  * Utility class for generating JDBC-related code including entity classes and SQL statements.
  * This class provides methods to automatically generate entity classes from database tables,
  * as well as generate common SQL statements (SELECT, INSERT, UPDATE) for database operations.
- * Generated column identifiers use the database dialect's quoting to preserve their metadata spelling and support reserved names.
+ * Generated column identifiers are always delimited to preserve their metadata spelling and support reserved names.
+ * The delimiter is the connection's reported identifier quote string ({@link java.sql.DatabaseMetaData#getIdentifierQuoteString()}),
+ * except that SQL Server and Sybase ASE always use brackets; when the driver reports no quoting support, simple names are left unquoted.
+ * Because even ordinary column names are delimited, the generated SQL relies on the reported quote string being valid in the
+ * session that executes it (for example, double quotes on Informix require {@code DELIMIDENT}, and MySQL reports them only in
+ * {@code ANSI_QUOTES} mode); a driver that reports a delimiter the session does not accept produces SQL that fails to parse.
  * SQL-generation examples assume PostgreSQL with lower-case column names unless another database is specified.
  *
  * <p>The generated entity classes can be customized using {@link EntityCodeConfig} to control
@@ -97,7 +102,9 @@ import lombok.experimental.Accessors;
  * {@code ds}/{@code conn} is {@code null}, or when a supplied
  * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank; every overload additionally
  * throws {@link IllegalArgumentException} when no columns remain to build the statement, whether
- * because the table itself reports none or because all of them were excluded.</p>
+ * because the table itself reports none or because all of them were excluded, and when the driver reports no identifier
+ * quoting support but a table-name part or column label is not a simple identifier (an ASCII letter or underscore followed
+ * by ASCII letters, digits or underscores) and therefore cannot be emitted without delimiters.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -1335,11 +1342,12 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Builds a metadata-only query for the specified table, resolving the database product from the connection.
      *
-     * @param conn the connection used to resolve the database product info
+     * @param conn the connection used to resolve the database product and identifier quote string
      * @param tableName the name of the table to query
      * @return a {@code SELECT} statement that matches no rows, used to read column metadata
-     * @throws IllegalArgumentException if {@code conn} is {@code null}, or the table name is {@code null}, blank, or malformed
-     * @throws UncheckedSQLException if reading database product metadata fails.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, or the table name is {@code null}, blank, or malformed, or
+     *         a part needs quoting but the driver reports no quoting support
+     * @throws UncheckedSQLException if reading database product or identifier quote metadata fails.
      */
     private static String createQueryByTableName(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -1353,10 +1361,11 @@ public final class JdbcCodeGenerationUtil {
      * Builds a {@code SELECT} query with a {@code WHERE 1 > 2} condition that matches no rows; used to obtain
      * column metadata through {@link ResultSetMetaData} without reading any data.
      *
-     * @param tableName the name of the table; quoted according to the database product when necessary
+     * @param tableName the name of the table; non-simple or explicitly delimited parts are quoted with {@code identifierQuote}
      * @param identifierQuote the connection's identifier delimiter, or {@code null} if unsupported
      * @return a {@code SELECT} statement that matches no rows
-     * @throws IllegalArgumentException if the table name is {@code null}, blank, or malformed.
+     * @throws IllegalArgumentException if the table name is {@code null}, blank, or malformed, or a part needs quoting but
+     *         {@code identifierQuote} is {@code null}.
      */
     private static String createQueryByTableName(final String tableName, final String identifierQuote) throws IllegalArgumentException {
         return "SELECT * FROM " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " WHERE 1 > 2";
@@ -1536,7 +1545,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates a SELECT SQL statement for the specified table.
      * The generated SQL includes all columns from the table.
      * All column names are quoted to preserve their exact metadata spelling and support reserved names
-     * (with backticks for MySQL/MariaDB, or double quotes for other databases).
+     * with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1569,7 +1578,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a SELECT SQL statement for the specified table using an existing connection.
      * All column names are quoted to preserve their exact metadata spelling and support reserved names,
-     * with backticks (MySQL/MariaDB) or double quotes (other databases).
+     * with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1708,7 +1717,7 @@ public final class JdbcCodeGenerationUtil {
      * Generates an INSERT SQL statement for the specified table.
      * The generated SQL uses positional parameters (?) for all column values.
      * All column names are quoted to preserve their exact metadata spelling and support reserved names
-     * (with backticks for MySQL/MariaDB, or double quotes for other databases).
+     * with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1741,7 +1750,7 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an INSERT SQL statement for the specified table using an existing connection.
      * All column names are quoted to preserve their exact metadata spelling and support reserved names
-     * (with backticks for MySQL/MariaDB, or double quotes for other databases).
+     * with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2719,8 +2728,10 @@ public final class JdbcCodeGenerationUtil {
      *   <li>SQL whitespace such as spaces, tabs, and line breaks is accepted between {@code INSERT}, {@code INTO}, the table name, and the column list.</li>
      *   <li>Column and value counts must match or conversion fails.</li>
      *   <li>The parsed table name is validated as a qualified identifier and each non-simple identifier part is quoted using the database-specific quote character.</li>
-     *   <li>Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore) are quoted
-     *       (with backticks for MySQL/MariaDB, or double quotes for other databases) based on the
+     *   <li>Column names that were delimited in {@code insertSql}, or that contain characters other than ASCII letters, digits, or underscores
+     *       (or that do not start with a letter or underscore), are quoted
+     *       (with brackets for SQL Server/ASE, backticks for MySQL/MariaDB, Spark, Databricks, Hive and BigQuery, or double quotes
+     *       for other databases) based on the
      *       {@link ProductInfo} resolved from {@code ds}.</li>
      *   <li>Value expressions are copied from the parsed {@code VALUES} list without re-quoting or re-escaping.
      *       Surrounding whitespace is trimmed, except that a trailing line comment is terminated by a newline

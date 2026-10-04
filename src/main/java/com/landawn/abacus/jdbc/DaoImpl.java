@@ -6464,12 +6464,17 @@ final class DaoImpl {
                         returnGeneratedKeys = false;
                     }
 
+                    // Only a Map is exempt for positional procedure SQL: its keys are bound through the driver's named callable
+                    // setters. A bean/record/EntityId still cannot supply positional procedure parameters, even with @Bind.
                     if (stmtParamLen == 1
-                            && (Beans.isBeanClass(paramTypes[stmtParamIndexes[0]]) || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
+                            && (Beans.isBeanClass(paramTypes[stmtParamIndexes[0]])
+                                    || (Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) && !isProcedure)
                                     || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || Beans.isRecordClass(paramTypes[stmtParamIndexes[0]]))
-                            && !isNamedQuery && !isProcedure) {
-                        throw new UnsupportedOperationException(
-                                "A parameter of type Entity/Map/EntityId requires @Query with named parameters (:name syntax) in method: "
+                            && !isNamedQuery) {
+                        throw new UnsupportedOperationException(isProcedure
+                                ? "A parameter of type Entity/EntityId cannot supply the parameters of a positional procedure call;"
+                                        + " bind them individually with @Bind or pass a Map, in method: " + fullClassMethodName
+                                : "A parameter of type Entity/Map/EntityId requires @Query with named parameters (:name syntax) in method: "
                                         + fullClassMethodName);
                     }
 

@@ -27,7 +27,7 @@ import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.util.EntityId;
 
-class DaoReviewRegressionTest extends TestBase {
+public class DaoReviewRegressionTest extends TestBase {
 
     @Table("dao_review_row")
     public static class ReviewRow {

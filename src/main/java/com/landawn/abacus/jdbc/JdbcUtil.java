@@ -6252,6 +6252,12 @@ public final class JdbcUtil {
         // "1_000" is a number or '[' starts an identifier depend on the database, which is only looked up for SQL where they
         // can matter, and at most once per transaction. If it can't be read, any interpretation that could write joins:
         // quotes inside a MySQL '#' comment or a SQL Server bracketed alias must not hide a real INTO clause.
+        // Statement classification only depends on the dialect through '[' (bracket identifier vs. array): without one, a
+        // non-SELECT always joins, so return before looking up the dialect or rescanning under every rule set.
+        if (sql.indexOf('[') < 0 && getSqlOperation(sql, false) != SqlOperation.SELECT) {
+            return tran;
+        }
+
         if (!dependsOnDialect(sql)) {
             return requiresTransaction(sql, ScanDialect.STANDARD) ? tran : null;
         }
@@ -6269,13 +6275,19 @@ public final class JdbcUtil {
      * Uses the same bracket interpretation for CTE classification and SELECT write detection. H2 can change compatibility
      * mode without changing its product metadata, even after this transaction's dialect has been cached. Check its
      * bracket-identifier interpretation too before allowing a SELECT to run outside the transaction.
+     *
+     * <p>Only called by {@link #getTransaction(javax.sql.DataSource, String, CreatedBy)} after its non-SELECT fast path: SQL
+     * without {@code '['} has already been classified as a SELECT (a classification no dialect can change), so it is not
+     * classified again here.</p>
      */
     private static boolean requiresTransaction(final String sql, final ScanDialect dialect) {
-        if (getSqlOperation(sql, dialect.bracketIdentifiers()) != SqlOperation.SELECT || isDataModifyingSelect(sql, dialect)) {
+        final boolean hasBracket = sql.indexOf('[') >= 0;
+
+        if ((hasBracket && getSqlOperation(sql, dialect.bracketIdentifiers()) != SqlOperation.SELECT) || isDataModifyingSelect(sql, dialect)) {
             return true;
         }
 
-        if (!dialect.checkBracketAlternatives() || sql.indexOf('[') < 0) {
+        if (!dialect.checkBracketAlternatives() || !hasBracket) {
             return false;
         }
 

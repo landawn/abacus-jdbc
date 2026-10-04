@@ -357,8 +357,10 @@ public @interface Query {
      * and handles input/output parameters accordingly.
      * A single {@link java.util.Map} parameter is supported: its keys are callable parameter names,
      * bound through the JDBC driver's named setters rather than colon-style SQL placeholders.
-     * A single bean, record or {@link com.landawn.abacus.util.EntityId} parameter is not supported
-     * for procedures and causes DAO initialization to throw {@link UnsupportedOperationException}.
+     * A single bean, record or {@link com.landawn.abacus.util.EntityId} parameter cannot supply procedure
+     * parameters and causes DAO initialization to throw {@link UnsupportedOperationException}, including when it is
+     * annotated with {@code @Bind} in positional ({@code ?}) SQL. Only in named-parameter SQL can such an object be
+     * bound as one value, through {@code @Bind} or {@link #collectionAsSingleParameter()}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

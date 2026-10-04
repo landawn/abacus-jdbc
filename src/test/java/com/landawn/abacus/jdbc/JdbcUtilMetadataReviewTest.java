@@ -23,8 +23,10 @@ import java.util.List;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
+
 @Tag("2025")
-class JdbcUtilMetadataReviewTest {
+public class JdbcUtilMetadataReviewTest extends TestBase {
 
     @Test
     void columnNamesUseTheQualifiedCatalogOnCatalogOnlyDatabases() throws SQLException {

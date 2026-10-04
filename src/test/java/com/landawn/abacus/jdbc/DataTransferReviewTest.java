@@ -11,8 +11,10 @@ import java.sql.Statement;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
+
 @Tag("2025")
-class DataTransferReviewTest {
+public class DataTransferReviewTest extends TestBase {
 
     @Test
     void copyingAllColumnsPreservesReservedColumnNamesAndValues() throws Exception {

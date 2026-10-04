@@ -27,7 +27,7 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Throwables;
 
-class DataTransferNullArgumentValidationTest extends TestBase {
+public class DataTransferNullArgumentValidationTest extends TestBase {
 
     @Test
     void datasetOverloadsRejectNullBeforeAccessingResources() {

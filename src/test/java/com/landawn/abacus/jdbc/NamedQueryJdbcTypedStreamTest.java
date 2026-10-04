@@ -15,8 +15,10 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
+
 @Tag("2025")
-class NamedQueryJdbcTypedStreamTest {
+public class NamedQueryJdbcTypedStreamTest extends TestBase {
 
     @Test
     void explicitJdbcTypesReplayByteStreams() {

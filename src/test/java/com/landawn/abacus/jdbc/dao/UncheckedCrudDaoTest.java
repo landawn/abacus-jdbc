@@ -892,7 +892,7 @@ public class UncheckedCrudDaoTest extends TestBase {
      */
     @Nested
     @TestInstance(Lifecycle.PER_CLASS)
-    class BatchUpsertIntegration {
+    public class BatchUpsertIntegration extends TestBase {
 
         private DataSource ds;
         private BatchUpsertUserDao dao;

@@ -23,8 +23,10 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
+
 @Tag("2025")
-class JdbcBracketAliasRegressionTest {
+public class JdbcBracketAliasRegressionTest extends TestBase {
     private static final SqlTransaction.CreatedBy CREATED_BY = SqlTransaction.CreatedBy.JDBC_UTIL;
 
     @Test

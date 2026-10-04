@@ -1,3 +1,8 @@
+## 4.9.3
+* Breaking: `JdbcCodeGenerationUtil.generate*Sql`, and `DataTransferUtil` copies whose column list is read from table metadata, now delimit every column name with the connection's identifier quote string (brackets on SQL Server/ASE), e.g. `SELECT "id", "name" FROM t`; names are left unquoted only when the driver reports no quoting support
+* Repeated named stream/reader parameters are buffered and bound with independent copies
+* Improvements and bug fixes
+
 ## 4.9.2
 * Naming convention improvements
 * Improvements and bug fixes

@@ -30,10 +30,11 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.type.Type;
 
 @Tag("2025")
-class AbstractQueryRepeatedStreamTest {
+public class AbstractQueryRepeatedStreamTest extends TestBase {
 
     @Test
     void repeatedByteStreamIndicesBindCompleteValuesWithAnEagerDriver() throws Exception {

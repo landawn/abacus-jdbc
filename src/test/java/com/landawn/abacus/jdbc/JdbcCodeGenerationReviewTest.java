@@ -12,8 +12,10 @@ import java.sql.Statement;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
+
 @Tag("2025")
-class JdbcCodeGenerationReviewTest {
+public class JdbcCodeGenerationReviewTest extends TestBase {
 
     @Test
     void generatedSelectReadsAColumnNamedUserInsteadOfTheCurrentUserFunction() throws Exception {

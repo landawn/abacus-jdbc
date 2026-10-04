@@ -13,8 +13,10 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
+
 @Tag("2025")
-class H2BracketTransactionTest {
+public class H2BracketTransactionTest extends TestBase {
     private static final String WRITE = " FROM FINAL TABLE (UPDATE t SET id = 2) WHERE 'a]' = 'a]'";
 
     @Test

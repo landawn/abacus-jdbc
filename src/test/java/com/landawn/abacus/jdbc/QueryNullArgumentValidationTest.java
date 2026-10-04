@@ -17,11 +17,12 @@ import java.sql.ResultSet;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.EntityId;
 
 @Tag("2025")
-class QueryNullArgumentValidationTest {
+public class QueryNullArgumentValidationTest extends TestBase {
 
     @Test
     void requiredEntityIdIsRejectedWithItsParameterNameAndClosesQuery() throws Exception {

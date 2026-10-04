@@ -29,7 +29,7 @@ import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.stream.Stream;
 
-public class JavaDocHelper {
+public class JavaDocHelper extends TestBase {
 
     static final List<String> filesToSkipSet = N.asList("CodeGenerationUtil");
 

@@ -24,7 +24,7 @@ import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.u.OptionalInt;
 import com.landawn.abacus.util.stream.Stream;
 
-public class CodeHelper {
+public class CodeHelper extends TestBase {
 
     @Test
     public void compare_methods_in_UncheckedDaos() throws Exception {

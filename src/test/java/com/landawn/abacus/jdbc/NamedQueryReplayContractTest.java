@@ -23,12 +23,13 @@ import java.util.Map;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.EntityId;
 
 @Tag("2025")
-class NamedQueryReplayContractTest {
+public class NamedQueryReplayContractTest extends TestBase {
     @Test
     void entityIdReplayWorksThroughBothSettersAndBatches() throws Exception {
         for (int mode = 0; mode < 4; mode++) {

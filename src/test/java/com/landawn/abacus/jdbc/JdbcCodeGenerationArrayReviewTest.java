@@ -11,8 +11,10 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
+
 @Tag("2025")
-class JdbcCodeGenerationArrayReviewTest {
+public class JdbcCodeGenerationArrayReviewTest extends TestBase {
 
     @Test
     void convertsNestedArrayExpressionsAcceptedByTheDatabase() throws Exception {

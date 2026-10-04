@@ -13,10 +13,11 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.SqlOperation;
 
 @Tag("2025")
-class JdbcUtilArrayScannerTest {
+public class JdbcUtilArrayScannerTest extends TestBase {
     @Test
     void nestedArrayCtesAreClassifiedAsSelectAndBypassUpdateOnlyTransactions() throws Exception {
         JdbcDataSource ds = new JdbcDataSource();

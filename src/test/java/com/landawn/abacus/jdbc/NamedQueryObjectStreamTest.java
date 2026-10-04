@@ -25,10 +25,11 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.type.Type;
 
 @Tag("2025")
-class NamedQueryObjectStreamTest {
+public class NamedQueryObjectStreamTest extends TestBase {
 
     @Test
     void conventionalObjectBindingReplaysByteStreams() {

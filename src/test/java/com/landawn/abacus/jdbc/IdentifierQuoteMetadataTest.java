@@ -22,8 +22,10 @@ import java.util.List;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
+
 @Tag("2025")
-class IdentifierQuoteMetadataTest {
+public class IdentifierQuoteMetadataTest extends TestBase {
     private static Connection dialect(Connection real, String product, String quote, List<String> statements) throws Exception {
         Connection conn = mock(Connection.class, delegatesTo(real));
         DatabaseMetaData metadata = mock(DatabaseMetaData.class, delegatesTo(real.getMetaData()));

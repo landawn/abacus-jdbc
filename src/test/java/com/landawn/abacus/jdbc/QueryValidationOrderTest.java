@@ -25,10 +25,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
 
 @Tag("2025")
-class QueryValidationOrderTest {
+public class QueryValidationOrderTest extends TestBase {
 
     public static final class Entity {
         private int reads;

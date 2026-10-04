@@ -17,8 +17,10 @@ import java.sql.Types;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
+
 @Tag("2025")
-class ResultSetProxyPolymorphicColumnTest {
+public class ResultSetProxyPolymorphicColumnTest extends TestBase {
 
     @Test
     void aDateInTheFirstRowDoesNotForceLaterJavaObjectsThroughGetDate() throws Exception {
