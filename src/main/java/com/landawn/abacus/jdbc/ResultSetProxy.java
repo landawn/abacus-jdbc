@@ -818,6 +818,10 @@ final class ResultSetProxy implements ResultSet {
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                         ret = delegate.getTimestamp(columnIndex);
                         columnGetters[columnIndex] = ColumnGetter.GET_TIMESTAMP;
+                    } else if ("java.lang.Object".equals(metaDataClassName)) {
+                        // JAVA_OBJECT columns can change runtime type between rows. A Date in the first
+                        // row must not force later timestamps, strings or other objects through getDate.
+                        columnGetters[columnIndex] = ColumnGetter.GET_OBJECT;
                     } else {
                         columnGetters[columnIndex] = ColumnGetter.GET_DATE;
                     }
@@ -928,6 +932,9 @@ final class ResultSetProxy implements ResultSet {
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                         ret = delegate.getTimestamp(columnIndex);
                         getter = rs -> rs.getTimestamp(columnIndex);
+                    } else if ("java.lang.Object".equals(metaDataClassName)) {
+                        // Match the index path: a polymorphic column cannot cache a date-only getter.
+                        getter = rs -> JdbcUtil.getColumnValue(rs, columnIndex);
                     } else {
                         getter = rs -> rs.getDate(columnIndex);
                     }

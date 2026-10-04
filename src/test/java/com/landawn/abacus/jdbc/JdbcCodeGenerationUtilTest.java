@@ -212,6 +212,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(connection.getMetaData()).thenReturn(databaseMetaData);
         when(databaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(databaseMetaData.getIdentifierQuoteString()).thenReturn("`");
         when(databaseMetaData.getDatabaseProductVersion()).thenReturn("8.0");
         when(connection.prepareStatement("SELECT * FROM order_history WHERE 1 > 2")).thenReturn(preparedStatement);
         when(preparedStatement.executeQuery()).thenReturn(resultSet);
@@ -240,14 +241,14 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     public void testGenerateSelectSql_WithExcludedColumns() {
         String sql = JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", List.of("createdAt"), "status = 'OPEN'");
 
-        assertEquals("SELECT id, status FROM order_history WHERE status = 'OPEN'", sql);
+        assertEquals("SELECT `id`, `status` FROM order_history WHERE status = 'OPEN'", sql);
     }
 
     @Test
     public void testGenerateInsertSql_WithExcludedColumns() {
         String sql = JdbcCodeGenerationUtil.generateInsertSql(connection, "order_history", List.of("status"));
 
-        assertEquals("INSERT INTO order_history(id, created_at) VALUES (?, ?)", sql);
+        assertEquals("INSERT INTO order_history(`id`, `created_at`) VALUES (?, ?)", sql);
     }
 
     // Excluding every column must fail fast with IllegalArgumentException instead of emitting malformed SQL
@@ -291,7 +292,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     public void testGenerateUpdateSql_ResolvesCamelCaseKeyToActualColumn() {
         final String sql = JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "createdAt");
 
-        assertEquals("UPDATE order_history SET id = ?, status = ? WHERE created_at = ?", sql);
+        assertEquals("UPDATE order_history SET `id` = ?, `status` = ? WHERE `created_at` = ?", sql);
     }
 
     @Test
@@ -309,6 +310,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("`");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
         when(conn.prepareStatement("SELECT * FROM `order-history` WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -319,7 +321,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "order-history");
 
-        assertEquals("SELECT id, created_at FROM `order-history`", sql);
+        assertEquals("SELECT `id`, `created_at` FROM `order-history`", sql);
     }
 
     @Test
@@ -332,6 +334,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("\"");
         when(metaData.getDatabaseProductVersion()).thenReturn("16");
         when(conn.prepareStatement("SELECT * FROM users WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -352,6 +355,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("`");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
         when(conn.prepareStatement("SELECT * FROM `order-history` WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -362,7 +366,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String sql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order-history");
 
-        assertEquals("INSERT INTO `order-history`(id, created_at) VALUES (?, ?)", sql);
+        assertEquals("INSERT INTO `order-history`(`id`, `created_at`) VALUES (?, ?)", sql);
     }
 
     @Test
@@ -375,6 +379,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("`");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
         // Per-part conditional quoting: the simple schema part `sales` is left unquoted (quoting it would
         // force case-exact resolution and break on case-folding databases); only the special table part
@@ -388,7 +393,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "sales.order-history");
 
-        assertEquals("SELECT id, created_at FROM sales.`order-history`", sql);
+        assertEquals("SELECT `id`, `created_at` FROM sales.`order-history`", sql);
     }
 
     @Test
@@ -401,6 +406,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("`");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
         when(conn.prepareStatement("SELECT * FROM `sales.data` WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -411,7 +417,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "\"sales.data\"");
 
-        assertEquals("SELECT id, created_at FROM `sales.data`", sql);
+        assertEquals("SELECT `id`, `created_at` FROM `sales.data`", sql);
     }
 
     @Test
@@ -424,6 +430,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("`");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
         when(conn.prepareStatement("SELECT * FROM sales.`order` WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -433,7 +440,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "sales.\"order\"");
 
-        assertEquals("SELECT id FROM sales.`order`", sql);
+        assertEquals("SELECT `id` FROM sales.`order`", sql);
     }
 
     @Test
@@ -446,6 +453,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("`");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
         when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -456,7 +464,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "123abc");
 
-        assertEquals("SELECT id, `1st_value` FROM `123abc`", sql);
+        assertEquals("SELECT `id`, `1st_value` FROM `123abc`", sql);
     }
 
     @Test
@@ -469,6 +477,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("`");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
         when(conn.prepareStatement("SELECT * FROM demo WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -480,7 +489,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "demo");
 
         // The embedded backtick must be doubled so the generated SQL is valid (not unbalanced/injectable).
-        assertEquals("SELECT id, `we``ird` FROM demo", sql);
+        assertEquals("SELECT `id`, `we``ird` FROM demo", sql);
     }
 
     @Test
@@ -493,6 +502,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("\"");
         when(metaData.getDatabaseProductVersion()).thenReturn("15.0");
         when(conn.prepareStatement("SELECT * FROM demo WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -504,7 +514,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "demo");
 
         // ANSI double-quote dialect: the embedded double-quote must be doubled.
-        assertEquals("SELECT id, \"we\"\"ird\" FROM demo", sql);
+        assertEquals("SELECT \"id\", \"we\"\"ird\" FROM demo", sql);
     }
 
     // A metadata label is the column's stored spelling. On a database that folds unquoted identifiers to lower
@@ -513,14 +523,15 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateSqlQuotesLabelsWhoseCaseWouldBeFolded_LowerCaseDatabase() throws SQLException {
         when(databaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(databaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(databaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
         when(resultSetMetaData.getColumnLabel(2)).thenReturn("createdAt");
         when(resultSetMetaData.getColumnLabel(3)).thenReturn("STATUS");
 
-        assertEquals("SELECT id, \"createdAt\", \"STATUS\" FROM order_history", JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history"));
-        assertEquals("INSERT INTO order_history(id, \"createdAt\", \"STATUS\") VALUES (:id, :createdAt, :status)",
+        assertEquals("SELECT \"id\", \"createdAt\", \"STATUS\" FROM order_history", JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history"));
+        assertEquals("INSERT INTO order_history(\"id\", \"createdAt\", \"STATUS\") VALUES (:id, :createdAt, :status)",
                 JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
-        assertEquals("UPDATE order_history SET \"createdAt\" = ?, \"STATUS\" = ? WHERE id = ?",
+        assertEquals("UPDATE order_history SET \"createdAt\" = ?, \"STATUS\" = ? WHERE \"id\" = ?",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "id"));
     }
 
@@ -536,9 +547,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
             final String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "case_guard");
             final String namedUpdateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "case_guard", null, List.of("userId"), null);
 
-            assertEquals("SELECT ID, \"userId\", \"note\" FROM case_guard", selectSql);
-            assertEquals("INSERT INTO case_guard(ID, \"userId\", \"note\") VALUES (?, ?, ?)", insertSql);
-            assertEquals("UPDATE case_guard SET ID = :id, \"note\" = :note WHERE \"userId\" = :userId", namedUpdateSql);
+            assertEquals("SELECT \"ID\", \"userId\", \"note\" FROM case_guard", selectSql);
+            assertEquals("INSERT INTO case_guard(\"ID\", \"userId\", \"note\") VALUES (?, ?, ?)", insertSql);
+            assertEquals("UPDATE case_guard SET \"ID\" = :id, \"note\" = :note WHERE \"userId\" = :userId", namedUpdateSql);
 
             assertEquals(1, JdbcUtil.executeUpdate(conn, insertSql, 1, 7, "old"));
             assertEquals(1, JdbcUtil.executeUpdate(conn, namedUpdateSql, java.util.Map.of("id", 1, "note", "new", "userId", 7)));
@@ -561,7 +572,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
             stmt.execute("CREATE TABLE dollar_guard (id INT PRIMARY KEY, price$usd INT)");
 
             // The positional forms remain usable.
-            assertEquals("UPDATE dollar_guard SET \"PRICE$USD\" = ? WHERE ID = ?", JdbcCodeGenerationUtil.generateUpdateSql(conn, "dollar_guard", "id"));
+            assertEquals("UPDATE dollar_guard SET \"PRICE$USD\" = ? WHERE \"ID\" = ?", JdbcCodeGenerationUtil.generateUpdateSql(conn, "dollar_guard", "id"));
 
             assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", "id"))
                     .getMessage()
@@ -571,7 +582,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                     () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", null, List.of("id"), null));
             assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "dollar_guard"));
             // Excluding the column leaves only valid parameter names.
-            assertEquals("UPDATE dollar_guard SET ID = :id",
+            assertEquals("UPDATE dollar_guard SET \"ID\" = :id",
                     JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", List.of("price$usd"), null, null));
 
             // Other currency symbols are Java identifier characters too, and are cut off by ParsedSql the same way.
@@ -784,6 +795,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("`");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
         when(conn.prepareStatement("SELECT * FROM `order-history` WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -1180,9 +1192,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGeneratedUpdateGroupsAdditionalOrPredicate() throws SQLException {
         final String condition = "status = 'OPEN' OR status = 'PENDING'";
-        assertEquals("UPDATE order_history SET status = ? WHERE id = ? AND (" + condition + ")",
+        assertEquals("UPDATE order_history SET `status` = ? WHERE `id` = ? AND (" + condition + ")",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", List.of("created_at"), List.of("id"), condition));
-        assertEquals("UPDATE order_history SET status = :status WHERE id = :id AND (" + condition + ")",
+        assertEquals("UPDATE order_history SET `status` = :status WHERE `id` = :id AND (" + condition + ")",
                 JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", List.of("created_at"), List.of("id"), condition));
 
         try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:update_predicate_grouping", "sa", "");
@@ -1421,6 +1433,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(dataSource.getConnection()).thenReturn(conn);
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn(productName);
+        when(metaData.getIdentifierQuoteString()).thenReturn(SqlIdentifierUtil.quoteString(com.landawn.abacus.query.SqlDialect.ProductInfo.of(productName, "1")));
         when(metaData.getDatabaseProductVersion()).thenReturn("1.0");
         return dataSource;
     }
@@ -2137,6 +2150,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(md);
         when(md.getDatabaseProductName()).thenReturn("MySQL");
+        when(md.getIdentifierQuoteString()).thenReturn("`");
         when(md.getDatabaseProductVersion()).thenReturn("8.0");
         when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         when(stmt.executeQuery()).thenThrow(new SQLException("execute failed"));
@@ -2716,25 +2730,25 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     // "UPDATE order_history SET ... WHERE   ". It is now treated like null/empty and omitted.
     @Test
     public void testGenerateSelectSql_BlankWhereClauseIsOmitted() {
-        assertEquals("SELECT id, created_at, status FROM order_history",
+        assertEquals("SELECT `id`, `created_at`, `status` FROM order_history",
                 JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", null, "   "));
-        assertEquals("SELECT id, created_at, status FROM order_history",
+        assertEquals("SELECT `id`, `created_at`, `status` FROM order_history",
                 JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", null, "\t\n"));
     }
 
     @Test
     public void testGenerateUpdateSql_BlankWhereClauseIsOmitted() {
-        assertEquals("UPDATE order_history SET id = ?, created_at = ?, status = ?",
+        assertEquals("UPDATE order_history SET `id` = ?, `created_at` = ?, `status` = ?",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, null, "   "));
-        assertEquals("UPDATE order_history SET created_at = ?, status = ? WHERE id = ?",
+        assertEquals("UPDATE order_history SET `created_at` = ?, `status` = ? WHERE `id` = ?",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("id"), " \t "));
     }
 
     @Test
     public void testGenerateNamedUpdateSql_BlankWhereClauseIsOmitted() {
-        assertEquals("UPDATE order_history SET id = :id, created_at = :createdAt, status = :status",
+        assertEquals("UPDATE order_history SET `id` = :id, `created_at` = :createdAt, `status` = :status",
                 JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", null, null, "   "));
-        assertEquals("UPDATE order_history SET created_at = :createdAt, status = :status WHERE id = :id",
+        assertEquals("UPDATE order_history SET `created_at` = :createdAt, `status` = :status WHERE `id` = :id",
                 JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", null, List.of("id"), " \t "));
     }
 
@@ -2820,7 +2834,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(resultSetMetaData.getColumnLabel(1)).thenReturn("user_id");
         when(resultSetMetaData.getColumnLabel(2)).thenReturn("userId");
 
-        assertEquals("UPDATE order_history SET userId = ?, status = ? WHERE user_id = ?",
+        assertEquals("UPDATE order_history SET `userId` = ?, `status` = ? WHERE `user_id` = ?",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("user_id"), null));
         assertEquals(JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "user_id") + " AND (status = 'OPEN')",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("user_id"), "status = 'OPEN'"));
@@ -2974,6 +2988,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(metaData.getIdentifierQuoteString()).thenReturn("`");
         when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
         when(conn.prepareStatement("SELECT * FROM orders WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -3046,6 +3061,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(md);
         when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getIdentifierQuoteString()).thenReturn("\"");
         when(md.getDatabaseProductVersion()).thenReturn("15");
         when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -3088,6 +3104,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(md);
         when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getIdentifierQuoteString()).thenReturn("\"");
         when(md.getDatabaseProductVersion()).thenReturn("15");
         when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -3140,6 +3157,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(md);
         when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getIdentifierQuoteString()).thenReturn("\"");
         when(md.getDatabaseProductVersion()).thenReturn("15");
         when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -3190,6 +3208,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(conn.getMetaData()).thenReturn(md);
         when(conn.getCatalog()).thenReturn("currentdb");
         when(md.getDatabaseProductName()).thenReturn("MySQL");
+        when(md.getIdentifierQuoteString()).thenReturn("`");
         when(md.getDatabaseProductVersion()).thenReturn("8.0");
         when(md.supportsSchemasInTableDefinitions()).thenReturn(false);
         when(md.supportsCatalogsInTableDefinitions()).thenReturn(true);
@@ -3232,6 +3251,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
             when(conn.getMetaData()).thenReturn(md);
             when(conn.getCatalog()).thenReturn("currentdb");
             when(md.getDatabaseProductName()).thenReturn("MySQL");
+            when(md.getIdentifierQuoteString()).thenReturn("`");
             when(md.getDatabaseProductVersion()).thenReturn("8.0");
             when(md.supportsSchemasInTableDefinitions()).thenReturn(true);
             when(md.supportsCatalogsInTableDefinitions()).thenReturn(catalogsSupported);
@@ -3273,6 +3293,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         when(conn.getMetaData()).thenReturn(md);
         when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getIdentifierQuoteString()).thenReturn("\"");
         when(md.getDatabaseProductVersion()).thenReturn("15");
         when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rs);
@@ -3691,11 +3712,11 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
     @Test
     public void testSplitSqlList_UnmatchedClosingParenthesis_Reflection() throws Exception {
-        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(), boolean.class);
+        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(), boolean.class, boolean.class);
         m.setAccessible(true);
 
         final java.lang.reflect.InvocationTargetException ex = assertThrows(java.lang.reflect.InvocationTargetException.class,
-                () -> m.invoke(null, "a)", "INSERT INTO t(a)) VALUES (1)", flatCommentStyle(), true));
+                () -> m.invoke(null, "a)", "INSERT INTO t(a)) VALUES (1)", flatCommentStyle(), false, true));
         assertTrue(ex.getCause() instanceof IllegalArgumentException);
         assertTrue(ex.getCause().getMessage().contains("Unmatched closing parenthesis in SQL"), ex.getCause().getMessage());
     }
@@ -3705,11 +3726,11 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     // exercised directly via reflection (an unterminated single-quote literal).
     @Test
     public void testSplitSqlList_UnclosedToken_Reflection() throws Exception {
-        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(), boolean.class);
+        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(), boolean.class, boolean.class);
         m.setAccessible(true);
 
         final java.lang.reflect.InvocationTargetException ex = assertThrows(java.lang.reflect.InvocationTargetException.class,
-                () -> m.invoke(null, "'abc", "INSERT INTO t('abc) VALUES (1)", flatCommentStyle(), true));
+                () -> m.invoke(null, "'abc", "INSERT INTO t('abc) VALUES (1)", flatCommentStyle(), false, true));
         assertTrue(ex.getCause() instanceof IllegalArgumentException);
         assertTrue(ex.getCause().getMessage().contains("Unclosed SQL token in SQL"), ex.getCause().getMessage());
     }

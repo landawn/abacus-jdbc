@@ -116,6 +116,7 @@ public class DataTransferUtilTest extends TestBase {
         when(mockDataSource.getConnection()).thenReturn(mockConnection);
         when(mockConnection.getMetaData()).thenReturn(mockDatabaseMetaData);
         when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("`");
         when(mockDatabaseMetaData.getDatabaseProductVersion()).thenReturn("8");
         when(mockConnection.prepareStatement(anyString())).thenReturn(mockPreparedStatement);
         when(mockConnection.prepareStatement(anyString(), anyInt(), anyInt())).thenReturn(mockPreparedStatement);
@@ -673,6 +674,7 @@ public class DataTransferUtilTest extends TestBase {
         when(targetDataSource.getConnection()).thenReturn(targetConnection);
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("`");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("8");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(targetPreparedStatement.executeQuery()).thenReturn(mockResultSet);
@@ -702,6 +704,7 @@ public class DataTransferUtilTest extends TestBase {
         when(targetDataSource.getConnection()).thenReturn(targetConnection);
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("`");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("8");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(targetPreparedStatement.executeQuery()).thenReturn(mockResultSet);
@@ -730,6 +733,7 @@ public class DataTransferUtilTest extends TestBase {
         when(targetDataSource.getConnection()).thenReturn(targetConnection);
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(targetPreparedStatement.executeQuery()).thenReturn(targetResultSet);
@@ -762,6 +766,7 @@ public class DataTransferUtilTest extends TestBase {
         when(targetDataSource.getConnection()).thenReturn(targetConnection);
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("`");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("8");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(mockResultSet.next()).thenReturn(true, false);
@@ -785,6 +790,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(mockResultSet.next()).thenReturn(true, false);
@@ -807,6 +813,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(mockResultSet.next()).thenReturn(true, false);
@@ -829,6 +836,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(mockResultSet.next()).thenReturn(true, false);
@@ -853,6 +861,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(mockResultSet.next()).thenReturn(true, false);
@@ -875,6 +884,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(mockResultSet.next()).thenReturn(true, false);
@@ -948,6 +958,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("`");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("8");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(targetPreparedStatement.executeQuery()).thenReturn(mockResultSet);
@@ -974,6 +985,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
         when(targetPreparedStatement.executeQuery()).thenReturn(targetResultSet);
@@ -1347,6 +1359,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(targetConn.getMetaData()).thenReturn(targetMeta);
         when(targetMeta.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetMeta.getIdentifierQuoteString()).thenReturn("`");
         when(targetMeta.getDatabaseProductVersion()).thenReturn("8");
         when(targetConn.prepareStatement(anyString())).thenReturn(targetStmt);
         when(mockConnection.prepareStatement(anyString(), anyInt(), anyInt())).thenReturn(mockPreparedStatement);
@@ -1430,6 +1443,7 @@ public class DataTransferUtilTest extends TestBase {
         when(targetDs.getConnection()).thenReturn(targetConn);
         when(targetConn.getMetaData()).thenReturn(targetMd);
         when(targetMd.getDatabaseProductName()).thenReturn("MySQL");
+        when(targetMd.getIdentifierQuoteString()).thenReturn("`");
         when(targetMd.getDatabaseProductVersion()).thenReturn("8");
 
         // Drive copy() into the finally block by failing the SQL generation step.
@@ -1486,6 +1500,7 @@ public class DataTransferUtilTest extends TestBase {
         final PreparedStatement stmt = mock(PreparedStatement.class);
         when(conn.getMetaData()).thenReturn(md);
         when(md.getDatabaseProductName()).thenReturn("MariaDB");
+        when(md.getIdentifierQuoteString()).thenReturn("`");
         when(md.getDatabaseProductVersion()).thenReturn("11.0");
 
         final java.lang.reflect.Method m = DataTransferUtil.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class,
@@ -1508,6 +1523,7 @@ public class DataTransferUtilTest extends TestBase {
         final PreparedStatement stmt = mock(PreparedStatement.class);
         when(conn.getMetaData()).thenReturn(md);
         when(md.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(md.getIdentifierQuoteString()).thenReturn("\"");
         when(md.getDatabaseProductVersion()).thenReturn("16.0");
 
         final java.lang.reflect.Method m = DataTransferUtil.class.getDeclaredMethod("setFetchForLargeResult", Connection.class, PreparedStatement.class,
@@ -1795,6 +1811,7 @@ public class DataTransferUtilTest extends TestBase {
 
         when(targetConnection.getMetaData()).thenReturn(targetMetadata);
         when(targetMetadata.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetMetadata.getIdentifierQuoteString()).thenReturn("\"");
         when(targetMetadata.getDatabaseProductVersion()).thenReturn("16");
         when(targetConnection.prepareStatement(anyString())).thenReturn(targetStatement);
         when(targetStatement.executeBatch()).thenReturn(new int[] { 1 });

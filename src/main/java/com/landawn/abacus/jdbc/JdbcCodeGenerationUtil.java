@@ -84,6 +84,8 @@ import lombok.experimental.Accessors;
  * Utility class for generating JDBC-related code including entity classes and SQL statements.
  * This class provides methods to automatically generate entity classes from database tables,
  * as well as generate common SQL statements (SELECT, INSERT, UPDATE) for database operations.
+ * Generated column identifiers use the database dialect's quoting to preserve their metadata spelling and support reserved names.
+ * SQL-generation examples assume PostgreSQL with lower-case column names unless another database is specified.
  *
  * <p>The generated entity classes can be customized using {@link EntityCodeConfig} to control
  * various aspects such as field naming conventions, type mappings, annotations, and more.</p>
@@ -1344,7 +1346,7 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        return createQueryByTableName(tableName, JdbcUtil.getDBProductInfo(conn));
+        return createQueryByTableName(tableName, SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn)));
     }
 
     /**
@@ -1352,12 +1354,12 @@ public final class JdbcCodeGenerationUtil {
      * column metadata through {@link ResultSetMetaData} without reading any data.
      *
      * @param tableName the name of the table; quoted according to the database product when necessary
-     * @param dbProductInfo the database product info used to render the table name
+     * @param identifierQuote the connection's identifier delimiter, or {@code null} if unsupported
      * @return a {@code SELECT} statement that matches no rows
      * @throws IllegalArgumentException if the table name is {@code null}, blank, or malformed.
      */
-    private static String createQueryByTableName(final String tableName, final ProductInfo dbProductInfo) throws IllegalArgumentException {
-        return "SELECT * FROM " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " WHERE 1 > 2";
+    private static String createQueryByTableName(final String tableName, final String identifierQuote) throws IllegalArgumentException {
+        return "SELECT * FROM " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " WHERE 1 > 2";
     }
 
     /**
@@ -1533,15 +1535,14 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a SELECT SQL statement for the specified table.
      * The generated SQL includes all columns from the table.
-     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore), or whose
-     * letter case the database would fold when unquoted (for example {@code userId} on H2, Oracle, or PostgreSQL), are quoted
+     * All column names are quoted to preserve their exact metadata spelling and support reserved names
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "employee");
-     * // Returns: "SELECT id, name, department, salary FROM employee"
+     * // Returns: SELECT "id", "name", "department", "salary" FROM employee
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1567,15 +1568,15 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates a SELECT SQL statement for the specified table using an existing connection.
-     * Column names containing special characters, or whose letter case the database would fold when unquoted, are properly escaped
+     * All column names are quoted to preserve their exact metadata spelling and support reserved names,
      * with backticks (MySQL/MariaDB) or double quotes (other databases).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "user_profile");
-     *     // Returns (MySQL):      SELECT user_id, first_name, last_name, `created-date` FROM user_profile
-     *     // Returns (PostgreSQL): SELECT user_id, first_name, last_name, "created-date" FROM user_profile
+     *     // Returns (MySQL):      SELECT `user_id`, `first_name`, `last_name`, `created-date` FROM user_profile
+     *     // Returns (PostgreSQL): SELECT "user_id", "first_name", "last_name", "created-date" FROM user_profile
      * }
      * }</pre>
      *
@@ -1593,21 +1594,21 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             // Guard the zero-column case (e.g. a view with no columns, or all columns filtered out) so we
             // throw a clear IAE here rather than emitting malformed "SELECT  FROM ...".
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ", "SELECT ",
-                    " FROM " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo));
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ", "SELECT ",
+                    " FROM " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1622,7 +1623,7 @@ public final class JdbcCodeGenerationUtil {
      * List<String> excludedColumns = Arrays.asList("password", "ssn");
      * String whereClause = "status = 'active'";
      * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "users", excludedColumns, whereClause);
-     * // Returns: "SELECT id, username, email FROM users WHERE status = 'active'"
+     * // Returns: SELECT "id", "username", "email" FROM users WHERE status = 'active'
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1659,7 +1660,7 @@ public final class JdbcCodeGenerationUtil {
      *     List<String> excludedColumns = Arrays.asList("salary", "birth_date");
      *     String whereClause = "department = 'Engineering'";
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "employees", excludedColumns, whereClause);
-     *     // Returns: "SELECT id, name, position FROM employees WHERE department = 'Engineering'"
+     *     // Returns: SELECT "id", "name", "position" FROM employees WHERE department = 'Engineering'
      * }
      * }</pre>
      *
@@ -1680,13 +1681,13 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
@@ -1695,8 +1696,9 @@ public final class JdbcCodeGenerationUtil {
 
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ", "SELECT ", " FROM "
-                    + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + (Strings.isBlank(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ", "SELECT ",
+                    " FROM " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote)
+                            + (Strings.isBlank(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -1705,15 +1707,14 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an INSERT SQL statement for the specified table.
      * The generated SQL uses positional parameters (?) for all column values.
-     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore), or whose
-     * letter case the database would fold when unquoted (for example {@code userId} on H2, Oracle, or PostgreSQL), are quoted
+     * All column names are quoted to preserve their exact metadata spelling and support reserved names
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "product");
-     * // Returns: "INSERT INTO product(id, name, price, category) VALUES (?, ?, ?, ?)"
+     * // Returns: INSERT INTO product("id", "name", "price", "category") VALUES (?, ?, ?, ?)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1739,15 +1740,14 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates an INSERT SQL statement for the specified table using an existing connection.
-     * Column names that contain characters other than ASCII letters, digits, or underscores (or that do not start with a letter or underscore), or whose
-     * letter case the database would fold when unquoted (for example {@code userId} on H2, Oracle, or PostgreSQL), are quoted
+     * All column names are quoted to preserve their exact metadata spelling and support reserved names
      * (with backticks for MySQL/MariaDB, or double quotes for other databases).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order_items");
-     *     // Returns: "INSERT INTO order_items(order_id, item_id, quantity, price) VALUES (?, ?, ?, ?)"
+     *     // Returns: INSERT INTO order_items("order_id", "item_id", "quantity", "price") VALUES (?, ?, ?, ?)
      * }
      * }</pre>
      *
@@ -1765,20 +1765,20 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             // Guard the zero-column case so we throw a clear IAE here rather than emitting malformed "INSERT INTO () VALUES ()".
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ",
-                    "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ",
+                    "INSERT INTO " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1794,7 +1794,7 @@ public final class JdbcCodeGenerationUtil {
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "orders", excludedColumns);
-     * // Returns: "INSERT INTO orders(id, customer_id, total_amount) VALUES (?, ?, ?)"
+     * // Returns: INSERT INTO orders("id", "customer_id", "total_amount") VALUES (?, ?, ?)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1829,7 +1829,7 @@ public final class JdbcCodeGenerationUtil {
      * try (Connection conn = ds.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "orders", excludedColumns);
-     *     // Returns: "INSERT INTO orders(id, customer_id, total_amount) VALUES (?, ?, ?)"
+     *     // Returns: INSERT INTO orders("id", "customer_id", "total_amount") VALUES (?, ?, ?)
      * }
      * }</pre>
      *
@@ -1852,13 +1852,13 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
@@ -1867,8 +1867,8 @@ public final class JdbcCodeGenerationUtil {
 
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ",
-                    "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ",
+                    "INSERT INTO " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1884,7 +1884,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "customer");
-     * // Returns: "INSERT INTO customer(customer_id, first_name, last_name) VALUES (:customerId, :firstName, :lastName)"
+     * // Returns: INSERT INTO customer("customer_id", "first_name", "last_name") VALUES (:customerId, :firstName, :lastName)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1916,8 +1916,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "user_settings");
-     *     // Returns: "INSERT INTO user_settings(user_id, theme_preference, notification_enabled)
-     *     //           VALUES (:userId, :themePreference, :notificationEnabled)"
+     *     // Returns: INSERT INTO user_settings("user_id", "theme_preference", "notification_enabled")
+     *     //           VALUES (:userId, :themePreference, :notificationEnabled)
      * }
      * }</pre>
      *
@@ -1935,21 +1935,21 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             // Guard the zero-column case so we throw a clear IAE here rather than emitting malformed "INSERT INTO () VALUES ()".
             checkColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ",
-                    "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ",
+                    "INSERT INTO " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1966,7 +1966,7 @@ public final class JdbcCodeGenerationUtil {
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "orders", excludedColumns);
-     * // Returns: "INSERT INTO orders(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)"
+     * // Returns: INSERT INTO orders("id", "customer_id", "total_amount") VALUES (:id, :customerId, :totalAmount)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -2001,7 +2001,7 @@ public final class JdbcCodeGenerationUtil {
      * try (Connection conn = ds.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "orders", excludedColumns);
-     *     // Returns: "INSERT INTO orders(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)"
+     *     // Returns: INSERT INTO orders("id", "customer_id", "total_amount") VALUES (:id, :customerId, :totalAmount)
      * }
      * }</pre>
      *
@@ -2024,13 +2024,13 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
@@ -2040,8 +2040,8 @@ public final class JdbcCodeGenerationUtil {
             checkColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, dbProductInfo, unquotedIdentifierCase), ", ",
-                    "INSERT INTO " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + "(",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ",
+                    "INSERT INTO " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2057,7 +2057,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee");
-     * // Returns (example): "UPDATE employee SET id = ?, name = ?, department = ?, salary = ?"
+     * // Returns (example): UPDATE employee SET "id" = ?, "name" = ?, "department" = ?, "salary" = ?
      * // Note: Includes ALL columns from the table. No WHERE clause - must be added manually.
      * }</pre>
      *
@@ -2091,7 +2091,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "product");
-     *     // Returns (example): "UPDATE product SET id = ?, name = ?, description = ?, price = ?"
+     *     // Returns (example): UPDATE product SET "id" = ?, "name" = ?, "description" = ?, "price" = ?
      *     // Note: Includes ALL columns from the table.
      *     // Usage: updateSql += " WHERE id = ?";
      * }
@@ -2111,17 +2111,17 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             checkUpdateSetColumnLabels(columnLabelList, tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(columnLabelList).map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = ?").join(", ");
+            return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
+                    + Stream.of(columnLabelList).map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = ?").join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -2135,7 +2135,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee", "id");
-     * // Returns: "UPDATE employee SET name = ?, department = ?, salary = ? WHERE id = ?"
+     * // Returns: UPDATE employee SET "name" = ?, "department" = ?, "salary" = ? WHERE "id" = ?
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -2171,7 +2171,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "employee", "id");
-     *     // Returns: "UPDATE employee SET name = ?, department = ?, salary = ? WHERE id = ?"
+     *     // Returns: UPDATE employee SET "name" = ?, "department" = ?, "salary" = ? WHERE "id" = ?
      * }
      * }</pre>
      *
@@ -2193,24 +2193,22 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             final String resolvedKeyColumnName = resolveKeyColumnNames(N.asList(keyColumnName), columnLabelList, tableName).get(0);
             final List<String> updateColumnLabelList = Stream.of(columnLabelList).filter(columnLabel -> !columnLabel.equals(resolvedKeyColumnName)).toList();
 
             checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(updateColumnLabelList)
-                            .map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = ?")
-                            .join(", ")
-                    + " WHERE " + renderColumnLabel(resolvedKeyColumnName, dbProductInfo, unquotedIdentifierCase) + " = ?";
+            return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
+                    + Stream.of(updateColumnLabelList).map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = ?").join(", ") + " WHERE "
+                    + renderStoredColumnLabel(resolvedKeyColumnName, identifierQuote) + " = ?";
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -2232,7 +2230,7 @@ public final class JdbcCodeGenerationUtil {
      * String customWhere = "version > 1";
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "orders",
      *                                                            excludedColumns, keyColumnNames, customWhere);
-     * // Returns: "UPDATE orders SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND (version > 1)"
+     * // Returns: UPDATE orders SET "customer_id" = ?, "total_amount" = ? WHERE "id" = ? AND "status" = ? AND (version > 1)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -2284,7 +2282,7 @@ public final class JdbcCodeGenerationUtil {
      *     String customWhere = "version > 1";
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "orders",
      *                                                                excludedColumns, keyColumnNames, customWhere);
-     *     // Returns: "UPDATE orders SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND (version > 1)"
+     *     // Returns: UPDATE orders SET "customer_id" = ?, "total_amount" = ? WHERE "id" = ? AND "status" = ? AND (version > 1)
      * }
      * }</pre>
      *
@@ -2314,13 +2312,13 @@ public final class JdbcCodeGenerationUtil {
         }
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> allColumnLabels = JdbcUtil.getColumnLabels(rs);
             final List<String> resolvedKeyColumnNames = resolveKeyColumnNames(keyColumnNames, allColumnLabels, tableName);
             // Key columns are already resolved to actual labels, so drop exactly those from the SET clause (as the
@@ -2341,9 +2339,7 @@ public final class JdbcCodeGenerationUtil {
                 whereSection = " WHERE ";
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
-                    whereSection += Stream.of(resolvedKeyColumnNames)
-                            .map(c -> renderColumnLabel(c, dbProductInfo, unquotedIdentifierCase) + " = ?")
-                            .join(" AND ");
+                    whereSection += Stream.of(resolvedKeyColumnNames).map(c -> renderStoredColumnLabel(c, identifierQuote) + " = ?").join(" AND ");
 
                     if (Strings.isNotBlank(whereClause)) {
                         whereSection += " AND (" + whereClause + ")";
@@ -2353,9 +2349,8 @@ public final class JdbcCodeGenerationUtil {
                 }
             }
 
-            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET "
-                    + Stream.of(columnLabelList).map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = ?").join(", ")
-                    + whereSection;
+            return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
+                    + Stream.of(columnLabelList).map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = ?").join(", ") + whereSection;
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -2371,8 +2366,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "user_profile");
-     * // Returns (example): "UPDATE user_profile SET user_id = :userId, first_name = :firstName,
-     * //           last_name = :lastName, email = :email"
+     * // Returns (example): UPDATE user_profile SET "user_id" = :userId, "first_name" = :firstName,
+     * //           "last_name" = :lastName, "email" = :email
      * // Note: Includes ALL columns from the table. No WHERE clause - must be added manually.
      * }</pre>
      *
@@ -2406,8 +2401,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order_status");
-     *     // Returns (example): "UPDATE order_status SET order_id = :orderId, status = :status,
-     *     //           updated_by = :updatedBy, updated_date = :updatedDate"
+     *     // Returns (example): UPDATE order_status SET "order_id" = :orderId, "status" = :status,
+     *     //           "updated_by" = :updatedBy, "updated_date" = :updatedDate
      *     // Note: Includes ALL columns from the table.
      *     // Usage: updateSql += " WHERE order_id = :orderId";
      * }
@@ -2427,20 +2422,21 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             checkUpdateSetColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
-                    .map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(columnLabel))
-                    .join(", ");
+            return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
+                    + Stream.of(columnLabelList)
+                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = :" + Strings.toCamelCase(columnLabel))
+                            .join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -2454,7 +2450,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "customer", "customer_id");
-     * // Returns: "UPDATE customer SET first_name = :firstName, last_name = :lastName, email = :email WHERE customer_id = :customerId"
+     * // Returns: UPDATE customer SET "first_name" = :firstName, "last_name" = :lastName, "email" = :email WHERE "customer_id" = :customerId
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -2490,7 +2486,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "customer", "customer_id");
-     *     // Returns: "UPDATE customer SET first_name = :firstName, last_name = :lastName, email = :email WHERE customer_id = :customerId"
+     *     // Returns: UPDATE customer SET "first_name" = :firstName, "last_name" = :lastName, "email" = :email WHERE "customer_id" = :customerId
      * }
      * }</pre>
      *
@@ -2512,13 +2508,13 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             final String resolvedKeyColumnName = resolveKeyColumnNames(N.asList(keyColumnName), columnLabelList, tableName).get(0);
             final List<String> updateColumnLabelList = Stream.of(columnLabelList).filter(columnLabel -> !columnLabel.equals(resolvedKeyColumnName)).toList();
@@ -2526,10 +2522,11 @@ public final class JdbcCodeGenerationUtil {
             checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
             checkNamedParameterColumnLabels(Stream.of(updateColumnLabelList).append(resolvedKeyColumnName).toList(), tableName);
 
-            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET " + Stream.of(updateColumnLabelList)
-                    .map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(columnLabel))
-                    .join(", ") + " WHERE " + renderColumnLabel(resolvedKeyColumnName, dbProductInfo, unquotedIdentifierCase) + " = :"
-                    + Strings.toCamelCase(resolvedKeyColumnName);
+            return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
+                    + Stream.of(updateColumnLabelList)
+                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = :" + Strings.toCamelCase(columnLabel))
+                            .join(", ")
+                    + " WHERE " + renderStoredColumnLabel(resolvedKeyColumnName, identifierQuote) + " = :" + Strings.toCamelCase(resolvedKeyColumnName);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -2549,7 +2546,7 @@ public final class JdbcCodeGenerationUtil {
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      * List<String> keyColumns = Arrays.asList("id", "status");
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "orders", excludedColumns, keyColumns, "version > 1");
-     * // Returns: "UPDATE orders SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND (version > 1)"
+     * // Returns: UPDATE orders SET "customer_id" = :customerId, "total_amount" = :totalAmount WHERE "id" = :id AND "status" = :status AND (version > 1)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -2601,7 +2598,7 @@ public final class JdbcCodeGenerationUtil {
      *     String customWhere = "version > 1";
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "orders",
      *                                                                      excludedColumns, keyColumnNames, customWhere);
-     *     // Returns: "UPDATE orders SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND (version > 1)"
+     *     // Returns: UPDATE orders SET "customer_id" = :customerId, "total_amount" = :totalAmount WHERE "id" = :id AND "status" = :status AND (version > 1)
      * }
      * }</pre>
      *
@@ -2631,13 +2628,13 @@ public final class JdbcCodeGenerationUtil {
         }
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
 
-        final String query = createQueryByTableName(tableName, dbProductInfo);
+        final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
-            final int unquotedIdentifierCase = getUnquotedIdentifierCase(conn);
             final List<String> allColumnLabels = JdbcUtil.getColumnLabels(rs);
             final List<String> resolvedKeyColumnNames = resolveKeyColumnNames(keyColumnNames, allColumnLabels, tableName);
             // Key columns are already resolved to actual labels, so drop exactly those from the SET clause (as the
@@ -2660,7 +2657,7 @@ public final class JdbcCodeGenerationUtil {
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
                     whereSection += Stream.of(resolvedKeyColumnNames)
-                            .map(c -> renderColumnLabel(c, dbProductInfo, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(c))
+                            .map(c -> renderStoredColumnLabel(c, identifierQuote) + " = :" + Strings.toCamelCase(c))
                             .join(" AND ");
 
                     if (Strings.isNotBlank(whereClause)) {
@@ -2671,9 +2668,11 @@ public final class JdbcCodeGenerationUtil {
                 }
             }
 
-            return "UPDATE " + SqlIdentifierUtil.renderTableName(tableName, dbProductInfo) + " SET " + Stream.of(columnLabelList)
-                    .map(columnLabel -> renderColumnLabel(columnLabel, dbProductInfo, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(columnLabel))
-                    .join(", ") + whereSection;
+            return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
+                    + Stream.of(columnLabelList)
+                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = :" + Strings.toCamelCase(columnLabel))
+                            .join(", ")
+                    + whereSection;
 
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2731,6 +2730,9 @@ public final class JdbcCodeGenerationUtil {
      *       A {@code $} directly after an identifier character (as in {@code a$b$c}) is part of that identifier, not a dollar quote.
      *       Comments in the column list are removed before the column names are validated. Comments in the value list are kept;
      *       a terminating line break is retained after a trailing line comment so it cannot hide the next assignment or WHERE clause.</li>
+     *   <li>Nested {@code ARRAY[...]} constructors, including {@code ARRAY[[...], [...]]}, and array subscripts are kept
+     *       together. Array contents use the same literal and comment rules as other expressions. On SQL Server/ASE,
+     *       brackets always delimit identifiers, so quotes or comment markers inside a bracketed alias remain literal.</li>
      *   <li>For MySQL/MariaDB, {@code #} also starts a line comment, a {@code --} line comment must be followed by whitespace or a
      *       control character, and block comments do not nest. For PostgreSQL, SQL Server and H2, block comments nest.
      *       For other databases (for example Oracle, SQLite and HSQLDB), block comments do not nest. Outside MySQL/MariaDB,
@@ -2809,9 +2811,10 @@ public final class JdbcCodeGenerationUtil {
             final String checkedTableName = SqlIdentifierUtil.renderTableName(tableName, dbProductInfo);
 
             final SqlCommentStyle commentStyle = SqlCommentStyle.of(dbProductInfo);
-            final int idx3 = findClosingParenthesis(insertSql, idx2, commentStyle);
+            final boolean bracketIdentifiers = SqlIdentifierUtil.usesBracketQuotes(dbProductInfo.name());
+            final int idx3 = findClosingParenthesis(insertSql, idx2, commentStyle, bracketIdentifiers);
             // Column names are validated and possibly quoted, so a retained comment would become part of the identifier.
-            final List<String> columnNames = splitSqlList(insertSql.substring(idx2 + 1, idx3), insertSql, commentStyle, false);
+            final List<String> columnNames = splitSqlList(insertSql.substring(idx2 + 1, idx3), insertSql, commentStyle, bracketIdentifiers, false);
 
             int valuesIdx = idx3 + 1;
 
@@ -2836,8 +2839,8 @@ public final class JdbcCodeGenerationUtil {
                 throw new IllegalArgumentException("Missing VALUES list in SQL: " + insertSql);
             }
 
-            final int idx5 = findClosingParenthesis(insertSql, idx4, commentStyle);
-            final List<String> values = splitSqlList(insertSql.substring(idx4 + 1, idx5), insertSql, commentStyle, true);
+            final int idx5 = findClosingParenthesis(insertSql, idx4, commentStyle, bracketIdentifiers);
+            final List<String> values = splitSqlList(insertSql.substring(idx4 + 1, idx5), insertSql, commentStyle, bracketIdentifiers, true);
             final String trailingSql = insertSql.substring(idx5 + 1).trim();
 
             if (Strings.isNotEmpty(trailingSql) && !";".equals(trailingSql)) {
@@ -2906,11 +2909,12 @@ public final class JdbcCodeGenerationUtil {
         return startIndex >= 0 && endIndex <= sql.length() && sql.regionMatches(true, startIndex, keyword, 0, keyword.length());
     }
 
-    // Quote handling below deliberately accepts the union of the dialect escaping styles rather than
-    // switching on the resolved ProductInfo: doubled delimiters (SQL standard), backslash escapes
+    // Quote escaping below deliberately accepts the union of the dialect escaping styles:
+    // doubled delimiters (SQL standard), backslash escapes
     // (MySQL/MariaDB), bracketed identifiers (SQL Server) and dollar-quoted bodies (PostgreSQL). This
-    // matches com.landawn.abacus.query.SqlParser, which the rest of the framework uses to scan SQL, so
-    // one statement is tokenized the same way everywhere. The cost is that a standard-SQL literal whose
+    // follows the quote-escape conventions of com.landawn.abacus.query.SqlParser. Array expressions need
+    // separate bracket nesting below, except on SQL Server/ASE where brackets always delimit names.
+    // The cost is that a standard-SQL literal whose
     // body ends with a backslash (for example the two-character literal C: followed by a backslash) is
     // treated as an unterminated string and rejected.
     /**
@@ -2965,15 +2969,19 @@ public final class JdbcCodeGenerationUtil {
      * @param sql the SQL text to scan
      * @param openingParenthesisIndex the index of the opening parenthesis to match
      * @param commentStyle the comment syntax of the target database
+     * @param bracketIdentifiers whether brackets always delimit identifiers in the target dialect
      * @return the index of the matching closing parenthesis
      * @throws IllegalArgumentException if no matching closing parenthesis exists
      */
-    private static int findClosingParenthesis(final String sql, final int openingParenthesisIndex, final SqlCommentStyle commentStyle)
-            throws IllegalArgumentException {
+    private static int findClosingParenthesis(final String sql, final int openingParenthesisIndex, final SqlCommentStyle commentStyle,
+            final boolean bracketIdentifiers) throws IllegalArgumentException {
         int parenthesisDepth = 0;
         char quote = 0;
         boolean inBracketIdentifier = false;
         String dollarQuoteDelimiter = null;
+        int arrayDepth = 0;
+        int previousTokenStart = -1;
+        int previousTokenEnd = -1;
 
         for (int i = openingParenthesisIndex, len = sql.length(); i < len; i++) {
             final char ch = sql.charAt(i);
@@ -2999,6 +3007,8 @@ public final class JdbcCodeGenerationUtil {
                         i++;
                     } else {
                         inBracketIdentifier = false;
+                        previousTokenStart = i;
+                        previousTokenEnd = i + 1;
                     }
                 }
             } else if (startsSqlComment(sql, i, commentStyle)) {
@@ -3011,20 +3021,140 @@ public final class JdbcCodeGenerationUtil {
                 }
             } else if (ch == '\'' || ch == '"' || ch == '`') {
                 quote = ch;
+                previousTokenStart = i;
+                previousTokenEnd = i + 1;
             } else if (ch == '[') {
-                inBracketIdentifier = true;
+                if (arrayDepth > 0 || startsArrayExpression(sql, i, previousTokenStart, previousTokenEnd, commentStyle, bracketIdentifiers)) {
+                    arrayDepth++;
+                } else {
+                    inBracketIdentifier = true;
+                }
+                previousTokenStart = i;
+                previousTokenEnd = i + 1;
+            } else if (ch == ']' && arrayDepth > 0) {
+                arrayDepth--;
+                previousTokenStart = i;
+                previousTokenEnd = i + 1;
             } else if (ch == '(') {
                 parenthesisDepth++;
+                previousTokenStart = i;
+                previousTokenEnd = i + 1;
             } else if (ch == ')') {
                 parenthesisDepth--;
 
-                if (parenthesisDepth == 0) {
+                if (parenthesisDepth == 0 && arrayDepth == 0) {
                     return i;
                 }
+                previousTokenStart = i;
+                previousTokenEnd = i + 1;
+            } else if (Character.isJavaIdentifierStart(ch)) {
+                previousTokenStart = i;
+                while (i + 1 < len && Character.isJavaIdentifierPart(sql.charAt(i + 1))) {
+                    i++;
+                }
+                previousTokenEnd = i + 1;
+            } else if (!Character.isWhitespace(ch)) {
+                previousTokenStart = i;
+                previousTokenEnd = i + 1;
             }
         }
 
         throw new IllegalArgumentException("SQL contains an unclosed parenthesis");
+    }
+
+    /**
+     * Distinguishes an ARRAY constructor or chained subscript from a bracket-delimited identifier.
+     * SQL Server/ASE brackets always delimit identifiers; their contents cannot be balanced as expressions because
+     * quotes and comment markers are ordinary identifier characters. For other dialects, callers retain the previous
+     * token across whitespace/comments. An explicit ARRAY prefix identifies a constructor;
+     * an inferred subscript must also have a balanced body because a value can precede a bracketed alias.
+     * Only the outermost inferred subscript is checked, so nested brackets do not repeatedly rescan its body.
+     * Shared with JdbcUtil's transaction scanners to keep bracket escaping and array nesting consistent.
+     */
+    static boolean startsArrayExpression(final String sql, final int openingBracketIndex, final int tokenStart, final int tokenEnd,
+            final SqlCommentStyle commentStyle, final boolean bracketIdentifiers) {
+        if (bracketIdentifiers || tokenStart < 0) {
+            return false;
+        }
+
+        final char last = sql.charAt(tokenEnd - 1);
+        if (last == ')' || last == ']' || last == '"' || last == '`') {
+            return hasBalancedArrayBody(sql, openingBracketIndex, commentStyle);
+        }
+
+        if (!Character.isJavaIdentifierStart(sql.charAt(tokenStart))) {
+            return false;
+        }
+
+        // A bracket after a value/name is a subscript; after a SQL clause or operator it starts an
+        // identifier instead, as in (SELECT [a[b] FROM [t]). ARRAY is itself an expression prefix.
+        return switch (sql.substring(tokenStart, tokenEnd).toUpperCase(Locale.ROOT)) {
+            case "ARRAY" -> true;
+            case "SELECT", "DISTINCT", "ALL", "FROM", "JOIN", "ON", "WHERE", "HAVING", "GROUP", "ORDER", "BY", "AS", "CASE", "WHEN", "THEN", "ELSE", "AND", "OR", "NOT", "IN", "IS", "LIKE", "ILIKE", "BETWEEN", "ESCAPE", "COLLATE", "AT", "TIME", "ZONE", "OVER", "PARTITION", "ROWS", "RANGE", "GROUPS", "PRECEDING", "FOLLOWING", "UNION", "INTERSECT", "EXCEPT", "EXISTS", "ANY", "SOME", "BOTH", "LEADING", "TRAILING", "LATERAL", "WINDOW", "WITH", "FILTER", "LIMIT", "OFFSET", "FETCH", "TOP", "INTO", "VALUES", "FOR" -> false;
+            default -> hasBalancedArrayBody(sql, openingBracketIndex, commentStyle);
+        };
+    }
+
+    /**
+     * Checks an inferred subscript without exposing the contents of a bracketed identifier to the main scanner.
+     * Names such as {@code [a[b]}, {@code [a]]b(c]} and {@code [a]]b'c]} remain opaque: an unmatched expression
+     * delimiter or a doubled outer closing bracket rules out the inferred subscript and preserves identifier escapes.
+     */
+    private static boolean hasBalancedArrayBody(final String sql, final int openingBracketIndex, final SqlCommentStyle commentStyle) {
+        int bracketDepth = 1;
+        int parenthesisDepth = 0;
+        char quote = 0;
+        String dollarQuoteDelimiter = null;
+
+        for (int i = openingBracketIndex + 1, len = sql.length(); i < len; i++) {
+            final char ch = sql.charAt(i);
+
+            if (dollarQuoteDelimiter != null) {
+                if (sql.startsWith(dollarQuoteDelimiter, i)) {
+                    i += dollarQuoteDelimiter.length() - 1;
+                    dollarQuoteDelimiter = null;
+                }
+            } else if (quote != 0) {
+                if (ch == '\\' && i + 1 < len) {
+                    i++;
+                } else if (ch == quote) {
+                    if (i + 1 < len && sql.charAt(i + 1) == quote) {
+                        i++;
+                    } else {
+                        quote = 0;
+                    }
+                }
+            } else if (startsSqlComment(sql, i, commentStyle)) {
+                try {
+                    i = skipSqlComment(sql, i, commentStyle) - 1;
+                } catch (final IllegalArgumentException e) {
+                    // An apparent unclosed comment can be literal text in a bracketed identifier.
+                    return false;
+                }
+            } else if (ch == '$') {
+                dollarQuoteDelimiter = findDollarQuoteDelimiter(sql, i);
+                if (dollarQuoteDelimiter != null) {
+                    i += dollarQuoteDelimiter.length() - 1;
+                }
+            } else if (ch == '\'' || ch == '"' || ch == '`') {
+                quote = ch;
+            } else if (ch == '[') {
+                bracketDepth++;
+            } else if (ch == ']') {
+                if (--bracketDepth == 0) {
+                    return parenthesisDepth == 0 && (i + 1 == len || sql.charAt(i + 1) != ']');
+                }
+            } else if (ch == '(') {
+                parenthesisDepth++;
+            } else if (ch == ')') {
+                if (parenthesisDepth == 0) {
+                    return false;
+                }
+                parenthesisDepth--;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -3066,9 +3196,9 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * The comment syntax used while scanning an INSERT statement for conversion.
+     * The comment syntax used while distinguishing SQL arrays and bracketed identifiers.
      */
-    private enum SqlCommentStyle {
+    enum SqlCommentStyle {
         /**
          * MySQL/MariaDB: {@code #} starts a line comment, {@code --} starts one only when followed by whitespace or a
          * control character, and block comments do not nest.
@@ -3659,13 +3789,14 @@ public final class JdbcCodeGenerationUtil {
      * @param sqlList the list text to split
      * @param insertSql the full SQL statement, used only in error messages
      * @param commentStyle the comment syntax of the target database
+     * @param bracketIdentifiers whether brackets always delimit identifiers in the target dialect
      * @param keepComments {@code true} to keep comments in the items (value expressions); {@code false} to replace each
      *        comment with a single space (identifiers)
      * @return the trimmed list items, with a terminating newline retained after trailing line comments when comments are kept
      * @throws IllegalArgumentException if the list contains an empty item, an unmatched parenthesis, or an unclosed token
      */
-    private static List<String> splitSqlList(final String sqlList, final String insertSql, final SqlCommentStyle commentStyle, final boolean keepComments)
-            throws IllegalArgumentException {
+    private static List<String> splitSqlList(final String sqlList, final String insertSql, final SqlCommentStyle commentStyle, final boolean bracketIdentifiers,
+            final boolean keepComments) throws IllegalArgumentException {
         final List<String> result = new ArrayList<>();
         final StringBuilder token = Objectory.createStringBuilder();
         int parenthesisDepth = 0;
@@ -3673,6 +3804,9 @@ public final class JdbcCodeGenerationUtil {
         boolean inBracketIdentifier = false;
         String dollarQuoteDelimiter = null;
         boolean trailingLineComment = false;
+        int arrayDepth = 0;
+        int previousTokenStart = -1;
+        int previousTokenEnd = -1;
 
         try {
             for (int i = 0, len = sqlList.length(); i < len; i++) {
@@ -3710,6 +3844,8 @@ public final class JdbcCodeGenerationUtil {
                             token.append(sqlList.charAt(++i));
                         } else {
                             inBracketIdentifier = false;
+                            previousTokenStart = i;
+                            previousTokenEnd = i + 1;
                         }
                     }
                 } else if (startsSqlComment(sqlList, i, commentStyle)) {
@@ -3736,12 +3872,27 @@ public final class JdbcCodeGenerationUtil {
                 } else if (ch == '\'' || ch == '"' || ch == '`') {
                     quote = ch;
                     token.append(ch);
+                    previousTokenStart = i;
+                    previousTokenEnd = i + 1;
                 } else if (ch == '[') {
-                    inBracketIdentifier = true;
+                    if (arrayDepth > 0 || startsArrayExpression(sqlList, i, previousTokenStart, previousTokenEnd, commentStyle, bracketIdentifiers)) {
+                        arrayDepth++;
+                    } else {
+                        inBracketIdentifier = true;
+                    }
                     token.append(ch);
+                    previousTokenStart = i;
+                    previousTokenEnd = i + 1;
+                } else if (ch == ']' && arrayDepth > 0) {
+                    arrayDepth--;
+                    token.append(ch);
+                    previousTokenStart = i;
+                    previousTokenEnd = i + 1;
                 } else if (ch == '(') {
                     parenthesisDepth++;
                     token.append(ch);
+                    previousTokenStart = i;
+                    previousTokenEnd = i + 1;
                 } else if (ch == ')') {
                     if (parenthesisDepth == 0) {
                         throw new IllegalArgumentException("Unmatched closing parenthesis in SQL: " + insertSql);
@@ -3749,15 +3900,30 @@ public final class JdbcCodeGenerationUtil {
 
                     parenthesisDepth--;
                     token.append(ch);
-                } else if (ch == ',' && parenthesisDepth == 0) {
+                    previousTokenStart = i;
+                    previousTokenEnd = i + 1;
+                } else if (ch == ',' && parenthesisDepth == 0 && arrayDepth == 0) {
                     addSqlListToken(result, token, insertSql, trailingLineComment);
                     trailingLineComment = false;
+                    previousTokenStart = -1;
+                    previousTokenEnd = -1;
+                } else if (Character.isJavaIdentifierStart(ch)) {
+                    previousTokenStart = i;
+                    while (i + 1 < len && Character.isJavaIdentifierPart(sqlList.charAt(i + 1))) {
+                        i++;
+                    }
+                    previousTokenEnd = i + 1;
+                    token.append(sqlList, previousTokenStart, previousTokenEnd);
                 } else {
                     token.append(ch);
+                    if (!Character.isWhitespace(ch)) {
+                        previousTokenStart = i;
+                        previousTokenEnd = i + 1;
+                    }
                 }
             }
 
-            if (dollarQuoteDelimiter != null || quote != 0 || inBracketIdentifier || parenthesisDepth != 0) {
+            if (dollarQuoteDelimiter != null || quote != 0 || inBracketIdentifier || parenthesisDepth != 0 || arrayDepth != 0) {
                 throw new IllegalArgumentException("Unclosed SQL token in SQL: " + insertSql);
             }
 
@@ -3807,18 +3973,29 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Renders the given column labels, read from result-set metadata, for the database product; see
-     * {@link #renderColumnLabel(String, ProductInfo, int)}.
+     * Renders the given exact column labels, read from result-set metadata, for generated SQL.
      *
      * @param columnLabelList the column labels to render
-     * @param dbProductInfo the database product info, or {@code null} to use standard double-quote delimiters
-     * @param unquotedIdentifierCase the case folding of unquoted identifiers, as returned by {@link #getUnquotedIdentifierCase(Connection)}
+     * @param identifierQuote the connection's identifier delimiter, or {@code null} if unsupported
      * @return the rendered column labels
      * @throws IllegalArgumentException if any column label is {@code null} or blank.
      */
-    private static List<String> renderColumnLabels(final List<String> columnLabelList, final ProductInfo dbProductInfo, final int unquotedIdentifierCase)
-            throws IllegalArgumentException {
-        return N.map(columnLabelList, it -> renderColumnLabel(it, dbProductInfo, unquotedIdentifierCase));
+    private static List<String> renderColumnLabels(final List<String> columnLabelList, final String identifierQuote) throws IllegalArgumentException {
+        return N.map(columnLabelList, it -> renderStoredColumnLabel(it, identifierQuote));
+    }
+
+    /**
+     * Preserves a metadata column's exact spelling using the connection's identifier delimiter.
+     * Even simple names may be reserved words or expressions such as {@code USER}. When the driver
+     * reports no quoting support, simple labels remain unquoted; non-simple labels are rejected.
+     *
+     * @param columnLabel the exact column label from metadata
+     * @param identifierQuote the connection's identifier delimiter, or {@code null} if unsupported
+     * @return the rendered column label
+     * @throws IllegalArgumentException if the label is blank or cannot be rendered without quoting
+     */
+    private static String renderStoredColumnLabel(final String columnLabel, final String identifierQuote) throws IllegalArgumentException {
+        return SqlIdentifierUtil.renderStoredIdentifier(columnLabel, identifierQuote);
     }
 
     /**

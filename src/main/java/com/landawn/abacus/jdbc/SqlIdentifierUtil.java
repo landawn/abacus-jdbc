@@ -15,6 +15,10 @@
  */
 package com.landawn.abacus.jdbc;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.Strings;
@@ -24,10 +28,10 @@ import com.landawn.abacus.util.Strings;
  * this package ({@link DataTransferUtil} and {@link JdbcCodeGenerationUtil}); {@link JdbcUtil} also
  * relies on the delimiter-decoding helper when splitting qualified identifiers.
  *
- * <p>Centralizing the rules in a single implementation guarantees that a table or column name
- * is rendered identically no matter which utility generates the statement.</p>
+ * <p>Caller-supplied table and column names share these parsing and rendering rules. Exact column labels
+ * returned by metadata can instead be quoted unconditionally to preserve their spelling and support reserved names.</p>
  *
- * <p>The rules are:</p>
+ * <p>The rules for caller-supplied names are:</p>
  * <ul>
  *   <li>A <i>simple</i> identifier (ASCII letter or underscore, then ASCII letters/digits/underscores)
  *       supplied without delimiters is emitted unquoted, so case-folding databases resolve it normally.</li>
@@ -47,18 +51,47 @@ final class SqlIdentifierUtil {
     }
 
     /**
-     * Returns the identifier quote character for the given database product: a backtick for the
-     * MySQL family, a double quote (the SQL standard delimiter) for everything else.
+     * Returns a dialect delimiter when no connection metadata is available. SQL Server/ASE use brackets;
+     * MySQL, MariaDB, Spark, Databricks, Hive and BigQuery use backticks. Other products use double quotes.
      *
      * @param dbProductInfo the resolved database product, or {@code null} if it is unknown
      * @return the quote string to wrap delimited identifiers with
      */
     static String quoteString(final ProductInfo dbProductInfo) {
-        return dbProductInfo != null && Strings.containsAnyIgnoreCase(dbProductInfo.name(), "MySQL", "MariaDB") ? "`" : "\"";
+        final String product = dbProductInfo == null ? null : dbProductInfo.name();
+        return usesBracketQuotes(product) ? "["
+                : Strings.containsAnyIgnoreCase(product, "MySQL", "MariaDB", "Spark", "Databricks", "Hive", "BigQuery") ? "`" : "\"";
     }
 
     /**
-     * Wraps an identifier in the given quote string, doubling any embedded occurrence of it.
+     * Reads the connection's identifier delimiter, returning {@code null} when quoting is unsupported.
+     * SQL Server and ASE use brackets because their reported double quote depends on a session option.
+     *
+     * @param conn the connection whose metadata supplies the quote string
+     * @param dbProductInfo the database product
+     * @return the opening delimiter, or {@code null} when the driver reports no quoting support
+     * @throws UncheckedSQLException if reading identifier metadata fails
+     */
+    static String quoteString(final Connection conn, final ProductInfo dbProductInfo) throws UncheckedSQLException {
+        if (usesBracketQuotes(dbProductInfo == null ? null : dbProductInfo.name())) {
+            return "[";
+        }
+        try {
+            final String quote = conn.getMetaData().getIdentifierQuoteString();
+            return Strings.isBlank(quote) ? null : quote.trim();
+        } catch (final SQLException e) {
+            throw new UncheckedSQLException(e);
+        }
+    }
+
+    /** Identifies products with session-independent bracket delimiters. */
+    static boolean usesBracketQuotes(final String product) {
+        return Strings.containsAnyIgnoreCase(product, "SQL Server", "Adaptive Server Enterprise", "SAP ASE") || "ASE".equalsIgnoreCase(product);
+    }
+
+    /**
+     * Wraps an identifier in the given quote string, doubling embedded closing delimiters.
+     * An opening bracket uses a closing bracket; other delimiters are symmetric.
      *
      * @param identifier the decoded (undelimited) identifier text
      * @param quote the quote string to wrap with
@@ -71,7 +104,28 @@ final class SqlIdentifierUtil {
 
         // Escape any embedded quote character by doubling it, then wrap, so identifiers containing
         // the active quote char produce valid SQL instead of unbalanced/injectable output.
-        return Strings.wrap(identifier.replace(quote, quote + quote), quote);
+        final String closingQuote = "[".equals(quote) ? "]" : quote;
+        return quote + identifier.replace(closingQuote, closingQuote + closingQuote) + closingQuote;
+    }
+
+    /**
+     * Renders an exact stored name with the driver's delimiter. Without quoting support, only simple
+     * names can be emitted; punctuation must not become SQL syntax or a string literal.
+     *
+     * @param identifier the exact, decoded identifier
+     * @param quote the driver's delimiter, or {@code null} if quoting is unsupported
+     * @return the identifier rendered for SQL
+     * @throws IllegalArgumentException if the name is blank or cannot be represented without quoting
+     */
+    static String renderStoredIdentifier(final String identifier, final String quote) {
+        N.checkArgNotBlank(identifier, cs.identifier);
+        if (quote != null) {
+            return quoteIdentifier(identifier, quote);
+        }
+        if (!isSimpleSqlIdentifier(identifier)) {
+            throw new IllegalArgumentException("Database does not support quoting identifier: " + identifier);
+        }
+        return identifier;
     }
 
     /**
@@ -225,12 +279,16 @@ final class SqlIdentifierUtil {
      *         qualified identifier
      */
     static String renderTableName(final String tableName, final ProductInfo dbProductInfo) throws IllegalArgumentException {
+        return renderTableNameWithQuote(tableName, quoteString(dbProductInfo));
+    }
+
+    /** Renders a caller-supplied table name using the connection's delimiter. */
+    static String renderTableNameWithQuote(final String tableName, final String quote) throws IllegalArgumentException {
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
-        final String quote = quoteString(dbProductInfo);
         final boolean[] explicitlyDelimitedParts = explicitlyDelimitedIdentifierParts(tableName, parts.length);
 
         if (parts.length == 1) {
-            return explicitlyDelimitedParts[0] || !isSimpleSqlIdentifier(parts[0]) ? quoteIdentifier(parts[0], quote) : parts[0];
+            return explicitlyDelimitedParts[0] || !isSimpleSqlIdentifier(parts[0]) ? renderStoredIdentifier(parts[0], quote) : parts[0];
         }
 
         final StringBuilder sb = new StringBuilder(tableName.length() + parts.length * 2);
@@ -240,7 +298,7 @@ final class SqlIdentifierUtil {
                 sb.append('.');
             }
 
-            sb.append(explicitlyDelimitedParts[i] || !isSimpleSqlIdentifier(parts[i]) ? quoteIdentifier(parts[i], quote) : parts[i]);
+            sb.append(explicitlyDelimitedParts[i] || !isSimpleSqlIdentifier(parts[i]) ? renderStoredIdentifier(parts[i], quote) : parts[i]);
         }
 
         return sb.toString();
@@ -256,6 +314,11 @@ final class SqlIdentifierUtil {
      * @throws IllegalArgumentException if {@code columnName} is {@code null} or blank or is not a single identifier
      */
     static String renderColumnName(final String columnName, final ProductInfo dbProductInfo) throws IllegalArgumentException {
+        return renderColumnNameWithQuote(columnName, quoteString(dbProductInfo));
+    }
+
+    /** Renders a caller-supplied column name using the connection's delimiter. */
+    static String renderColumnNameWithQuote(final String columnName, final String quote) throws IllegalArgumentException {
         N.checkArgNotBlank(columnName, cs.columnName);
 
         final String[] parts = JdbcUtil.splitQualifiedSqlIdentifier(columnName, cs.columnName);
@@ -267,7 +330,7 @@ final class SqlIdentifierUtil {
         // Parse every input, not just explicitly delimited names: this strips insignificant outer
         // whitespace consistently and prevents an unquoted qualified name from being silently
         // reinterpreted as one literal column containing a dot.
-        return checkColumnName(parts[0], dbProductInfo, startsWithIdentifierDelimiter(columnName));
+        return !startsWithIdentifierDelimiter(columnName) && isSimpleSqlIdentifier(parts[0]) ? parts[0] : renderStoredIdentifier(parts[0], quote);
     }
 
     /**

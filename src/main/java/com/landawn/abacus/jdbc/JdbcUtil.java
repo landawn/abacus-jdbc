@@ -142,6 +142,11 @@ import lombok.experimental.Accessors;
  * statements, and result sets. It supports both traditional JDBC patterns and functional
  * programming approaches via {@link PreparedQuery} and Abacus {@link Stream} instances.</p>
  *
+ * <p>Direct named-SQL execution and batches accept Map, bean, record and EntityId parameters.
+ * A repeated name handled by a built-in stream/reader type is buffered in memory once per parameter
+ * set and bound with independent cursors. Single occurrences and positional values remain streamed;
+ * custom Type handlers keep their own semantics. The caller retains ownership of the original resource.</p>
+ *
  * <p><b>Key Features:</b></p>
  * <ul>
  *   <li>Connection management with Spring transaction awareness</li>
@@ -2039,7 +2044,8 @@ public final class JdbcUtil {
      * keyword); quoted or otherwise exotic names have no such fallback.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like
-     * {@code schema.table} or {@code catalog.schema.table}. Schema and table parts are literal
+     * {@code schema.table} or {@code catalog.schema.table}. On databases whose driver supports catalogs but not schemas
+     * in table definitions, a two-part name is interpreted as {@code catalog.table}. Schema and table parts are literal
      * identifiers: metadata wildcard characters and the driver's pattern escape sequence are escaped.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -2068,6 +2074,8 @@ public final class JdbcUtil {
         final boolean[] delimitedNameParts = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(tableName, nameParts.length);
         final DatabaseMetaData metadata = conn.getMetaData();
         final boolean caseFolded = normalizeMetadataIdentifierParts(metadata, nameParts, delimitedNameParts);
+        final boolean catalogQualified = nameParts.length == 2 && !metadata.supportsSchemasInTableDefinitions()
+                && metadata.supportsCatalogsInTableDefinitions();
         final String catalog;
         final String schema;
         final String table;
@@ -2085,13 +2093,14 @@ public final class JdbcUtil {
             tableDelimited = delimitedNameParts[0];
             fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, null, table);
         } else if (nameParts.length == 2) {
-            catalog = conn.getCatalog();
-            schema = nameParts[0];
+            // On catalog-only databases, database.table must query the named catalog, not the connection's current database.
+            catalog = catalogQualified ? nameParts[0] : conn.getCatalog();
+            schema = catalogQualified ? null : nameParts[0];
             table = nameParts[1];
-            catalogDelimited = false;
-            schemaDelimited = delimitedNameParts[0];
+            catalogDelimited = catalogQualified && delimitedNameParts[0];
+            schemaDelimited = !catalogQualified && delimitedNameParts[0];
             tableDelimited = delimitedNameParts[1];
-            fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, schema, table);
+            fallbackQualifiedTableName = buildSimpleQualifiedTableName(null, nameParts[0], table);
         } else if (nameParts.length == 3) {
             catalog = nameParts[0];
             schema = nameParts[1];
@@ -2110,7 +2119,7 @@ public final class JdbcUtil {
 
         String schemaToUse = schema;
 
-        if (schemaToUse == null) {
+        if (schemaToUse == null && !catalogQualified) {
             try {
                 schemaToUse = conn.getSchema();
             } catch (final SQLException | AbstractMethodError e) {
@@ -2153,7 +2162,7 @@ public final class JdbcUtil {
             final String probeQuote = caseFolded ? normalizeIdentifierQuote(metadata) : null;
 
             columnNameList = getColumnNamesBySelect(conn, probeQuote == null ? fallbackQualifiedTableName
-                    : buildSimpleQualifiedTableName(nameParts.length == 3 ? catalog : null, schema, table, probeQuote));
+                    : buildSimpleQualifiedTableName(nameParts.length == 3 || catalogQualified ? catalog : null, schema, table, probeQuote));
         }
 
         if (N.isEmpty(columnNameList)) {
@@ -3019,6 +3028,11 @@ public final class JdbcUtil {
      * @see SqlOperation
      */
     static SqlOperation getSqlOperation(final String sql) {
+        return getSqlOperation(sql, false);
+    }
+
+    /** Classifies a statement using the target dialect's bracket rules when scanning CTE bodies. */
+    private static SqlOperation getSqlOperation(final String sql, final boolean bracketIdentifiers) {
         String trimmedSql = sql.trim();
 
         // Skip leading parentheses and comments so queries like "(SELECT ...) UNION ALL (SELECT ...)",
@@ -3036,7 +3050,7 @@ public final class JdbcUtil {
         }
 
         if (startsWithSqlToken(trimmedSql, "with")) {
-            final int operationStart = findOperationAfterWith(trimmedSql);
+            final int operationStart = findOperationAfterWith(trimmedSql, bracketIdentifiers);
 
             if (operationStart >= 0) {
                 trimmedSql = trimmedSql.substring(operationStart);
@@ -3093,8 +3107,11 @@ public final class JdbcUtil {
      * parenthesized section is required before an operation is accepted, preventing a CTE whose
      * name happens to resemble an operation from being misclassified.
      */
-    private static int findOperationAfterWith(final String sql) {
+    private static int findOperationAfterWith(final String sql, final boolean bracketIdentifiers) {
         int parenthesisDepth = 0;
+        int arrayDepth = 0;
+        int previousTokenStart = -1;
+        int previousTokenEnd = -1;
         boolean completedParenthesizedSection = false;
 
         for (int i = 4, len = sql.length(); i < len;) {
@@ -3102,14 +3119,31 @@ public final class JdbcUtil {
 
             if (Character.isWhitespace(ch)) {
                 i++;
+                continue;
             } else if (ch == '-' && i + 1 < len && sql.charAt(i + 1) == '-') {
                 i = skipLineComment(sql, i + 2);
+                continue;
             } else if (ch == '/' && i + 1 < len && sql.charAt(i + 1) == '*') {
                 i = skipBlockComment(sql, i + 2);
-            } else if (ch == '\'' || ch == '"' || ch == '`') {
+                continue;
+            }
+
+            final int tokenStart = i;
+            if (ch == '\'' || ch == '"' || ch == '`') {
                 i = skipQuotedSqlText(sql, i, ch);
             } else if (ch == '[') {
-                i = skipBracketQuotedSqlText(sql, i);
+                // Consecutive array closers are nesting, not the escaped ']' of a bracketed name.
+                // Share the codegen distinction to retain aliases and escaped SQL Server identifiers.
+                if (arrayDepth > 0 || JdbcCodeGenerationUtil.startsArrayExpression(sql, i, previousTokenStart, previousTokenEnd,
+                        JdbcCodeGenerationUtil.SqlCommentStyle.NESTED_BLOCKS, bracketIdentifiers)) {
+                    arrayDepth++;
+                    i++;
+                } else {
+                    i = skipBracketQuotedSqlText(sql, i);
+                }
+            } else if (ch == ']' && arrayDepth > 0) {
+                arrayDepth--;
+                i++;
             } else if (ch == '$') {
                 final int end = skipDollarQuotedSqlText(sql, i);
                 i = end > i ? end : i + 1;
@@ -3122,7 +3156,7 @@ public final class JdbcUtil {
                 }
 
                 i++;
-            } else if (parenthesisDepth == 0 && completedParenthesizedSection && Character.isLetter(ch)) {
+            } else if (isSqlIdentifierPart(ch)) {
                 int end = i + 1;
 
                 while (end < len && isSqlIdentifierPart(sql.charAt(end))) {
@@ -3131,8 +3165,9 @@ public final class JdbcUtil {
 
                 final String token = sql.substring(i, end);
 
-                if (token.equalsIgnoreCase("select") || token.equalsIgnoreCase("update") || token.equalsIgnoreCase("insert") || token.equalsIgnoreCase("delete")
-                        || token.equalsIgnoreCase("merge")) {
+                if (parenthesisDepth == 0 && arrayDepth == 0 && completedParenthesizedSection
+                        && (token.equalsIgnoreCase("select") || token.equalsIgnoreCase("update") || token.equalsIgnoreCase("insert")
+                                || token.equalsIgnoreCase("delete") || token.equalsIgnoreCase("merge"))) {
                     return i;
                 }
 
@@ -3140,6 +3175,8 @@ public final class JdbcUtil {
             } else {
                 i++;
             }
+            previousTokenStart = tokenStart;
+            previousTokenEnd = i;
         }
 
         return -1;
@@ -3315,6 +3352,11 @@ public final class JdbcUtil {
      */
     private static boolean isDataModifyingSelect(final String sql, final ScanDialect dialect) {
         final boolean mySqlDialect = dialect.mySql();
+        int arrayDepth = 0;
+        int parenthesisDepth = 0;
+        List<Integer> arrayParenthesisDepths = null;
+        int previousTokenStart = -1;
+        int previousTokenEnd = -1;
         boolean atSectionStart = false;
         // Whether the last significant token (whitespace and comments don't count) can be qualified by a following '.'
         // (an identifier, a quoted identifier or a closing parenthesis, but not a number), and whether it is such a '.'.
@@ -3380,15 +3422,19 @@ public final class JdbcUtil {
             }
 
             if (ch == '(') {
+                parenthesisDepth++;
                 atSectionStart = true;
                 lastTokenIsName = false;
                 afterQualifierDot = false;
+                previousTokenStart = i;
+                previousTokenEnd = i + 1;
                 i++;
                 continue;
             }
 
             boolean isName = false;
             boolean isQualifierDot = false;
+            final int tokenStart = i;
 
             if (ch == '\'') {
                 i = skipQuotedSqlText(sql, i, ch);
@@ -3396,7 +3442,25 @@ public final class JdbcUtil {
                 i = skipQuotedSqlText(sql, i, ch);
                 isName = true;
             } else if (ch == '[') {
-                i = skipBracketQuotedSqlText(sql, i);
+                // Scan array contents as code: skipping them as a quoted name can swallow a later
+                // INTO or FINAL TABLE write and incorrectly route it outside the active transaction.
+                if (arrayDepth > 0 || JdbcCodeGenerationUtil.startsArrayExpression(sql, i, previousTokenStart, previousTokenEnd,
+                        mySqlDialect ? JdbcCodeGenerationUtil.SqlCommentStyle.MYSQL : JdbcCodeGenerationUtil.SqlCommentStyle.NESTED_BLOCKS,
+                        dialect.bracketIdentifiers())) {
+                    if (arrayParenthesisDepths == null) {
+                        arrayParenthesisDepths = new ArrayList<>();
+                    }
+                    arrayParenthesisDepths.add(parenthesisDepth);
+                    arrayDepth++;
+                    i++;
+                } else {
+                    i = skipBracketQuotedSqlText(sql, i);
+                    isName = true;
+                }
+            } else if (ch == ']' && arrayDepth > 0) {
+                arrayParenthesisDepths.remove(arrayDepth - 1);
+                arrayDepth--;
+                i++;
                 isName = true;
             } else if (ch == '$' && skipDollarQuotedSqlText(sql, i) > i) {
                 i = skipDollarQuotedSqlText(sql, i);
@@ -3419,7 +3483,11 @@ public final class JdbcUtil {
                 final char prev = i > 0 ? sql.charAt(i - 1) : ' ';
                 final boolean isKeywordPosition = !(afterQualifierDot || prev == ':' || prev == '@');
 
-                if (isKeywordPosition && end - i == 4 && sql.regionMatches(true, i, "into", 0, 4)) {
+                // A bare word inside an array element/subscript is not an INTO clause. This also
+                // preserves ambiguous bracket aliases such as "SELECT abs(1) [into]". A nested
+                // parenthesized query is still scanned for writes, including FINAL TABLE updates.
+                final boolean inArrayElement = arrayDepth > 0 && parenthesisDepth == arrayParenthesisDepths.get(arrayDepth - 1);
+                if (isKeywordPosition && !inArrayElement && end - i == 4 && sql.regionMatches(true, i, "into", 0, 4)) {
                     return true;
                 }
 
@@ -3443,12 +3511,17 @@ public final class JdbcUtil {
             } else {
                 isQualifierDot = ch == '.' && lastTokenIsName;
                 isName = ch == ')';
+                if (ch == ')' && parenthesisDepth > 0) {
+                    parenthesisDepth--;
+                }
                 i++;
             }
 
             atSectionStart = false;
             lastTokenIsName = isName;
             afterQualifierDot = isQualifierDot;
+            previousTokenStart = tokenStart;
+            previousTokenEnd = i;
         }
 
         // A trailing INSERT keyword is not a function call.
@@ -3528,13 +3601,21 @@ public final class JdbcUtil {
      * @param mariaDb Whether the server is MariaDB, or {@code null} if unknown; MariaDB-only executable comments run only
      *        there.
      * @param serverVersion The server version as {@code major * 10000 + minor * 100 + patch}, or {@code -1} if unknown.
+     * @param bracketIdentifiers Whether brackets always delimit identifiers rather than array expressions.
+     * @param checkBracketAlternatives Whether compatibility modes can also interpret brackets as identifiers.
      */
-    record ScanDialect(boolean mySql, Boolean mariaDb, int serverVersion) {
-        /** Standard rules (any database other than MySQL/MariaDB). */
-        static final ScanDialect STANDARD = new ScanDialect(false, false, -1);
+    record ScanDialect(boolean mySql, Boolean mariaDb, int serverVersion, boolean bracketIdentifiers, boolean checkBracketAlternatives) {
+        /** Standard rules with array expressions and context-dependent bracket identifiers. */
+        static final ScanDialect STANDARD = new ScanDialect(false, false, -1, false, false);
+
+        /** H2 reports the same product name in all modes; MSSQLServer mode interprets brackets as identifiers. */
+        static final ScanDialect H2 = new ScanDialect(false, false, -1, false, true);
+
+        /** SQL Server/ASE: bracket-delimited names are opaque regardless of their contents or preceding token. */
+        static final ScanDialect BRACKET_IDENTIFIERS = new ScanDialect(false, false, -1, true, false);
 
         /** MySQL/MariaDB rules with unknown vendor and version: every executable comment counts as run. */
-        static final ScanDialect MYSQL_UNKNOWN_SERVER = new ScanDialect(true, null, -1);
+        static final ScanDialect MYSQL_UNKNOWN_SERVER = new ScanDialect(true, null, -1, false, false);
     }
 
     /** Leading {@code major.minor[.patch]} of a database product version. */
@@ -3542,14 +3623,14 @@ public final class JdbcUtil {
 
     /**
      * Returns whether the scan of {@code sql} can depend on the database: on its comment rules ({@code #}, {@code --},
-     * {@code /*}) or on whether a digit-leading word with underscores ({@code 1_000}) is a number or an identifier.
+     * {@code /*}), bracket delimiters, or whether a digit-leading word with underscores ({@code 1_000}) is a number or an identifier.
      * The database product only needs to be looked up for such SQL.
      *
      * @param sql The SQL text.
-     * @return {@code true} if the SQL contains {@code #}, {@code --}, {@code /*}, or a digit followed by {@code _}.
+     * @return {@code true} if the SQL contains {@code [}, {@code #}, {@code --}, {@code /*}, or a digit followed by {@code _}.
      */
     private static boolean dependsOnDialect(final String sql) {
-        if (sql.indexOf('#') >= 0 || sql.contains("--") || sql.contains("/*")) {
+        if (sql.indexOf('[') >= 0 || sql.indexOf('#') >= 0 || sql.contains("--") || sql.contains("/*")) {
             return true;
         }
 
@@ -3579,8 +3660,20 @@ public final class JdbcUtil {
             metadata = conn.getMetaData();
             productName = metadata.getDatabaseProductName();
         } catch (final SQLException | RuntimeException e) {
-            logger.debug(e, "Failed to read the database product name to apply MySQL rules");
+            logger.debug(e, "Failed to read the database product name to apply SQL dialect rules");
             return null;
+        }
+
+        if (Strings.isBlank(productName)) {
+            return null;
+        }
+
+        if (SqlIdentifierUtil.usesBracketQuotes(productName)) {
+            return ScanDialect.BRACKET_IDENTIFIERS;
+        }
+
+        if ("H2".equalsIgnoreCase(productName)) {
+            return ScanDialect.H2;
         }
 
         if (!Strings.containsAnyIgnoreCase(productName, "MySQL", "MariaDB")) {
@@ -3593,14 +3686,14 @@ public final class JdbcUtil {
             productVersion = metadata.getDatabaseProductVersion();
         } catch (final SQLException | RuntimeException e) {
             logger.debug(e, "Failed to read the database product version");
-            return new ScanDialect(true, Strings.containsIgnoreCase(productName, "MariaDB") ? Boolean.TRUE : null, -1);
+            return new ScanDialect(true, Strings.containsIgnoreCase(productName, "MariaDB") ? Boolean.TRUE : null, -1, false, false);
         }
 
         // A MariaDB server may report itself as "MySQL" (through the MySQL driver), but its version says "...-MariaDB".
         final Boolean mariaDb = Strings.containsIgnoreCase(productName, "MariaDB") || Strings.containsIgnoreCase(productVersion, "MariaDB") ? Boolean.TRUE
                 : productVersion == null ? null : Boolean.FALSE;
 
-        return new ScanDialect(true, mariaDb, parseServerVersion(productVersion, Boolean.TRUE.equals(mariaDb)));
+        return new ScanDialect(true, mariaDb, parseServerVersion(productVersion, Boolean.TRUE.equals(mariaDb)), false, false);
     }
 
     /**
@@ -6147,7 +6240,7 @@ public final class JdbcUtil {
     static SqlTransaction getTransaction(final javax.sql.DataSource ds, final String sql, final CreatedBy createdBy) {
         final SqlTransaction tran = SqlTransaction.getTransaction(ds, createdBy);
 
-        if (tran == null || !tran.isForUpdateOnly() || JdbcUtil.getSqlOperation(sql) != SqlOperation.SELECT) {
+        if (tran == null || !tran.isForUpdateOnly()) {
             return tran;
         }
 
@@ -6156,19 +6249,41 @@ public final class JdbcUtil {
         // a separate auto-commit connection would let the write escape a for-update-only transaction's rollback (or block
         // on the transaction's own row locks, or leave a temp table/session variable on the wrong connection).
         // Comment rules (MySQL: '#' comments, "--" only before whitespace, flat and executable block comments) and whether
-        // "1_000" is a number depend on the database, which is only looked up for SQL where they can matter, and at most once
-        // per transaction. If it can't be read, the SQL counts as writing when either rule set says so: under the wrong rules
-        // a quote inside a MySQL '#' comment ("# don't") would open a string that hides a real INTO on the next line.
+        // "1_000" is a number or '[' starts an identifier depend on the database, which is only looked up for SQL where they
+        // can matter, and at most once per transaction. If it can't be read, any interpretation that could write joins:
+        // quotes inside a MySQL '#' comment or a SQL Server bracketed alias must not hide a real INTO clause.
         if (!dependsOnDialect(sql)) {
-            return isDataModifyingSelect(sql, ScanDialect.STANDARD) ? tran : null;
+            return requiresTransaction(sql, ScanDialect.STANDARD) ? tran : null;
         }
 
         final ScanDialect dialect = tran.scanDialect(JdbcUtil::scanDialectOf);
         final boolean writes = dialect == null
-                ? isDataModifyingSelect(sql, ScanDialect.MYSQL_UNKNOWN_SERVER) || isDataModifyingSelect(sql, ScanDialect.STANDARD)
-                : isDataModifyingSelect(sql, dialect);
+                ? requiresTransaction(sql, ScanDialect.MYSQL_UNKNOWN_SERVER) || requiresTransaction(sql, ScanDialect.STANDARD)
+                        || requiresTransaction(sql, ScanDialect.BRACKET_IDENTIFIERS)
+                : requiresTransaction(sql, dialect);
 
         return writes ? tran : null;
+    }
+
+    /**
+     * Uses the same bracket interpretation for CTE classification and SELECT write detection. H2 can change compatibility
+     * mode without changing its product metadata, even after this transaction's dialect has been cached. Check its
+     * bracket-identifier interpretation too before allowing a SELECT to run outside the transaction.
+     */
+    private static boolean requiresTransaction(final String sql, final ScanDialect dialect) {
+        if (getSqlOperation(sql, dialect.bracketIdentifiers()) != SqlOperation.SELECT || isDataModifyingSelect(sql, dialect)) {
+            return true;
+        }
+
+        if (!dialect.checkBracketAlternatives() || sql.indexOf('[') < 0) {
+            return false;
+        }
+
+        // The first pass identified a SELECT. The alternate CTE scan may be indeterminate for nested arrays (whose
+        // consecutive ']' characters look like an identifier escape), so only a recognized write overrides that result.
+        final SqlOperation bracketOperation = getSqlOperation(sql, true);
+        return bracketOperation == SqlOperation.INSERT || bracketOperation == SqlOperation.UPDATE || bracketOperation == SqlOperation.DELETE
+                || bracketOperation == SqlOperation.MERGE || isDataModifyingSelect(sql, ScanDialect.BRACKET_IDENTIFIERS);
     }
 
     /**
@@ -7640,7 +7755,8 @@ public final class JdbcUtil {
     /**
      * Sets the given parameters on the specified {@link PreparedStatement} according to the parsed SQL.
      * When the SQL uses named parameters, a single entity, {@link Map}, or {@link EntityId} may be passed
-     * to bind them by name.
+     * to bind them by name. Repeated built-in stream values are buffered once after all names have
+     * been validated, retaining the selected Type and without closing the caller's resource.
      *
      * @param parsedSql The parsed SQL statement containing parameter information.
      * @param stmt The {@link PreparedStatement} to set parameters on.
@@ -7668,41 +7784,71 @@ public final class JdbcUtil {
             final Class<?> cls = parameter_0.getClass();
 
             parameterValues = new Object[parameterCount];
+            parameterTypes = new Type[parameterCount];
+            final BeanInfo entityInfo = Beans.isBeanClass(cls) || Beans.isRecordClass(cls) ? ParserUtil.getBeanInfo(cls) : null;
+            Map<String, Integer> streamIndices = null;
+            Set<String> repeatedStreams = null;
 
-            if (Beans.isBeanClass(cls) || Beans.isRecordClass(cls)) {
-                final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
-                parameterTypes = new Type[parameterCount];
-                PropInfo propInfo = null;
-
-                for (int i = 0; i < parameterCount; i++) {
-                    propInfo = entityInfo.getPropInfo(namedParameters.get(i));
-
-                    if (propInfo == null) {
-                        throw new IllegalArgumentException(
-                                "No property found with name: " + namedParameters.get(i) + " in class: " + ClassUtil.getCanonicalClassName(cls));
+            for (int i = 0; i < parameterCount; i++) {
+                final String name = namedParameters.get(i);
+                final Integer firstIndex = streamIndices == null ? null : streamIndices.get(name);
+                if (firstIndex != null) {
+                    // A bean getter may open a resource: reuse its first value and original Type rather
+                    // than opening a second, unused stream. Custom Types retain their existing behavior.
+                    parameterValues[i] = parameterValues[firstIndex];
+                    parameterTypes[i] = parameterTypes[firstIndex];
+                    if (repeatedStreams == null) {
+                        repeatedStreams = N.newHashSet();
                     }
+                    repeatedStreams.add(name);
+                    continue;
+                }
 
+                if (entityInfo != null) {
+                    final PropInfo propInfo = entityInfo.getPropInfo(name);
+                    if (propInfo == null) {
+                        throw new IllegalArgumentException("No property found with name: " + name + " in class: " + ClassUtil.getCanonicalClassName(cls));
+                    }
                     parameterValues[i] = propInfo.getPropValue(parameter_0);
                     parameterTypes[i] = propInfo.dbType;
-                }
-            } else if (parameter_0 instanceof Map) {
-                final Map<String, Object> m = (Map<String, Object>) parameter_0;
-
-                for (int i = 0; i < parameterCount; i++) {
-                    parameterValues[i] = m.get(namedParameters.get(i));
-
-                    if ((parameterValues[i] == null) && !m.containsKey(namedParameters.get(i))) {
-                        throw new IllegalArgumentException("Missing parameter for property: '" + namedParameters.get(i) + "'");
+                } else if (parameter_0 instanceof Map) {
+                    final Map<String, Object> m = (Map<String, Object>) parameter_0;
+                    parameterValues[i] = m.get(name);
+                    if (parameterValues[i] == null && !m.containsKey(name)) {
+                        throw new IllegalArgumentException("Missing parameter for property: '" + name + "'");
+                    }
+                } else {
+                    final EntityId entityId = (EntityId) parameter_0;
+                    parameterValues[i] = entityId.get(name);
+                    if (parameterValues[i] == null && !entityId.containsKey(name)) {
+                        throw new IllegalArgumentException("Missing parameter for property: '" + name + "'");
                     }
                 }
-            } else {
-                final EntityId entityId = (EntityId) parameter_0;
+                if (entityInfo == null && parameterValues[i] != null) {
+                    parameterTypes[i] = Type.of(parameterValues[i].getClass());
+                }
+                if (JdbcStreamUtil.usesBuiltInBinding(parameterValues[i], parameterTypes[i])) {
+                    if (streamIndices == null) {
+                        streamIndices = N.newHashMap();
+                    }
+                    streamIndices.put(name, i);
+                }
+            }
 
+            if (repeatedStreams != null) {
+                // Validate every name before consuming any stream, and keep the buffers local to this
+                // parameter set so batch rows never share cursors. Positional parameters remain streamed.
+                if (stmt.isClosed()) {
+                    throw new SQLException("Cannot buffer repeated parameters for a closed statement");
+                }
+                final Map<String, Supplier<Object>> copies = N.newHashMap();
+                for (final String name : repeatedStreams) {
+                    copies.put(name, JdbcStreamUtil.buffer(parameterValues[streamIndices.get(name)], Long.MAX_VALUE));
+                }
                 for (int i = 0; i < parameterCount; i++) {
-                    parameterValues[i] = entityId.get(namedParameters.get(i));
-
-                    if ((parameterValues[i] == null) && !entityId.containsKey(namedParameters.get(i))) {
-                        throw new IllegalArgumentException("Missing parameter for property: '" + namedParameters.get(i) + "'");
+                    final Supplier<Object> supplier = copies.get(namedParameters.get(i));
+                    if (supplier != null) {
+                        parameterValues[i] = supplier.get();
                     }
                 }
             }
@@ -7732,7 +7878,11 @@ public final class JdbcUtil {
             throws SQLException {
         if (N.notEmpty(parameterTypes) && parameterTypes.length >= parameterCount) {
             for (int i = 0; i < parameterCount; i++) {
-                parameterTypes[i].set(stmt, i + 1, parameters[i]);
+                if (parameterTypes[i] == null) {
+                    stmt.setObject(i + 1, parameters[i]);
+                } else {
+                    parameterTypes[i].set(stmt, i + 1, parameters[i]);
+                }
             }
         } else if (N.notEmpty(parameters) && parameters.length >= parameterCount) {
             for (int i = 0; i < parameterCount; i++) {
@@ -10271,7 +10421,8 @@ public final class JdbcUtil {
      * instead of returning {@code false}.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like {@code schema.table}
-     * or {@code catalog.schema.table}.</p>
+     * or {@code catalog.schema.table}. On databases whose driver supports catalogs but not schemas in table definitions,
+     * a two-part name is interpreted as {@code catalog.table}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10326,7 +10477,8 @@ public final class JdbcUtil {
      * instead of returning {@code false}.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like {@code schema.table}
-     * or {@code catalog.schema.table}.</p>
+     * or {@code catalog.schema.table}. On databases whose driver supports catalogs but not schemas in table definitions,
+     * a two-part name is interpreted as {@code catalog.table}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10353,6 +10505,8 @@ public final class JdbcUtil {
             final boolean[] delimitedNameParts = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(tableName, nameParts.length);
             final DatabaseMetaData metadata = conn.getMetaData();
             final boolean caseFolded = normalizeMetadataIdentifierParts(metadata, nameParts, delimitedNameParts);
+            final boolean catalogQualified = nameParts.length == 2 && !metadata.supportsSchemasInTableDefinitions()
+                    && metadata.supportsCatalogsInTableDefinitions();
             final String catalog;
             final String schema;
             final String table;
@@ -10368,11 +10522,12 @@ public final class JdbcUtil {
                 schemaDelimited = false;
                 tableDelimited = delimitedNameParts[0];
             } else if (nameParts.length == 2) {
-                catalog = conn.getCatalog();
-                schema = nameParts[0];
+                // The first part denotes a catalog on MySQL/MariaDB in catalog mode; their metadata ignores schema filters.
+                catalog = catalogQualified ? nameParts[0] : conn.getCatalog();
+                schema = catalogQualified ? null : nameParts[0];
                 table = nameParts[1];
-                catalogDelimited = false;
-                schemaDelimited = delimitedNameParts[0];
+                catalogDelimited = catalogQualified && delimitedNameParts[0];
+                schemaDelimited = !catalogQualified && delimitedNameParts[0];
                 tableDelimited = delimitedNameParts[1];
             } else if (nameParts.length == 3) {
                 catalog = nameParts[0];
@@ -10391,7 +10546,7 @@ public final class JdbcUtil {
 
             String schemaToUse = schema;
 
-            if (schemaToUse == null) {
+            if (schemaToUse == null && !catalogQualified) {
                 try {
                     schemaToUse = conn.getSchema();
                 } catch (final SQLException | AbstractMethodError e) {
@@ -10428,7 +10583,8 @@ public final class JdbcUtil {
             // parsed as a keyword: unquoted, H2 rejects "FROM order" as a syntax error (thrown instead of returning false),
             // and PostgreSQL runs "FROM user" as the CURRENT_USER function, reporting a missing table as present.
             final String probeQuote = caseFolded && !hasDelimitedIdentifierPart(tableName) ? normalizeIdentifierQuote(metadata) : null;
-            final String safeQualifiedTableName = buildSimpleQualifiedTableName(nameParts.length == 3 ? catalog : null, schema, table, probeQuote);
+            final String safeQualifiedTableName = buildSimpleQualifiedTableName(nameParts.length == 3 || catalogQualified ? catalog : null, schema, table,
+                    probeQuote);
 
             // splitQualifiedSqlIdentifier removes delimiters. Never feed those stripped parts to
             // unquoted fallback SQL: "mixedCase" and mixedCase can identify different tables.

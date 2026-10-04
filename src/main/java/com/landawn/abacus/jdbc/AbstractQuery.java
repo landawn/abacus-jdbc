@@ -129,10 +129,14 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  *
- * <p>Parameter-binding methods validate their arguments without checking whether this query has been closed.
+ * <p>Most parameter-binding methods validate their arguments without checking whether this query has been closed.
  * When a binding reaches the underlying JDBC statement, that statement reports a closed-statement failure
  * through {@link SQLException}. A valid empty binding operation may return without accessing the statement.
  * Custom parameter setters are invoked directly and retain their own validation and exception behavior.</p>
+ *
+ * <p>Before buffering a repeated, non-null stream or reader, {@link #setObjectForIndices(Object, int...)}
+ * and the named binding methods in {@link NamedQuery} reject a closed query with {@link IllegalStateException}
+ * without consuming caller data. Batch parameter methods also check closed state before consuming their input.</p>
  *
  * <p><b>{@code setParameters} vs {@code settParameters} (double "t"):</b> these are two distinct,
  * intentionally similar method families &mdash; the extra {@code t} is not a typo, and because both
@@ -3813,6 +3817,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Sets the same Object value to multiple parameter positions.
      *
+     * <p>Built-in stream and reader types are buffered in memory when multiple indices are supplied,
+     * with an independent cursor for every binding. A single index and custom type handlers retain
+     * their normal binding behavior. The caller owns the original stream or reader; it is not closed.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * UUID defaultId = UUID.randomUUID();
@@ -3822,13 +3830,32 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param value the Object value to set
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
+     * @throws IllegalStateException if this query is closed and a built-in stream or reader needs buffering
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
      * @throws SQLException if an index in {@code parameterIndices} does not correspond to a parameter marker in the SQL statement, the statement
-     *         is closed, or the driver fails to bind the {@code value}
+     *         is closed, or the driver fails to bind the {@code value}; also if buffering fails, in which case this query is closed
      */
     @Beta
     public This setObjectForIndices(final Object value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
+
+        if (parameterIndices.length > 1 && (value instanceof InputStream || value instanceof Reader)) {
+            final Type<Object> type = Type.of(value.getClass());
+            if (JdbcStreamUtil.usesBuiltInBinding(value, type)) {
+                assertNotClosed();
+                final Supplier<Object> copies;
+                try {
+                    copies = JdbcStreamUtil.buffer(value, Long.MAX_VALUE);
+                } catch (final SQLException | RuntimeException | Error e) {
+                    closeSuppressingFailure(e);
+                    throw e;
+                }
+                for (final int parameterIndex : parameterIndices) {
+                    type.set(stmt, parameterIndex, copies.get());
+                }
+                return (This) this;
+            }
+        }
 
         for (final int parameterIndex : parameterIndices) {
             setObject(parameterIndex, value);

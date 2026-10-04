@@ -396,6 +396,29 @@ public class DBLockTest extends TestBase {
         assertNotNull(code);
     }
 
+    @Test
+    public void testTryLockRetriesDriverIllegalStateException() throws Exception {
+        final LockFixture fixture = newLockFixture();
+        when(fixture.preparedStatement.executeUpdate()).thenReturn(0)
+                .thenThrow(new IllegalStateException("transient driver failure"))
+                .thenReturn(0, 1);
+
+        final String code = fixture.lock.tryLock("driver-state-retry", 60_000, 5_000, 1);
+
+        assertNotNull(code);
+        assertEquals(1, targetCodePool(fixture.lock).size());
+        verify(fixture.connection, times(2)).prepareStatement(LOCK_SQL);
+    }
+
+    @Test
+    public void testTryLockDriverIllegalStateExceptionReturnsNullAtTimeout() throws Exception {
+        final LockFixture fixture = newLockFixture();
+        when(fixture.preparedStatement.executeUpdate()).thenReturn(0).thenThrow(new IllegalStateException("driver unavailable"));
+
+        assertNull(fixture.lock.tryLock("driver-state-timeout", 60_000, 0));
+        assertTrue(targetCodePool(fixture.lock).isEmpty());
+    }
+
     // Passing Long.MAX_VALUE as timeout must not overflow endTime to a negative value.
     // Before the fix, now.getTime() + Long.MAX_VALUE overflowed to a large negative number,
     // making the do-while condition false immediately so the lock was never acquired.

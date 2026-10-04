@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -3401,7 +3402,9 @@ public final class DataTransferUtil {
      * INSERT column order matches the SELECT, so positional parameter binding stays aligned even
      * when the two databases store columns in different orders. JDBC labels are literal names;
      * punctuation, surrounding whitespace, and case that requires quoting in the source database
-     * are preserved as identifier content.
+     * are preserved as identifier content. Ordinary source names are folded to the target database's
+     * unquoted identifier case before rendering with the target connection's quote metadata (brackets
+     * on SQL Server/ASE). If quoting is unsupported, simple names remain unquoted and non-simple names fail.
      * @throws IllegalArgumentException if a connection is {@code null}, or a table/column name is {@code null}, blank, or malformed.
      * @throws SQLException if preparing or executing the source metadata query, reading its labels or identifier-folding metadata,
      *         or closing its resources fails.
@@ -3417,10 +3420,17 @@ public final class DataTransferUtil {
              ResultSet rs = stmt.executeQuery()) {
             final List<String> sourceColumns = new ArrayList<>();
             final int unquotedIdentifierCase = JdbcCodeGenerationUtil.getUnquotedIdentifierCase(sourceConn);
-            // Preserve source case sensitivity with standard quotes; the target renderer adapts
-            // the delimiters while ordinary unquoted names retain the target's case-folding rules.
+            final int targetIdentifierCase = JdbcCodeGenerationUtil.getUnquotedIdentifierCase(targetConn);
             for (final String columnLabel : JdbcUtil.getColumnLabels(rs)) {
-                sourceColumns.add(JdbcCodeGenerationUtil.renderColumnLabel(columnLabel, null, unquotedIdentifierCase));
+                final String sourceColumn = JdbcCodeGenerationUtil.renderColumnLabel(columnLabel, null, unquotedIdentifierCase);
+                // First apply the target's folding to ordinary names, then quote the exact target spelling. Quoting the
+                // source spelling directly breaks upper-case-to-lower-case copies; leaving it unquoted breaks ORDER/USER.
+                final String targetColumn = SqlIdentifierUtil.isDelimitedIdentifier(sourceColumn) ? columnLabel
+                        : targetIdentifierCase > 0 ? columnLabel.toUpperCase(Locale.ROOT)
+                                : targetIdentifierCase < 0 ? columnLabel.toLowerCase(Locale.ROOT) : columnLabel;
+                // These delimiters only mark literal names for the internal renderer; generateInsertSql
+                // decodes them and emits the target connection's delimiter, never these quotes verbatim.
+                sourceColumns.add(SqlIdentifierUtil.quoteIdentifier(targetColumn, "\""));
             }
             return generateInsertSql(targetConn, targetTableName, sourceColumns);
         }
@@ -3563,6 +3573,7 @@ public final class DataTransferUtil {
         }
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
         final StringBuilder sb = new StringBuilder();
 
         sb.append(SK.SELECT).append(SK._SPACE);
@@ -3572,14 +3583,14 @@ public final class DataTransferUtil {
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(SqlIdentifierUtil.renderColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
+            sb.append(SqlIdentifierUtil.renderColumnNameWithQuote(iter.next(), identifierQuote)).append(SK.COMMA_SPACE);
         }
 
-        sb.append(SqlIdentifierUtil.renderColumnName(iter.next(), dbProductInfo))
+        sb.append(SqlIdentifierUtil.renderColumnNameWithQuote(iter.next(), identifierQuote))
                 .append(SK._SPACE)
                 .append(SK.FROM)
                 .append(SK._SPACE)
-                .append(SqlIdentifierUtil.renderTableName(tableName, dbProductInfo));
+                .append(SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote));
 
         return sb.toString();
     }
@@ -3603,13 +3614,14 @@ public final class DataTransferUtil {
         }
 
         final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
+        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
         final StringBuilder sb = new StringBuilder();
 
         sb.append(SK.INSERT)
                 .append(SK._SPACE)
                 .append(SK.INTO)
                 .append(SK._SPACE)
-                .append(SqlIdentifierUtil.renderTableName(tableName, dbProductInfo))
+                .append(SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote))
                 .append(SK._PARENTHESIS_L);
 
         final Iterator<String> iter = columnNames.iterator();
@@ -3617,10 +3629,10 @@ public final class DataTransferUtil {
         int cnt = 0;
 
         while (iter.hasNext() && cnt++ < lastIdx) {
-            sb.append(SqlIdentifierUtil.renderColumnName(iter.next(), dbProductInfo)).append(SK.COMMA_SPACE);
+            sb.append(SqlIdentifierUtil.renderColumnNameWithQuote(iter.next(), identifierQuote)).append(SK.COMMA_SPACE);
         }
 
-        sb.append(SqlIdentifierUtil.renderColumnName(iter.next(), dbProductInfo))
+        sb.append(SqlIdentifierUtil.renderColumnNameWithQuote(iter.next(), identifierQuote))
                 .append(SK._PARENTHESIS_R)
                 .append(SK._SPACE)
                 .append(SK.VALUES)

@@ -355,6 +355,10 @@ public @interface Query {
      * Indicates whether the SQL statement is a stored procedure call.
      * When {@code true}, the framework treats the SQL as a callable statement
      * and handles input/output parameters accordingly.
+     * A single {@link java.util.Map} parameter is supported: its keys are callable parameter names,
+     * bound through the JDBC driver's named setters rather than colon-style SQL placeholders.
+     * A single bean, record or {@link com.landawn.abacus.util.EntityId} parameter is not supported
+     * for procedures and causes DAO initialization to throw {@link UnsupportedOperationException}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -573,10 +577,12 @@ public @interface Query {
      *
      * <p>Important notes:</p>
      * <ul>
-     *   <li>The collection/array must be the method's only statement/query parameter; fragment and
-     *       other framework-recognized auxiliary parameters are not statement parameters. Setting this
+     *   <li>The collection/array must be the method's only statement/query parameter, apart from an
+     *       optional {@code int} batch-size argument for batch methods; fragment and other
+     *       framework-recognized auxiliary parameters are not statement parameters. Setting this
      *       element on a method with any other number of statement parameters fails DAO initialization
      *       with {@code UnsupportedOperationException}</li>
+     *   <li>For batch methods, each element of the batch collection is bound as one value</li>
      *   <li>The JDBC driver and database must support binding the supplied Java collection/array
      *       as one value; this option does not call {@code Connection.createArrayOf}</li>
      *   <li>Not commonly needed for standard SQL; primarily for database-specific features</li>

@@ -37,6 +37,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Supplier;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.parser.ParserUtil;
@@ -57,9 +59,18 @@ import com.landawn.abacus.util.N;
  * ({@code ?}). The same named parameter may appear multiple times in the SQL; every occurrence is
  * bound to the same value. For stream and {@code Reader} values (the {@code setXxxStream},
  * {@code setBlob(String, InputStream...)}, {@code setClob(String, Reader...)} and
- * {@code setNClob(String, Reader...)} setters) the same stream object is passed to every occurrence,
- * and a stream can typically be consumed only once, so later occurrences may receive empty or partial
- * data (H2, for example, binds an empty value); use a distinct parameter name per occurrence instead.
+ * {@code setNClob(String, Reader...)} setters), repeated occurrences are buffered in memory once and
+ * bound using independent streams or readers. A single occurrence is passed directly to the driver.
+ * An explicit length limits the buffered bytes or characters, and the caller retains ownership of
+ * the original stream or reader. Use distinct parameter names with separate streams for large values
+ * that must remain streamed without buffering.
+ * The same replay behavior applies to JDBC-typed object setters and built-in stream types used by
+ * {@code setObject(String, Object)}, {@code setObject(String, Object, Type)} and map/bean parameter
+ * binding on this {@code NamedQuery}, including its batch methods. Direct named-SQL execution through
+ * {@link JdbcUtil} also replays built-in stream values for repeated Map, bean, record and EntityId names.
+ * Custom {@code Type} implementations retain their own binding behavior and receive the original value.
+ * Before buffering a repeated, non-null stream or reader, an already closed query is rejected with
+ * {@link IllegalStateException} without consuming caller data.
  *
  * <p>If a name passed to a by-name {@code setXxx(String, ...)} setter (or to
  * {@link #setObject(String, Object)} and its overloads) does not match any named parameter declared
@@ -227,6 +238,89 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             }
         }
+    }
+
+    private boolean isRepeatedParameter(final String parameterName) {
+        checkParameterName(parameterName);
+
+        return parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP ? parameterNames.indexOf(parameterName) != parameterNames.lastIndexOf(parameterName)
+                : paramNameIndexMap.get(parameterName).size() > 1;
+    }
+
+    private <T> Supplier<T> repeatableStream(final String parameterName, final T value, final long length) throws SQLException {
+        final boolean repeated = isRepeatedParameter(parameterName);
+        if (length < 0) {
+            checkArgument(false, "'length' can't be negative: " + length);
+        }
+        if (value == null || !repeated) {
+            return () -> value;
+        }
+        assertNotClosed();
+        try {
+            return JdbcStreamUtil.buffer(value, length);
+        } catch (final SQLException | RuntimeException | Error e) {
+            closeSuppressingFailure(e);
+            throw e;
+        }
+    }
+
+    private Supplier<?> repeatableParameter(final String parameterName, final Object value, final long length) throws SQLException {
+        if (value instanceof InputStream input) {
+            return repeatableStream(parameterName, input, length);
+        } else if (value instanceof Reader reader) {
+            return repeatableStream(parameterName, reader, length);
+        }
+
+        return () -> value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Supplier<T> repeatableParameter(final String parameterName, final T value, final Type<T> type) throws SQLException {
+        // Custom Types may serialize a stream object without reading it, or require its concrete
+        // subclass. Replay only the built-in stream handlers and keep invoking the originally chosen Type.
+        if (JdbcStreamUtil.usesBuiltInBinding(value, type)) {
+            return value instanceof InputStream ? (Supplier<T>) repeatableStream(parameterName, (InputStream) value, Long.MAX_VALUE)
+                    : (Supplier<T>) repeatableStream(parameterName, (Reader) value, Long.MAX_VALUE);
+        }
+
+        return () -> value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> Map<String, Supplier<?>> setParameter(final int parameterIndex, final String parameterName, final T value, final Type<T> type,
+            Map<String, Supplier<?>> repeatedValues) throws SQLException {
+        if (type == null) {
+            stmt.setObject(parameterIndex, value);
+        } else if (JdbcStreamUtil.usesBuiltInBinding(value, type) && isRepeatedParameter(parameterName)) {
+            if (repeatedValues == null) {
+                repeatedValues = N.newHashMap();
+            }
+
+            Supplier<?> supplier = repeatedValues.get(parameterName);
+            if (supplier == null) {
+                supplier = repeatableParameter(parameterName, value, type);
+                repeatedValues.put(parameterName, supplier);
+            }
+
+            type.set(stmt, parameterIndex, (T) supplier.get());
+        } else {
+            type.set(stmt, parameterIndex, value);
+        }
+
+        return repeatedValues;
+    }
+
+    private Map<String, Supplier<?>> setBeanParameter(final int parameterIndex, final String parameterName, final Object bean, final PropInfo propInfo,
+            final Map<String, Supplier<?>> repeatedValues) throws SQLException {
+        final Supplier<?> supplier = repeatedValues == null ? null : repeatedValues.get(parameterName);
+        if (supplier != null) {
+            // A getter may open a new stream. Once buffered, reuse the value without opening
+            // another caller-owned resource that would never be bound or closed.
+            propInfo.dbType.set(stmt, parameterIndex, supplier.get());
+            return repeatedValues;
+        }
+
+        return setParameter(parameterIndex, parameterName, propInfo.getPropValue(bean), propInfo.dbType, repeatedValues);
     }
 
     /**
@@ -2048,21 +2142,27 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the InputStream containing ASCII data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      * @see #setAsciiStream(String, InputStream, long)
      */
     public NamedQuery setAsciiStream(final String parameterName, final InputStream value) throws IllegalArgumentException, SQLException {
+        final Supplier<InputStream> valueSupplier = repeatableStream(parameterName, value, Long.MAX_VALUE);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setAsciiStream(i + 1, value);
+                    setAsciiStream(i + 1, valueSupplier.get());
                     cnt++;
                 }
             }
@@ -2081,17 +2181,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setAsciiStream(indexes.get(0), value);
+                    setAsciiStream(indexes.get(0), valueSupplier.get());
                 } else if (indexes.size() == 2) {
-                    setAsciiStream(indexes.get(0), value);
-                    setAsciiStream(indexes.get(1), value);
+                    setAsciiStream(indexes.get(0), valueSupplier.get());
+                    setAsciiStream(indexes.get(1), valueSupplier.get());
                 } else if (indexes.size() == 3) {
-                    setAsciiStream(indexes.get(0), value);
-                    setAsciiStream(indexes.get(1), value);
-                    setAsciiStream(indexes.get(2), value);
+                    setAsciiStream(indexes.get(0), valueSupplier.get());
+                    setAsciiStream(indexes.get(1), valueSupplier.get());
+                    setAsciiStream(indexes.get(2), valueSupplier.get());
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setAsciiStream(indexes.get(i), value);
+                        setAsciiStream(indexes.get(i), valueSupplier.get());
                     }
                 }
             }
@@ -2115,22 +2215,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the InputStream containing ASCII data, or {@code null} to set SQL {@code NULL}
      * @param length the number of bytes in the stream
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query or length is negative
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      * @see #setAsciiStream(String, InputStream)
      */
     public NamedQuery setAsciiStream(final String parameterName, final InputStream value, final long length) throws IllegalArgumentException, SQLException {
+        final Supplier<InputStream> valueSupplier = repeatableStream(parameterName, value, length);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setAsciiStream(i + 1, value, length);
+                    setAsciiStream(i + 1, valueSupplier.get(), length);
                     cnt++;
                 }
             }
@@ -2149,17 +2255,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setAsciiStream(indexes.get(0), value, length);
+                    setAsciiStream(indexes.get(0), valueSupplier.get(), length);
                 } else if (indexes.size() == 2) {
-                    setAsciiStream(indexes.get(0), value, length);
-                    setAsciiStream(indexes.get(1), value, length);
+                    setAsciiStream(indexes.get(0), valueSupplier.get(), length);
+                    setAsciiStream(indexes.get(1), valueSupplier.get(), length);
                 } else if (indexes.size() == 3) {
-                    setAsciiStream(indexes.get(0), value, length);
-                    setAsciiStream(indexes.get(1), value, length);
-                    setAsciiStream(indexes.get(2), value, length);
+                    setAsciiStream(indexes.get(0), valueSupplier.get(), length);
+                    setAsciiStream(indexes.get(1), valueSupplier.get(), length);
+                    setAsciiStream(indexes.get(2), valueSupplier.get(), length);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setAsciiStream(indexes.get(i), value, length);
+                        setAsciiStream(indexes.get(i), valueSupplier.get(), length);
                     }
                 }
             }
@@ -2183,21 +2289,27 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the InputStream containing binary data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      * @see #setBinaryStream(String, InputStream, long)
      */
     public NamedQuery setBinaryStream(final String parameterName, final InputStream value) throws IllegalArgumentException, SQLException {
+        final Supplier<InputStream> valueSupplier = repeatableStream(parameterName, value, Long.MAX_VALUE);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setBinaryStream(i + 1, value);
+                    setBinaryStream(i + 1, valueSupplier.get());
                     cnt++;
                 }
             }
@@ -2216,17 +2328,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setBinaryStream(indexes.get(0), value);
+                    setBinaryStream(indexes.get(0), valueSupplier.get());
                 } else if (indexes.size() == 2) {
-                    setBinaryStream(indexes.get(0), value);
-                    setBinaryStream(indexes.get(1), value);
+                    setBinaryStream(indexes.get(0), valueSupplier.get());
+                    setBinaryStream(indexes.get(1), valueSupplier.get());
                 } else if (indexes.size() == 3) {
-                    setBinaryStream(indexes.get(0), value);
-                    setBinaryStream(indexes.get(1), value);
-                    setBinaryStream(indexes.get(2), value);
+                    setBinaryStream(indexes.get(0), valueSupplier.get());
+                    setBinaryStream(indexes.get(1), valueSupplier.get());
+                    setBinaryStream(indexes.get(2), valueSupplier.get());
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setBinaryStream(indexes.get(i), value);
+                        setBinaryStream(indexes.get(i), valueSupplier.get());
                     }
                 }
             }
@@ -2251,22 +2363,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the InputStream containing binary data, or {@code null} to set SQL {@code NULL}
      * @param length the number of bytes in the stream
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query or length is negative
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      * @see #setBinaryStream(String, InputStream)
      */
     public NamedQuery setBinaryStream(final String parameterName, final InputStream value, final long length) throws IllegalArgumentException, SQLException {
+        final Supplier<InputStream> valueSupplier = repeatableStream(parameterName, value, length);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setBinaryStream(i + 1, value, length);
+                    setBinaryStream(i + 1, valueSupplier.get(), length);
                     cnt++;
                 }
             }
@@ -2285,17 +2403,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setBinaryStream(indexes.get(0), value, length);
+                    setBinaryStream(indexes.get(0), valueSupplier.get(), length);
                 } else if (indexes.size() == 2) {
-                    setBinaryStream(indexes.get(0), value, length);
-                    setBinaryStream(indexes.get(1), value, length);
+                    setBinaryStream(indexes.get(0), valueSupplier.get(), length);
+                    setBinaryStream(indexes.get(1), valueSupplier.get(), length);
                 } else if (indexes.size() == 3) {
-                    setBinaryStream(indexes.get(0), value, length);
-                    setBinaryStream(indexes.get(1), value, length);
-                    setBinaryStream(indexes.get(2), value, length);
+                    setBinaryStream(indexes.get(0), valueSupplier.get(), length);
+                    setBinaryStream(indexes.get(1), valueSupplier.get(), length);
+                    setBinaryStream(indexes.get(2), valueSupplier.get(), length);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setBinaryStream(indexes.get(i), value, length);
+                        setBinaryStream(indexes.get(i), valueSupplier.get(), length);
                     }
                 }
             }
@@ -2319,21 +2437,27 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the Reader containing character data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      * @see #setCharacterStream(String, Reader, long)
      */
     public NamedQuery setCharacterStream(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
+        final Supplier<Reader> valueSupplier = repeatableStream(parameterName, value, Long.MAX_VALUE);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setCharacterStream(i + 1, value);
+                    setCharacterStream(i + 1, valueSupplier.get());
                     cnt++;
                 }
             }
@@ -2352,17 +2476,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setCharacterStream(indexes.get(0), value);
+                    setCharacterStream(indexes.get(0), valueSupplier.get());
                 } else if (indexes.size() == 2) {
-                    setCharacterStream(indexes.get(0), value);
-                    setCharacterStream(indexes.get(1), value);
+                    setCharacterStream(indexes.get(0), valueSupplier.get());
+                    setCharacterStream(indexes.get(1), valueSupplier.get());
                 } else if (indexes.size() == 3) {
-                    setCharacterStream(indexes.get(0), value);
-                    setCharacterStream(indexes.get(1), value);
-                    setCharacterStream(indexes.get(2), value);
+                    setCharacterStream(indexes.get(0), valueSupplier.get());
+                    setCharacterStream(indexes.get(1), valueSupplier.get());
+                    setCharacterStream(indexes.get(2), valueSupplier.get());
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setCharacterStream(indexes.get(i), value);
+                        setCharacterStream(indexes.get(i), valueSupplier.get());
                     }
                 }
             }
@@ -2386,22 +2510,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * query.setCharacterStream("largeText", contentReader, content.length()).update();
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the Reader containing character data, or {@code null} to set SQL {@code NULL}
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query or length is negative
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      * @see #setCharacterStream(String, Reader)
      */
     public NamedQuery setCharacterStream(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
+        final Supplier<Reader> valueSupplier = repeatableStream(parameterName, value, length);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setCharacterStream(i + 1, value, length);
+                    setCharacterStream(i + 1, valueSupplier.get(), length);
                     cnt++;
                 }
             }
@@ -2420,17 +2550,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setCharacterStream(indexes.get(0), value, length);
+                    setCharacterStream(indexes.get(0), valueSupplier.get(), length);
                 } else if (indexes.size() == 2) {
-                    setCharacterStream(indexes.get(0), value, length);
-                    setCharacterStream(indexes.get(1), value, length);
+                    setCharacterStream(indexes.get(0), valueSupplier.get(), length);
+                    setCharacterStream(indexes.get(1), valueSupplier.get(), length);
                 } else if (indexes.size() == 3) {
-                    setCharacterStream(indexes.get(0), value, length);
-                    setCharacterStream(indexes.get(1), value, length);
-                    setCharacterStream(indexes.get(2), value, length);
+                    setCharacterStream(indexes.get(0), valueSupplier.get(), length);
+                    setCharacterStream(indexes.get(1), valueSupplier.get(), length);
+                    setCharacterStream(indexes.get(2), valueSupplier.get(), length);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setCharacterStream(indexes.get(i), value, length);
+                        setCharacterStream(indexes.get(i), valueSupplier.get(), length);
                     }
                 }
             }
@@ -2454,21 +2584,27 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the Reader containing national character data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      * @see #setNCharacterStream(String, Reader, long)
      */
     public NamedQuery setNCharacterStream(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
+        final Supplier<Reader> valueSupplier = repeatableStream(parameterName, value, Long.MAX_VALUE);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setNCharacterStream(i + 1, value);
+                    setNCharacterStream(i + 1, valueSupplier.get());
                     cnt++;
                 }
             }
@@ -2487,17 +2623,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setNCharacterStream(indexes.get(0), value);
+                    setNCharacterStream(indexes.get(0), valueSupplier.get());
                 } else if (indexes.size() == 2) {
-                    setNCharacterStream(indexes.get(0), value);
-                    setNCharacterStream(indexes.get(1), value);
+                    setNCharacterStream(indexes.get(0), valueSupplier.get());
+                    setNCharacterStream(indexes.get(1), valueSupplier.get());
                 } else if (indexes.size() == 3) {
-                    setNCharacterStream(indexes.get(0), value);
-                    setNCharacterStream(indexes.get(1), value);
-                    setNCharacterStream(indexes.get(2), value);
+                    setNCharacterStream(indexes.get(0), valueSupplier.get());
+                    setNCharacterStream(indexes.get(1), valueSupplier.get());
+                    setNCharacterStream(indexes.get(2), valueSupplier.get());
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setNCharacterStream(indexes.get(i), value);
+                        setNCharacterStream(indexes.get(i), valueSupplier.get());
                     }
                 }
             }
@@ -2521,22 +2657,28 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * query.setNCharacterStream("description", value, unicodeContent.length()).update();
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the Reader containing national character data, or {@code null} to set SQL {@code NULL}
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query or length is negative
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      * @see #setNCharacterStream(String, Reader)
      */
     public NamedQuery setNCharacterStream(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
+        final Supplier<Reader> valueSupplier = repeatableStream(parameterName, value, length);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setNCharacterStream(i + 1, value, length);
+                    setNCharacterStream(i + 1, valueSupplier.get(), length);
                     cnt++;
                 }
             }
@@ -2555,17 +2697,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setNCharacterStream(indexes.get(0), value, length);
+                    setNCharacterStream(indexes.get(0), valueSupplier.get(), length);
                 } else if (indexes.size() == 2) {
-                    setNCharacterStream(indexes.get(0), value, length);
-                    setNCharacterStream(indexes.get(1), value, length);
+                    setNCharacterStream(indexes.get(0), valueSupplier.get(), length);
+                    setNCharacterStream(indexes.get(1), valueSupplier.get(), length);
                 } else if (indexes.size() == 3) {
-                    setNCharacterStream(indexes.get(0), value, length);
-                    setNCharacterStream(indexes.get(1), value, length);
-                    setNCharacterStream(indexes.get(2), value, length);
+                    setNCharacterStream(indexes.get(0), valueSupplier.get(), length);
+                    setNCharacterStream(indexes.get(1), valueSupplier.get(), length);
+                    setNCharacterStream(indexes.get(2), valueSupplier.get(), length);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setNCharacterStream(indexes.get(i), value, length);
+                        setNCharacterStream(indexes.get(i), valueSupplier.get(), length);
                     }
                 }
             }
@@ -2671,20 +2813,26 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the InputStream containing the BLOB data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      */
     public NamedQuery setBlob(final String parameterName, final InputStream value) throws IllegalArgumentException, SQLException {
+        final Supplier<InputStream> valueSupplier = repeatableStream(parameterName, value, Long.MAX_VALUE);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setBlob(i + 1, value);
+                    setBlob(i + 1, valueSupplier.get());
                     cnt++;
                 }
             }
@@ -2703,17 +2851,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setBlob(indexes.get(0), value);
+                    setBlob(indexes.get(0), valueSupplier.get());
                 } else if (indexes.size() == 2) {
-                    setBlob(indexes.get(0), value);
-                    setBlob(indexes.get(1), value);
+                    setBlob(indexes.get(0), valueSupplier.get());
+                    setBlob(indexes.get(1), valueSupplier.get());
                 } else if (indexes.size() == 3) {
-                    setBlob(indexes.get(0), value);
-                    setBlob(indexes.get(1), value);
-                    setBlob(indexes.get(2), value);
+                    setBlob(indexes.get(0), valueSupplier.get());
+                    setBlob(indexes.get(1), valueSupplier.get());
+                    setBlob(indexes.get(2), valueSupplier.get());
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setBlob(indexes.get(i), value);
+                        setBlob(indexes.get(i), valueSupplier.get());
                     }
                 }
             }
@@ -2738,21 +2886,27 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the InputStream containing the BLOB data, or {@code null} to set SQL {@code NULL}
      * @param length the number of bytes to read from the stream
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query or length is negative
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      */
     public NamedQuery setBlob(final String parameterName, final InputStream value, final long length) throws IllegalArgumentException, SQLException {
+        final Supplier<InputStream> valueSupplier = repeatableStream(parameterName, value, length);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setBlob(i + 1, value, length);
+                    setBlob(i + 1, valueSupplier.get(), length);
                     cnt++;
                 }
             }
@@ -2771,17 +2925,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setBlob(indexes.get(0), value, length);
+                    setBlob(indexes.get(0), valueSupplier.get(), length);
                 } else if (indexes.size() == 2) {
-                    setBlob(indexes.get(0), value, length);
-                    setBlob(indexes.get(1), value, length);
+                    setBlob(indexes.get(0), valueSupplier.get(), length);
+                    setBlob(indexes.get(1), valueSupplier.get(), length);
                 } else if (indexes.size() == 3) {
-                    setBlob(indexes.get(0), value, length);
-                    setBlob(indexes.get(1), value, length);
-                    setBlob(indexes.get(2), value, length);
+                    setBlob(indexes.get(0), valueSupplier.get(), length);
+                    setBlob(indexes.get(1), valueSupplier.get(), length);
+                    setBlob(indexes.get(2), valueSupplier.get(), length);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setBlob(indexes.get(i), value, length);
+                        setBlob(indexes.get(i), valueSupplier.get(), length);
                     }
                 }
             }
@@ -2876,9 +3030,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets a CLOB (Character Large Object) parameter using a Reader for the specified parameter name.
      * The JDBC driver will read data from the Reader as needed until end-of-file is reached.
      *
-     * <p>This method is useful for setting large text data without loading it entirely into memory.
-     * If the parameter name appears multiple times in the query, the same {@code Reader} is passed to every
-     * occurrence; since it can typically be read only once, later occurrences may receive no data.
+     * <p>When the name appears once, this method passes the reader directly to the driver without
+     * loading its data into memory. Repeated names require the buffering described below.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2887,20 +3040,26 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the Reader object containing the CLOB data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      */
     public NamedQuery setClob(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
+        final Supplier<Reader> valueSupplier = repeatableStream(parameterName, value, Long.MAX_VALUE);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setClob(i + 1, value);
+                    setClob(i + 1, valueSupplier.get());
                     cnt++;
                 }
             }
@@ -2919,17 +3078,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setClob(indexes.get(0), value);
+                    setClob(indexes.get(0), valueSupplier.get());
                 } else if (indexes.size() == 2) {
-                    setClob(indexes.get(0), value);
-                    setClob(indexes.get(1), value);
+                    setClob(indexes.get(0), valueSupplier.get());
+                    setClob(indexes.get(1), valueSupplier.get());
                 } else if (indexes.size() == 3) {
-                    setClob(indexes.get(0), value);
-                    setClob(indexes.get(1), value);
-                    setClob(indexes.get(2), value);
+                    setClob(indexes.get(0), valueSupplier.get());
+                    setClob(indexes.get(1), valueSupplier.get());
+                    setClob(indexes.get(2), valueSupplier.get());
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setClob(indexes.get(i), value);
+                        setClob(indexes.get(i), valueSupplier.get());
                     }
                 }
             }
@@ -2943,30 +3102,34 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read exactly 'length' characters from the Reader.
      *
      * <p>This method provides more control over the amount of data read from the Reader compared to
-     * {@link #setClob(String, Reader)}. If the parameter name appears multiple times in the query,
-     * the same {@code Reader} is passed to every occurrence; since it can typically be read only once,
-     * later occurrences may receive no data.
+     * {@link #setClob(String, Reader)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setClob("description", new StringReader(longText), longText.length()).update();
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the Reader object containing the CLOB data, or {@code null} to set SQL {@code NULL}
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if binding the reader at a position mapped to {@code parameterName} fails, for example because the statement is closed or
-     *         {@code length} is less than zero
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query or length is negative
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if binding the reader at a position mapped to {@code parameterName} fails,
+     *         or if buffering a repeated reader fails
      */
     public NamedQuery setClob(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
+        final Supplier<Reader> valueSupplier = repeatableStream(parameterName, value, length);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setClob(i + 1, value, length);
+                    setClob(i + 1, valueSupplier.get(), length);
                     cnt++;
                 }
             }
@@ -2985,17 +3148,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setClob(indexes.get(0), value, length);
+                    setClob(indexes.get(0), valueSupplier.get(), length);
                 } else if (indexes.size() == 2) {
-                    setClob(indexes.get(0), value, length);
-                    setClob(indexes.get(1), value, length);
+                    setClob(indexes.get(0), valueSupplier.get(), length);
+                    setClob(indexes.get(1), valueSupplier.get(), length);
                 } else if (indexes.size() == 3) {
-                    setClob(indexes.get(0), value, length);
-                    setClob(indexes.get(1), value, length);
-                    setClob(indexes.get(2), value, length);
+                    setClob(indexes.get(0), valueSupplier.get(), length);
+                    setClob(indexes.get(1), valueSupplier.get(), length);
+                    setClob(indexes.get(2), valueSupplier.get(), length);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setClob(indexes.get(i), value, length);
+                        setClob(indexes.get(i), valueSupplier.get(), length);
                     }
                 }
             }
@@ -3076,9 +3239,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * Sets an NCLOB (National Character Large Object) parameter using a Reader for the specified parameter name.
      * The JDBC driver will read data from the Reader as needed until end-of-file is reached.
      *
-     * <p>This method is useful for setting large Unicode text data without loading it entirely into memory.
-     * If the parameter name appears multiple times in the query, the same {@code Reader} is passed to every
-     * occurrence; since it can typically be read only once, later occurrences may receive no data.
+     * <p>When the name appears once, this method passes the reader directly to the driver without
+     * loading its data into memory. Repeated names require the buffering described below.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3087,20 +3249,26 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * }
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the Reader object containing the NCLOB data, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; also if buffering a repeated stream or reader fails
      */
     public NamedQuery setNClob(final String parameterName, final Reader value) throws IllegalArgumentException, SQLException {
+        final Supplier<Reader> valueSupplier = repeatableStream(parameterName, value, Long.MAX_VALUE);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setNClob(i + 1, value);
+                    setNClob(i + 1, valueSupplier.get());
                     cnt++;
                 }
             }
@@ -3119,17 +3287,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setNClob(indexes.get(0), value);
+                    setNClob(indexes.get(0), valueSupplier.get());
                 } else if (indexes.size() == 2) {
-                    setNClob(indexes.get(0), value);
-                    setNClob(indexes.get(1), value);
+                    setNClob(indexes.get(0), valueSupplier.get());
+                    setNClob(indexes.get(1), valueSupplier.get());
                 } else if (indexes.size() == 3) {
-                    setNClob(indexes.get(0), value);
-                    setNClob(indexes.get(1), value);
-                    setNClob(indexes.get(2), value);
+                    setNClob(indexes.get(0), valueSupplier.get());
+                    setNClob(indexes.get(1), valueSupplier.get());
+                    setNClob(indexes.get(2), valueSupplier.get());
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setNClob(indexes.get(i), value);
+                        setNClob(indexes.get(i), valueSupplier.get());
                     }
                 }
             }
@@ -3143,8 +3311,6 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * The JDBC driver will read exactly 'length' characters from the Reader.
      *
      * <p>This method provides more control over the amount of Unicode data read from the Reader.
-     * If the parameter name appears multiple times in the query, the same {@code Reader} is passed to every
-     * occurrence; since it can typically be read only once, later occurrences may receive no data.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3152,21 +3318,27 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * query.setNClob("description", new StringReader(unicodeText), unicodeText.length()).update();
      * }</pre>
      *
+     * <p>Repeated occurrences of this name are buffered in memory and receive independent copies.
+     * A single occurrence keeps the supplied stream or reader unchanged for the driver.</p>
+     *
      * @param parameterName the name of the parameter to be set (without the ':' prefix)
      * @param value the Reader object containing the NCLOB data, or {@code null} to set SQL {@code NULL}
      * @param length the number of characters in the stream
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if binding the reader at a position mapped to {@code parameterName} fails, for example because the statement is closed or
-     *         {@code length} is less than zero
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query or length is negative
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if binding the reader at a position mapped to {@code parameterName} fails,
+     *         or if buffering a repeated reader fails
      */
     public NamedQuery setNClob(final String parameterName, final Reader value, final long length) throws IllegalArgumentException, SQLException {
+        final Supplier<Reader> valueSupplier = repeatableStream(parameterName, value, length);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setNClob(i + 1, value, length);
+                    setNClob(i + 1, valueSupplier.get(), length);
                     cnt++;
                 }
             }
@@ -3185,17 +3357,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setNClob(indexes.get(0), value, length);
+                    setNClob(indexes.get(0), valueSupplier.get(), length);
                 } else if (indexes.size() == 2) {
-                    setNClob(indexes.get(0), value, length);
-                    setNClob(indexes.get(1), value, length);
+                    setNClob(indexes.get(0), valueSupplier.get(), length);
+                    setNClob(indexes.get(1), valueSupplier.get(), length);
                 } else if (indexes.size() == 3) {
-                    setNClob(indexes.get(0), value, length);
-                    setNClob(indexes.get(1), value, length);
-                    setNClob(indexes.get(2), value, length);
+                    setNClob(indexes.get(0), valueSupplier.get(), length);
+                    setNClob(indexes.get(1), valueSupplier.get(), length);
+                    setNClob(indexes.get(2), valueSupplier.get(), length);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setNClob(indexes.get(i), value, length);
+                        setNClob(indexes.get(i), valueSupplier.get(), length);
                     }
                 }
             }
@@ -3558,10 +3730,16 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the object containing the parameter value, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query
-     * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the {@code value} cannot be converted to a SQL type
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if a repeated stream or reader cannot be buffered, or binding the {@code value} at a position mapped to
+     *         {@code parameterName} fails, for example because the statement is closed or the {@code value} cannot be converted to a SQL type
      */
     public NamedQuery setObject(final String parameterName, final Object value) throws IllegalArgumentException, SQLException {
+        if (value instanceof InputStream || value instanceof Reader) {
+            checkParameterName(parameterName);
+            return setObject(parameterName, value, Type.of(value.getClass()));
+        }
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
@@ -3626,20 +3804,23 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query,
      *                                  or {@code sqlType} is not a standard {@code java.sql.Types} constant
-     * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the {@code value} cannot be converted to {@code sqlType}
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if a repeated stream or reader cannot be buffered, or binding the {@code value} at a position mapped to
+     *         {@code parameterName} fails, for example because the statement is closed or the {@code value} cannot be converted to {@code sqlType}
      * @see java.sql.Types
      */
     public NamedQuery setObject(final String parameterName, final Object value, final int sqlType) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
         checkSqlType(sqlType);
 
+        final Supplier<?> valueSupplier = repeatableParameter(parameterName, value, Long.MAX_VALUE);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setObject(i + 1, value, sqlType);
+                    setObject(i + 1, valueSupplier.get(), sqlType);
                     cnt++;
                 }
             }
@@ -3658,17 +3839,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setObject(indexes.get(0), value, sqlType);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType);
                 } else if (indexes.size() == 2) {
-                    setObject(indexes.get(0), value, sqlType);
-                    setObject(indexes.get(1), value, sqlType);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType);
+                    setObject(indexes.get(1), valueSupplier.get(), sqlType);
                 } else if (indexes.size() == 3) {
-                    setObject(indexes.get(0), value, sqlType);
-                    setObject(indexes.get(1), value, sqlType);
-                    setObject(indexes.get(2), value, sqlType);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType);
+                    setObject(indexes.get(1), valueSupplier.get(), sqlType);
+                    setObject(indexes.get(2), valueSupplier.get(), sqlType);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setObject(indexes.get(i), value, sqlType);
+                        setObject(indexes.get(i), valueSupplier.get(), sqlType);
                     }
                 }
             }
@@ -3705,9 +3886,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query,
-     *                                  or {@code sqlType} is not a standard {@code java.sql.Types} constant
-     * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the {@code value} cannot be converted to {@code sqlType}
+     *                                  {@code sqlType} is not a standard {@code java.sql.Types} constant, or the value is a stream or reader
+     *                                  and {@code scaleOrLength} is negative
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if a repeated stream or reader cannot be buffered, or binding the {@code value} at a position mapped to
+     *         {@code parameterName} fails, for example because the statement is closed or the {@code value} cannot be converted to {@code sqlType}
      * @see java.sql.Types
      */
     public NamedQuery setObject(final String parameterName, final Object value, final int sqlType, final int scaleOrLength)
@@ -3715,12 +3898,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         checkParameterName(parameterName);
         checkSqlType(sqlType);
 
+        final Supplier<?> valueSupplier = repeatableParameter(parameterName, value, scaleOrLength);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setObject(i + 1, value, sqlType, scaleOrLength);
+                    setObject(i + 1, valueSupplier.get(), sqlType, scaleOrLength);
                     cnt++;
                 }
             }
@@ -3739,17 +3924,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setObject(indexes.get(0), value, sqlType, scaleOrLength);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType, scaleOrLength);
                 } else if (indexes.size() == 2) {
-                    setObject(indexes.get(0), value, sqlType, scaleOrLength);
-                    setObject(indexes.get(1), value, sqlType, scaleOrLength);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType, scaleOrLength);
+                    setObject(indexes.get(1), valueSupplier.get(), sqlType, scaleOrLength);
                 } else if (indexes.size() == 3) {
-                    setObject(indexes.get(0), value, sqlType, scaleOrLength);
-                    setObject(indexes.get(1), value, sqlType, scaleOrLength);
-                    setObject(indexes.get(2), value, sqlType, scaleOrLength);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType, scaleOrLength);
+                    setObject(indexes.get(1), valueSupplier.get(), sqlType, scaleOrLength);
+                    setObject(indexes.get(2), valueSupplier.get(), sqlType, scaleOrLength);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setObject(indexes.get(i), value, sqlType, scaleOrLength);
+                        setObject(indexes.get(i), valueSupplier.get(), sqlType, scaleOrLength);
                     }
                 }
             }
@@ -3777,20 +3962,24 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param sqlType the SQLType to be used
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or {@code sqlType} is {@code null}
-     * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed, the {@code value} cannot be converted to {@code sqlType}, or the driver does not support the JDBC 4.2 {@code SQLType}
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if a repeated stream or reader cannot be buffered, or binding the {@code value} at a position mapped to
+     *         {@code parameterName} fails, for example because the statement is closed, the {@code value} cannot be converted to {@code sqlType},
+     *         or the driver does not support the JDBC 4.2 {@code SQLType}
      *         overload
      */
     public NamedQuery setObject(final String parameterName, final Object value, final SQLType sqlType) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
         checkArgNotNull(sqlType, cs.sqlType);
 
+        final Supplier<?> valueSupplier = repeatableParameter(parameterName, value, Long.MAX_VALUE);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setObject(i + 1, value, sqlType);
+                    setObject(i + 1, valueSupplier.get(), sqlType);
                     cnt++;
                 }
             }
@@ -3809,17 +3998,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setObject(indexes.get(0), value, sqlType);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType);
                 } else if (indexes.size() == 2) {
-                    setObject(indexes.get(0), value, sqlType);
-                    setObject(indexes.get(1), value, sqlType);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType);
+                    setObject(indexes.get(1), valueSupplier.get(), sqlType);
                 } else if (indexes.size() == 3) {
-                    setObject(indexes.get(0), value, sqlType);
-                    setObject(indexes.get(1), value, sqlType);
-                    setObject(indexes.get(2), value, sqlType);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType);
+                    setObject(indexes.get(1), valueSupplier.get(), sqlType);
+                    setObject(indexes.get(2), valueSupplier.get(), sqlType);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setObject(indexes.get(i), value, sqlType);
+                        setObject(indexes.get(i), valueSupplier.get(), sqlType);
                     }
                 }
             }
@@ -3852,9 +4041,12 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param scaleOrLength for numeric types, the number of digits after the decimal point;
      *        for {@link java.io.InputStream}/{@link java.io.Reader}, the stream length; otherwise ignored
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or {@code sqlType} is {@code null}
-     * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed, the {@code value} cannot be converted to {@code sqlType}, or the driver does not support the JDBC 4.2 {@code SQLType}
+     * @throws IllegalArgumentException if the parameter name is not found in the SQL query, {@code sqlType} is {@code null}, or the value is a
+     *         stream or reader and {@code scaleOrLength} is negative
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if a repeated stream or reader cannot be buffered, or binding the {@code value} at a position mapped to
+     *         {@code parameterName} fails, for example because the statement is closed, the {@code value} cannot be converted to {@code sqlType},
+     *         or the driver does not support the JDBC 4.2 {@code SQLType}
      *         overload
      */
     public NamedQuery setObject(final String parameterName, final Object value, final SQLType sqlType, final int scaleOrLength)
@@ -3862,12 +4054,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         checkParameterName(parameterName);
         checkArgNotNull(sqlType, cs.sqlType);
 
+        final Supplier<?> valueSupplier = repeatableParameter(parameterName, value, scaleOrLength);
+
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    setObject(i + 1, value, sqlType, scaleOrLength);
+                    setObject(i + 1, valueSupplier.get(), sqlType, scaleOrLength);
                     cnt++;
                 }
             }
@@ -3886,17 +4080,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    setObject(indexes.get(0), value, sqlType, scaleOrLength);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType, scaleOrLength);
                 } else if (indexes.size() == 2) {
-                    setObject(indexes.get(0), value, sqlType, scaleOrLength);
-                    setObject(indexes.get(1), value, sqlType, scaleOrLength);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType, scaleOrLength);
+                    setObject(indexes.get(1), valueSupplier.get(), sqlType, scaleOrLength);
                 } else if (indexes.size() == 3) {
-                    setObject(indexes.get(0), value, sqlType, scaleOrLength);
-                    setObject(indexes.get(1), value, sqlType, scaleOrLength);
-                    setObject(indexes.get(2), value, sqlType, scaleOrLength);
+                    setObject(indexes.get(0), valueSupplier.get(), sqlType, scaleOrLength);
+                    setObject(indexes.get(1), valueSupplier.get(), sqlType, scaleOrLength);
+                    setObject(indexes.get(2), valueSupplier.get(), sqlType, scaleOrLength);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        setObject(indexes.get(i), value, sqlType, scaleOrLength);
+                        setObject(indexes.get(i), valueSupplier.get(), sqlType, scaleOrLength);
                     }
                 }
             }
@@ -3931,19 +4125,23 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param type the Type handler to use for setting the parameter. Must not be {@code null}.
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or {@code type} is {@code null}
-     * @throws SQLException if {@code type} throws {@code SQLException} while binding the {@code value} at a position mapped to {@code
-     *         parameterName}, for example because the statement is closed
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if a repeated stream or reader handled by a built-in stream type cannot be buffered, or if {@code type} throws
+     *         {@code SQLException} while binding the {@code value} at a position mapped to {@code parameterName}, for example because the
+     *         statement is closed
      */
     public <T> NamedQuery setObject(final String parameterName, final T value, final Type<T> type) throws IllegalArgumentException, SQLException {
         checkParameterName(parameterName);
         checkArgNotNull(type, cs.type);
+
+        final Supplier<T> valueSupplier = repeatableParameter(parameterName, value, type);
 
         if (parameterCount < MIN_PARAMETER_COUNT_FOR_INDEX_BY_MAP) {
             int cnt = 0;
 
             for (int i = 0; i < parameterCount; i++) {
                 if (parameterNames.get(i).equals(parameterName)) {
-                    type.set(stmt, i + 1, value);
+                    type.set(stmt, i + 1, valueSupplier.get());
                     cnt++;
                 }
             }
@@ -3962,17 +4160,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 throw closeAfterNamedParameterNotFound(parameterName);
             } else {
                 if (indexes.size() == 1) {
-                    type.set(stmt, indexes.get(0), value);
+                    type.set(stmt, indexes.get(0), valueSupplier.get());
                 } else if (indexes.size() == 2) {
-                    type.set(stmt, indexes.get(0), value);
-                    type.set(stmt, indexes.get(1), value);
+                    type.set(stmt, indexes.get(0), valueSupplier.get());
+                    type.set(stmt, indexes.get(1), valueSupplier.get());
                 } else if (indexes.size() == 3) {
-                    type.set(stmt, indexes.get(0), value);
-                    type.set(stmt, indexes.get(1), value);
-                    type.set(stmt, indexes.get(2), value);
+                    type.set(stmt, indexes.get(0), valueSupplier.get());
+                    type.set(stmt, indexes.get(1), valueSupplier.get());
+                    type.set(stmt, indexes.get(2), valueSupplier.get());
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        type.set(stmt, indexes.get(i), value);
+                        type.set(stmt, indexes.get(i), valueSupplier.get());
                     }
                 }
             }
@@ -4005,20 +4203,24 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameters a map containing parameter names (without the ':' prefix) as keys and their values
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameters} is {@code null}
-     * @throws SQLException if binding one of the mapped values to the underlying {@code PreparedStatement} fails; this query is closed before
-     *         the exception is rethrown
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if buffering a repeated stream or reader, or binding one of the mapped values to the underlying
+     *         {@code PreparedStatement}, fails; this query is closed before the exception is rethrown
      */
     public NamedQuery setParameters(final Map<String, ?> parameters) throws IllegalArgumentException, SQLException {
         checkArgNotNull(parameters, cs.parameters);
 
         try {
+            Map<String, Supplier<?>> repeatedValues = null;
+
             for (int i = 0; i < parameterCount; i++) {
                 final String paramName = parameterNames.get(i);
 
                 if (parameters.containsKey(paramName)) {
                     // Bind each physical placeholder once. Calling the name-based overload here
                     // rebinds every occurrence on every encounter, making repeated names O(n^2).
-                    setObject(i + 1, parameters.get(paramName));
+                    final Object value = parameters.get(paramName);
+                    repeatedValues = setParameter(i + 1, paramName, value, value == null ? null : Type.of(value.getClass()), repeatedValues);
                 }
             }
         } catch (final SQLException | RuntimeException | Error e) {
@@ -4036,8 +4238,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param entityId the EntityId containing parameter values; may be {@code null} only when this query has no parameters
      * @throws IllegalArgumentException if {@code entityId} is {@code null} and this query contains at least one parameter;
      *         this query is closed before the exception is thrown
-     * @throws SQLException if binding one of the {@code entityId} values to the underlying {@code PreparedStatement} fails; this query is
-     *         closed before the exception is rethrown
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if buffering a repeated stream or reader, or binding one of the {@code entityId} values to the underlying
+     *         {@code PreparedStatement}, fails; this query is closed before the exception is rethrown
      */
     void setParameters(final EntityId entityId) throws IllegalArgumentException, SQLException {
         if (parameterCount > 0) {
@@ -4045,11 +4248,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         }
 
         try {
+            Map<String, Supplier<?>> repeatedValues = null;
+
             for (int i = 0; i < parameterCount; i++) {
                 final String paramName = parameterNames.get(i);
 
                 if (entityId.containsKey(paramName)) {
-                    setObject(i + 1, entityId.get(paramName));
+                    final Object value = entityId.get(paramName);
+                    repeatedValues = setParameter(i + 1, paramName, value, value == null ? null : Type.of(value.getClass()), repeatedValues);
                 }
             }
         } catch (final SQLException | RuntimeException | Error e) {
@@ -4100,8 +4306,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         sysDate}, which are skipped when no matching property exists, so they keep any value already bound to them or otherwise stay
      *         unbound — bind them separately); or if it is none of a bean,
      *         {@code Map}, {@code Collection}, reference array or {@code EntityId} and the SQL does not have exactly one parameter placeholder
-     * @throws SQLException if binding one of the parameter values to the underlying {@code PreparedStatement} fails, for example because a collection
-     *         or array supplies more values than the SQL has parameter placeholders
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if buffering a repeated stream or reader, or binding one of the parameter values to the underlying
+     *         {@code PreparedStatement}, fails, for example because a collection or array supplies more values than the SQL has parameter placeholders
      * @see JdbcUtil#getNamedParameters(String)
      */
     @SuppressWarnings("rawtypes")
@@ -4126,11 +4333,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     }
                 }
 
+                Map<String, Supplier<?>> repeatedValues = null;
+
                 for (int i = 0; i < parameterCount; i++) {
                     final PropInfo propInfo = propInfos[i];
 
                     if (propInfo != null) {
-                        propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(parameters));
+                        repeatedValues = setBeanParameter(i + 1, parameterNames.get(i), parameters, propInfo, repeatedValues);
                     }
                 }
             } catch (final SQLException | RuntimeException | Error e) {
@@ -4205,7 +4414,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if {@code entity} is {@code null} or is not a bean/record class, if {@code parameterNamesToSet} is {@code
      *         null} or contains a {@code null} element, if a listed property does not exist on the {@code entity}, or if a listed name is not a
      *         parameter in the SQL query; all listed names are checked before any property value is read or bound
-     * @throws SQLException if binding one of the property values to the underlying {@code PreparedStatement} fails
+     * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
+     * @throws SQLException if buffering a repeated stream or reader, or binding one of the property values to the underlying
+     *         {@code PreparedStatement}, fails
      * @see Beans#getPropNameList(Class)
      * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#getNamedParameters(String)
@@ -4242,24 +4453,41 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 }
             }
 
+            Map<String, Supplier<?>> repeatedValues = null;
+            Set<String> boundStreamNames = null;
+
             for (int parameter = 0; parameter < names.size(); parameter++) {
+                final String parameterName = names.get(parameter);
+                if (boundStreamNames != null && boundStreamNames.contains(parameterName)) {
+                    // Duplicate selections must not consume the same stream a second time,
+                    // including when the SQL contains only one occurrence of the name.
+                    continue;
+                }
+
                 final PropInfo propInfo = propInfos[parameter];
                 final Object propValue = propInfo.getPropValue(entity);
                 final Type<Object> dbType = propInfo.dbType;
                 final IntList indexes = parameterIndexes[parameter];
 
+                if (JdbcStreamUtil.usesBuiltInBinding(propValue, dbType)) {
+                    if (boundStreamNames == null) {
+                        boundStreamNames = N.newHashSet();
+                    }
+                    boundStreamNames.add(parameterName);
+                }
+
                 if (indexes.size() == 1) {
-                    dbType.set(stmt, indexes.get(0), propValue);
+                    repeatedValues = setParameter(indexes.get(0), parameterName, propValue, dbType, repeatedValues);
                 } else if (indexes.size() == 2) {
-                    dbType.set(stmt, indexes.get(0), propValue);
-                    dbType.set(stmt, indexes.get(1), propValue);
+                    repeatedValues = setParameter(indexes.get(0), parameterName, propValue, dbType, repeatedValues);
+                    repeatedValues = setParameter(indexes.get(1), parameterName, propValue, dbType, repeatedValues);
                 } else if (indexes.size() == 3) {
-                    dbType.set(stmt, indexes.get(0), propValue);
-                    dbType.set(stmt, indexes.get(1), propValue);
-                    dbType.set(stmt, indexes.get(2), propValue);
+                    repeatedValues = setParameter(indexes.get(0), parameterName, propValue, dbType, repeatedValues);
+                    repeatedValues = setParameter(indexes.get(1), parameterName, propValue, dbType, repeatedValues);
+                    repeatedValues = setParameter(indexes.get(2), parameterName, propValue, dbType, repeatedValues);
                 } else {
                     for (int i = 0, size = indexes.size(); i < size; i++) {
-                        dbType.set(stmt, indexes.get(i), propValue);
+                        repeatedValues = setParameter(indexes.get(i), parameterName, propValue, dbType, repeatedValues);
                     }
                 }
             }
@@ -4372,7 +4600,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
      *         lacks a property matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
-     * @throws SQLException if clearing or binding parameters on the underlying {@code PreparedStatement}, or adding a row to its batch, fails
+     * @throws SQLException if buffering a repeated stream or reader, clearing or binding parameters on the underlying
+     *         {@code PreparedStatement}, or adding a row to its batch, fails
      * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId},
      *         and a later non-null row is not of the same kind; or if the first row is a bean and a later
      *         non-null row is not an instance of the first row's class
@@ -4397,14 +4626,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Adds a batch of parameters from an iterator for batch execution.
      *
-     * <p>This method allows streaming of parameter sets for batch operations without loading
-     * all data into memory at once. Each element provided by the iterator should be a parameter
+     * <p>This method consumes parameter sets from an iterator without requiring a collection of
+     * parameter objects. Each element provided by the iterator should be a parameter
      * object compatible with {@link #setParameters(Object)}, such as:
      * <ul>
      * <li>Bean objects with properties matching parameter names</li>
      * <li>Maps with keys matching parameter names</li>
      * <li>{@code Object[]} arrays or Collections for positional parameters</li>
      * </ul>
+     *
+     * <p>Repeated stream-valued names are buffered separately for each row as described in the class documentation.
+     * The driver may retain those buffers with the queued bindings until the batch executes.
      *
      * <p>The runtime type of the first element (when it is non-null) determines how the remaining non-null
      * elements are interpreted, so they should have the same parameter shape. If the iterator is empty,
@@ -4456,7 +4688,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
      *         lacks a property matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
-     * @throws SQLException if clearing or binding parameters on the underlying {@code PreparedStatement}, or adding a row to its batch, fails
+     * @throws SQLException if buffering a repeated stream or reader, clearing or binding parameters on the underlying
+     *         {@code PreparedStatement}, or adding a row to its batch, fails
      * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId},
      *         and a later non-null row is not of the same kind; or if the first row is a bean and a later
      *         non-null row is not an instance of the first row's class
@@ -4511,12 +4744,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                     }
 
                     PropInfo propInfo = null;
+                    Map<String, Supplier<?>> repeatedValues = null;
 
                     for (int i = 0; i < parameterCount; i++) {
                         propInfo = propInfos[i];
 
                         if (propInfo != null) {
-                            propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(first));
+                            repeatedValues = setBeanParameter(i + 1, parameterNames.get(i), first, propInfo, repeatedValues);
                         }
                     }
 
@@ -4531,11 +4765,14 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                             continue;
                         }
 
+                        // A replay buffer belongs to one batch row; a later row may supply a new stream.
+                        repeatedValues = null;
+
                         for (int i = 0; i < parameterCount; i++) {
                             propInfo = propInfos[i];
 
                             if (propInfo != null) {
-                                propInfo.dbType.set(stmt, i + 1, propInfo.getPropValue(params));
+                                repeatedValues = setBeanParameter(i + 1, parameterNames.get(i), params, propInfo, repeatedValues);
                             }
                         }
 

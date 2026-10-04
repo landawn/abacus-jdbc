@@ -596,38 +596,38 @@ public final class DBLock implements AutoCloseable {
             removeExpiredLock(target);
             now = Dates.currentTimestamp();
 
+            boolean acquired = false;
+
             try {
-                if (executeLockUpdate(lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0) {
-                    // Linearize successful acquisition with close(), which synchronizes on the same
-                    // monitor. A plain post-insert volatile check still allowed close() to run after
-                    // that check but before this method returned, so lock() could report success for
-                    // a row close() had already deleted.
-                    synchronized (this) {
-                        if (isClosed) {
-                            try {
-                                executeLockUpdate(unlockSQL, target, code);
-                            } catch (final Exception cleanupFailure) {
-                                logger.warn(cleanupFailure, "Failed to remove DB lock acquired concurrently with close(target={})", target);
-                            }
-
-                            throw new IllegalStateException("This DBLock has been closed");
-                        }
-
-                        targetCodePool.put(target, new LockInfo(code, liveTime));
-
-                        logger.info("Acquired DB lock(target={}, liveTime={}, attempts={})", target, liveTime, attempts + 1);
-
-                        return code;
-                    }
-                }
-            } catch (final IllegalStateException e) {
-                // The closed-instance check above must not be swallowed by the retry loop.
-                throw e;
+                acquired = executeLockUpdate(lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0;
             } catch (final Exception e) {
                 if (logger.isDebugEnabled()) {
                     logger.debug(e, "Failed to acquire DB lock(target={}, attempt={})", target, attempts + 1);
                 }
                 lastException = e;
+            }
+
+            if (acquired) {
+                // Keep our closed-instance exception outside the retry catch: an IllegalStateException
+                // from a driver or connection pool is an acquisition failure and must still be retried.
+                // Synchronizing with close() also keeps registration and release of the row atomic.
+                synchronized (this) {
+                    if (isClosed) {
+                        try {
+                            executeLockUpdate(unlockSQL, target, code);
+                        } catch (final Exception cleanupFailure) {
+                            logger.warn(cleanupFailure, "Failed to remove DB lock acquired concurrently with close(target={})", target);
+                        }
+
+                        throw new IllegalStateException("This DBLock has been closed");
+                    }
+
+                    targetCodePool.put(target, new LockInfo(code, liveTime));
+
+                    logger.info("Acquired DB lock(target={}, liveTime={}, attempts={})", target, liveTime, attempts + 1);
+
+                    return code;
+                }
             }
 
             boolean interruptedDuringSleep = false;

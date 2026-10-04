@@ -6467,13 +6467,13 @@ final class DaoImpl {
                     if (stmtParamLen == 1
                             && (Beans.isBeanClass(paramTypes[stmtParamIndexes[0]]) || Map.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]])
                                     || EntityId.class.isAssignableFrom(paramTypes[stmtParamIndexes[0]]) || Beans.isRecordClass(paramTypes[stmtParamIndexes[0]]))
-                            && !isNamedQuery) {
+                            && !isNamedQuery && !isProcedure) {
                         throw new UnsupportedOperationException(
                                 "A parameter of type Entity/Map/EntityId requires @Query with named parameters (:name syntax) in method: "
                                         + fullClassMethodName);
                     }
 
-                    if (isSingleParameter && stmtParamLen != 1) {
+                    if (isSingleParameter && stmtParamLen != 1 && !(isBatch && stmtParamLen == 2 && int.class.equals(paramTypes[stmtParamIndexes[1]]))) {
                         throw new UnsupportedOperationException(
                                 "Don't set 'collectionAsSingleParameter' to true if the count of statement/query parameters is not one in method: "
                                         + fullClassMethodName);

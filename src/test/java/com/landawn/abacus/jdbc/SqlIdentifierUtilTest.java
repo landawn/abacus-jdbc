@@ -18,11 +18,25 @@ public class SqlIdentifierUtilTest extends TestBase {
     private static final ProductInfo POSTGRES = ProductInfo.of("PostgreSQL", "16");
 
     @Test
-    public void testQuoteString_BacktickOnlyForMySqlFamily() {
+    public void testQuoteString_StandardAndMySqlFallbacks() {
         assertEquals("\"", SqlIdentifierUtil.quoteString(null));
         assertEquals("\"", SqlIdentifierUtil.quoteString(POSTGRES));
         assertEquals("`", SqlIdentifierUtil.quoteString(MYSQL));
         assertEquals("`", SqlIdentifierUtil.quoteString(MARIADB));
+    }
+
+    @Test
+    public void testQuoteString_NonAnsiDialectFallbacksAndBracketEscaping() {
+        for (final String product : java.util.List.of("Spark SQL", "Databricks", "Apache Hive", "Google BigQuery")) {
+            assertEquals("`", SqlIdentifierUtil.quoteString(ProductInfo.of(product, "1")));
+        }
+        for (final String product : java.util.List.of("Microsoft SQL Server", "Adaptive Server Enterprise", "SAP ASE", "ASE")) {
+            final ProductInfo info = ProductInfo.of(product, "1");
+            assertEquals("[", SqlIdentifierUtil.quoteString(info));
+            assertEquals("[a]]b]", SqlIdentifierUtil.renderColumnName("\"a]b\"", info));
+            assertEquals("[a[b]", SqlIdentifierUtil.renderColumnName("\"a[b\"", info));
+            assertEquals("[s].[a]]b]", SqlIdentifierUtil.renderTableName("\"s\".\"a]b\"", info));
+        }
     }
 
     @Test
