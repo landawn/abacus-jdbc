@@ -19,6 +19,7 @@ import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -243,6 +244,61 @@ class JdbcUtilBatchTest extends JdbcUtilTestSupport {
         assertEquals(1, thrown.getSuppressed().length);
         assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
         assertSame(rollbackFailure, thrown.getSuppressed()[0].getCause());
+    }
+
+    @ParameterizedTest(name = "largeBatch={0}, commitFailure={1}, restorationFailure={2}")
+    @CsvSource({ "false,false,false", "false,false,true", "false,true,false", "false,true,true", "true,false,false", "true,false,true", "true,true,false",
+            "true,true,true" })
+    void failedBatchCompletionRollsBackAndPreservesRestorationFailure(final boolean largeBatch, final boolean failCommit, final boolean failRestoration)
+            throws SQLException {
+        final SQLException primary = new SQLException(failCommit ? "commit failed" : "batch failed");
+        final SQLException restoration = new SQLException("auto-commit restoration failed");
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        stubBatchCounts(largeBatch, 1, 1);
+        if (failCommit) {
+            doThrow(primary).when(mockConnection).commit();
+        } else if (largeBatch) {
+            doThrow(primary).when(mockPreparedStatement).executeLargeBatch();
+        } else {
+            doThrow(primary).when(mockPreparedStatement).executeBatch();
+        }
+        if (failRestoration) {
+            doThrow(restoration).when(mockConnection).setAutoCommit(true);
+        }
+
+        assertSame(primary, assertThrows(SQLException.class, () -> executeConfiguredBatch(largeBatch, List.of(new Object[] { 1 }, new Object[] { 2 }))));
+        assertArrayEquals(failRestoration ? new Throwable[] { restoration } : new Throwable[0], primary.getSuppressed());
+        final org.mockito.InOrder order = org.mockito.Mockito.inOrder(mockConnection, mockPreparedStatement);
+        order.verify(mockConnection).setAutoCommit(false);
+        if (failCommit) {
+            order.verify(mockConnection).commit();
+        } else {
+            verify(mockConnection, never()).commit();
+        }
+        order.verify(mockConnection).rollback();
+        order.verify(mockConnection).setAutoCommit(true);
+        order.verify(mockPreparedStatement).close();
+        verify(mockConnection, never()).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void emptyBatchesDoNotTouchCallerConnection(final boolean largeBatch) throws SQLException {
+        assertEquals(0, executeConfiguredBatch(largeBatch, List.of()));
+        assertEquals(0, executeConfiguredBatch(largeBatch, null));
+        org.mockito.Mockito.verifyNoInteractions(mockConnection, mockPreparedStatement);
+    }
+
+    @Test
+    void largeBatchDefaultSizeOnCallerConnectionKeepsLongCountsAndConnection() throws SQLException {
+        final long count = (long) Integer.MAX_VALUE + 1;
+        when(mockPreparedStatement.executeLargeBatch()).thenReturn(new long[] { count });
+
+        assertEquals(count, JdbcUtil.executeLargeBatchUpdate(mockConnection, "UPDATE account SET status = ?", List.of(1)));
+        verify(mockPreparedStatement).close();
+        verify(mockConnection, never()).commit();
+        verify(mockConnection, never()).rollback();
+        verify(mockConnection, never()).close();
     }
 
     private void stubBatchCounts(final boolean largeBatch, final int... counts) throws SQLException {

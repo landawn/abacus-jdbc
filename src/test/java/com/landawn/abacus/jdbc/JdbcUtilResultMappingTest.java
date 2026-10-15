@@ -34,6 +34,9 @@ import java.util.Set;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.ReadOnly;
@@ -42,8 +45,11 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.RowFilter;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
+import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.util.Dataset;
+import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.ImmutableMap;
+import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Tuple.Tuple3;
 
 class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
@@ -575,6 +581,73 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         assertTrue(JdbcUtil.isDefaultIdPropValue(BigInteger.ZERO));
         assertFalse(JdbcUtil.isDefaultIdPropValue(new BigDecimal("1E-400")));
         assertFalse(JdbcUtil.isDefaultIdPropValue(BigInteger.ONE));
+    }
+
+    @ParameterizedTest(name = "{0} -> {3}, aliases={1}, labels={2}")
+    @MethodSource("columnPrefixes")
+    void columnPrefixesResolveAliasesAndPluralPropertiesWithoutCollisions(final String label, final Map<String, String> aliases, final List<String> labels,
+            final String expected) {
+        assertEquals(expected, JdbcUtil.checkPrefix(ParserUtil.getBeanInfo(PrefixContainer.class), label, aliases, labels));
+    }
+
+    private static java.util.stream.Stream<Arguments> columnPrefixes() {
+        return java.util.stream.Stream.of(Arguments.of("id", null, List.of("id"), "id"), Arguments.of(".city", null, List.of(".city"), ".city"),
+                Arguments.of("addresses.city", Map.of("addresses", "orders"), List.of("addresses.city"), "addresses.city"),
+                Arguments.of("home.city", Map.of("home", "addresses"), List.of("home.city"), "addresses.city"),
+                Arguments.of("order.total", Map.of("order", "missing"), List.of("order.total"), "orders.total"),
+                Arguments.of("order.total", Map.of(), List.of("order.total"), "orders.total"),
+                Arguments.of("order.total", null, List.of("order.total", "ORDERS.total"), "order.total"),
+                Arguments.of("order.total", null, List.of("order.total", "orders", "ordersExtra.total"), "orders.total"),
+                Arguments.of("address.city", null, List.of("address.city"), "addresses.city"),
+                Arguments.of("address.city", null, List.of("address.city", "ADDRESSES.city"), "address.city"),
+                Arguments.of("address.city", null, List.of("address.city", "addresses", "addressesExtra.city"), "addresses.city"),
+                Arguments.of("box.city", null, List.of("box.city"), "boxes.city"),
+                Arguments.of("box.city", null, List.of("box.city", "BOXES.city"), "box.city"),
+                Arguments.of("tag.value", null, List.of("tag.value"), "tag.value"), Arguments.of("stat.value", null, List.of("stat.value"), "stat.value"),
+                Arguments.of("missing.city", Map.of("missing", "absent"), List.of("missing.city"), "missing.city"));
+    }
+
+    @Test
+    void generatedCompositeEntityIdMapsKnownColumnsAndRetainsUnknownDriverColumns() throws SQLException {
+        final var accessors = JdbcUtil.<EntityId> getIdGeneratorGetterSetter(CrudDao.class, ColumnMappedCompositeIdEntity.class, NamingPolicy.SNAKE_CASE,
+                EntityId.class);
+        when(mockResultSet.getLong(1)).thenReturn(3L);
+        when(mockResultSet.getLong(2)).thenReturn(42L);
+        when(mockResultSet.getObject(3)).thenReturn("driver-token");
+
+        final EntityId generatedId = accessors._1.apply(mockResultSet, List.of("TENANT_NO", "seq_no", "driver_extra"));
+
+        assertEquals(3L, (Long) generatedId.get("tenantId"));
+        assertEquals(42L, (Long) generatedId.get("entityId"));
+        assertEquals("driver-token", generatedId.get("driver_extra"));
+        final ColumnMappedCompositeIdEntity entity = new ColumnMappedCompositeIdEntity();
+        accessors._3.accept(generatedId, entity);
+        assertEquals(3L, entity.getTenantId());
+        assertEquals(42L, entity.getEntityId());
+        verify(mockResultSet).getLong(1);
+        verify(mockResultSet).getLong(2);
+        verify(mockResultSet).getObject(3);
+    }
+
+    @Test
+    @SuppressWarnings("deprecation")
+    void typedColumnLabelLookupUsesRequestedJdbcTypeAndPreservesSqlFailure() throws SQLException {
+        when(mockResultSet.getString("display_name")).thenReturn("Ada");
+        assertEquals("Ada", JdbcUtil.getColumnValue(mockResultSet, "display_name", String.class));
+        final SQLException failure = new SQLException("unknown label");
+        when(mockResultSet.getString("missing")).thenThrow(failure);
+        assertSame(failure, assertThrows(SQLException.class, () -> JdbcUtil.getColumnValue(mockResultSet, "missing", String.class)));
+        verify(mockResultSet, never()).close();
+    }
+
+    @lombok.Data
+    public static class PrefixContainer {
+        private long id;
+        private List<SubOrder> orders;
+        private SubAddress addresses;
+        private List<SubAddress> boxes;
+        private List<String> tags;
+        private Integer stats;
     }
 
     // getSubPropInfo resolves a dotted path through a nested bean property.

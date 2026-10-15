@@ -27,6 +27,8 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
@@ -103,6 +105,22 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
         JdbcUtil.runIgnoringSpringTransaction(() -> {
             assertThrows(UncheckedSQLException.class, () -> JdbcUtil.getDBProductInfo(mockDataSource));
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void productMetadataFailurePreservesCauseAndConnectionOwnership(final boolean fromDataSource) throws SQLException {
+        final SQLException failure = new SQLException("product metadata unavailable");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenThrow(failure);
+
+        assertSame(failure, assertThrows(UncheckedSQLException.class, () -> {
+            if (fromDataSource) {
+                JdbcUtil.getDBProductInfo(mockDataSource);
+            } else {
+                JdbcUtil.getDBProductInfo(mockConnection);
+            }
+        }).getCause());
+        verify(mockConnection, org.mockito.Mockito.times(fromDataSource ? 1 : 0)).close();
     }
 
     @Test
@@ -334,6 +352,17 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
 
         int index = JdbcUtil.getColumnIndex(mockResultSetMetaData, "name");
         assertEquals(2, index);
+    }
+
+    @Test
+    void tableExistsDataSourceReleasesConnectionAfterMetadataFailure() throws SQLException {
+        final SQLException failure = new SQLException("metadata access denied", "42501");
+        when(mockConnection.getMetaData()).thenThrow(failure);
+
+        assertSame(failure, assertThrows(UncheckedSQLException.class, () -> JdbcUtil.tableExists(mockDataSource, "users")).getCause());
+
+        verify(mockDataSource).getConnection();
+        verify(mockConnection).close();
     }
 
     @Test
@@ -705,6 +734,74 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
         assertSame(createFailure, ex.getCause(), "the CREATE failure must be reported, not the re-check failure");
         assertEquals(1, createFailure.getSuppressed().length);
         assertSame(transactionAborted, createFailure.getSuppressed()[0].getCause());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void failedCreateRechecksWhetherAnotherConnectionCreatedTheTable(final boolean createdConcurrently) throws SQLException {
+        final SQLException missing = new SQLException("table missing", "42S02");
+        final SQLException createFailure = new SQLException("create rejected", "42S01");
+        final String schema = "CREATE TABLE users (id INT)";
+        when(mockPreparedStatement.execute()).thenThrow(missing, createFailure).thenAnswer(invocation -> {
+            if (!createdConcurrently) {
+                throw missing;
+            }
+            return false;
+        });
+
+        if (createdConcurrently) {
+            assertFalse(JdbcUtil.createTableIfNotExists(mockConnection, "users", schema));
+        } else {
+            assertSame(createFailure,
+                    assertThrows(UncheckedSQLException.class, () -> JdbcUtil.createTableIfNotExists(mockConnection, "users", schema)).getCause());
+        }
+        verify(mockConnection).prepareStatement(schema);
+        verify(mockPreparedStatement, org.mockito.Mockito.times(3)).close();
+        verify(mockConnection, never()).close();
+    }
+
+    @Test
+    void droppingMissingTableDoesNotIssueDropStatement() throws SQLException {
+        when(mockPreparedStatement.execute()).thenThrow(new SQLException("table missing", "42S02"));
+
+        assertFalse(JdbcUtil.dropTableIfExists(mockConnection, "users"));
+
+        verify(mockConnection, never()).prepareStatement("DROP TABLE users");
+        verify(mockPreparedStatement).close();
+        verify(mockConnection, never()).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void failedDropDistinguishesConcurrentDeletionFromPermissionFailure(final boolean droppedConcurrently) throws SQLException {
+        final SQLException failure = new SQLException("drop failed", droppedConcurrently ? "42S02" : "42000", droppedConcurrently ? 1146 : 1142);
+        when(mockPreparedStatement.execute()).thenReturn(false).thenThrow(failure);
+
+        if (droppedConcurrently) {
+            assertFalse(JdbcUtil.dropTableIfExists(mockConnection, "users"));
+        } else {
+            assertSame(failure, assertThrows(UncheckedSQLException.class, () -> JdbcUtil.dropTableIfExists(mockConnection, "users")).getCause());
+        }
+        verify(mockConnection).prepareStatement("DROP TABLE users");
+        verify(mockPreparedStatement, org.mockito.Mockito.times(2)).close();
+        verify(mockConnection, never()).close();
+    }
+
+    @Test
+    void unknownDatabaseUsesSavepointAndIgnoresSavepointReleaseFailure() throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenThrow(new SQLException("product unavailable"));
+        when(mockPreparedStatement.execute()).thenThrow(new SQLException("table missing", "42S02"));
+        doThrow(new IllegalStateException("savepoint release failed")).when(mockConnection).releaseSavepoint(savepoint);
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "users"));
+
+        verify(mockConnection).rollback(savepoint);
+        verify(mockConnection).releaseSavepoint(savepoint);
+        verify(mockConnection, never()).commit();
+        verify(mockConnection, never()).close();
     }
 
     @Test

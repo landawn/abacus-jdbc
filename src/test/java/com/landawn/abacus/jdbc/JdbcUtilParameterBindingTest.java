@@ -7,32 +7,30 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import java.nio.charset.StandardCharsets;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
-import java.util.Arrays;
 import java.util.function.Supplier;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
-import com.landawn.abacus.jdbc.Jdbc.OutParam;
-import com.landawn.abacus.jdbc.Jdbc.OutParamResult;
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.util.Dataset;
 
 class JdbcUtilParameterBindingTest extends JdbcUtilTestSupport {
 
@@ -133,6 +131,140 @@ class JdbcUtilParameterBindingTest extends JdbcUtilTestSupport {
         NamedQuery query = JdbcUtil.prepareNamedQuery(mockConnection, parsedSql);
         assertNotNull(query);
         query.close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void namedQueryOnCallerConnectionForwardsGeneratedKeyFlag(final boolean generatedKeys) throws SQLException {
+        final String sql = "INSERT INTO users (name) VALUES (:name)";
+        final String jdbcSql = "INSERT INTO users (name) VALUES (?)";
+        final int flag = generatedKeys ? Statement.RETURN_GENERATED_KEYS : Statement.NO_GENERATED_KEYS;
+        when(mockConnection.prepareStatement(jdbcSql, flag)).thenReturn(mockPreparedStatement);
+
+        try (NamedQuery query = JdbcUtil.prepareNamedQuery(mockConnection, sql, generatedKeys)) {
+            query.setString("name", "Ada");
+            verify(mockConnection).prepareStatement(jdbcSql, flag);
+            verify(mockPreparedStatement).setString(1, "Ada");
+        }
+
+        verify(mockPreparedStatement).close();
+        verify(mockConnection, never()).close();
+    }
+
+    @Test
+    void namedQueryOnCallerConnectionForwardsGeneratedKeyNames() throws SQLException {
+        final String sql = "INSERT INTO users (name) VALUES (:name)";
+        final String jdbcSql = "INSERT INTO users (name) VALUES (?)";
+        final String[] keys = { "user_id", "tenant_id" };
+        when(mockConnection.prepareStatement(jdbcSql, keys)).thenReturn(mockPreparedStatement);
+
+        try (NamedQuery query = JdbcUtil.prepareNamedQuery(mockConnection, sql, keys)) {
+            query.setString("name", "Ada");
+            verify(mockConnection).prepareStatement(jdbcSql, keys);
+            verify(mockPreparedStatement).setString(1, "Ada");
+        }
+
+        verify(mockPreparedStatement).close();
+        verify(mockConnection, never()).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2 })
+    void largeResultQueriesConfigureStatementAndKeepCallerConnection(final int variant) throws SQLException {
+        try (AbstractQuery<?, ?> query = largeResultQuery(variant)) {
+            verify(mockConnection).prepareStatement("SELECT * FROM users WHERE id = ?");
+            verify(mockPreparedStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
+            verify(mockPreparedStatement).setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
+        }
+
+        verify(mockPreparedStatement).close();
+        verify(mockConnection, never()).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2 })
+    void largeResultConfigurationFailureClosesStatementAndKeepsCallerConnection(final int variant) throws SQLException {
+        final SQLException failure = new SQLException("fetch size rejected");
+        doThrow(failure).when(mockPreparedStatement).setFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
+
+        assertSame(failure, assertThrows(SQLException.class, () -> largeResultQuery(variant)));
+
+        verify(mockPreparedStatement).close();
+        verify(mockConnection, never()).close();
+    }
+
+    private AbstractQuery<?, ?> largeResultQuery(final int variant) throws SQLException {
+        return switch (variant) {
+            case 0 -> JdbcUtil.prepareQueryForLargeResult(mockConnection, "SELECT * FROM users WHERE id = ?");
+            case 1 -> JdbcUtil.prepareNamedQueryForLargeResult(mockConnection, "SELECT * FROM users WHERE id = :id");
+            case 2 -> JdbcUtil.prepareNamedQueryForLargeResult(mockConnection, ParsedSql.parse("SELECT * FROM users WHERE id = :id"));
+            default -> throw new AssertionError(variant);
+        };
+    }
+
+    @ParameterizedTest
+    @EnumSource(TransactionPreparation.class)
+    void queryFactoriesReuseTransactionConnectionWithoutOwningIt(final TransactionPreparation preparation) throws SQLException {
+        when(mockConnection.prepareStatement(anyString(), anyInt())).thenReturn(mockPreparedStatement);
+        when(mockConnection.prepareStatement(anyString(), any(int[].class))).thenReturn(mockPreparedStatement);
+        when(mockConnection.prepareStatement(anyString(), any(String[].class))).thenReturn(mockPreparedStatement);
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED);
+
+        try {
+            try (AbstractQuery<?, ?> query = transactionalQuery(preparation)) {
+                query.setInt(1, 7);
+            }
+            final boolean callable = preparation == TransactionPreparation.CALLABLE || preparation == TransactionPreparation.CALLABLE_CUSTOM;
+            verify(callable ? mockCallableStatement : mockPreparedStatement).setInt(1, 7);
+            verify(callable ? mockCallableStatement : mockPreparedStatement).close();
+            verify(mockDataSource).getConnection();
+            verify(mockConnection, never()).close();
+            verify(mockConnection, never()).commit();
+            verify(mockConnection, never()).rollback();
+        } finally {
+            transaction.rollbackIfNotCommitted();
+        }
+        verify(mockConnection).rollback();
+        verify(mockConnection).close();
+    }
+
+    private AbstractQuery<?, ?> transactionalQuery(final TransactionPreparation preparation) throws SQLException {
+        final String sql = "INSERT INTO users (id) VALUES (?)";
+        final String named = "INSERT INTO users (id) VALUES (:id)";
+        final ParsedSql parsed = ParsedSql.parse(named);
+        return switch (preparation) {
+            case PREPARED_KEYS -> JdbcUtil.prepareQuery(mockDataSource, sql, true);
+            case PREPARED_INDEXES -> JdbcUtil.prepareQuery(mockDataSource, sql, new int[] { 1 });
+            case PREPARED_NAMES -> JdbcUtil.prepareQuery(mockDataSource, sql, new String[] { "id" });
+            case PREPARED_CUSTOM -> JdbcUtil.prepareQuery(mockDataSource, sql, Connection::prepareStatement);
+            case NAMED_KEYS -> JdbcUtil.prepareNamedQuery(mockDataSource, named, true);
+            case NAMED_INDEXES -> JdbcUtil.prepareNamedQuery(mockDataSource, named, new int[] { 1 });
+            case NAMED_NAMES -> JdbcUtil.prepareNamedQuery(mockDataSource, named, new String[] { "id" });
+            case NAMED_CUSTOM -> JdbcUtil.prepareNamedQuery(mockDataSource, named, Connection::prepareStatement);
+            case PARSED_KEYS -> JdbcUtil.prepareNamedQuery(mockDataSource, parsed, true);
+            case PARSED_INDEXES -> JdbcUtil.prepareNamedQuery(mockDataSource, parsed, new int[] { 1 });
+            case PARSED_NAMES -> JdbcUtil.prepareNamedQuery(mockDataSource, parsed, new String[] { "id" });
+            case PARSED_CUSTOM -> JdbcUtil.prepareNamedQuery(mockDataSource, parsed, Connection::prepareStatement);
+            case CALLABLE -> JdbcUtil.prepareCallableQuery(mockDataSource, "{call save_user(?)}");
+            case CALLABLE_CUSTOM -> JdbcUtil.prepareCallableQuery(mockDataSource, "{call save_user(?)}", Connection::prepareCall);
+        };
+    }
+
+    private enum TransactionPreparation {
+        PREPARED_KEYS,
+        PREPARED_INDEXES,
+        PREPARED_NAMES,
+        PREPARED_CUSTOM,
+        NAMED_KEYS,
+        NAMED_INDEXES,
+        NAMED_NAMES,
+        NAMED_CUSTOM,
+        PARSED_KEYS,
+        PARSED_INDEXES,
+        PARSED_NAMES,
+        PARSED_CUSTOM,
+        CALLABLE,
+        CALLABLE_CUSTOM
     }
 
     @Test
@@ -310,128 +442,6 @@ class JdbcUtilParameterBindingTest extends JdbcUtilTestSupport {
         JdbcUtil.setParameters(parsedSql, mockPreparedStatement, new Object[] { new NamedRecordParameter("Ada", "Lovelace") });
 
         verify(mockPreparedStatement).setString(1, "Ada");
-    }
-
-    @Test
-    public void testGetOutParameters() throws SQLException {
-        List<OutParam> outParams = Arrays.asList(OutParam.of(1, Types.VARCHAR), OutParam.of(2, Types.INTEGER));
-
-        when(mockCallableStatement.getString(1)).thenReturn("result");
-        when(mockCallableStatement.getInt(2)).thenReturn(42);
-
-        OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, outParams);
-
-        assertNotNull(result);
-        assertEquals("result", result.getOutParamValue(1));
-        assertEquals(42, (Integer) result.getOutParamValue(2));
-    }
-
-    @Test
-    public void testGetOutParametersBitUsesBooleanMapping() throws SQLException {
-        final OutParam namedBit = OutParam.of("enabled", Types.BIT);
-        when(mockCallableStatement.getBoolean(1)).thenReturn(true);
-        when(mockCallableStatement.getBoolean("enabled")).thenReturn(false);
-
-        final OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, List.of(OutParam.of(1, Types.BIT), namedBit));
-
-        assertEquals(Boolean.TRUE, result.getOutParamValue(1));
-        assertEquals(Boolean.FALSE, result.getOutParamValue("enabled"));
-        verify(mockCallableStatement, never()).getByte(1);
-        verify(mockCallableStatement, never()).getByte("enabled");
-    }
-
-    @Test
-    public void testGetOutParameters_floatTypeUsesGetDouble() throws SQLException {
-        // Regression: per the JDBC spec (Appendix B), SQL FLOAT is an 8-byte, double-precision type that
-        // maps to Java double (synonym of Types.DOUBLE), while SQL REAL is the 4-byte type mapping to Java
-        // float. A Types.FLOAT OUT parameter must therefore be read with getDouble(), not getFloat() (which
-        // would narrow to single precision and overflow to Float.POSITIVE_INFINITY beyond ~3.4e38).
-        final double preciseDoubleValue = 1234567.890123456d;
-        final float realValue = 3.5f;
-
-        when(mockCallableStatement.getDouble(1)).thenReturn(preciseDoubleValue);
-        when(mockCallableStatement.getFloat(2)).thenReturn(realValue);
-
-        List<OutParam> outParams = Arrays.asList(OutParam.of(1, Types.FLOAT), OutParam.of(2, Types.REAL));
-
-        OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, outParams);
-
-        assertNotNull(result);
-
-        // Types.FLOAT must be retrieved at full double precision (via getDouble), not narrowed to a Float.
-        Object floatParam = result.getOutParamValue(1);
-        assertTrue(floatParam instanceof Double, "Types.FLOAT OUT param should be read as Double via getDouble()");
-        assertEquals(preciseDoubleValue, (Double) floatParam, 0.0d);
-
-        // Types.REAL must still be retrieved as a Float (via getFloat).
-        Object realParam = result.getOutParamValue(2);
-        assertTrue(realParam instanceof Float, "Types.REAL OUT param should be read as Float via getFloat()");
-        assertEquals(realValue, (Float) realParam, 0.0f);
-
-        // Confirm the correct CallableStatement accessors were invoked for each SQL type.
-        verify(mockCallableStatement).getDouble(1);
-        verify(mockCallableStatement).getFloat(2);
-        verify(mockCallableStatement, never()).getFloat(1);
-    }
-
-    @Test
-    public void testGetOutParameters_NamedBlobAndClobAreMaterialized() throws SQLException {
-        final byte[] blobData = "blob out".getBytes(StandardCharsets.UTF_8);
-        final String clobData = "clob out";
-
-        final OutParam blobParam = OutParam.of("blob_out", Types.BLOB);
-        final OutParam clobParam = OutParam.of("clob_out", Types.CLOB);
-
-        when(mockCallableStatement.getBlob("blob_out")).thenReturn(mockBlob);
-        when(mockBlob.length()).thenReturn((long) blobData.length);
-        when(mockBlob.getBytes(1, blobData.length)).thenReturn(blobData);
-        when(mockCallableStatement.getClob("clob_out")).thenReturn(mockClob);
-        when(mockClob.length()).thenReturn((long) clobData.length());
-        when(mockClob.getSubString(1, clobData.length())).thenReturn(clobData);
-
-        final OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, List.of(blobParam, clobParam));
-
-        assertArrayEquals(blobData, (byte[]) result.getOutParamValue("blob_out"));
-        assertEquals(clobData, result.getOutParamValue("clob_out"));
-        verify(mockBlob).free();
-        verify(mockClob).free();
-    }
-
-    @Test
-    public void testOutParametersRejectNullEntriesBeforeReadingTheStatement() throws SQLException {
-        final CallableStatement stmt = mock(CallableStatement.class);
-        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getOutParameters(stmt, Arrays.asList(OutParam.of(1, Types.INTEGER), null)));
-        assertTrue(JdbcUtil.getOutParameters(stmt, null).getOutParamValues().isEmpty());
-        assertTrue(JdbcUtil.getOutParameters(stmt, List.of()).getOutParamValues().isEmpty());
-        verifyNoInteractions(stmt);
-    }
-
-    @Test
-    public void testGetOutParameters_BlobSizeOverflowThrowsAndFreesBlob() throws SQLException {
-        final OutParam blobParam = OutParam.of("blob_out", Types.BLOB);
-
-        when(mockCallableStatement.getBlob("blob_out")).thenReturn(mockBlob);
-        when(mockBlob.length()).thenReturn(Integer.MAX_VALUE + 1L);
-
-        assertThrows(SQLException.class, () -> JdbcUtil.getOutParameters(mockCallableStatement, List.of(blobParam)));
-        verify(mockBlob).free();
-    }
-
-    @Test
-    public void testGetOutParameters_ResultSetValueExtractedAndClosed() throws SQLException {
-        final OutParam rowsParam = new OutParam(0, "rows", Types.OTHER, null, 0);
-
-        when(mockCallableStatement.getObject("rows")).thenReturn(mockResultSet);
-        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
-        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
-        when(mockResultSet.next()).thenReturn(true, false);
-        when(mockResultSet.getObject(1)).thenReturn(7);
-
-        final OutParamResult result = JdbcUtil.getOutParameters(mockCallableStatement, List.of(rowsParam));
-        final Dataset rows = result.getOutParamValue("rows");
-
-        assertEquals(1, rows.size());
-        verify(mockResultSet).close();
     }
 
     @Test

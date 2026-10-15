@@ -22,19 +22,22 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.BindList;
+import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.OutParameter;
 import com.landawn.abacus.jdbc.annotation.Query;
+import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.annotation.SqlFragment;
 import com.landawn.abacus.jdbc.annotation.SqlFragmentList;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.DaoBase;
+import com.landawn.abacus.jdbc.dao.NonUpdateCrudDao;
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
@@ -42,7 +45,7 @@ import com.landawn.abacus.util.u.Optional;
 class DaoImplQueryValidationTest extends TestBase {
 
     @ParameterizedTest(name = "{0}: {2}")
-    @MethodSource("invalidDeclarations")
+    @MethodSource({ "invalidDeclarations", "invalidCacheDeclarations" })
     void createDao_invalidDeclaration_rejectsBeforePreparingSql(final Class<? extends DaoBase> daoType, final Class<? extends RuntimeException> exceptionType,
             final String message) throws SQLException {
         final DataSource dataSource = mock(DataSource.class);
@@ -53,7 +56,13 @@ class DaoImplQueryValidationTest extends TestBase {
         when(metadata.getDatabaseProductName()).thenReturn("H2");
         when(metadata.getDatabaseProductVersion()).thenReturn("2");
 
-        final RuntimeException failure = assertThrows(exceptionType, () -> JdbcUtil.createDao(daoType, dataSource));
+        final RuntimeException failure = assertThrows(exceptionType, () -> {
+            if (NonUpdateCrudDao.class.isAssignableFrom(daoType)) {
+                JdbcUtil.createDao(daoType, dataSource, JdbcUtil.DaoCreationOptions.builder().cache(Jdbc.DaoCache.createByMap()).build());
+            } else {
+                JdbcUtil.createDao(daoType, dataSource);
+            }
+        });
 
         assertTrue(failure.getMessage().contains(message), failure::getMessage);
         verify(connection, never()).prepareStatement(anyString());
@@ -101,6 +110,65 @@ class DaoImplQueryValidationTest extends TestBase {
                 Arguments.of(DatasetWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
                 Arguments.of(OptionalWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
                 Arguments.of(NullableWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"));
+    }
+
+    private static Stream<Arguments> invalidCacheDeclarations() {
+        return Stream.of(Arguments.of(NegativeCacheLifetimeDao.class, UnsupportedOperationException.class, "maxLiveTimeMillis"),
+                Arguments.of(NegativeCacheIdleDao.class, UnsupportedOperationException.class, "maxIdleTimeMillis"),
+                Arguments.of(NegativeCacheMinSizeDao.class, UnsupportedOperationException.class, "minSize"),
+                Arguments.of(NegativeCacheMaxSizeDao.class, UnsupportedOperationException.class, "maxSize"),
+                Arguments.of(ReversedCacheSizeDao.class, UnsupportedOperationException.class, "minSize"),
+                Arguments.of(CachedStreamDao.class, UnsupportedOperationException.class, "not cacheable"),
+                Arguments.of(RefreshWithoutCacheDao.class, UnsupportedOperationException.class, "none of them is annotated with @CacheResult"));
+    }
+
+    interface NegativeCacheLifetimeDao extends NonUpdateCrudDao<Record, Long, NegativeCacheLifetimeDao> {
+        @CacheResult(enabled = true, maxLiveTimeMillis = -1)
+        default String findValue() {
+            return "value";
+        }
+    }
+
+    interface NegativeCacheIdleDao extends NonUpdateCrudDao<Record, Long, NegativeCacheIdleDao> {
+        @CacheResult(enabled = true, maxIdleTimeMillis = -1)
+        default String findValue() {
+            return "value";
+        }
+    }
+
+    interface NegativeCacheMinSizeDao extends NonUpdateCrudDao<Record, Long, NegativeCacheMinSizeDao> {
+        @CacheResult(enabled = true, minSize = -1)
+        default List<String> findValues() {
+            return List.of();
+        }
+    }
+
+    interface NegativeCacheMaxSizeDao extends NonUpdateCrudDao<Record, Long, NegativeCacheMaxSizeDao> {
+        @CacheResult(enabled = true, maxSize = -1)
+        default List<String> findValues() {
+            return List.of();
+        }
+    }
+
+    interface ReversedCacheSizeDao extends NonUpdateCrudDao<Record, Long, ReversedCacheSizeDao> {
+        @CacheResult(enabled = true, minSize = 2, maxSize = 1)
+        default List<String> findValues() {
+            return List.of();
+        }
+    }
+
+    interface CachedStreamDao extends NonUpdateCrudDao<Record, Long, CachedStreamDao> {
+        @CacheResult(enabled = true)
+        default com.landawn.abacus.util.stream.Stream<String> findValues() {
+            return com.landawn.abacus.util.stream.Stream.empty();
+        }
+    }
+
+    interface RefreshWithoutCacheDao extends NonUpdateCrudDao<Record, Long, RefreshWithoutCacheDao> {
+        @RefreshCache
+        default int updateValue() {
+            return 1;
+        }
     }
 
     interface EmptySqlDao extends CrudDao<Record, Long, EmptySqlDao> {

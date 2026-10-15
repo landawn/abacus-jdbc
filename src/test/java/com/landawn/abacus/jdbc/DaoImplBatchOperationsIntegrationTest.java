@@ -15,18 +15,20 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
+import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.TestBase;
 
 @Tag("integration")
 public class DaoImplBatchOperationsIntegrationTest extends TestBase {
@@ -37,10 +39,11 @@ public class DaoImplBatchOperationsIntegrationTest extends TestBase {
     private static final String INSERT_ALL = "INSERT INTO batch_record(id, name, score) VALUES(:id, :name, :score)";
     private Connection keeper;
     private RecordDao dao;
+    private JdbcDataSource dataSource;
 
     @BeforeEach
     void createDatabase() throws SQLException {
-        final JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource = new JdbcDataSource();
         dataSource.setURL("jdbc:h2:mem:dao_batch_operations_" + System.nanoTime());
         keeper = dataSource.getConnection();
         JdbcUtil.executeUpdate(keeper,
@@ -188,6 +191,86 @@ public class DaoImplBatchOperationsIntegrationTest extends TestBase {
         } else {
             assertEquals(3, byId ? dao.batchDeleteByIds(List.of(10L, 11L, 12L), 1) : dao.batchDelete(records, 1));
             assertEquals(0, rowCount());
+        }
+    }
+
+    @ParameterizedTest(name = "{0}, batchSize={1}")
+    @MethodSource("generatedIdBatchModes")
+    void applicationGeneratedIdsFillOnlyMissingIdsAcrossChunks(final InsertMode mode, final int batchSize) throws SQLException {
+        final GeneratedRecordDao generatedDao = generatedRecordDao();
+        final List<Record> records = List.of(new Record(null, "alpha", 10), new Record(10L, "beta", 20), new Record(0L, "gamma", 30));
+
+        final List<Long> ids = switch (mode) {
+            case DEFAULT -> generatedDao.batchInsert(records, batchSize);
+            case SELECTED_COLUMNS -> generatedDao.batchInsert(records, ALL_COLUMNS, batchSize);
+            case CUSTOM_SQL -> generatedDao.batchInsert(INSERT_ALL, records, batchSize);
+        };
+
+        assertEquals(List.of(1000L, 10L, 1001L), ids);
+        assertEquals(ids, records.stream().map(Record::getId).toList());
+        assertEquals(3, rowCount());
+        for (final Record record : records) {
+            assertEquals(record.getName(), dao.get(record.getId()).get().getName());
+        }
+        assertEquals(1002L, JdbcUtil.prepareQuery(keeper, "SELECT NEXT VALUE FOR application_ids").queryForLong().get());
+    }
+
+    @ParameterizedTest
+    @EnumSource(InsertMode.class)
+    void singleInsertGeneratesOnlyMissingId(final InsertMode mode) throws SQLException {
+        final GeneratedRecordDao generatedDao = generatedRecordDao();
+        final Record missing = new Record(null, "generated", 10);
+        final Record supplied = new Record(7L, "supplied", 20);
+
+        for (final Record record : List.of(missing, supplied)) {
+            final Long id = switch (mode) {
+                case DEFAULT -> generatedDao.insert(record);
+                case SELECTED_COLUMNS -> generatedDao.insert(record, ALL_COLUMNS);
+                case CUSTOM_SQL -> generatedDao.insert(INSERT_ALL, record);
+            };
+            assertEquals(record.getId(), id);
+            assertEquals(record.getName(), dao.get(id).get().getName());
+        }
+        assertEquals(1000L, missing.getId());
+        assertEquals(7L, supplied.getId());
+        assertEquals(1001L, JdbcUtil.prepareQuery(keeper, "SELECT NEXT VALUE FOR application_ids").queryForLong().get());
+    }
+
+    @Test
+    void selectedColumnsWithoutIdUseDatabaseGeneration() throws SQLException {
+        final GeneratedRecordDao generatedDao = generatedRecordDao();
+        final Record single = new Record(null, "single", 10);
+        final Record batched = new Record(null, "batch", 20);
+
+        final Long singleId = generatedDao.insert(single, VALUE_COLUMNS);
+        final List<Long> batchIds = generatedDao.batchInsert(List.of(batched), VALUE_COLUMNS, 1);
+
+        assertEquals(singleId, single.getId());
+        assertEquals(List.of(batched.getId()), batchIds);
+        assertEquals("single", dao.get(singleId).get().getName());
+        assertEquals("batch", dao.get(batchIds.get(0)).get().getName());
+        assertEquals(1000L, JdbcUtil.prepareQuery(keeper, "SELECT NEXT VALUE FOR application_ids").queryForLong().get(),
+                "The application generator must not run when ID is omitted from selected columns");
+    }
+
+    private GeneratedRecordDao generatedRecordDao() throws SQLException {
+        JdbcUtil.executeUpdate(keeper, "CREATE SEQUENCE application_ids START WITH 1000");
+        return JdbcUtil.createDao(GeneratedRecordDao.class, dataSource);
+    }
+
+    private static Stream<Arguments> generatedIdBatchModes() {
+        return Stream.of(InsertMode.values()).flatMap(mode -> Stream.of(1, 8).map(size -> Arguments.of(mode, size)));
+    }
+
+    private enum InsertMode {
+        DEFAULT, SELECTED_COLUMNS, CUSTOM_SQL
+    }
+
+    @DaoConfig(callGenerateIdForInsertIfIdNotSet = true, callGenerateIdForInsertWithSqlIfIdNotSet = true)
+    public interface GeneratedRecordDao extends CrudDao<Record, Long, GeneratedRecordDao> {
+        @Override
+        default Long generateId() throws SQLException {
+            return prepareQuery("SELECT NEXT VALUE FOR application_ids").queryForLong().get();
         }
     }
 

@@ -386,6 +386,33 @@ public class JoinEntityDeleteOpsIntegrationTest extends TestBase {
         assertEquals(0, djOrderCount(1) + djOrderCount(2));
     }
 
+    @Test
+    public void testBatchJoinDeleteRollsBackEarlierChunkWhenLaterChunkFails() throws SQLException {
+        final int size = JdbcUtil.DEFAULT_BATCH_SIZE + 1;
+        final List<DJUser> users = java.util.stream.LongStream.rangeClosed(1, size).mapToObj(JoinEntityDeleteOpsIntegrationTest::djUser).toList();
+        try (Connection connection = ds.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("INSERT INTO dj_user(id, name) SELECT X, 'batch' FROM SYSTEM_RANGE(1, " + size + ")");
+            statement.executeUpdate("INSERT INTO dj_order(id, user_id, amount) SELECT X, X, 10 FROM SYSTEM_RANGE(1, " + size + ")");
+            statement.executeUpdate("CREATE TABLE dj_order_guard(order_id BIGINT REFERENCES dj_order(id))");
+            try {
+                statement.executeUpdate("INSERT INTO dj_order_guard VALUES(" + size + ")");
+
+                final com.landawn.abacus.exception.UncheckedSQLException failure = assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class,
+                        () -> djUserDao.deleteJoinEntities(users, "orders"));
+
+                assertEquals("23503", failure.getCause().getSQLState());
+                assertEquals(1, djOrderCount(1), "The first chunk must be restored after the second chunk fails");
+                assertEquals(1, djOrderCount(size));
+                assertEquals(size, JdbcUtil.prepareQuery(connection, "SELECT COUNT(*) FROM dj_order").queryForInt().get());
+            } finally {
+                statement.executeUpdate("DROP TABLE dj_order_guard");
+            }
+            assertEquals(size, djUserDao.deleteJoinEntities(users, "orders"));
+            assertEquals(0, JdbcUtil.prepareQuery(connection, "SELECT COUNT(*) FROM dj_order").queryForInt().get());
+        }
+    }
+
     // deleteJoinEntities(entity, Collection<String>) early-returns 0 for an empty prop-name collection (L270).
     @Test
     public void testDeleteJoinEntities_EmptyPropNames() throws SQLException {

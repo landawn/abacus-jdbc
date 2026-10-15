@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static com.landawn.abacus.query.Dsl.PSC;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -27,11 +28,12 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
@@ -48,11 +50,12 @@ import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.DaoBase;
-import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.query.condition.Limit;
 import com.landawn.abacus.query.condition.SqlExpression;
+import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.ImmutableList;
@@ -1640,6 +1643,47 @@ public class DaoImplTest extends TestBase {
         assertSame(CacheDisabledOverrideDao.INVOCATION_FAILURE, thrown);
         assertEquals(1, thrown.getSuppressed().length);
         assertSame(refreshFailure, thrown.getSuppressed()[0]);
+    }
+
+    @ParameterizedTest(name = "methodFailure={0}, sharedRefreshFailure={1}")
+    @CsvSource({ "false,false", "false,true", "true,false", "true,true" })
+    void cacheRefreshAttemptsBothCachesAndPreservesFailures(final boolean methodFailure, final boolean sharedRefreshFailure) throws SQLException {
+        final Jdbc.DaoCache localCache = mock(Jdbc.DaoCache.class);
+        final Jdbc.DaoCache daoCache = mock(Jdbc.DaoCache.class);
+        final IllegalStateException primary = methodFailure ? new IllegalStateException("write failed") : null;
+        final IllegalStateException localFailure = new IllegalStateException("local invalidation failed");
+        final IllegalStateException daoFailure = sharedRefreshFailure ? localFailure : new IllegalStateException("DAO invalidation failed");
+        Mockito.doThrow(localFailure).when(localCache).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.<Object[]> any(), Mockito.any());
+        Mockito.doThrow(daoFailure).when(daoCache).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.<Object[]> any(), Mockito.any());
+        final CacheFailureDao dao = DaoImpl.createDao(CacheFailureDao.class, null, mockDataSourceForDaoCreation(), PSC, null, daoCache, null);
+
+        try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(localCache)) {
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> dao.updateValue(primary));
+            assertSame(methodFailure ? primary : localFailure, thrown);
+            if (methodFailure) {
+                assertArrayEquals(new Throwable[] { localFailure }, primary.getSuppressed());
+            }
+            assertArrayEquals(sharedRefreshFailure ? new Throwable[0] : new Throwable[] { daoFailure }, localFailure.getSuppressed());
+            Mockito.verify(localCache)
+                    .update(Mockito.anyString(), Mockito.eq(methodFailure ? null : "updated"), Mockito.same(dao), Mockito.<Object[]> any(), Mockito.any());
+            Mockito.verify(daoCache)
+                    .update(Mockito.anyString(), Mockito.eq(methodFailure ? null : "updated"), Mockito.same(dao), Mockito.<Object[]> any(), Mockito.any());
+        }
+    }
+
+    @CacheResult(enabled = true)
+    interface CacheFailureDao extends com.landawn.abacus.jdbc.dao.UncheckedNonUpdateDao<TestEntity, CacheFailureDao> {
+        default String findCachedValue() {
+            return "cached";
+        }
+
+        @RefreshCache
+        default String updateValue(final IllegalStateException failure) {
+            if (failure != null) {
+                throw failure;
+            }
+            return "updated";
+        }
     }
 
     // isFindFirst: QueryOperation.findFirst returns true regardless of method name (line 521)

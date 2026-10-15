@@ -596,6 +596,36 @@ public class DaoImplIntegrationTest extends TestBase {
         }
     }
 
+    public interface EntityIdRowDao extends CrudDao<CompositeKeyRow, com.landawn.abacus.util.EntityId, EntityIdRowDao> {
+    }
+
+    @Test
+    public void testCompositeEntityIdBindsDeclaredKeysForReadsUpdatesAndDeletes() throws SQLException {
+        try (Connection connection = ds.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE entity_id_record(tenant_id BIGINT, row_id BIGINT, name VARCHAR(64), PRIMARY KEY(tenant_id, row_id))");
+            try {
+                statement.executeUpdate("INSERT INTO entity_id_record VALUES(1, 2, 'target'), (1, 3, 'other row'), (2, 2, 'other tenant')");
+                final EntityIdRowDao entityDao = JdbcUtil.createDao(EntityIdRowDao.class, ds,
+                        JdbcUtil.DaoCreationOptions.builder().targetTableName("entity_id_record").build());
+                final com.landawn.abacus.util.EntityId id = com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", 2L);
+
+                assertTrue(entityDao.exists(id));
+                assertEquals("target", entityDao.get(id).get().getName());
+                assertEquals(1, entityDao.update(Map.of("name", "changed"), id));
+                assertEquals("changed", entityDao.getOrNull(id).getName());
+                assertEquals("other row", entityDao.getOrNull(com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", 3L)).getName());
+                assertEquals("other tenant", entityDao.getOrNull(com.landawn.abacus.util.EntityId.of("tenantId", 2L, "rowId", 2L)).getName());
+                assertThrows(IllegalArgumentException.class, () -> entityDao.getOrNull((com.landawn.abacus.util.EntityId) null));
+                assertEquals(1, entityDao.deleteById(id));
+                assertFalse(entityDao.exists(id));
+                assertEquals(2, entityDao.count(Filters.expr("1 = 1")));
+            } finally {
+                statement.executeUpdate("DROP TABLE entity_id_record");
+            }
+        }
+    }
+
     // A plain (non-CRUD) Dao declares no ID type.
     public interface CompositeKeyRowDao extends Dao<CompositeKeyRow, CompositeKeyRowDao> {
     }

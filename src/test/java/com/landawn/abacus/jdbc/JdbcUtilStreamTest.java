@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -22,6 +23,7 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -29,6 +31,8 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
@@ -521,6 +525,94 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
             assertFalse(iter.hasNext());
             verify(rs, org.mockito.Mockito.times(2)).next();
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2 })
+    void rowIteratorCloseCallbackRunsOnceWithoutClosingBorrowedResultSet(final int variant) throws SQLException {
+        final AtomicInteger closes = new AtomicInteger();
+        final ObjIteratorEx<Integer> iterator = closeableRowIterator(variant, closes::incrementAndGet);
+
+        iterator.closeResource();
+        iterator.closeResource();
+
+        assertEquals(1, closes.get());
+        verify(mockResultSet, never()).close();
+        verify(mockResultSet, never()).next();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2 })
+    void rowIteratorCloseWithoutCallbackKeepsBorrowedResultSet(final int variant) throws SQLException {
+        final ObjIteratorEx<Integer> iterator = closeableRowIterator(variant, null);
+
+        assertDoesNotThrow(iterator::closeResource);
+        assertDoesNotThrow(iterator::closeResource);
+
+        verify(mockResultSet, never()).close();
+        verify(mockResultSet, never()).next();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2 })
+    void failedRowIteratorCloseCallbackIsNotRetried(final int variant) throws SQLException {
+        final AtomicInteger closes = new AtomicInteger();
+        final IllegalStateException failure = new IllegalStateException("close failed");
+        final ObjIteratorEx<Integer> iterator = closeableRowIterator(variant, () -> {
+            closes.incrementAndGet();
+            throw failure;
+        });
+
+        assertSame(failure, assertThrows(IllegalStateException.class, iterator::closeResource));
+        assertDoesNotThrow(iterator::closeResource);
+
+        assertEquals(1, closes.get());
+        verify(mockResultSet, never()).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 1, 2, 3 })
+    void rowIteratorPreservesMappingSqlException(final int variant) throws SQLException {
+        final SQLException failure = new SQLException("mapping failed");
+        when(mockResultSet.next()).thenReturn(true);
+        final ObjIteratorEx<Integer> iterator = switch (variant) {
+            case 0 -> JdbcUtil.iterate(mockResultSet, (RowMapper<Integer>) row -> {
+                throw failure;
+            }, null);
+            case 1 -> JdbcUtil.iterate(mockResultSet, row -> true, (RowMapper<Integer>) row -> {
+                throw failure;
+            }, null);
+            case 2 -> JdbcUtil.iterate(mockResultSet, (BiRowMapper<Integer>) (row, labels) -> {
+                throw failure;
+            }, null);
+            default -> JdbcUtil.iterate(mockResultSet, (row, labels) -> true, (BiRowMapper<Integer>) (row, labels) -> {
+                throw failure;
+            });
+        };
+
+        assertSame(failure, assertThrows(UncheckedSQLException.class, iterator::next).getCause());
+        verify(mockResultSet, never()).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 0, 2 })
+    void rowIteratorCountAndAdvancePreserveCursorFailure(final int variant) throws SQLException {
+        final SQLException failure = new SQLException("cursor failed");
+        when(mockResultSet.next()).thenThrow(failure);
+        when(mockResultSet.getType()).thenReturn(ResultSet.TYPE_FORWARD_ONLY);
+
+        assertSame(failure, assertThrows(UncheckedSQLException.class, () -> rowIterator(mockResultSet, variant).count()).getCause());
+        assertSame(failure, assertThrows(UncheckedSQLException.class, () -> rowIterator(mockResultSet, variant).advance(1)).getCause());
+        verify(mockResultSet, never()).close();
+    }
+
+    private ObjIteratorEx<Integer> closeableRowIterator(final int variant, final Runnable onClose) {
+        return switch (variant) {
+            case 0 -> JdbcUtil.iterate(mockResultSet, (RowMapper<Integer>) row -> 1, onClose);
+            case 1 -> JdbcUtil.iterate(mockResultSet, row -> true, row -> 1, onClose);
+            case 2 -> JdbcUtil.iterate(mockResultSet, (BiRowMapper<Integer>) (row, labels) -> 1, onClose);
+            default -> throw new AssertionError(variant);
+        };
     }
 
     private static ObjIteratorEx<Integer> rowIterator(final ResultSet rs, final int variant) {
