@@ -652,7 +652,7 @@ public class DBLockTest extends TestBase {
         ds.setURL("jdbc:h2:mem:independent_lock_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
 
         try (Connection observer = ds.getConnection();
-             DBLock lock = new DBLock(ds, "\"independent_locks\"")) {
+             DBLock lock = new DBLock(ds, "independent_locks")) {
             JdbcUtil.executeUpdate(observer, "CREATE TABLE business_data(id INT)");
             final String code;
 
@@ -660,24 +660,24 @@ public class DBLockTest extends TestBase {
                 JdbcUtil.executeUpdate(ds, "INSERT INTO business_data VALUES (1)");
                 code = lock.tryLock("resource", 60_000, 0);
                 assertNotNull(code);
-                assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+                assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
                 assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM business_data").queryForInt().orElse(-1));
             }
 
-            assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+            assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
             assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM business_data").queryForInt().orElse(-1));
 
             try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
                 assertTrue(lock.unlock("resource", code));
-                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
             }
 
-            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
             assertNotNull(lock.tryLock("close-resource", 60_000, 0));
 
             try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
                 lock.close();
-                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"independent_locks\"").queryForInt().orElse(-1));
+                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
             }
         }
     }
@@ -694,23 +694,21 @@ public class DBLockTest extends TestBase {
         });
 
         try (Connection observer = database.getConnection();
-             DBLock lock = new DBLock(ds, "\"manual_locks\"")) {
+             DBLock lock = new DBLock(ds, "manual_locks")) {
             ((ScheduledFuture<?>) getField(lock, "scheduledFuture")).cancel(false);
             final String code = lock.tryLock("resource", 60_000, 0);
             assertNotNull(code);
-            assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"manual_locks\"").queryForInt().orElse(-1));
+            assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM manual_locks").queryForInt().orElse(-1));
 
-            JdbcUtil.executeUpdate(observer, "UPDATE \"manual_locks\" SET expiry_time = TIMESTAMP '2000-01-01 00:00:00'");
+            JdbcUtil.executeUpdate(observer, "UPDATE manual_locks SET expiry_time = TIMESTAMP '2000-01-01 00:00:00'");
             try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
                 lock.refreshLocks();
                 assertEquals(1,
-                        JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"manual_locks\" WHERE expiry_time > CURRENT_TIMESTAMP")
-                                .queryForInt()
-                                .orElse(-1));
+                        JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM manual_locks WHERE expiry_time > CURRENT_TIMESTAMP").queryForInt().orElse(-1));
             }
 
             assertTrue(lock.unlock("resource", code));
-            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM \"manual_locks\"").queryForInt().orElse(-1));
+            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM manual_locks").queryForInt().orElse(-1));
         }
     }
 

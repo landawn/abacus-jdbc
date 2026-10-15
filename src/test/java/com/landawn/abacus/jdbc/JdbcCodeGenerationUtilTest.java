@@ -242,14 +242,14 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     public void testGenerateSelectSql_WithExcludedColumns() {
         String sql = JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", List.of("createdAt"), "status = 'OPEN'");
 
-        assertEquals("SELECT `id`, `status` FROM order_history WHERE status = 'OPEN'", sql);
+        assertEquals("SELECT id, status FROM order_history WHERE status = 'OPEN'", sql);
     }
 
     @Test
     public void testGenerateInsertSql_WithExcludedColumns() {
         String sql = JdbcCodeGenerationUtil.generateInsertSql(connection, "order_history", List.of("status"));
 
-        assertEquals("INSERT INTO order_history(`id`, `created_at`) VALUES (?, ?)", sql);
+        assertEquals("INSERT INTO order_history(id, created_at) VALUES (?, ?)", sql);
     }
 
     // Excluding every column must fail fast with IllegalArgumentException instead of emitting malformed SQL
@@ -278,7 +278,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(resultSetMetaData.getColumnLabel(1)).thenReturn("user_id");
         when(resultSetMetaData.getColumnLabel(2)).thenReturn("userId");
 
-        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
+        assertTrue(failure.getMessage().contains("both map to named parameter"), failure.getMessage());
     }
 
     @Test
@@ -286,14 +288,16 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(resultSetMetaData.getColumnCount()).thenReturn(1);
         when(resultSetMetaData.getColumnLabel(1)).thenReturn("123value");
 
-        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
+        assertTrue(failure.getMessage().contains("valid named parameter"), failure.getMessage());
     }
 
     @Test
     public void testGenerateUpdateSql_ResolvesCamelCaseKeyToActualColumn() {
         final String sql = JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "createdAt");
 
-        assertEquals("UPDATE order_history SET `id` = ?, `status` = ? WHERE `created_at` = ?", sql);
+        assertEquals("UPDATE order_history SET id = ?, status = ? WHERE created_at = ?", sql);
     }
 
     @Test
@@ -302,255 +306,141 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
-    public void testGenerateSelectSql_QuotesSpecialTableNameInMetadataQuery() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+    public void testGenerateSelectSql_RejectsSpecialTableNameBeforeMetadataQuery() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "order-history"));
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("`");
-        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
-        when(conn.prepareStatement("SELECT * FROM `order-history` WHERE 1 > 2")).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rsMetaData.getColumnCount()).thenReturn(2);
-        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
-        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
-
-        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "order-history");
-
-        assertEquals("SELECT `id`, `created_at` FROM `order-history`", sql);
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(connection, Mockito.never()).prepareStatement(ArgumentMatchers.anyString());
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
     @Test
-    public void testGenerateSelectSql_QuotesDecodedMetadataLabelContainingDot() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+    public void testGenerateSelectSql_RejectsDecodedMetadataLabelContainingDot() throws SQLException {
+        when(resultSetMetaData.getColumnLabel(2)).thenReturn("user.name");
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("PostgreSQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("\"");
-        when(metaData.getDatabaseProductVersion()).thenReturn("16");
-        when(conn.prepareStatement("SELECT * FROM users WHERE 1 > 2")).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rsMetaData.getColumnCount()).thenReturn(1);
-        when(rsMetaData.getColumnLabel(1)).thenReturn("user.name");
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history"));
 
-        assertEquals("SELECT \"user.name\" FROM users", JdbcCodeGenerationUtil.generateSelectSql(conn, "users"));
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(preparedStatement).close();
+        Mockito.verify(resultSet).close();
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
     @Test
-    public void testGenerateInsertSql_QuotesSpecialTableNameInMetadataQuery() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+    public void testGenerateInsertSql_RejectsSpecialTableNameBeforeMetadataQuery() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateInsertSql(connection, "order-history"));
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("`");
-        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
-        when(conn.prepareStatement("SELECT * FROM `order-history` WHERE 1 > 2")).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rsMetaData.getColumnCount()).thenReturn(2);
-        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
-        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
-
-        final String sql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order-history");
-
-        assertEquals("INSERT INTO `order-history`(`id`, `created_at`) VALUES (?, ?)", sql);
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(connection, Mockito.never()).prepareStatement(ArgumentMatchers.anyString());
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
     @Test
-    public void testGenerateSelectSql_QuotesQualifiedSpecialTableName() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+    public void testGenerateSelectSql_RejectsQualifiedSpecialTableName() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "sales.order-history"));
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("`");
-        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
-        // Per-part conditional quoting: the simple schema part `sales` is left unquoted (quoting it would
-        // force case-exact resolution and break on case-folding databases); only the special table part
-        // `order-history` is quoted.
-        when(conn.prepareStatement("SELECT * FROM sales.`order-history` WHERE 1 > 2")).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rsMetaData.getColumnCount()).thenReturn(2);
-        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
-        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
-
-        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "sales.order-history");
-
-        assertEquals("SELECT `id`, `created_at` FROM sales.`order-history`", sql);
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(connection, Mockito.never()).prepareStatement(ArgumentMatchers.anyString());
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
     @Test
-    public void testGenerateSelectSql_PreservesQuotedDotsWithinSingleIdentifier() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+    public void testGenerateSelectSql_RejectsQuotedDotsWithinSingleIdentifier() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "\"sales.data\""));
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("`");
-        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
-        when(conn.prepareStatement("SELECT * FROM `sales.data` WHERE 1 > 2")).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rsMetaData.getColumnCount()).thenReturn(2);
-        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
-        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
-
-        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "\"sales.data\"");
-
-        assertEquals("SELECT `id`, `created_at` FROM `sales.data`", sql);
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(connection, Mockito.never()).prepareStatement(ArgumentMatchers.anyString());
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
     @Test
-    public void testGenerateSelectSql_PreservesExplicitDelimiterOnSimpleQualifiedPart() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+    public void testGenerateSelectSql_RejectsExplicitDelimiterOnSimpleQualifiedPart() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "sales.\"events\""));
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("`");
-        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
-        when(conn.prepareStatement("SELECT * FROM sales.`order` WHERE 1 > 2")).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rsMetaData.getColumnCount()).thenReturn(1);
-        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
-
-        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "sales.\"order\"");
-
-        assertEquals("SELECT `id` FROM sales.`order`", sql);
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(connection, Mockito.never()).prepareStatement(ArgumentMatchers.anyString());
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
     @Test
-    public void testGenerateSelectSql_QuotesSinglePartIdentifierStartingWithDigit() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+    public void testGenerateSelectSql_RejectsSinglePartIdentifierStartingWithDigit() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "123abc"));
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("`");
-        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
-        when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rsMetaData.getColumnCount()).thenReturn(2);
-        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
-        when(rsMetaData.getColumnLabel(2)).thenReturn("1st_value");
-
-        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "123abc");
-
-        assertEquals("SELECT `id`, `1st_value` FROM `123abc`", sql);
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(connection, Mockito.never()).prepareStatement(ArgumentMatchers.anyString());
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
     @Test
-    public void testGenerateSelectSql_EscapesEmbeddedBacktickInColumnName() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+    public void testGenerateSelectSql_RejectsEmbeddedBacktickInColumnName() throws SQLException {
+        when(resultSetMetaData.getColumnLabel(2)).thenReturn("we`ird");
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("`");
-        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
-        when(conn.prepareStatement("SELECT * FROM demo WHERE 1 > 2")).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rsMetaData.getColumnCount()).thenReturn(2);
-        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
-        when(rsMetaData.getColumnLabel(2)).thenReturn("we`ird");
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history"));
 
-        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "demo");
-
-        // The embedded backtick must be doubled so the generated SQL is valid (not unbalanced/injectable).
-        assertEquals("SELECT `id`, `we``ird` FROM demo", sql);
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(preparedStatement).close();
+        Mockito.verify(resultSet).close();
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
     @Test
-    public void testGenerateSelectSql_EscapesEmbeddedDoubleQuoteInColumnName() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
+    public void testGenerateSelectSql_RejectsEmbeddedDoubleQuoteInColumnName() throws SQLException {
+        when(resultSetMetaData.getColumnLabel(2)).thenReturn("we\"ird");
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("PostgreSQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("\"");
-        when(metaData.getDatabaseProductVersion()).thenReturn("15.0");
-        when(conn.prepareStatement("SELECT * FROM demo WHERE 1 > 2")).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rsMetaData.getColumnCount()).thenReturn(2);
-        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
-        when(rsMetaData.getColumnLabel(2)).thenReturn("we\"ird");
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history"));
 
-        final String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "demo");
-
-        // ANSI double-quote dialect: the embedded double-quote must be doubled.
-        assertEquals("SELECT \"id\", \"we\"\"ird\" FROM demo", sql);
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(preparedStatement).close();
+        Mockito.verify(resultSet).close();
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
-    // A metadata label is the column's stored spelling. On a database that folds unquoted identifiers to lower
-    // case (PostgreSQL), a mixed- or upper-case label emitted unquoted resolves to a different column, so it
-    // must be quoted even though it contains only letters/digits/underscores.
+    // A stored label whose case would change cannot be emitted unquoted without changing its identity.
     @Test
-    public void testGenerateSqlQuotesLabelsWhoseCaseWouldBeFolded_LowerCaseDatabase() throws SQLException {
+    public void testGenerateSqlRejectsLabelsWhoseCaseWouldBeFolded_LowerCaseDatabase() throws SQLException {
         when(databaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(databaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(databaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
         when(resultSetMetaData.getColumnLabel(2)).thenReturn("createdAt");
         when(resultSetMetaData.getColumnLabel(3)).thenReturn("STATUS");
 
-        assertEquals("SELECT \"id\", \"createdAt\", \"STATUS\" FROM order_history", JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history"));
-        assertEquals("INSERT INTO order_history(\"id\", \"createdAt\", \"STATUS\") VALUES (:id, :createdAt, :status)",
-                JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
-        assertEquals("UPDATE order_history SET \"createdAt\" = ?, \"STATUS\" = ? WHERE \"id\" = ?",
-                JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "id"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "id"));
+        assertEquals("SELECT id FROM order_history",
+                JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", List.of("createdAt", "STATUS"), null));
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
-    // Same on a database that folds unquoted identifiers to upper case (H2): the generated SQL must round-trip
-    // against the real table, including the key column of the WHERE clause.
+    // Reject case-dependent columns, while ordinary metadata names still round-trip through real generated SQL.
     @Test
-    public void testGenerateSqlQuotesLabelsWhoseCaseWouldBeFolded_H2() throws SQLException {
+    public void testGenerateSqlRejectsLabelsWhoseCaseWouldBeFolded_H2() throws SQLException {
         try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:codegen_case_folding", "sa", "");
              Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE case_guard (id INT PRIMARY KEY, \"userId\" INT, \"note\" VARCHAR(20))");
 
-            final String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "case_guard");
-            final String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "case_guard");
-            final String namedUpdateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "case_guard", null, List.of("userId"), null);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateSelectSql(conn, "case_guard"));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateInsertSql(conn, "case_guard"));
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "case_guard", null, List.of("userId"), null));
 
-            assertEquals("SELECT \"ID\", \"userId\", \"note\" FROM case_guard", selectSql);
-            assertEquals("INSERT INTO case_guard(\"ID\", \"userId\", \"note\") VALUES (?, ?, ?)", insertSql);
-            assertEquals("UPDATE case_guard SET \"ID\" = :id, \"note\" = :note WHERE \"userId\" = :userId", namedUpdateSql);
+            stmt.execute("CREATE TABLE ordinary_guard (id INT PRIMARY KEY, user_id INT, note VARCHAR(20))");
+            final String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "ordinary_guard");
+            final String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "ordinary_guard");
+            final String namedUpdateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "ordinary_guard", null, List.of("userId"), null);
+
+            assertEquals("SELECT ID, USER_ID, NOTE FROM ordinary_guard", selectSql);
+            assertEquals("INSERT INTO ordinary_guard(ID, USER_ID, NOTE) VALUES (?, ?, ?)", insertSql);
+            assertEquals("UPDATE ordinary_guard SET ID = :id, NOTE = :note WHERE USER_ID = :userId", namedUpdateSql);
 
             assertEquals(1, JdbcUtil.executeUpdate(conn, insertSql, 1, 7, "old"));
             assertEquals(1, JdbcUtil.executeUpdate(conn, namedUpdateSql, java.util.Map.of("id", 1, "note", "new", "userId", 7)));
@@ -572,28 +462,32 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
              Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE dollar_guard (id INT PRIMARY KEY, price$usd INT)");
 
-            // The positional forms remain usable.
-            assertEquals("UPDATE dollar_guard SET \"PRICE$USD\" = ? WHERE \"ID\" = ?", JdbcCodeGenerationUtil.generateUpdateSql(conn, "dollar_guard", "id"));
+            final IllegalArgumentException positionalFailure = assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateUpdateSql(conn, "dollar_guard", "id"));
+            assertTrue(positionalFailure.getMessage().contains("quoting is disabled"), positionalFailure.getMessage());
 
-            assertTrue(
-                    assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", "id")).getMessage()
-                            .contains("PRICE$USD"));
+            final IllegalArgumentException namedFailure = assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", "id"));
+            assertTrue(namedFailure.getMessage().contains("PRICE$USD"), namedFailure.getMessage());
+            assertTrue(namedFailure.getMessage().contains("valid named parameter"), namedFailure.getMessage());
             assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard"));
             assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", null, List.of("id"), null));
             assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "dollar_guard"));
             // Excluding the column leaves only valid parameter names.
-            assertEquals("UPDATE dollar_guard SET \"ID\" = :id",
+            assertEquals("UPDATE dollar_guard SET ID = :id",
                     JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", List.of("price$usd"), null, null));
 
             // Other currency symbols are Java identifier characters too, and are cut off by ParsedSql the same way.
             stmt.execute("CREATE TABLE pound_guard (id INT PRIMARY KEY, \"price£gbp\" INT)");
             assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "pound_guard"));
 
-            // Guard: non-ASCII letters remain valid named parameters, and ParsedSql reads each one whole.
+            // Non-ASCII letters remain valid named parameters, but the column still needs identifier quoting.
             stmt.execute("CREATE TABLE unicode_guard (id INT PRIMARY KEY, \"名前\" VARCHAR(10))");
-            final String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "unicode_guard");
-            assertTrue(insertSql.endsWith("VALUES (:id, :名前)"), insertSql);
-            assertEquals(List.of("id", "名前"), com.landawn.abacus.query.ParsedSql.parse(insertSql).namedParameters());
+            final IllegalArgumentException unicodeFailure = assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "unicode_guard"));
+            assertTrue(unicodeFailure.getMessage().contains("quoting is disabled"), unicodeFailure.getMessage());
+            assertEquals(List.of("id", "名前"),
+                    com.landawn.abacus.query.ParsedSql.parse("INSERT INTO unicode_guard(id, \"名前\") VALUES (:id, :名前)").namedParameters());
         }
     }
 
@@ -797,40 +691,13 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
-    public void testGenerateEntityClass_QuotesSpecialTableNameInMetadataQuery() throws SQLException {
-        final Connection conn = Mockito.mock(Connection.class);
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData rsMetaData = Mockito.mock(ResultSetMetaData.class);
-        final DatabaseMetaData metaData = Mockito.mock(DatabaseMetaData.class);
-        final Statement jdbcStmt = Mockito.mock(Statement.class);
-        final ResultSet pkRs = Mockito.mock(ResultSet.class);
+    public void testGenerateEntityClass_RejectsSpecialTableNameBeforeMetadataQuery() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass(connection, "order-history"));
 
-        when(conn.getMetaData()).thenReturn(metaData);
-        when(metaData.getDatabaseProductName()).thenReturn("MySQL");
-        when(metaData.getIdentifierQuoteString()).thenReturn("`");
-        when(metaData.getDatabaseProductVersion()).thenReturn("8.0");
-        when(conn.prepareStatement("SELECT * FROM `order-history` WHERE 1 > 2")).thenReturn(stmt);
-        when(stmt.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(rsMetaData);
-        when(rs.getStatement()).thenReturn(jdbcStmt);
-        when(jdbcStmt.getConnection()).thenReturn(conn);
-        when(metaData.getPrimaryKeys(null, null, "order-history")).thenReturn(pkRs);
-        when(pkRs.next()).thenReturn(false);
-        when(rsMetaData.getColumnCount()).thenReturn(2);
-        when(rsMetaData.getColumnName(1)).thenReturn("id");
-        when(rsMetaData.getColumnName(2)).thenReturn("created_at");
-        when(rsMetaData.getColumnLabel(1)).thenReturn("id");
-        when(rsMetaData.getColumnLabel(2)).thenReturn("created_at");
-        when(rsMetaData.getColumnType(1)).thenReturn(Types.BIGINT);
-        when(rsMetaData.getColumnType(2)).thenReturn(Types.TIMESTAMP);
-        when(rsMetaData.getColumnClassName(1)).thenReturn("java.lang.Long");
-        when(rsMetaData.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
-
-        final String result = JdbcCodeGenerationUtil.generateEntityClass(conn, "order-history");
-
-        assertNotNull(result);
-        assertTrue(result.contains("OrderHistory"));
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        Mockito.verify(connection, Mockito.never()).prepareStatement(ArgumentMatchers.anyString());
+        Mockito.verify(databaseMetaData, Mockito.never()).getIdentifierQuoteString();
     }
 
     // Test generateEntityClass(Connection, tableName, EntityCodeConfig) overload
@@ -1205,9 +1072,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGeneratedUpdateGroupsAdditionalOrPredicate() throws SQLException {
         final String condition = "status = 'OPEN' OR status = 'PENDING'";
-        assertEquals("UPDATE order_history SET `status` = ? WHERE `id` = ? AND (" + condition + ")",
+        assertEquals("UPDATE order_history SET status = ? WHERE id = ? AND (" + condition + ")",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", List.of("created_at"), List.of("id"), condition));
-        assertEquals("UPDATE order_history SET `status` = :status WHERE `id` = :id AND (" + condition + ")",
+        assertEquals("UPDATE order_history SET status = :status WHERE id = :id AND (" + condition + ")",
                 JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", List.of("created_at"), List.of("id"), condition));
 
         try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:update_predicate_grouping", "sa", "");
@@ -1269,21 +1136,23 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 assertTrue(source.contains("    private int pkCode;"), source);
             }
 
-            final String quotedSource = JdbcCodeGenerationUtil.generateEntityClass(conn, "\"MixedSchema\".\"MixedTable\"");
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(conn, "\"MixedSchema\".\"MixedTable\""));
+            final String quotedSource = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, "\"MixedSchema\".\"MixedTable\"",
+                    "SELECT * FROM \"MixedSchema\".\"MixedTable\" WHERE 1 > 2");
             assertTrue(quotedSource.contains("    @Id\n"), quotedSource);
             assertTrue(quotedSource.contains("@Column(name = \"customKey\")"), quotedSource);
         }
     }
 
-    // A table name that is not a simple identifier (order-history) is delimited in the generated metadata query, so the
-    // database resolved it case-exactly; the primary-key lookup still folded it to ORDER-HISTORY and found no key on H2.
+    // Caller-supplied SQL can still address exact table names; primary-key lookup must retain their case.
     @Test
     public void testGenerateEntityClassPrimaryKeysOfSpecialTableNameAreNotCaseFolded() throws SQLException {
         try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:codegen_primary_key_special_" + System.nanoTime(), "sa", "");
              Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE \"order-history\" (order_key INT PRIMARY KEY, note VARCHAR(20))");
 
-            final String source = JdbcCodeGenerationUtil.generateEntityClass(conn, "order-history");
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(conn, "order-history"));
+            final String source = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, "order-history", "SELECT * FROM \"order-history\" WHERE 1 > 2");
 
             assertTrue(source.contains("public class OrderHistory"), source);
             assertTrue(source.contains("    @Id\n    @Column(name = \"ORDER_KEY\")"), source);
@@ -1292,7 +1161,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
             stmt.execute("CREATE SCHEMA special_schema");
             stmt.execute("CREATE TABLE special_schema.\"order-history\" (other_key INT PRIMARY KEY, note VARCHAR(20))");
 
-            final String qualifiedSource = JdbcCodeGenerationUtil.generateEntityClass(conn, "special_schema.order-history");
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(conn, "special_schema.order-history"));
+            final String qualifiedSource = JdbcCodeGenerationUtil.generateEntityClassByQuery(conn, "special_schema.order-history",
+                    "SELECT * FROM special_schema.\"order-history\" WHERE 1 > 2");
 
             assertTrue(qualifiedSource.contains("    @Id\n    @Column(name = \"OTHER_KEY\")"), qualifiedSource);
         }
@@ -1565,9 +1436,11 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         assertEquals("UPDATE order_history SET id = 1, status = 2 WHERE id = 42", JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
                 "INSERT INTO order_history(id /* pk, (x) */, -- ), '\n status -- last\n) VALUES (1, 2)", "id = 42"));
-        // Comment text inside a quoted identifier is part of the name, not a comment.
-        assertEquals("UPDATE order_history SET `a--b` = 1",
-                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(`a--b`) VALUES (1)"));
+        // The parser keeps the quoted name intact before the rendering policy rejects it.
+        final IllegalArgumentException quotedNameFailure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(`a--b`) VALUES (1)"));
+        assertTrue(quotedNameFailure.getMessage().contains("quoting is disabled"), quotedNameFailure.getMessage());
+        assertTrue(quotedNameFailure.getMessage().contains("a--b"), quotedNameFailure.getMessage());
         // A column entry consisting only of a comment is empty.
         assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id, /* none */) VALUES (1, 2)"));
@@ -1642,8 +1515,10 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
 
-        assertEquals("UPDATE `audit(log)` SET id = 1",
-                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO \"audit(log)\"(id) VALUES (1)"));
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO \"audit(log)\"(id) VALUES (1)"));
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        assertTrue(failure.getMessage().contains("audit(log)"), failure.getMessage());
     }
 
     @Test
@@ -1682,12 +1557,13 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     }
 
     @Test
-    public void testConvertInsertSqlToUpdateSql_QuotesUnsafeTableFragment() throws SQLException {
+    public void testConvertInsertSqlToUpdateSql_RejectsUnsafeTableFragment() throws SQLException {
         final DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
 
-        assertEquals("UPDATE `t; DROP TABLE audit; --` SET id = 1",
-                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO t; DROP TABLE audit; -- (id) VALUES (1)"));
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO t; DROP TABLE audit; -- (id) VALUES (1)"));
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
     }
 
     @Test
@@ -2742,25 +2618,23 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     // "UPDATE order_history SET ... WHERE   ". It is now treated like null/empty and omitted.
     @Test
     public void testGenerateSelectSql_BlankWhereClauseIsOmitted() {
-        assertEquals("SELECT `id`, `created_at`, `status` FROM order_history",
-                JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", null, "   "));
-        assertEquals("SELECT `id`, `created_at`, `status` FROM order_history",
-                JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", null, "\t\n"));
+        assertEquals("SELECT id, created_at, status FROM order_history", JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", null, "   "));
+        assertEquals("SELECT id, created_at, status FROM order_history", JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", null, "\t\n"));
     }
 
     @Test
     public void testGenerateUpdateSql_BlankWhereClauseIsOmitted() {
-        assertEquals("UPDATE order_history SET `id` = ?, `created_at` = ?, `status` = ?",
+        assertEquals("UPDATE order_history SET id = ?, created_at = ?, status = ?",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, null, "   "));
-        assertEquals("UPDATE order_history SET `created_at` = ?, `status` = ? WHERE `id` = ?",
+        assertEquals("UPDATE order_history SET created_at = ?, status = ? WHERE id = ?",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("id"), " \t "));
     }
 
     @Test
     public void testGenerateNamedUpdateSql_BlankWhereClauseIsOmitted() {
-        assertEquals("UPDATE order_history SET `id` = :id, `created_at` = :createdAt, `status` = :status",
+        assertEquals("UPDATE order_history SET id = :id, created_at = :createdAt, status = :status",
                 JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", null, null, "   "));
-        assertEquals("UPDATE order_history SET `created_at` = :createdAt, `status` = :status WHERE `id` = :id",
+        assertEquals("UPDATE order_history SET created_at = :createdAt, status = :status WHERE id = :id",
                 JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", null, List.of("id"), " \t "));
     }
 
@@ -2843,10 +2717,12 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     // after camelCase normalization silently dropped a distinct column ("userId" for key "user_id") from the SET clause.
     @Test
     public void testGenerateUpdateSql_KeyColumnsRemovedFromSetByExactLabel() throws SQLException {
+        when(databaseMetaData.storesUpperCaseIdentifiers()).thenReturn(false);
+        when(databaseMetaData.storesLowerCaseIdentifiers()).thenReturn(false);
         when(resultSetMetaData.getColumnLabel(1)).thenReturn("user_id");
         when(resultSetMetaData.getColumnLabel(2)).thenReturn("userId");
 
-        assertEquals("UPDATE order_history SET `userId` = ?, `status` = ? WHERE `user_id` = ?",
+        assertEquals("UPDATE order_history SET userId = ?, status = ? WHERE user_id = ?",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("user_id"), null));
         assertEquals(JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", "user_id") + " AND (status = 'OPEN')",
                 JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", null, List.of("user_id"), "status = 'OPEN'"));
@@ -3677,17 +3553,18 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testConvertInsertSqlToUpdateSql_DoubledQuoteIdentifier() throws SQLException {
         final DataSource ds = dataSourceReturningConnection();
-        final String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(\"a\"\"b\") VALUES (1)");
-        // MySQL re-quotes with backticks; the embedded double-quote in the identifier is preserved.
-        assertEquals("UPDATE t SET `a\"b` = 1", updateSql);
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t(\"a\"\"b\") VALUES (1)"));
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        assertTrue(failure.getMessage().contains("a\"b"), failure.getMessage());
     }
 
     @Test
-    public void testConvertInsertSqlToUpdateSql_PreservesExplicitSimpleIdentifiers() throws SQLException {
+    public void testConvertInsertSqlToUpdateSql_RejectsExplicitSimpleIdentifiers() throws SQLException {
         final DataSource ds = dataSourceReturningConnection();
-        final String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO \"order\"(\"select\") VALUES (1)");
-
-        assertEquals("UPDATE `order` SET `select` = 1", updateSql);
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO \"events\"(\"id\") VALUES (1)"));
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
     }
 
     // A bracket-delimited identifier with an escaped (doubled) bracket exercises the bracket-identifier
@@ -3696,9 +3573,10 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testConvertInsertSqlToUpdateSql_BracketIdentifier() throws SQLException {
         final DataSource ds = dataSourceReturningConnection();
-        final String updateSql = JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t([a]]b]) VALUES (1)");
-        // [a]]b] decodes to identifier a]b, then MySQL re-quotes with backticks.
-        assertEquals("UPDATE t SET `a]b` = 1", updateSql);
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO t([a]]b]) VALUES (1)"));
+        assertTrue(failure.getMessage().contains("quoting is disabled"), failure.getMessage());
+        assertTrue(failure.getMessage().contains("a]b"), failure.getMessage());
     }
 
     // An escaped single quote inside a string VALUE is copied verbatim; exercises the quote-doubling

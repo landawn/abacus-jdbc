@@ -1,9 +1,11 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,28 +24,30 @@ import org.junit.jupiter.api.Test;
 class JdbcUtilIdentifierDelimiterReviewTest {
 
     @Test
-    void qualifiedIdentifiersUseMatchingBracketDelimiters() throws SQLException {
+    void qualifiedIdentifiersStayUnquotedWhenTheDriverUsesBrackets() throws SQLException {
         final Connection conn = bracketQuotedConnection();
 
-        assertEquals("[CATALOG].[ARCHIVE].[EVENTS]", JdbcUtil.toQualifiedSqlIdentifier(conn, "catalog.archive.events", "tableName"));
-        assertEquals("[MixedCase].[a]]b]", JdbcUtil.toQualifiedSqlIdentifier(conn, "\"MixedCase\".\"a]b\"", "tableName"));
-        assertEquals("[a[b]", JdbcUtil.toQualifiedSqlIdentifier(conn, "\"a[b\"", "tableName"));
+        assertEquals("CATALOG.ARCHIVE.EVENTS", JdbcUtil.toQualifiedSqlIdentifier(conn, "catalog.archive.events", "tableName"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.toQualifiedSqlIdentifier(conn, "\"MixedCase\".\"a]b\"", "tableName"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.toQualifiedSqlIdentifier(conn, "\"a[b\"", "tableName"));
+        verify(conn.getMetaData(), never()).getIdentifierQuoteString();
     }
 
     @Test
-    void tableExistenceFallbackUsesMatchingBracketDelimiters() throws SQLException {
+    void tableExistenceFallbackStaysUnquotedWhenTheDriverUsesBrackets() throws SQLException {
         final Connection conn = bracketQuotedConnection();
         final PreparedStatement stmt = mock(PreparedStatement.class);
         when(conn.prepareStatement(anyString())).thenReturn(stmt);
 
         assertTrue(JdbcUtil.tableExists(conn, "archive.events"));
 
-        verify(conn).prepareStatement("SELECT 1 FROM [ARCHIVE].[EVENTS] WHERE 1 > 2");
+        verify(conn).prepareStatement("SELECT 1 FROM ARCHIVE.EVENTS WHERE 1 > 2");
+        verify(conn.getMetaData(), never()).getIdentifierQuoteString();
         verify(stmt).close();
     }
 
     @Test
-    void columnNameFallbackUsesMatchingBracketDelimiters() throws SQLException {
+    void columnNameFallbackStaysUnquotedWhenTheDriverUsesBrackets() throws SQLException {
         final Connection conn = bracketQuotedConnection();
         final PreparedStatement stmt = mock(PreparedStatement.class);
         final ResultSet rows = mock(ResultSet.class);
@@ -56,7 +60,8 @@ class JdbcUtilIdentifierDelimiterReviewTest {
 
         assertEquals(List.of("ID"), JdbcUtil.getColumnNames(conn, "archive.events"));
 
-        verify(conn).prepareStatement("SELECT * FROM [ARCHIVE].[EVENTS] WHERE 1 > 2");
+        verify(conn).prepareStatement("SELECT * FROM ARCHIVE.EVENTS WHERE 1 > 2");
+        verify(conn.getMetaData(), never()).getIdentifierQuoteString();
         verify(stmt).close();
         verify(rows).close();
     }

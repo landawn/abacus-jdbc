@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
@@ -101,12 +102,12 @@ public class JdbcCodeGenerationArrayReviewTest extends TestBase {
     }
 
     @Test
-    void preservesBracketDelimitedIdentifiersAndTheirEscapes() {
+    void rejectsGeneratedBracketIdentifiersButPreservesValueExpressions() {
         final JdbcDataSource source = new JdbcDataSource();
         source.setURL("jdbc:h2:mem:codegen_bracket_identifier_review");
 
-        assertEquals("UPDATE \"array_table\" SET \"a[b\" = [a[b], \"a]b\" = [a]]b]",
-                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(source, "INSERT INTO [array_table]([a[b], [a]]b]) VALUES ([a[b], [a]]b])"));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(source, "INSERT INTO [array_table]([a[b], [a]]b]) VALUES ([a[b], [a]]b])"));
         assertEquals("UPDATE t SET a = (SELECT [a[b] FROM [c]]d])",
                 JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(source, "INSERT INTO t(a) VALUES ((SELECT [a[b] FROM [c]]d]))"));
     }

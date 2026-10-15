@@ -106,7 +106,9 @@ public class JdbcUtilIntegrationTest extends TestBase {
                 assertEquals(List.of(expectedColumn), JdbcUtil.getColumnNames(conn, schema + ".\"MixedCase\""));
                 assertTrue(JdbcUtil.tableExists(conn, catalog + "." + schema + ".\"MixedCase\""));
                 assertEquals(List.of(expectedColumn), JdbcUtil.getColumnNames(conn, catalog + "." + schema + ".\"MixedCase\""));
-                assertTrue(JdbcUtil.dropTableIfExists(conn, schema + ".\"MixedCase\""));
+                assertThrows(IllegalArgumentException.class, () -> JdbcUtil.dropTableIfExists(conn, schema + ".\"MixedCase\""));
+                assertTrue(JdbcUtil.tableExists(conn, schema + ".\"MixedCase\""));
+                stmt.executeUpdate("DROP TABLE " + schema + ".\"MixedCase\"");
                 assertFalse(JdbcUtil.tableExists(conn, schema + ".\"MixedCase\""));
             }
         }
@@ -1002,7 +1004,7 @@ public class JdbcUtilIntegrationTest extends TestBase {
     // word H2 failed "SELECT 1 FROM ORDER WHERE 1 > 2" with a syntax error (42001) that was thrown instead of returning
     // false, which also broke createTableIfNotExists for such a table.
     @Test
-    public void testTableExists_ReservedWordTableName_CreateAndDrop() throws SQLException {
+    public void testTableExists_ReservedWordTableName_CreateAndExplicitSqlDrop() throws SQLException {
         try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:tableexists_reserved_word", "sa", "")) {
             for (final String name : new String[] { "order", "user", "value", "year", "PUBLIC.order" }) {
                 assertFalse(JdbcUtil.tableExists(conn, name), name);
@@ -1012,9 +1014,11 @@ public class JdbcUtilIntegrationTest extends TestBase {
             assertTrue(JdbcUtil.tableExists(conn, "order"));
             assertTrue(JdbcUtil.tableExists(conn, "public.order"));
             assertFalse(JdbcUtil.createTableIfNotExists(conn, "order", "CREATE TABLE \"ORDER\" (id INT)"));
-            assertTrue(JdbcUtil.dropTableIfExists(conn, "order"));
+            assertThrows(IllegalArgumentException.class, () -> JdbcUtil.dropTableIfExists(conn, "order"));
+            assertTrue(JdbcUtil.tableExists(conn, "order"));
+            JdbcUtil.executeUpdate(conn, "DROP TABLE \"ORDER\"");
             assertFalse(JdbcUtil.tableExists(conn, "order"));
-            assertFalse(JdbcUtil.dropTableIfExists(conn, "order"));
+            assertThrows(IllegalArgumentException.class, () -> JdbcUtil.dropTableIfExists(conn, "order"));
         }
     }
 

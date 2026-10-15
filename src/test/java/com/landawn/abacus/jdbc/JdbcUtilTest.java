@@ -1010,10 +1010,9 @@ public class JdbcUtilTest extends TestBase {
         verify(mockConnection, never()).prepareStatement("SELECT * FROM mixedCase WHERE 1 > 2");
     }
 
-    // BUG FIX: like the tableExists probe, the SELECT fallback quotes case-folded name parts. Unquoted, PostgreSQL runs
-    // "SELECT * FROM user" as the CURRENT_USER function, so a missing table "user" reported the single column [user].
+    // USER can be parsed as a value expression, so the disabled-quoting policy must skip this fallback entirely.
     @Test
-    public void testGetColumnNames_FallbackQuotesCaseFoldedReservedWord() throws SQLException {
+    public void testGetColumnNames_FallbackSkipsCaseFoldedReservedWord() throws SQLException {
         when(mockDatabaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
         when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         // Any other fallback text reaches the default mock statement, which (like PostgreSQL's "FROM user") reports [user].
@@ -1026,8 +1025,7 @@ public class JdbcUtilTest extends TestBase {
         assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "User"));
         assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "public.user"));
 
-        verify(mockConnection, never()).prepareStatement("SELECT * FROM user WHERE 1 > 2");
-        verify(mockConnection, never()).prepareStatement("SELECT * FROM public.user WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement(anyString());
     }
 
     // Guard (passes before and after the quoting fix): without a canonical identifier case (e.g. MySQL, SQL Server), the
@@ -1044,19 +1042,18 @@ public class JdbcUtilTest extends TestBase {
         verify(mockDatabaseMetaData, never()).getIdentifierQuoteString();
     }
 
-    // The quoted fallback keeps the caller's qualification: every case-folded part of a three-part name is quoted,
-    // catalog included.
+    // Preserve the caller's qualification and canonical case without adding delimiters.
     @Test
-    public void testGetColumnNames_FallbackQuotesEveryPartOfThreePartName() throws SQLException {
+    public void testGetColumnNames_FallbackFoldsEveryPartOfThreePartName() throws SQLException {
         when(mockDatabaseMetaData.storesUpperCaseIdentifiers()).thenReturn(true);
         when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
         when(mockResultSetMetaData.getColumnName(1)).thenReturn("ID");
 
-        assertEquals(List.of("ID"), JdbcUtil.getColumnNames(mockConnection, "appdb.sales.order"));
+        assertEquals(List.of("ID"), JdbcUtil.getColumnNames(mockConnection, "appdb.sales.orders"));
 
-        verify(mockConnection).prepareStatement("SELECT * FROM \"APPDB\".\"SALES\".\"ORDER\" WHERE 1 > 2");
-        verify(mockConnection, never()).prepareStatement("SELECT * FROM APPDB.SALES.ORDER WHERE 1 > 2");
+        verify(mockConnection).prepareStatement("SELECT * FROM APPDB.SALES.ORDERS WHERE 1 > 2");
+        verify(mockDatabaseMetaData, never()).getIdentifierQuoteString();
     }
 
     @Test
@@ -2054,7 +2051,7 @@ public class JdbcUtilTest extends TestBase {
     }
 
     @Test
-    public void testDropTableIfExists_QuotesIdentifier() throws SQLException {
+    public void testDropTableIfExists_RejectsReservedIdentifier() throws SQLException {
         final ResultSet tableRs = mock(ResultSet.class);
 
         when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
@@ -2062,24 +2059,23 @@ public class JdbcUtilTest extends TestBase {
         when(tableRs.next()).thenReturn(true);
         when(mockPreparedStatement.execute()).thenReturn(false);
 
-        boolean dropped = JdbcUtil.dropTableIfExists(mockConnection, "order");
-        assertTrue(dropped);
-        verify(mockConnection).prepareStatement("DROP TABLE \"order\"");
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.dropTableIfExists(mockConnection, "order"));
+        verify(mockConnection, never()).prepareStatement(anyString());
     }
 
     @Test
-    public void testToQualifiedSqlIdentifier_QuotesAndEscapes() throws SQLException {
+    public void testToQualifiedSqlIdentifier_RejectsEmbeddedQuotes() throws SQLException {
         when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
 
-        assertEquals("\"schema\".\"my\"\"table\"", JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "schema.my\"table", "tableName"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "schema.my\"table", "tableName"));
     }
 
     @Test
-    public void testToQualifiedSqlIdentifier_PreservesQuotedDotsWithinIdentifier() throws SQLException {
+    public void testToQualifiedSqlIdentifier_RejectsQuotedDotsWithinIdentifier() throws SQLException {
         when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
 
-        assertEquals("\"schema\".\"sales.data\"", JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "schema.\"sales.data\"", "tableName"));
-        assertEquals("\"sales.data\"", JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "\"sales.data\"", "tableName"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "schema.\"sales.data\"", "tableName"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.toQualifiedSqlIdentifier(mockConnection, "\"sales.data\"", "tableName"));
     }
 
     @Test
@@ -4954,9 +4950,9 @@ public class JdbcUtilTest extends TestBase {
 
     // Regression: on PostgreSQL the unquoted probe "SELECT 1 FROM user WHERE 1 > 2" succeeds (USER is parsed as the
     // CURRENT_USER function), so a missing table named "user" was reported as present (and createTableIfNotExists skipped
-    // creating it). When the driver reports a canonical identifier case, the probe now quotes the case-folded parts.
+    // creating it). With quoting disabled, a keyword name must not be used in a SQL probe.
     @Test
-    public void testTableExists_FallbackProbeQuotesCaseFoldedReservedWord() throws SQLException {
+    public void testTableExists_FallbackProbeSkipsCaseFoldedReservedWord() throws SQLException {
         when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockDatabaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
         when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
@@ -4969,8 +4965,7 @@ public class JdbcUtilTest extends TestBase {
         assertFalse(JdbcUtil.tableExists(mockConnection, "User"));
         assertFalse(JdbcUtil.tableExists(mockConnection, "public.user"));
 
-        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM user WHERE 1 > 2");
-        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM public.user WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement(anyString());
     }
 
     // Guard (passes before and after the quoting fix): without a canonical identifier case (e.g. MySQL, SQL Server), the
@@ -4987,11 +4982,9 @@ public class JdbcUtilTest extends TestBase {
         verify(mockDatabaseMetaData, never()).getIdentifierQuoteString();
     }
 
-    // The quoted probe keeps the caller's qualification: every case-folded part of a three-part name is quoted
-    // (catalog included), an unqualified name never gains the connection's current catalog, and on PostgreSQL in a
-    // transaction the quoted probe still runs under the savepoint that is rolled back when the table is missing.
+    // Keep qualification and case folding, and retain the savepoint rollback for failed ordinary-name probes.
     @Test
-    public void testTableExists_FallbackProbeQuotesEveryPartOfThreePartNameUnderSavepoint() throws SQLException {
+    public void testTableExists_FallbackProbeFoldsEveryPartOfThreePartNameUnderSavepoint() throws SQLException {
         final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
         when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockDatabaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
@@ -5000,16 +4993,16 @@ public class JdbcUtilTest extends TestBase {
         when(mockConnection.getAutoCommit()).thenReturn(false);
         when(mockConnection.setSavepoint()).thenReturn(savepoint);
         // Any other probe text reaches the default mock statement, which succeeds.
-        when(mockConnection.prepareStatement("SELECT 1 FROM \"appdb\".\"public\".\"order\" WHERE 1 > 2"))
-                .thenThrow(new SQLException("relation \"public.order\" does not exist", "42P01"));
+        when(mockConnection.prepareStatement("SELECT 1 FROM appdb.public.orders WHERE 1 > 2"))
+                .thenThrow(new SQLException("relation \"public.orders\" does not exist", "42P01"));
 
-        assertFalse(JdbcUtil.tableExists(mockConnection, "AppDb.Public.Order"));
+        assertFalse(JdbcUtil.tableExists(mockConnection, "AppDb.Public.Orders"));
         verify(mockConnection).rollback(savepoint);
 
-        assertTrue(JdbcUtil.tableExists(mockConnection, "Order"));
-        verify(mockConnection).prepareStatement("SELECT 1 FROM \"order\" WHERE 1 > 2");
-        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM \"appdb\".\"order\" WHERE 1 > 2");
-        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM appdb.public.order WHERE 1 > 2");
+        assertTrue(JdbcUtil.tableExists(mockConnection, "Orders"));
+        verify(mockConnection).prepareStatement("SELECT 1 FROM orders WHERE 1 > 2");
+        verify(mockConnection, never()).prepareStatement("SELECT 1 FROM appdb.orders WHERE 1 > 2");
+        verify(mockDatabaseMetaData, never()).getIdentifierQuoteString();
     }
 
     // Guard (passes before and after the quoting fix): a driver that reports a canonical identifier case but no usable
@@ -5643,7 +5636,7 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testCheckColumnNameParsesEveryInputAsSingleIdentifier() {
         assertEquals("users", SqlIdentifierUtil.renderColumnName("  users  ", null));
-        assertEquals("\"user.name\"", SqlIdentifierUtil.renderColumnName("\"user.name\"", null));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName("\"user.name\"", null));
         assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName("users.name", null));
     }
 
@@ -5656,10 +5649,9 @@ public class JdbcUtilTest extends TestBase {
         when(tableRows.getString("TABLE_NAME")).thenReturn("mixedCase");
         when(mockPreparedStatement.execute()).thenThrow(new SQLException("table not found", "42S02"));
 
-        assertFalse(JdbcUtil.dropTableIfExists(mockConnection, "\"mixedCase\""));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.dropTableIfExists(mockConnection, "\"mixedCase\""));
 
-        verify(mockConnection).prepareStatement("DROP TABLE \"mixedCase\"");
-        verify(mockConnection, never()).prepareStatement("DROP TABLE mixedCase");
+        verify(mockConnection, never()).prepareStatement(anyString());
     }
 
     @Test

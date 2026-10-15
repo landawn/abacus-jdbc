@@ -3,8 +3,13 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
+
+import java.sql.Connection;
 
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +31,19 @@ public class SqlIdentifierUtilTest extends TestBase {
     }
 
     @Test
+    public void testQuoteString_ConnectionSkipsMetadataWhenQuotingIsDisabled() {
+        final Connection conn = mock(Connection.class);
+
+        for (final ProductInfo product : new ProductInfo[] { null, MYSQL, MARIADB, POSTGRES, ProductInfo.of("OtherDB", "1"),
+                ProductInfo.of("Microsoft SQL Server", "1"), ProductInfo.of("Adaptive Server Enterprise", "1"), ProductInfo.of("SAP ASE", "1"),
+                ProductInfo.of("ASE", "1") }) {
+            assertNull(SqlIdentifierUtil.quoteString(conn, product));
+        }
+
+        verifyNoInteractions(conn);
+    }
+
+    @Test
     public void testQuoteString_NonAnsiDialectFallbacksAndBracketEscaping() {
         for (final String product : java.util.List.of("Spark SQL", "Databricks", "Apache Hive", "Google BigQuery")) {
             assertEquals("`", SqlIdentifierUtil.quoteString(ProductInfo.of(product, "1")));
@@ -33,9 +51,9 @@ public class SqlIdentifierUtilTest extends TestBase {
         for (final String product : java.util.List.of("Microsoft SQL Server", "Adaptive Server Enterprise", "SAP ASE", "ASE")) {
             final ProductInfo info = ProductInfo.of(product, "1");
             assertEquals("[", SqlIdentifierUtil.quoteString(info));
-            assertEquals("[a]]b]", SqlIdentifierUtil.renderColumnName("\"a]b\"", info));
-            assertEquals("[a[b]", SqlIdentifierUtil.renderColumnName("\"a[b\"", info));
-            assertEquals("[s].[a]]b]", SqlIdentifierUtil.renderTableName("\"s\".\"a]b\"", info));
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName("\"a]b\"", info));
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName("\"a[b\"", info));
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderTableName("\"s\".\"a]b\"", info));
         }
     }
 
@@ -46,6 +64,8 @@ public class SqlIdentifierUtilTest extends TestBase {
         // The other dialect's quote character is not an escape target.
         assertEquals("`a\"b`", SqlIdentifierUtil.quoteIdentifier("a\"b", "`"));
         assertEquals("\"\"", SqlIdentifierUtil.quoteIdentifier("", "\""));
+        assertEquals("[a]]b]", SqlIdentifierUtil.quoteIdentifier("a]b", "["));
+        assertEquals("[a[b]", SqlIdentifierUtil.quoteIdentifier("a[b", "["));
     }
 
     @Test
@@ -117,13 +137,10 @@ public class SqlIdentifierUtilTest extends TestBase {
     public void testRenderTableName() {
         assertEquals("users", SqlIdentifierUtil.renderTableName(" users ", null));
         assertEquals("schema.users", SqlIdentifierUtil.renderTableName("schema.users", POSTGRES));
-        assertEquals("\"Schema\".users", SqlIdentifierUtil.renderTableName("\"Schema\".users", null));
-        assertEquals("`Schema`.users", SqlIdentifierUtil.renderTableName("\"Schema\".users", MYSQL));
-        assertEquals("\"my table\"", SqlIdentifierUtil.renderTableName("my table", null));
-        assertEquals("`dbo`.`my table`", SqlIdentifierUtil.renderTableName("[dbo].[my table]", MARIADB));
-        assertEquals("a.\"b\"\"c\"", SqlIdentifierUtil.renderTableName("a.\"b\"\"c\"", null));
-        assertEquals("`a\"b`", SqlIdentifierUtil.renderTableName("`a\"b`", MYSQL));
-        assertEquals("\"s.x\".t", SqlIdentifierUtil.renderTableName("\"s.x\".t", null));
+        for (final String table : java.util.List.of("\"Schema\".users", "my table", "[dbo].[my table]", "a.\"b\"\"c\"", "`a\"b`", "\"s.x\".t")) {
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderTableName(table, null));
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderTableName(table, MYSQL));
+        }
         assertEquals("c.s.t", SqlIdentifierUtil.renderTableName("c . s . t", null));
 
         assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderTableName(null, null));
@@ -138,12 +155,10 @@ public class SqlIdentifierUtilTest extends TestBase {
     @Test
     public void testRenderColumnName() {
         assertEquals("first_name", SqlIdentifierUtil.renderColumnName("first_name", null));
-        assertEquals("\"first_name\"", SqlIdentifierUtil.renderColumnName("\"first_name\"", null));
-        assertEquals("`Name`", SqlIdentifierUtil.renderColumnName("[Name]", MYSQL));
-        assertEquals("\"Name\"", SqlIdentifierUtil.renderColumnName("`Name`", POSTGRES));
-        assertEquals("\"first name\"", SqlIdentifierUtil.renderColumnName("first name", null));
-        assertEquals("\"a\"\"b\"", SqlIdentifierUtil.renderColumnName("a\"b", null));
-        assertEquals("\"a.b\"", SqlIdentifierUtil.renderColumnName(" [a.b] ", null));
+        for (final String column : java.util.List.of("\"first_name\"", "[Name]", "`Name`", "first name", "a\"b", " [a.b] ")) {
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName(column, null));
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName(column, MYSQL));
+        }
 
         assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName(null, null));
         assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName(" ", null));
@@ -154,12 +169,51 @@ public class SqlIdentifierUtilTest extends TestBase {
     @Test
     public void testCheckColumnName() {
         assertEquals("Name", SqlIdentifierUtil.checkColumnName("Name", null, false));
-        assertEquals("\"Name\"", SqlIdentifierUtil.checkColumnName("Name", null, true));
-        assertEquals("`Name`", SqlIdentifierUtil.checkColumnName("Name", MYSQL, true));
-        assertEquals("\"my col\"", SqlIdentifierUtil.checkColumnName("my col", null, false));
-        assertEquals("`a``b`", SqlIdentifierUtil.checkColumnName("a`b", MYSQL, false));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.checkColumnName("Name", null, true));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.checkColumnName("Name", MYSQL, true));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.checkColumnName("my col", null, false));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.checkColumnName("a`b", MYSQL, false));
 
         assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.checkColumnName(null, null, false));
         assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.checkColumnName("  ", null, true));
+    }
+
+    @Test
+    public void disabledPolicyCannotBeBypassedBySupplyingADelimiter() {
+        assertFalse(SqlIdentifierUtil.isIdentifierQuotingEnabled());
+        for (final String quote : java.util.List.of("\"", "`", "[")) {
+            assertEquals("catalog.schema.table_name", SqlIdentifierUtil.renderTableNameWithQuote("catalog.schema.table_name", quote));
+            assertEquals("column_name", SqlIdentifierUtil.renderColumnNameWithQuote("column_name", quote));
+            assertEquals("COLUMN_NAME", SqlIdentifierUtil.renderStoredIdentifier("COLUMN_NAME", quote));
+            for (final String name : java.util.List.of("user", "ORDER", "Current_User", "current_timestamp", "a.b", "a b", "a]b", "1column")) {
+                final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                        () -> SqlIdentifierUtil.renderStoredIdentifier(name, quote));
+                assertTrue(failure.getMessage().contains("Identifier quoting is disabled"));
+            }
+        }
+    }
+
+    @Test
+    public void bareExpressionNamesRequireQuotingRegardlessOfCase() {
+        for (final String name : java.util.List.of("ROWNUM", "rownum", "RowNum", "CURRENT_PATH", "current_path", "Current_Path")) {
+            assertFalse(SqlIdentifierUtil.isUnquotedIdentifier(name), name);
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderStoredIdentifier(name, null), name);
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderColumnName(name, null), name);
+            assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderTableName("schema_name." + name, null), name);
+        }
+
+        assertTrue(SqlIdentifierUtil.isUnquotedIdentifier("rownum_value"));
+        assertTrue(SqlIdentifierUtil.isUnquotedIdentifier("current_path_value"));
+    }
+
+    @Test
+    public void storedNamesMustRetainTheirIdentityWithoutQuotes() {
+        assertEquals("COLUMN_NAME", SqlIdentifierUtil.renderStoredIdentifier("COLUMN_NAME", "\"", 1));
+        assertEquals("column_name", SqlIdentifierUtil.renderStoredIdentifier("column_name", "`", -1));
+        assertEquals("MixedCase", SqlIdentifierUtil.renderStoredIdentifier("MixedCase", "[", 0));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderStoredIdentifier("MixedCase", "\"", 1));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderStoredIdentifier("MixedCase", "\"", -1));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderStoredIdentifier("a.b", "\"", 0));
+        assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderStoredIdentifier("USER", "\"", 1));
     }
 }

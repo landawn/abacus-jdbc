@@ -46,6 +46,7 @@ public class JdbcUtilMetadataReviewTest extends TestBase {
             verify(columns).close();
             verify(conn, never()).getSchema();
             verify(conn, never()).prepareStatement(anyString());
+            verify(metadata, never()).getIdentifierQuoteString();
         }
     }
 
@@ -66,6 +67,7 @@ public class JdbcUtilMetadataReviewTest extends TestBase {
             verify(tables).close();
             verify(conn, never()).getSchema();
             verify(conn, never()).prepareStatement(anyString());
+            verify(metadata, never()).getIdentifierQuoteString();
         }
     }
 
@@ -91,7 +93,7 @@ public class JdbcUtilMetadataReviewTest extends TestBase {
         final ResultSetMetaData columns = mock(ResultSetMetaData.class);
         when(metadata.storesLowerCaseIdentifiers()).thenReturn(true);
         when(metadata.getIdentifierQuoteString()).thenReturn("`");
-        when(conn.prepareStatement("SELECT * FROM `archive`.`events` WHERE 1 > 2")).thenReturn(stmt);
+        when(conn.prepareStatement("SELECT * FROM archive.events WHERE 1 > 2")).thenReturn(stmt);
         when(stmt.executeQuery()).thenReturn(rows);
         when(rows.getMetaData()).thenReturn(columns);
         when(columns.getColumnCount()).thenReturn(1);
@@ -99,7 +101,8 @@ public class JdbcUtilMetadataReviewTest extends TestBase {
 
         assertEquals(List.of("archived_id"), JdbcUtil.getColumnNames(conn, "Archive.Events"));
 
-        verify(conn).prepareStatement("SELECT * FROM `archive`.`events` WHERE 1 > 2");
+        verify(conn).prepareStatement("SELECT * FROM archive.events WHERE 1 > 2");
+        verify(metadata, never()).getIdentifierQuoteString();
         verify(stmt).close();
     }
 
@@ -110,11 +113,12 @@ public class JdbcUtilMetadataReviewTest extends TestBase {
         final PreparedStatement stmt = mock(PreparedStatement.class);
         when(metadata.storesLowerCaseIdentifiers()).thenReturn(true);
         when(metadata.getIdentifierQuoteString()).thenReturn("`");
-        when(conn.prepareStatement("SELECT 1 FROM `archive`.`events` WHERE 1 > 2")).thenReturn(stmt);
+        when(conn.prepareStatement("SELECT 1 FROM archive.events WHERE 1 > 2")).thenReturn(stmt);
 
         assertTrue(JdbcUtil.tableExists(conn, "Archive.Events"));
 
-        verify(conn).prepareStatement("SELECT 1 FROM `archive`.`events` WHERE 1 > 2");
+        verify(conn).prepareStatement("SELECT 1 FROM archive.events WHERE 1 > 2");
+        verify(metadata, never()).getIdentifierQuoteString();
         verify(stmt).close();
     }
 

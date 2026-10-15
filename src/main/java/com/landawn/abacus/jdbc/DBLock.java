@@ -253,8 +253,9 @@ public final class DBLock implements AutoCloseable {
      * @param ds the {@link DataSource} to use for database connections. Must not be {@code null}.
      * @param tableName the name of the database table to use for storing lock information.
      *        This table will be created if it does not exist. Must not be {@code null} or empty.
+     *        Generated identifier quoting is disabled; use simple undelimited table-name parts.
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is
-     *         {@code null}, empty, blank, or not a valid qualified identifier.
+     *         {@code null}, empty, blank, not a valid qualified identifier, or requires quoting.
      * @throws UncheckedSQLException if opening or configuring the connection, reading metadata, creating or querying the lock table,
      *         deleting stale locks, or closing the initialization connection fails.
      * @throws IllegalStateException if the lock table cannot be verified after the creation attempt.

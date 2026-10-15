@@ -98,7 +98,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
     }
 
     @Test
-    public void testCopy_AllColumnsPreservesCaseSensitiveColumnNames() throws SQLException {
+    public void testCopy_AllColumnsRejectsCaseSensitiveColumnNames() throws SQLException {
         try (Connection source = ds.getConnection();
              Connection target = ds.getConnection();
              Statement stmt = source.createStatement()) {
@@ -106,15 +106,13 @@ public class DataTransferUtilIntegrationTest extends TestBase {
             stmt.execute("CREATE TABLE copy_case_tgt (ordinary INT, \"lowercase\" INT, \"MixedCase\" INT)");
             try {
                 stmt.execute("INSERT INTO copy_case_src VALUES (11, 22, 33)");
-                assertEquals(1, DataTransferUtil.copyTable(source, "copy_case_src").to(target, "copy_case_tgt"));
-                assertEquals(1, DataTransferUtil.copyTable(ds, "copy_case_src").to(ds, "copy_case_tgt"));
+                assertTrue(assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyTable(source, "copy_case_src").to(target, "copy_case_tgt"))
+                        .getMessage()
+                        .contains("MixedCase"));
+                assertTrue(
+                        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyTable(ds, "copy_case_src").to(ds, "copy_case_tgt")).getMessage()
+                                .contains("MixedCase"));
                 try (ResultSet rows = stmt.executeQuery("SELECT \"MixedCase\", \"lowercase\", ordinary FROM copy_case_tgt")) {
-                    for (int i = 0; i < 2; i++) {
-                        assertTrue(rows.next());
-                        assertEquals(11, rows.getInt(1));
-                        assertEquals(22, rows.getInt(2));
-                        assertEquals(33, rows.getInt(3));
-                    }
                     assertFalse(rows.next());
                 }
             } finally {
@@ -133,14 +131,14 @@ public class DataTransferUtilIntegrationTest extends TestBase {
                  Connection target = DriverManager.getConnection("jdbc:h2:mem:copy_fold_target" + targetOptions);
                  Statement sourceStatement = source.createStatement();
                  Statement targetStatement = target.createStatement()) {
-                sourceStatement.execute("CREATE TABLE copy_fold_src (id INT, \"MixedCase\" INT)");
-                targetStatement.execute("CREATE TABLE copy_fold_tgt (\"MixedCase\" INT, id INT)");
+                sourceStatement.execute("CREATE TABLE copy_fold_src (id INT, amount_value INT)");
+                targetStatement.execute("CREATE TABLE copy_fold_tgt (amount_value INT, id INT)");
                 sourceStatement.execute("INSERT INTO copy_fold_src VALUES (11, 22)");
 
-                // Ordinary names must follow the target's folding rules while quoted names keep their case.
+                // Source column order must survive target reordering and the opposite unquoted-case folding rule.
                 assertEquals(1, DataTransferUtil.copyTable(source, "copy_fold_src").to(target, "copy_fold_tgt"));
 
-                try (ResultSet rows = targetStatement.executeQuery("SELECT id, \"MixedCase\" FROM copy_fold_tgt")) {
+                try (ResultSet rows = targetStatement.executeQuery("SELECT id, amount_value FROM copy_fold_tgt")) {
                     assertTrue(rows.next());
                     assertEquals(11, rows.getInt(1));
                     assertEquals(22, rows.getInt(2));
@@ -151,7 +149,7 @@ public class DataTransferUtilIntegrationTest extends TestBase {
     }
 
     @Test
-    public void testCopy_AllColumnsPreservesLiteralMetadataNames() throws SQLException {
+    public void testCopy_AllColumnsRejectsLiteralMetadataNames() throws SQLException {
         try (Connection conn = ds.getConnection();
              Statement stmt = conn.createStatement()) {
             final String columns = "(\"a.b\" INT, \"\"\"quoted\"\"\" INT, \" padded \" INT)";
@@ -159,12 +157,10 @@ public class DataTransferUtilIntegrationTest extends TestBase {
             stmt.execute("CREATE TABLE copy_literal_tgt " + columns);
             try {
                 stmt.execute("INSERT INTO copy_literal_src VALUES (11, 22, 33)");
-                assertEquals(1, DataTransferUtil.copyTable(conn, "copy_literal_src").to(conn, "copy_literal_tgt"));
+                assertTrue(assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyTable(conn, "copy_literal_src").to(conn, "copy_literal_tgt"))
+                        .getMessage()
+                        .contains("a.b"));
                 try (ResultSet rs = stmt.executeQuery("SELECT * FROM copy_literal_tgt")) {
-                    assertTrue(rs.next());
-                    assertEquals(11, rs.getInt(1));
-                    assertEquals(22, rs.getInt(2));
-                    assertEquals(33, rs.getInt(3));
                     assertFalse(rs.next());
                 }
             } finally {

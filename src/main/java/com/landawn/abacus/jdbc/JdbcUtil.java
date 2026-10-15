@@ -2066,11 +2066,11 @@ public final class JdbcUtil {
      * and upper- and lower-case variants only when the driver reports no canonical identifier case). Undelimited parts are
      * folded to the storage case reported by the driver; delimited and case-folded parts are
      * matched case-sensitively. If the metadata lookup yields no match and all name parts
-     * are simple identifiers (letters, digits, {@code _} and {@code $}), it falls back to running an
+     * satisfy the unquoted identifier policy, it falls back to running an
      * empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column
-     * names from the result set metadata (when the driver reports a canonical identifier case, the case-folded
-     * name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as a
-     * keyword); quoted or otherwise exotic names have no such fallback.</p>
+     * names from the result set metadata. Generated identifier quoting is disabled: this fallback accepts only
+     * simple ASCII names beginning with a letter or underscore, excluding common SQL keywords. Delimited and
+     * quote-dependent names remain available through exact JDBC metadata lookup but have no SQL fallback.</p>
      *
      * <p>The {@code tableName} may be a simple identifier or a qualified name like
      * {@code schema.table} or {@code catalog.schema.table}. On databases whose driver supports catalogs but not schemas
@@ -2185,9 +2185,8 @@ public final class JdbcUtil {
         }
 
         if (N.isEmpty(columnNameList) && !hasDelimitedIdentifierPart(tableName) && Strings.isNotEmpty(fallbackQualifiedTableName)) {
-            // As in tableExists: when the database reports a canonical identifier case, every part was folded to it above, so
-            // quoting the parts names the same table. Unquoted, a reserved word is parsed as a keyword: PostgreSQL runs
-            // "SELECT * FROM user" as the CURRENT_USER function (a missing table then yields the column [user]).
+            // The probe builder excludes quote-dependent names while quoting is disabled. If enabled, canonical
+            // spelling can be quoted without changing the intended table, including names that are SQL keywords.
             final String probeQuote = caseFolded ? normalizeIdentifierQuote(metadata) : null;
 
             columnNameList = getColumnNamesBySelect(conn, probeQuote == null ? fallbackQualifiedTableName
@@ -10608,10 +10607,9 @@ public final class JdbcUtil {
      * Delimited and case-folded parts are matched case-sensitively; upper- and lower-case table variants
      * are tried only when the driver reports no canonical identifier case).
      * Schema and table parts are treated as literal names, with metadata search-pattern characters escaped.
-     * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
-     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} (when the driver reports a canonical identifier case, the
-     * case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as
-     * a keyword) — a SQL error from that query
+     * If metadata lookup yields no match and all parts satisfy the unquoted identifier policy, the method falls back to
+     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2}. Generated identifier quoting is disabled, so delimited names,
+     * non-simple names and common SQL keywords use JDBC metadata only. A SQL error from the fallback query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated. On PostgreSQL and PostgreSQL-compatible databases (where a
      * failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query
@@ -10664,10 +10662,9 @@ public final class JdbcUtil {
      * — and, for an unqualified name, all schemas — using the driver's canonical storage case for undelimited parts.
      * Delimited and case-folded parts are matched case-sensitively; upper- and lower-case table variants
      * are tried only when the driver reports no canonical identifier case).
-     * If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to
-     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2} (when the driver reports a canonical identifier case, the
-     * case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as
-     * a keyword) — a SQL error from that query
+     * If metadata lookup yields no match and all parts satisfy the unquoted identifier policy, the method falls back to
+     * executing {@code SELECT 1 FROM <table> WHERE 1 > 2}. Generated identifier quoting is disabled, so delimited names,
+     * non-simple names and common SQL keywords use JDBC metadata only. A SQL error from the fallback query
      * that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns
      * {@code false}; any other SQL error is propagated. On PostgreSQL and PostgreSQL-compatible databases (where a
      * failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query
@@ -10778,10 +10775,8 @@ public final class JdbcUtil {
             // Use the current catalog only to scope metadata lookup. The fallback SQL must retain the
             // caller's original qualification: on databases such as PostgreSQL and SQL Server,
             // "catalog.table" is not equivalent to an unqualified table in the current catalog.
-            // When the database reports a canonical identifier case, every part was folded to it above, so the quoted parts
-            // name the same table as the unquoted name would. Quoting keeps a reserved word (e.g. order, user) from being
-            // parsed as a keyword: unquoted, H2 rejects "FROM order" as a syntax error (thrown instead of returning false),
-            // and PostgreSQL runs "FROM user" as the CURRENT_USER function, reporting a missing table as present.
+            // With quoting disabled, buildSimpleQualifiedTableName skips keywords instead of executing expressions
+            // such as FROM USER. If quoting is enabled, canonical parts may be delimited without changing their identity.
             final String probeQuote = caseFolded && !hasDelimitedIdentifierPart(tableName) ? normalizeIdentifierQuote(metadata) : null;
             final String safeQualifiedTableName = buildSimpleQualifiedTableName(nameParts.length == 3 || catalogQualified ? catalog : null, schema, table,
                     probeQuote);
@@ -10987,7 +10982,8 @@ public final class JdbcUtil {
 
     /**
      * Assembles a dotted {@code catalog.schema.table} name from the non-empty parts, optionally wrapping each part in
-     * {@code identifierQuote}.
+     * {@code identifierQuote} when identifier quoting is enabled. With quoting disabled, common keywords and names
+     * outside the simple identifier grammar cause this optional SQL probe to be skipped.
      *
      * @param catalog The catalog part, or {@code null}/empty to omit.
      * @param schema The schema part, or {@code null}/empty to omit.
@@ -10998,6 +10994,15 @@ public final class JdbcUtil {
      *         (so callers skip the SQL-based existence probe).
      */
     private static String buildSimpleQualifiedTableName(final String catalog, final String schema, final String tableName, final String identifierQuote) {
+        // A probe must not reinterpret a keyword as a value expression (for example FROM USER). Skip it when the
+        // unquoted rendering policy cannot preserve identifier semantics; JDBC metadata lookup remains available.
+        if (!SqlIdentifierUtil.isIdentifierQuotingEnabled()
+                && (!SqlIdentifierUtil.isUnquotedIdentifier(tableName) || (Strings.isNotEmpty(catalog) && !SqlIdentifierUtil.isUnquotedIdentifier(catalog))
+                        || (Strings.isNotEmpty(schema) && !SqlIdentifierUtil.isUnquotedIdentifier(schema)))) {
+            return null;
+        }
+        final String quote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? identifierQuote : null;
+
         if (!isUnquotedSafeIdentifier(tableName)) {
             return null;
         }
@@ -11009,7 +11014,7 @@ public final class JdbcUtil {
                 return null;
             }
 
-            sb.append(identifierQuote == null ? catalog : SqlIdentifierUtil.quoteIdentifier(catalog, identifierQuote)).append('.');
+            sb.append(quote == null ? catalog : SqlIdentifierUtil.quoteIdentifier(catalog, quote)).append('.');
         }
 
         if (Strings.isNotEmpty(schema)) {
@@ -11017,10 +11022,10 @@ public final class JdbcUtil {
                 return null;
             }
 
-            sb.append(identifierQuote == null ? schema : SqlIdentifierUtil.quoteIdentifier(schema, identifierQuote)).append('.');
+            sb.append(quote == null ? schema : SqlIdentifierUtil.quoteIdentifier(schema, quote)).append('.');
         }
 
-        sb.append(identifierQuote == null ? tableName : SqlIdentifierUtil.quoteIdentifier(tableName, identifierQuote));
+        sb.append(quote == null ? tableName : SqlIdentifierUtil.quoteIdentifier(tableName, quote));
 
         return sb.toString();
     }
@@ -11167,17 +11172,17 @@ public final class JdbcUtil {
     }
 
     /**
-     * Converts a one-, two-, or three-part SQL identifier into a delimited (quoted) qualified identifier,
-     * using the identifier quote string reported by the connection's metadata. Undelimited parts are first
-     * folded to the database's storage case so quoting does not change which identifier they reference.
-     * Explicitly delimited parts retain their original case. When the database does not
-     * support delimited identifiers, each part must be an unquoted-safe identifier.
+     * Converts a one-, two-, or three-part SQL identifier into a qualified identifier under the fixed quoting policy.
+     * Quoting is disabled in this build: caller-delimited names and names requiring quotes are rejected. Ordinary
+     * parts are folded to the database's storage case and emitted without delimiters. When quoting is enabled,
+     * explicit parts retain their exact case and the connection's identifier delimiter is used where supported.
      *
      * @param conn The database {@link Connection} used to determine the identifier quote string.
      * @param qualifiedName The qualified identifier to convert (e.g., {@code schema.table}).
      * @param argName The argument name used in error messages.
-     * @return The delimited qualified identifier.
-     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code qualifiedName} is blank or otherwise invalid.
+     * @return The rendered qualified identifier.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code qualifiedName} is blank or otherwise invalid,
+     *         or the name requires quoting while quoting is disabled.
      * @throws SQLException if reading the database identifier quote string or identifier storage-case rules fails.
      */
     static String toQualifiedSqlIdentifier(final Connection conn, final String qualifiedName, final String argName)
@@ -11186,8 +11191,15 @@ public final class JdbcUtil {
         N.checkArgNotBlank(qualifiedName, argName);
 
         final String[] rawNameParts = splitQualifiedSqlIdentifier(qualifiedName, argName);
+        final boolean[] explicitlyDelimited = SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(qualifiedName, rawNameParts.length);
+        if (!SqlIdentifierUtil.isIdentifierQuotingEnabled()) {
+            for (int i = 0; i < rawNameParts.length; i++) {
+                SqlIdentifierUtil.checkExplicitDelimiters(rawNameParts[i], explicitlyDelimited[i]);
+                SqlIdentifierUtil.renderStoredIdentifier(rawNameParts[i], null);
+            }
+        }
         final DatabaseMetaData metadata = conn.getMetaData();
-        normalizeMetadataIdentifierParts(metadata, rawNameParts, SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(qualifiedName, rawNameParts.length));
+        normalizeMetadataIdentifierParts(metadata, rawNameParts, explicitlyDelimited);
         final String identifierQuote = normalizeIdentifierQuote(metadata);
         final StringBuilder sb = new StringBuilder(qualifiedName.length() + 6);
 
@@ -11251,7 +11263,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the database's identifier quote string, or {@code null} when the database reports none
+     * Returns the database's identifier quote string, or {@code null} when quoting is disabled or the database reports none
      * ({@code null}, blank, or a space, meaning delimited identifiers are unsupported).
      *
      * @param metadata The database metadata to query.
@@ -11259,6 +11271,9 @@ public final class JdbcUtil {
      * @throws SQLException if the driver cannot report its identifier quote string.
      */
     private static String normalizeIdentifierQuote(final DatabaseMetaData metadata) throws SQLException {
+        if (!SqlIdentifierUtil.isIdentifierQuotingEnabled()) {
+            return null;
+        }
         final String quoteString = metadata.getIdentifierQuoteString();
         final String normalized = quoteString == null ? null : quoteString.trim();
 
@@ -11339,12 +11354,9 @@ public final class JdbcUtil {
      * <p>The method first checks for existence via {@link #tableExists(Connection, String)} and only
      * issues a {@code DROP TABLE} if the table is found. If the drop itself fails because the table no
      * longer exists (for example, a concurrent drop), the method returns {@code false}; any other SQL
-     * error is wrapped and rethrown as {@link UncheckedSQLException}. The {@code DROP} quotes the name, after
-     * folding undelimited parts to the database's canonical identifier case when the driver reports one. If
-     * that quoted {@code DROP} reports "table not found" while the table is still found to exist (for example,
-     * when the driver reports no canonical case and only an upper- or lower-case variant matched), an
-     * unquoted retry lets the database apply its own case folding. An explicitly delimited name is never
-     * retried unquoted, preserving its exact identity.</p>
+     * error is wrapped and rethrown as {@link UncheckedSQLException}. Generated identifier quoting is disabled:
+     * the name is folded to the database's canonical identifier case when reported and emitted without delimiters.
+     * Explicitly delimited names and names requiring quotes are rejected before any {@code DROP} is issued.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11356,7 +11368,8 @@ public final class JdbcUtil {
      * @param tableName The name of the table to drop (optionally qualified); must not be blank.
      * @return {@code true} if the table was dropped by this call; {@code false} if the table did not exist
      *         (either at the time of the existence check or by the time the {@code DROP} executed).
-     * @throws IllegalArgumentException if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
+     * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is blank or otherwise invalid,
+     *         or the table name requires quoting while quoting is disabled.
      * @throws UncheckedSQLException if reading the connection's identifier metadata or checking whether the table exists fails, or the
      *         {@code DROP} fails with an error other than "table not found".
      */
@@ -11389,10 +11402,11 @@ public final class JdbcUtil {
                 // (upper-/lower-case variants when the driver reports no canonical identifier case),
                 // so the quoted name may miss the table. Retry unquoted so the database applies its
                 // own case folding.
-                final String simpleTableName = buildSimpleQualifiedName(tableName);
+                final String simpleTableName = SqlIdentifierUtil.isIdentifierQuotingEnabled() && !hasDelimitedIdentifierPart(tableName)
+                        ? buildSimpleQualifiedName(tableName)
+                        : null;
 
-                if (!hasDelimitedIdentifierPart(tableName) && simpleTableName != null && !simpleTableName.equals(sqlTableName)
-                        && tableExists(conn, tableName)) {
+                if (simpleTableName != null && !simpleTableName.equals(sqlTableName) && tableExists(conn, tableName)) {
                     try {
                         execute(conn, "DROP TABLE " + simpleTableName);
 
@@ -11469,8 +11483,10 @@ public final class JdbcUtil {
      *
      * @param ds The {@link javax.sql.DataSource} to use for acquiring connections; must not be {@code null}.
      * @param tableName The name of the table that stores lock records; created when absent. Must not be blank.
+     *        Generated identifier quoting is disabled; use simple undelimited table-name parts.
      * @return A new {@link DBLock} instance bound to {@code ds} and {@code tableName}.
-     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is blank or otherwise invalid.
+     * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is blank, otherwise invalid,
+     *         or requires quoting.
      * @throws UncheckedSQLException if opening or configuring the initialization connection, reading metadata, creating or querying the
      *         lock table, deleting stale locks, or closing the initialization connection fails.
      * @throws IllegalStateException if the lock table still does not exist after the {@code CREATE TABLE} attempt.

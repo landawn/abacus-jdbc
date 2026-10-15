@@ -74,6 +74,13 @@ import com.landawn.abacus.util.Throwables;
  * including Dataset objects, CSV files, Readers/Writers, Iterators, and database tables.
  * Many import methods offer configurable batch sizes and batch intervals.</p>
  *
+ * <p><b>Generated SQL:</b> Table-copy operations generate unquoted table and column names under a fixed build policy.
+ * Identifier quoting is disabled: explicit delimiters, non-simple names, common SQL reserved names and bare expressions
+ * such as {@code ROWNUM} and {@code CURRENT_PATH} are rejected to avoid copying expression results instead of stored values.
+ * A simple name starts with an ASCII letter or underscore and contains only ASCII letters, digits or underscores.
+ * Exact metadata column labels must also retain their spelling under the database's unquoted-identifier case folding.
+ * Database-specific naming restrictions still apply. Caller-supplied SQL and CSV field quoting are unaffected.</p>
+ *
  * <p><b>Supported Operations:</b></p>
  * <table border="1" style="border-collapse: collapse;">
  *   <caption><b>Data Operation Types and Methods</b></caption>
@@ -2889,7 +2896,9 @@ public final class DataTransferUtil {
      * @param tableName the name of the table to copy
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is {@code null},
-     *         blank, or malformed, or if database metadata reports a {@code null} or blank product name
+     *         blank, or malformed, or if database metadata reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
      *         because the table does not exist in the source database); connection acquisition follows
@@ -2922,7 +2931,9 @@ public final class DataTransferUtil {
      * @param targetTableName the name of the table in the target data source
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is {@code null},
-     *         blank, or malformed, or if database metadata reports a {@code null} or blank product name
+     *         blank, or malformed, or if database metadata reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
      *         because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -2955,7 +2966,9 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or a table
-     *         name is {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name
+     *         name is {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
      *         because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -3023,7 +3036,9 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or a table name is {@code null},
      *         blank, or malformed, or a selected column name is {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank
-     *         product name
+     *         product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -3063,7 +3078,9 @@ public final class DataTransferUtil {
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or a table
      *         name is {@code null}, blank, or malformed, or a selected column name is {@code null}, blank, or malformed, or if database metadata
-     *         reports a {@code null} or blank product name
+     *         reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -3338,7 +3355,9 @@ public final class DataTransferUtil {
      * @param tableName the name of the table to copy data from and to
      * @return the number of rows copied
      * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata
-     *         reports a {@code null} or blank product name
+     *         reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      */
@@ -3370,7 +3389,9 @@ public final class DataTransferUtil {
      * @param targetTableName the name of the target table to copy data to
      * @return the number of rows copied
      * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata
-     *         reports a {@code null} or blank product name
+     *         reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      */
@@ -3405,7 +3426,9 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to copy in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}, or a table name is {@code null}, blank, or malformed, or a connection is
-     *         {@code null}, or if database metadata reports a {@code null} or blank product name
+     *         {@code null}, or if database metadata reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).batchSize(batchSize).to(targetConn, targetTableName)}.
@@ -3433,12 +3456,11 @@ public final class DataTransferUtil {
      * Generates an INSERT SQL for {@code targetTableName} on {@code targetConn} using the column
      * ordering taken from executing {@code selectSql} on {@code sourceConn}. This guarantees the
      * INSERT column order matches the SELECT, so positional parameter binding stays aligned even
-     * when the two databases store columns in different orders. JDBC labels are literal names;
-     * punctuation, surrounding whitespace, and case that requires quoting in the source database
-     * are preserved as identifier content. Ordinary source names are folded to the target database's
-     * unquoted identifier case before rendering with the target connection's quote metadata (brackets
-     * on SQL Server/ASE). If quoting is unsupported, simple names remain unquoted and non-simple names fail.
-     * @throws IllegalArgumentException if a connection is {@code null}, or a table/column name is {@code null}, blank, or malformed.
+     * when the two databases store columns in different orders. Ordinary source names are folded to the target
+     * database's unquoted identifier case. With identifier quoting disabled, names requiring delimiters, common
+     * reserved names, and exact metadata labels whose spelling would change without quoting are rejected.
+     * @throws IllegalArgumentException if a connection is {@code null}, or a table/column name is {@code null}, blank, malformed,
+     *         or cannot be rendered under the disabled identifier-quoting policy.
      * @throws SQLException if preparing or executing the source metadata query, reading its labels or identifier-folding metadata,
      *         or closing its resources fails.
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
@@ -3452,18 +3474,20 @@ public final class DataTransferUtil {
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(sourceConn, selectSql + " WHERE 1 > 2");
              ResultSet rs = stmt.executeQuery()) {
             final List<String> sourceColumns = new ArrayList<>();
+            final boolean identifierQuotingEnabled = SqlIdentifierUtil.isIdentifierQuotingEnabled();
             final int unquotedIdentifierCase = JdbcCodeGenerationUtil.getUnquotedIdentifierCase(sourceConn);
             final int targetIdentifierCase = JdbcCodeGenerationUtil.getUnquotedIdentifierCase(targetConn);
             for (final String columnLabel : JdbcUtil.getColumnLabels(rs)) {
                 final String sourceColumn = JdbcCodeGenerationUtil.renderColumnLabel(columnLabel, null, unquotedIdentifierCase);
-                // First apply the target's folding to ordinary names, then quote the exact target spelling. Quoting the
-                // source spelling directly breaks upper-case-to-lower-case copies; leaving it unquoted breaks ORDER/USER.
-                final String targetColumn = SqlIdentifierUtil.isDelimitedIdentifier(sourceColumn) ? columnLabel
+                // Fold ordinary names to the target spelling before rendering. Quoting the source spelling directly
+                // would break upper-case-to-lower-case copies; quote-dependent names are rejected when quoting is disabled.
+                final String targetColumn = identifierQuotingEnabled && SqlIdentifierUtil.isDelimitedIdentifier(sourceColumn) ? columnLabel
                         : targetIdentifierCase > 0 ? columnLabel.toUpperCase(Locale.ROOT)
                                 : targetIdentifierCase < 0 ? columnLabel.toLowerCase(Locale.ROOT) : columnLabel;
-                // These delimiters only mark literal names for the internal renderer; generateInsertSql
-                // decodes them and emits the target connection's delimiter, never these quotes verbatim.
-                sourceColumns.add(SqlIdentifierUtil.quoteIdentifier(targetColumn, "\""));
+                // When quoting is enabled, delimiters mark literal names for the internal renderer. With quoting
+                // disabled, pass validated ordinary names: public rendering deliberately rejects explicit delimiters.
+                sourceColumns.add(identifierQuotingEnabled ? SqlIdentifierUtil.quoteIdentifier(targetColumn, "\"")
+                        : SqlIdentifierUtil.renderStoredIdentifier(targetColumn, null, targetIdentifierCase));
             }
             return generateInsertSql(targetConn, targetTableName, sourceColumns);
         }
@@ -3495,7 +3519,9 @@ public final class DataTransferUtil {
      * @param columnNames the collection of column names to be copied; {@code null} or empty copies all columns
      * @return the number of rows copied
      * @throws IllegalArgumentException if a table name is {@code null}, blank, or malformed, or a selected column name is {@code null}, blank, or
-     *         malformed, or a connection is {@code null}, or if database metadata reports a {@code null} or blank product name
+     *         malformed, or a connection is {@code null}, or if database metadata reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any
      *         specified column doesn't exist
@@ -3535,7 +3561,9 @@ public final class DataTransferUtil {
      * @param batchSize the number of rows to be copied in each batch (must be greater than 0)
      * @return the number of rows copied
      * @throws IllegalArgumentException if {@code batchSize <= 0}, or a table name is {@code null}, blank, or malformed, or a selected column name is
-     *         {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata reports a {@code null} or blank product name
+     *         {@code null}, blank, or malformed, or a connection is {@code null}, or if database metadata reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyTable(Connection, String)} instead: {@code copyTable(sourceConn, sourceTableName).columns(columnNames).batchSize(batchSize).to(targetConn, targetTableName)}.
@@ -3563,9 +3591,9 @@ public final class DataTransferUtil {
     }
 
     /**
-     * Validates a table name of a table copy before any connection is acquired or any metadata is read.
-     * It applies the same parser that later renders the name into the generated SQL, so it rejects exactly the
-     * names the SQL generation would reject, but reports them under the caller's parameter name.
+     * Validates the qualified syntax of a table-copy name before any connection is acquired or metadata is read,
+     * reporting malformed names under the caller's parameter name. SQL rendering subsequently applies the
+     * disabled identifier-quoting policy.
      *
      * @param tableName the table name to validate
      * @param argName the name of the public parameter that supplied {@code tableName}
@@ -3580,7 +3608,8 @@ public final class DataTransferUtil {
      * read, applying the same rules the SQL generation applies later when it renders each name.
      *
      * @param columnNames the selected column names; each must be a single, non-blank identifier
-     * @throws IllegalArgumentException if a column name is {@code null}, blank, or malformed
+     * @throws IllegalArgumentException if a column name is {@code null}, blank, malformed, explicitly delimited, non-simple,
+     *         or a common reserved name while identifier quoting is disabled
      */
     private static void checkCopyColumnNames(final Collection<String> columnNames) throws IllegalArgumentException {
         for (final String columnName : columnNames) {
@@ -3590,13 +3619,14 @@ public final class DataTransferUtil {
 
     /**
      * Builds the {@code SELECT} statement reading {@code columnNames} (or all columns when empty) from
-     * {@code tableName}, rendering identifiers for the database product of {@code conn}.
+     * {@code tableName}. Identifier quoting is disabled, so only validated undelimited names are emitted.
      *
-     * @param conn the connection used to determine the database product for identifier rendering
+     * @param conn the connection used to read table metadata when columns are omitted, and quote metadata only when quoting is enabled
      * @param tableName the source table name
      * @param columnNames the columns to select; {@code null} or empty selects all columns of the table
      * @return the SELECT SQL statement
-     * @throws IllegalArgumentException if a connection is {@code null}, or a table/column name is {@code null}, blank, or malformed.
+     * @throws IllegalArgumentException if a connection is {@code null}, or a table/column name is {@code null}, blank, malformed,
+     *         or cannot be rendered under the disabled identifier-quoting policy.
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      */
     private static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> columnNames)
@@ -3605,8 +3635,8 @@ public final class DataTransferUtil {
             return JdbcCodeGenerationUtil.generateSelectSql(conn, tableName);
         }
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
         final StringBuilder sb = new StringBuilder();
 
         sb.append(SK.SELECT).append(SK._SPACE);
@@ -3630,14 +3660,15 @@ public final class DataTransferUtil {
 
     /**
      * Builds the {@code INSERT} statement writing {@code columnNames} (or all columns when empty) into
-     * {@code tableName}, rendering identifiers for the database product of {@code conn} and emitting one
-     * {@code ?} placeholder per column.
+     * {@code tableName}, emitting one {@code ?} placeholder per column. Identifier quoting is disabled,
+     * so only validated undelimited names are emitted.
      *
-     * @param conn the connection used to determine the database product for identifier rendering
+     * @param conn the connection used to read table metadata when columns are omitted, and quote metadata only when quoting is enabled
      * @param tableName the target table name
      * @param columnNames the columns to insert; {@code null} or empty inserts all columns of the table
      * @return the INSERT SQL statement
-     * @throws IllegalArgumentException if a connection is {@code null}, or a table/column name is {@code null}, blank, or malformed.
+     * @throws IllegalArgumentException if a connection is {@code null}, or a table/column name is {@code null}, blank, malformed,
+     *         or cannot be rendered under the disabled identifier-quoting policy.
      * @throws UncheckedSQLException if database product or table metadata lookup fails.
      */
     private static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> columnNames)
@@ -3646,8 +3677,8 @@ public final class DataTransferUtil {
             return JdbcCodeGenerationUtil.generateInsertSql(conn, tableName);
         }
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
         final StringBuilder sb = new StringBuilder();
 
         sb.append(SK.INSERT)
@@ -5215,8 +5246,9 @@ public final class DataTransferUtil {
      * <p>The returned {@link CopyTableFromDataSource} lets you configure {@code columnNames} and
      * {@code batchSize}, then run the copy with {@link CopyTableFromDataSource#to(javax.sql.DataSource, String)}.</p>
      *
-     * <p>When copying all columns, their source order and any case-sensitive spelling requiring
-     * identifier quotes are preserved in the generated target INSERT.</p>
+     * <p>When copying all columns, their source order is preserved in the target INSERT. Identifier quoting is
+     * disabled; the terminal {@code to(...)} call rejects explicit delimiters, non-simple/common reserved names,
+     * and metadata labels whose spelling would change under unquoted-identifier case folding.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5249,8 +5281,9 @@ public final class DataTransferUtil {
      * Creates a fluent builder for copying a whole table (or selected columns) from a source {@link Connection}
      * to a target table on another {@link Connection}, generating the SELECT and INSERT SQL from the table schema.
      *
-     * <p>When copying all columns, their source order and any case-sensitive spelling requiring
-     * identifier quotes are preserved in the generated target INSERT.</p>
+     * <p>When copying all columns, their source order is preserved in the target INSERT. Identifier quoting is
+     * disabled; the terminal {@code to(...)} call rejects explicit delimiters, non-simple/common reserved names,
+     * and metadata labels whose spelling would change under unquoted-identifier case folding.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5663,7 +5696,8 @@ public final class DataTransferUtil {
         /**
          * Restricts the copy to the specified columns. When {@code null} or empty (the default), all columns are copied.
          *
-         * @param columns the column names to copy. The supplied collection is copied.
+         * @param columns the undelimited column names to copy; validated under the disabled quoting policy when
+         *        {@code to(...)} runs. The supplied collection is copied.
          * @return this builder
          */
         public CopyTableFromDataSource columns(final Collection<String> columns) {
@@ -5691,7 +5725,9 @@ public final class DataTransferUtil {
          * @param targetTableName the name of the target table
          * @return the number of rows copied
          * @throws IllegalArgumentException if {@code targetDataSource} is {@code null}, {@code batchSize <= 0}, or a table/selected column name is
-         *         {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name
+         *         {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name.
+         *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+         *         metadata labels whose exact case would be folded are rejected.
          * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
          * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
          *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -5747,7 +5783,8 @@ public final class DataTransferUtil {
         /**
          * Restricts the copy to the specified columns. When {@code null} or empty (the default), all columns are copied.
          *
-         * @param columns the column names to copy. The supplied collection is copied.
+         * @param columns the undelimited column names to copy; validated under the disabled quoting policy when
+         *        {@code to(...)} runs. The supplied collection is copied.
          * @return this builder
          */
         public CopyTableFromConnection columns(final Collection<String> columns) {
@@ -5775,7 +5812,9 @@ public final class DataTransferUtil {
          * @param targetTableName the name of the target table
          * @return the number of rows copied
          * @throws IllegalArgumentException if {@code targetConn} is {@code null}, {@code batchSize <= 0}, or a table/selected column name is
-         *         {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name
+         *         {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name.
+         *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+         *         metadata labels whose exact case would be folded are rejected.
          * @throws UncheckedSQLException if database product or table metadata lookup fails.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          */

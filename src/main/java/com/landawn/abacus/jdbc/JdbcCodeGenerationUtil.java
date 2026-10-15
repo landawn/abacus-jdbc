@@ -84,13 +84,20 @@ import lombok.experimental.Accessors;
  * Utility class for generating JDBC-related code including entity classes and SQL statements.
  * This class provides methods to automatically generate entity classes from database tables,
  * as well as generate common SQL statements (SELECT, INSERT, UPDATE) for database operations.
- * Generated column identifiers are always delimited to preserve their metadata spelling and support reserved names.
- * The delimiter is the connection's reported identifier quote string ({@link java.sql.DatabaseMetaData#getIdentifierQuoteString()}),
- * except that SQL Server and Sybase ASE always use brackets; when the driver reports no quoting support, simple names are left unquoted.
- * Because even ordinary column names are delimited, the generated SQL relies on the reported quote string being valid in the
- * session that executes it (for example, double quotes on Informix require {@code DELIMIDENT}, and MySQL reports them only in
- * {@code ANSI_QUOTES} mode); a driver that reports a delimiter the session does not accept produces SQL that fails to parse.
- * SQL-generation examples assume PostgreSQL with lower-case column names unless another database is specified.
+ *
+ * <p>Identifier quoting in generated SQL is disabled by a fixed build policy. Table-name parts and column names must
+ * be undelimited simple identifiers: an ASCII letter or underscore followed by ASCII letters, digits or underscores.
+ * Explicit delimiters, non-simple names, common SQL reserved names and bare expressions such as {@code ROWNUM} and
+ * {@code CURRENT_PATH} are rejected, including when used as update keys. Metadata column labels are also
+ * rejected if their exact spelling would change under the database's unquoted-identifier case folding. Database-specific
+ * identifier restrictions still apply. This policy does not rewrite raw queries passed to entity generation,
+ * WHERE clauses or value expressions.</p>
+ *
+ * <p>The SQL generators skip database product and identifier-quote lookups while quoting is disabled. They still
+ * read column and identifier-case metadata to validate names. INSERT-to-UPDATE conversion reads the database
+ * product because parsing caller-provided SQL requires its dialect independently of the quoting policy.</p>
+ *
+ * <p>SQL-generation examples assume PostgreSQL with lower-case column names unless another database is specified.</p>
  *
  * <p>The generated entity classes can be customized using {@link EntityCodeConfig} to control
  * various aspects such as field naming conventions, type mappings, annotations, and more.</p>
@@ -102,9 +109,8 @@ import lombok.experimental.Accessors;
  * {@code ds}/{@code conn} is {@code null}, or when a supplied
  * {@code tableName} (or {@code keyColumnName}) is {@code null}/blank; every overload additionally
  * throws {@link IllegalArgumentException} when no columns remain to build the statement, whether
- * because the table itself reports none or because all of them were excluded, and when the driver reports no identifier
- * quoting support but a table-name part or column label is not a simple identifier (an ASCII letter or underscore followed
- * by ASCII letters, digits or underscores) and therefore cannot be emitted without delimiters.</p>
+ * because the table itself reports none or because all of them were excluded, or when an identifier cannot be rendered
+ * under the disabled-quoting policy described above.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -280,7 +286,8 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the entity class
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code tableName} is {@code null}, blank, or malformed, or the derived class or
-     *         field names are invalid or collide
+     *         field names are invalid or collide.
+     *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
      */
     public static String generateEntityClass(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -307,7 +314,8 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null}, blank, or malformed, or the
      *         configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and
-     *         non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
+     *         non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element.
+     *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
@@ -341,7 +349,8 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the entity class
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is {@code null}, blank, or malformed, or the derived class
-     *         or field names are invalid or collide
+     *         or field names are invalid or collide.
+     *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
      * @throws UncheckedSQLException if reading database product metadata, querying rows or metadata, or closing the query's JDBC resources fails
      */
     public static String generateEntityClass(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -366,7 +375,8 @@ public final class JdbcCodeGenerationUtil {
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null}, blank, or malformed, or the
      *         configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and
-     *         non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
+     *         non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element.
+     *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
      * @throws UncheckedSQLException if reading database product metadata, querying rows or metadata, or closing the query's JDBC resources fails
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
@@ -1340,32 +1350,33 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
-     * Builds a metadata-only query for the specified table, resolving the database product from the connection.
+     * Builds a metadata-only query for the specified table under the fixed identifier-quoting policy.
      *
-     * @param conn the connection used to resolve the database product and identifier quote string
+     * @param conn the connection; used to resolve the identifier delimiter only if quoting is enabled
      * @param tableName the name of the table to query
      * @return a {@code SELECT} statement that matches no rows, used to read column metadata
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or the table name is {@code null}, blank, or malformed, or
-     *         a part needs quoting but the driver reports no quoting support
-     * @throws UncheckedSQLException if reading database product or identifier quote metadata fails.
+     *         a part is explicitly delimited, non-simple or a common reserved name while quoting is disabled
+     * @throws UncheckedSQLException if reading database product or identifier quote metadata fails when quoting is enabled.
      */
     private static String createQueryByTableName(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        return createQueryByTableName(tableName, SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn)));
+        return createQueryByTableName(tableName,
+                SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn)) : null);
     }
 
     /**
      * Builds a {@code SELECT} query with a {@code WHERE 1 > 2} condition that matches no rows; used to obtain
      * column metadata through {@link ResultSetMetaData} without reading any data.
      *
-     * @param tableName the name of the table; non-simple or explicitly delimited parts are quoted with {@code identifierQuote}
-     * @param identifierQuote the connection's identifier delimiter, or {@code null} if unsupported
+     * @param tableName the qualified table name; each part must be a simple undelimited name while quoting is disabled
+     * @param identifierQuote the connection's identifier delimiter, or {@code null} when quoting is disabled or unsupported
      * @return a {@code SELECT} statement that matches no rows
-     * @throws IllegalArgumentException if the table name is {@code null}, blank, or malformed, or a part needs quoting but
-     *         {@code identifierQuote} is {@code null}.
+     * @throws IllegalArgumentException if the table name is {@code null}, blank, malformed, or cannot be rendered under
+     *         the current identifier-quoting policy.
      */
     private static String createQueryByTableName(final String tableName, final String identifierQuote) throws IllegalArgumentException {
         return "SELECT * FROM " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " WHERE 1 > 2";
@@ -1544,22 +1555,23 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates a SELECT SQL statement for the specified table.
      * The generated SQL includes all columns from the table.
-     * All column names are quoted to preserve their exact metadata spelling and support reserved names
-     * with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
+     * Column names are emitted without delimiters; names that require quoting are rejected.
+     * See the class documentation for the fixed identifier-quoting policy.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "employee");
-     * // Returns: SELECT "id", "name", "department", "salary" FROM employee
+     * // Returns: SELECT id, name, department, salary FROM employee
      * }</pre>
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
-     *         This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the
-     *         driver.
+     *         This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1577,15 +1589,14 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates a SELECT SQL statement for the specified table using an existing connection.
-     * All column names are quoted to preserve their exact metadata spelling and support reserved names,
-     * with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
+     * Column names are emitted without delimiters; names that require quoting are rejected.
+     * See the class documentation for the fixed identifier-quoting policy.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "user_profile");
-     *     // Returns (MySQL):      SELECT `user_id`, `first_name`, `last_name`, `created-date` FROM user_profile
-     *     // Returns (PostgreSQL): SELECT "user_id", "first_name", "last_name", "created-date" FROM user_profile
+     *     // Returns: SELECT user_id, first_name, last_name, created_date FROM user_profile
      * }
      * }</pre>
      *
@@ -1593,8 +1604,9 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the SELECT statement
      * @return a SELECT SQL statement string with all columns from the table
      * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no
-     *         columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported
-     *         by the driver.
+     *         columns. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateSelectSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -1602,13 +1614,15 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
@@ -1616,7 +1630,7 @@ public final class JdbcCodeGenerationUtil {
             // throw a clear IAE here rather than emitting malformed "SELECT  FROM ...".
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ", "SELECT ",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote, unquotedIdentifierCase), ", ", "SELECT ",
                     " FROM " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote));
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -1632,7 +1646,7 @@ public final class JdbcCodeGenerationUtil {
      * List<String> excludedColumns = Arrays.asList("password", "ssn");
      * String whereClause = "status = 'active'";
      * String selectSql = JdbcCodeGenerationUtil.generateSelectSql(ds, "users", excludedColumns, whereClause);
-     * // Returns: SELECT "id", "username", "email" FROM users WHERE status = 'active'
+     * // Returns: SELECT id, username, email FROM users WHERE status = 'active'
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1641,8 +1655,9 @@ public final class JdbcCodeGenerationUtil {
      * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword); ignored when {@code null} or blank
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
-     *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a
-     *         {@code null} or blank database product name reported by the driver.
+     *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1669,7 +1684,7 @@ public final class JdbcCodeGenerationUtil {
      *     List<String> excludedColumns = Arrays.asList("salary", "birth_date");
      *     String whereClause = "department = 'Engineering'";
      *     String selectSql = JdbcCodeGenerationUtil.generateSelectSql(conn, "employees", excludedColumns, whereClause);
-     *     // Returns: SELECT "id", "name", "position" FROM employees WHERE department = 'Engineering'
+     *     // Returns: SELECT id, name, position FROM employees WHERE department = 'Engineering'
      * }
      * }</pre>
      *
@@ -1679,8 +1694,9 @@ public final class JdbcCodeGenerationUtil {
      * @param whereClause an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword); ignored when {@code null} or blank
      * @return a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
-     *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a
-     *         {@code null} or blank database product name reported by the driver.
+     *         excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames,
@@ -1689,13 +1705,15 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
@@ -1705,7 +1723,7 @@ public final class JdbcCodeGenerationUtil {
 
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ", "SELECT ",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote, unquotedIdentifierCase), ", ", "SELECT ",
                     " FROM " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote)
                             + (Strings.isBlank(whereClause) ? Strings.EMPTY : " WHERE " + whereClause));
         } catch (final SQLException e) {
@@ -1716,22 +1734,23 @@ public final class JdbcCodeGenerationUtil {
     /**
      * Generates an INSERT SQL statement for the specified table.
      * The generated SQL uses positional parameters (?) for all column values.
-     * All column names are quoted to preserve their exact metadata spelling and support reserved names
-     * with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
+     * Column names are emitted without delimiters; names that require quoting are rejected.
+     * See the class documentation for the fixed identifier-quoting policy.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "product");
-     * // Returns: INSERT INTO product("id", "name", "price", "category") VALUES (?, ?, ?, ?)
+     * // Returns: INSERT INTO product(id, name, price, category) VALUES (?, ?, ?, ?)
      * }</pre>
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no columns.
-     *         This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the
-     *         driver.
+     *         This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1749,14 +1768,14 @@ public final class JdbcCodeGenerationUtil {
 
     /**
      * Generates an INSERT SQL statement for the specified table using an existing connection.
-     * All column names are quoted to preserve their exact metadata spelling and support reserved names
-     * with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
+     * Column names are emitted without delimiters; names that require quoting are rejected.
+     * See the class documentation for the fixed identifier-quoting policy.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "order_items");
-     *     // Returns: INSERT INTO order_items("order_id", "item_id", "quantity", "price") VALUES (?, ?, ?, ?)
+     *     // Returns: INSERT INTO order_items(order_id, item_id, quantity, price) VALUES (?, ?, ?, ?)
      * }
      * }</pre>
      *
@@ -1764,8 +1783,9 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the INSERT statement
      * @return an INSERT SQL statement string with positional parameters for all columns
      * @throws IllegalArgumentException if {@code conn} is {@code null}, if {@code tableName} is {@code null} or blank, or if the table has no
-     *         columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported
-     *         by the driver.
+     *         columns. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateInsertSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -1773,20 +1793,22 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
+
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
             // Guard the zero-column case so we throw a clear IAE here rather than emitting malformed "INSERT INTO () VALUES ()".
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote, unquotedIdentifierCase), ", ",
                     "INSERT INTO " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
@@ -1803,7 +1825,7 @@ public final class JdbcCodeGenerationUtil {
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      * String insertSql = JdbcCodeGenerationUtil.generateInsertSql(ds, "orders", excludedColumns);
-     * // Returns: INSERT INTO orders("id", "customer_id", "total_amount") VALUES (?, ?, ?)
+     * // Returns: INSERT INTO orders(id, customer_id, total_amount) VALUES (?, ?, ?)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1811,8 +1833,9 @@ public final class JdbcCodeGenerationUtil {
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with positional parameters for all included columns
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
-     *         excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a
-     *         {@code null} or blank database product name reported by the driver.
+     *         excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1838,7 +1861,7 @@ public final class JdbcCodeGenerationUtil {
      * try (Connection conn = ds.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      *     String insertSql = JdbcCodeGenerationUtil.generateInsertSql(conn, "orders", excludedColumns);
-     *     // Returns: INSERT INTO orders("id", "customer_id", "total_amount") VALUES (?, ?, ?)
+     *     // Returns: INSERT INTO orders(id, customer_id, total_amount) VALUES (?, ?, ?)
      * }
      * }</pre>
      *
@@ -1847,8 +1870,9 @@ public final class JdbcCodeGenerationUtil {
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with positional parameters for all included columns
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or if all columns are
-     *         excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a
-     *         {@code null} or blank database product name reported by the driver.
+     *         excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateInsertSql(Connection, String)
      * @see #generateInsertSql(DataSource, String, Collection)
@@ -1860,13 +1884,15 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
@@ -1876,7 +1902,7 @@ public final class JdbcCodeGenerationUtil {
 
             checkColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote, unquotedIdentifierCase), ", ",
                     "INSERT INTO " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + "(",
                     ") VALUES (" + Strings.repeat("?", columnLabelList.size(), ", ") + ")");
         } catch (final SQLException e) {
@@ -1893,15 +1919,17 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "customer");
-     * // Returns: INSERT INTO customer("customer_id", "first_name", "last_name") VALUES (:customerId, :firstName, :lastName)
+     * // Returns: INSERT INTO customer(customer_id, first_name, last_name) VALUES (:customerId, :firstName, :lastName)
      * }</pre>
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns, or
-     *         two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
-     *         labels, or a {@code null} or blank database product name reported by the driver.
+     *         two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column
+     *         labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -1925,7 +1953,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "user_settings");
-     *     // Returns: INSERT INTO user_settings("user_id", "theme_preference", "notification_enabled")
+     *     // Returns: INSERT INTO user_settings(user_id, theme_preference, notification_enabled)
      *     //           VALUES (:userId, :themePreference, :notificationEnabled)
      * }
      * }</pre>
@@ -1934,8 +1962,10 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named INSERT statement
      * @return an INSERT SQL statement string with named parameters based on camelCase column names
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns,
-     *         or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
-     *         labels, or a {@code null} or blank database product name reported by the driver.
+     *         or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column
+     *         labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateNamedInsertSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -1943,13 +1973,15 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
 
@@ -1957,7 +1989,7 @@ public final class JdbcCodeGenerationUtil {
             checkColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote, unquotedIdentifierCase), ", ",
                     "INSERT INTO " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
         } catch (final SQLException e) {
@@ -1975,7 +2007,7 @@ public final class JdbcCodeGenerationUtil {
      * DataSource ds = getDataSource();
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      * String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(ds, "orders", excludedColumns);
-     * // Returns: INSERT INTO orders("id", "customer_id", "total_amount") VALUES (:id, :customerId, :totalAmount)
+     * // Returns: INSERT INTO orders(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -1983,8 +2015,10 @@ public final class JdbcCodeGenerationUtil {
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with named parameters for all included columns
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, all columns are excluded, or
-     *         two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank
-     *         column labels, or a {@code null} or blank database product name reported by the driver.
+     *         two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank
+     *         column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -2010,7 +2044,7 @@ public final class JdbcCodeGenerationUtil {
      * try (Connection conn = ds.getConnection()) {
      *     List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      *     String insertSql = JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "orders", excludedColumns);
-     *     // Returns: INSERT INTO orders("id", "customer_id", "total_amount") VALUES (:id, :customerId, :totalAmount)
+     *     // Returns: INSERT INTO orders(id, customer_id, total_amount) VALUES (:id, :customerId, :totalAmount)
      * }
      * }</pre>
      *
@@ -2019,8 +2053,10 @@ public final class JdbcCodeGenerationUtil {
      * @param excludedColumnNames a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
      * @return an INSERT SQL statement string with named parameters for all included columns
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, all columns are excluded,
-     *         or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names,
-     *         blank column labels, or a {@code null} or blank database product name reported by the driver.
+     *         or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or
+     *         blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateNamedInsertSql(Connection, String)
      * @see #generateNamedInsertSql(DataSource, String, Collection)
@@ -2032,13 +2068,15 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
 
@@ -2049,7 +2087,7 @@ public final class JdbcCodeGenerationUtil {
             checkColumnLabels(columnLabelList, tableName);
             checkNamedParameterColumnLabels(columnLabelList, tableName);
 
-            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote), ", ",
+            return Strings.join(renderColumnLabels(columnLabelList, identifierQuote, unquotedIdentifierCase), ", ",
                     "INSERT INTO " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + "(",
                     Stream.of(columnLabelList).map(it -> ":" + Strings.toCamelCase(it)).join(", ", ") VALUES (", ")"));
         } catch (final SQLException e) {
@@ -2066,7 +2104,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee");
-     * // Returns (example): UPDATE employee SET "id" = ?, "name" = ?, "department" = ?, "salary" = ?
+     * // Returns (example): UPDATE employee SET id = ?, name = ?, department = ?, salary = ?
      * // Note: Includes ALL columns from the table. No WHERE clause - must be added manually.
      * }</pre>
      *
@@ -2074,8 +2112,9 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @return an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, or the table has no columns
-     *         for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name
-     *         reported by the driver.
+     *         for the SET clause. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -2100,7 +2139,7 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "product");
-     *     // Returns (example): UPDATE product SET "id" = ?, "name" = ?, "description" = ?, "price" = ?
+     *     // Returns (example): UPDATE product SET id = ?, name = ?, description = ?, price = ?
      *     // Note: Includes ALL columns from the table.
      *     // Usage: updateSql += " WHERE id = ?";
      * }
@@ -2110,8 +2149,9 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @return an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, or the table has no columns
-     *         for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name
-     *         reported by the driver.
+     *         for the SET clause. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateUpdateSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -2119,18 +2159,22 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
 
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
+
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             checkUpdateSetColumnLabels(columnLabelList, tableName);
 
             return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
-                    + Stream.of(columnLabelList).map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = ?").join(", ");
+                    + Stream.of(columnLabelList)
+                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote, unquotedIdentifierCase) + " = ?")
+                            .join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -2144,17 +2188,18 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "employee", "id");
-     * // Returns: UPDATE employee SET "name" = ?, "department" = ?, "salary" = ? WHERE "id" = ?
+     * // Returns: UPDATE employee SET name = ?, department = ?, salary = ? WHERE id = ?
      * }</pre>
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
-     *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
+     *            camel-case form ({@code userId}); the generated SQL uses the metadata spelling without delimiters
      * @return an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
-     *         ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a
-     *         {@code null} or blank database product name reported by the driver.
+     *         ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -2180,18 +2225,19 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "employee", "id");
-     *     // Returns: UPDATE employee SET "name" = ?, "department" = ?, "salary" = ? WHERE "id" = ?
+     *     // Returns: UPDATE employee SET name = ?, department = ?, salary = ? WHERE id = ?
      * }
      * }</pre>
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the UPDATE statement
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
-     *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
+     *            camel-case form ({@code userId}); the generated SQL uses the metadata spelling without delimiters
      * @return an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
-     *         ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a
-     *         {@code null} or blank database product name reported by the driver.
+     *         ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName)
@@ -2201,13 +2247,15 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             final String resolvedKeyColumnName = resolveKeyColumnNames(N.asList(keyColumnName), columnLabelList, tableName).get(0);
@@ -2216,8 +2264,10 @@ public final class JdbcCodeGenerationUtil {
             checkUpdateSetColumnLabels(updateColumnLabelList, tableName);
 
             return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
-                    + Stream.of(updateColumnLabelList).map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = ?").join(", ") + " WHERE "
-                    + renderStoredColumnLabel(resolvedKeyColumnName, identifierQuote) + " = ?";
+                    + Stream.of(updateColumnLabelList)
+                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote, unquotedIdentifierCase) + " = ?")
+                            .join(", ")
+                    + " WHERE " + renderStoredColumnLabel(resolvedKeyColumnName, identifierQuote, unquotedIdentifierCase) + " = ?";
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -2239,7 +2289,7 @@ public final class JdbcCodeGenerationUtil {
      * String customWhere = "version > 1";
      * String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(ds, "orders",
      *                                                            excludedColumns, keyColumnNames, customWhere);
-     * // Returns: UPDATE orders SET "customer_id" = ?, "total_amount" = ? WHERE "id" = ? AND "status" = ? AND (version > 1)
+     * // Returns: UPDATE orders SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND (version > 1)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -2249,8 +2299,10 @@ public final class JdbcCodeGenerationUtil {
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
-     *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names,
-     *         blank column labels, or a {@code null} or blank database product name reported by the driver.
+     *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names or
+     *         blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      * @see #generateUpdateSql(Connection, String, String)
@@ -2291,7 +2343,7 @@ public final class JdbcCodeGenerationUtil {
      *     String customWhere = "version > 1";
      *     String updateSql = JdbcCodeGenerationUtil.generateUpdateSql(conn, "orders",
      *                                                                excludedColumns, keyColumnNames, customWhere);
-     *     // Returns: UPDATE orders SET "customer_id" = ?, "total_amount" = ? WHERE "id" = ? AND "status" = ? AND (version > 1)
+     *     // Returns: UPDATE orders SET customer_id = ?, total_amount = ? WHERE id = ? AND status = ? AND (version > 1)
      * }
      * }</pre>
      *
@@ -2302,8 +2354,10 @@ public final class JdbcCodeGenerationUtil {
      * @param whereClause an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
      * @return an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
-     *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names,
-     *         blank column labels, or a {@code null} or blank database product name reported by the driver.
+     *         missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names or
+     *         blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateUpdateSql(Connection, String, String)
      * @see #generateUpdateSql(DataSource, String, Collection, Collection, String)
@@ -2320,13 +2374,15 @@ public final class JdbcCodeGenerationUtil {
             }
         }
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final List<String> allColumnLabels = JdbcUtil.getColumnLabels(rs);
             final List<String> resolvedKeyColumnNames = resolveKeyColumnNames(keyColumnNames, allColumnLabels, tableName);
@@ -2348,7 +2404,9 @@ public final class JdbcCodeGenerationUtil {
                 whereSection = " WHERE ";
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
-                    whereSection += Stream.of(resolvedKeyColumnNames).map(c -> renderStoredColumnLabel(c, identifierQuote) + " = ?").join(" AND ");
+                    whereSection += Stream.of(resolvedKeyColumnNames)
+                            .map(c -> renderStoredColumnLabel(c, identifierQuote, unquotedIdentifierCase) + " = ?")
+                            .join(" AND ");
 
                     if (Strings.isNotBlank(whereClause)) {
                         whereSection += " AND (" + whereClause + ")";
@@ -2359,7 +2417,10 @@ public final class JdbcCodeGenerationUtil {
             }
 
             return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
-                    + Stream.of(columnLabelList).map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = ?").join(", ") + whereSection;
+                    + Stream.of(columnLabelList)
+                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote, unquotedIdentifierCase) + " = ?")
+                            .join(", ")
+                    + whereSection;
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -2375,8 +2436,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "user_profile");
-     * // Returns (example): UPDATE user_profile SET "user_id" = :userId, "first_name" = :firstName,
-     * //           "last_name" = :lastName, "email" = :email
+     * // Returns (example): UPDATE user_profile SET user_id = :userId, first_name = :firstName,
+     * //           last_name = :lastName, email = :email
      * // Note: Includes ALL columns from the table. No WHERE clause - must be added manually.
      * }</pre>
      *
@@ -2384,8 +2445,10 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns, or
-     *         two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
-     *         labels, or a {@code null} or blank database product name reported by the driver.
+     *         two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column
+     *         labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -2410,8 +2473,8 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "order_status");
-     *     // Returns (example): UPDATE order_status SET "order_id" = :orderId, "status" = :status,
-     *     //           "updated_by" = :updatedBy, "updated_date" = :updatedDate
+     *     // Returns (example): UPDATE order_status SET order_id = :orderId, status = :status,
+     *     //           updated_by = :updatedBy, updated_date = :updatedDate
      *     // Note: Includes ALL columns from the table.
      *     // Usage: updateSql += " WHERE order_id = :orderId";
      * }
@@ -2421,8 +2484,10 @@ public final class JdbcCodeGenerationUtil {
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @return an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, the table has no columns,
-     *         or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column
-     *         labels, or a {@code null} or blank database product name reported by the driver.
+     *         or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column
+     *         labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
@@ -2430,13 +2495,15 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotBlank(tableName, cs.tableName);
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             checkUpdateSetColumnLabels(columnLabelList, tableName);
@@ -2444,7 +2511,8 @@ public final class JdbcCodeGenerationUtil {
 
             return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
                     + Stream.of(columnLabelList)
-                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = :" + Strings.toCamelCase(columnLabel))
+                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote, unquotedIdentifierCase) + " = :"
+                                    + Strings.toCamelCase(columnLabel))
                             .join(", ");
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
@@ -2459,17 +2527,19 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * DataSource ds = getDataSource();
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "customer", "customer_id");
-     * // Returns: UPDATE customer SET "first_name" = :firstName, "last_name" = :lastName, "email" = :email WHERE "customer_id" = :customerId
+     * // Returns: UPDATE customer SET first_name = :firstName, last_name = :lastName, email = :email WHERE customer_id = :customerId
      * }</pre>
      *
      * @param ds the data source to connect to the database
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
-     *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
+     *            camel-case form ({@code userId}); the generated SQL uses the metadata spelling without delimiters
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
      *         ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed
-     *         qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+     *         qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      */
@@ -2495,18 +2565,20 @@ public final class JdbcCodeGenerationUtil {
      * <pre>{@code
      * try (Connection conn = ds.getConnection()) {
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "customer", "customer_id");
-     *     // Returns: UPDATE customer SET "first_name" = :firstName, "last_name" = :lastName, "email" = :email WHERE "customer_id" = :customerId
+     *     // Returns: UPDATE customer SET first_name = :firstName, last_name = :lastName, email = :email WHERE customer_id = :customerId
      * }
      * }</pre>
      *
      * @param conn the database connection to use
      * @param tableName the name of the table for which to generate the named UPDATE statement
      * @param keyColumnName the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id}) or its unambiguous
-     *            camel-case form ({@code userId}); the generated SQL uses the actual metadata name and dialect quoting
+     *            camel-case form ({@code userId}); the generated SQL uses the metadata spelling without delimiters
      * @return an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if either name is {@code null} or blank, the key column is missing or
      *         ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed
-     *         qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+     *         qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      */
     public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName)
@@ -2516,13 +2588,15 @@ public final class JdbcCodeGenerationUtil {
         JdbcUtil.splitQualifiedSqlIdentifier(tableName, cs.tableName);
         N.checkArgNotBlank(keyColumnName, cs.keyColumnName);
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final List<String> columnLabelList = JdbcUtil.getColumnLabels(rs);
             final String resolvedKeyColumnName = resolveKeyColumnNames(N.asList(keyColumnName), columnLabelList, tableName).get(0);
@@ -2533,9 +2607,11 @@ public final class JdbcCodeGenerationUtil {
 
             return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
                     + Stream.of(updateColumnLabelList)
-                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = :" + Strings.toCamelCase(columnLabel))
+                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote, unquotedIdentifierCase) + " = :"
+                                    + Strings.toCamelCase(columnLabel))
                             .join(", ")
-                    + " WHERE " + renderStoredColumnLabel(resolvedKeyColumnName, identifierQuote) + " = :" + Strings.toCamelCase(resolvedKeyColumnName);
+                    + " WHERE " + renderStoredColumnLabel(resolvedKeyColumnName, identifierQuote, unquotedIdentifierCase) + " = :"
+                    + Strings.toCamelCase(resolvedKeyColumnName);
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
         }
@@ -2555,7 +2631,7 @@ public final class JdbcCodeGenerationUtil {
      * List<String> excludedColumns = Arrays.asList("created_at", "updated_at");
      * List<String> keyColumns = Arrays.asList("id", "status");
      * String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(ds, "orders", excludedColumns, keyColumns, "version > 1");
-     * // Returns: UPDATE orders SET "customer_id" = :customerId, "total_amount" = :totalAmount WHERE "id" = :id AND "status" = :status AND (version > 1)
+     * // Returns: UPDATE orders SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND (version > 1)
      * }</pre>
      *
      * @param ds the data source to connect to the database
@@ -2566,7 +2642,9 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code ds} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
-     *         malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+     *         malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources
      *         fails
      * @see #generateNamedUpdateSql(Connection, String, String)
@@ -2607,7 +2685,7 @@ public final class JdbcCodeGenerationUtil {
      *     String customWhere = "version > 1";
      *     String updateSql = JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "orders",
      *                                                                      excludedColumns, keyColumnNames, customWhere);
-     *     // Returns: UPDATE orders SET "customer_id" = :customerId, "total_amount" = :totalAmount WHERE "id" = :id AND "status" = :status AND (version > 1)
+     *     // Returns: UPDATE orders SET customer_id = :customerId, total_amount = :totalAmount WHERE id = :id AND status = :status AND (version > 1)
      * }
      * }</pre>
      *
@@ -2619,7 +2697,9 @@ public final class JdbcCodeGenerationUtil {
      * @return an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or if {@code tableName} is {@code null} or blank, a key column is blank,
      *         missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to
-     *         malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+     *         malformed qualified table names or blank column labels.
+     *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
+     *         metadata labels whose exact case would be folded are rejected.
      * @throws UncheckedSQLException if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
      * @see #generateNamedUpdateSql(Connection, String, String)
      * @see #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)
@@ -2636,13 +2716,15 @@ public final class JdbcCodeGenerationUtil {
             }
         }
 
-        final ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(conn);
-        final String identifierQuote = SqlIdentifierUtil.quoteString(conn, dbProductInfo);
+        final String identifierQuote = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? SqlIdentifierUtil.quoteString(conn, JdbcUtil.getDBProductInfo(conn))
+                : null;
 
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
              final ResultSet rs = stmt.executeQuery()) {
+
+            final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
             final List<String> allColumnLabels = JdbcUtil.getColumnLabels(rs);
             final List<String> resolvedKeyColumnNames = resolveKeyColumnNames(keyColumnNames, allColumnLabels, tableName);
@@ -2666,7 +2748,7 @@ public final class JdbcCodeGenerationUtil {
 
                 if (N.notEmpty(resolvedKeyColumnNames)) {
                     whereSection += Stream.of(resolvedKeyColumnNames)
-                            .map(c -> renderStoredColumnLabel(c, identifierQuote) + " = :" + Strings.toCamelCase(c))
+                            .map(c -> renderStoredColumnLabel(c, identifierQuote, unquotedIdentifierCase) + " = :" + Strings.toCamelCase(c))
                             .join(" AND ");
 
                     if (Strings.isNotBlank(whereClause)) {
@@ -2679,7 +2761,8 @@ public final class JdbcCodeGenerationUtil {
 
             return "UPDATE " + SqlIdentifierUtil.renderTableNameWithQuote(tableName, identifierQuote) + " SET "
                     + Stream.of(columnLabelList)
-                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote) + " = :" + Strings.toCamelCase(columnLabel))
+                            .map(columnLabel -> renderStoredColumnLabel(columnLabel, identifierQuote, unquotedIdentifierCase) + " = :"
+                                    + Strings.toCamelCase(columnLabel))
                             .join(", ")
                     + whereSection;
 
@@ -2706,7 +2789,8 @@ public final class JdbcCodeGenerationUtil {
      * @param insertSql the INSERT SQL statement to convert
      * @return an UPDATE SQL statement derived from the INSERT statement
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if the INSERT SQL is null/empty, invalid, or cannot be converted, or if
-     *         the database metadata reports a {@code null} or blank product name
+     *         the database metadata reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
      * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
      *         database product info
@@ -2727,12 +2811,9 @@ public final class JdbcCodeGenerationUtil {
      * <ul>
      *   <li>SQL whitespace such as spaces, tabs, and line breaks is accepted between {@code INSERT}, {@code INTO}, the table name, and the column list.</li>
      *   <li>Column and value counts must match or conversion fails.</li>
-     *   <li>The parsed table name is validated as a qualified identifier and each non-simple identifier part is quoted using the database-specific quote character.</li>
-     *   <li>Column names that were delimited in {@code insertSql}, or that contain characters other than ASCII letters, digits, or underscores
-     *       (or that do not start with a letter or underscore), are quoted
-     *       (with brackets for SQL Server/ASE, backticks for MySQL/MariaDB, Spark, Databricks, Hive and BigQuery, or double quotes
-     *       for other databases) based on the
-     *       {@link ProductInfo} resolved from {@code ds}.</li>
+     *   <li>The parsed table name is validated as a qualified identifier. Identifier quoting is disabled, so each
+     *       table-name part and column name must be a simple undelimited name. Explicit delimiters, non-simple names
+     *       and common SQL reserved names cause conversion to fail.</li>
      *   <li>Value expressions are copied from the parsed {@code VALUES} list without re-quoting or re-escaping.
      *       Surrounding whitespace is trimmed, except that a trailing line comment is terminated by a newline
      *       (the supplied INSERT is assumed to already contain valid SQL expressions).</li>
@@ -2766,7 +2847,8 @@ public final class JdbcCodeGenerationUtil {
      * @param whereClause the WHERE clause to append (without the {@code WHERE} keyword). Ignored when {@code null} or blank.
      * @return an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if the INSERT SQL is null/empty, invalid, or cannot be converted, or if
-     *         the database metadata reports a {@code null} or blank product name
+     *         the database metadata reports a {@code null} or blank product name.
+     *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
      * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
      *         database product info
@@ -4080,40 +4162,41 @@ public final class JdbcCodeGenerationUtil {
      * Renders the given exact column labels, read from result-set metadata, for generated SQL.
      *
      * @param columnLabelList the column labels to render
-     * @param identifierQuote the connection's identifier delimiter, or {@code null} if unsupported
+     * @param identifierQuote the connection's identifier delimiter, or {@code null} when quoting is disabled or unsupported
+     * @param unquotedIdentifierCase positive for upper-case storage, negative for lower-case storage, or zero for no folding
      * @return the rendered column labels
-     * @throws IllegalArgumentException if any column label is {@code null} or blank.
+     * @throws IllegalArgumentException if a column label is {@code null}, blank, or cannot retain its identity without quoting.
      */
-    private static List<String> renderColumnLabels(final List<String> columnLabelList, final String identifierQuote) throws IllegalArgumentException {
-        return N.map(columnLabelList, it -> renderStoredColumnLabel(it, identifierQuote));
+    private static List<String> renderColumnLabels(final List<String> columnLabelList, final String identifierQuote, final int unquotedIdentifierCase)
+            throws IllegalArgumentException {
+        return N.map(columnLabelList, it -> renderStoredColumnLabel(it, identifierQuote, unquotedIdentifierCase));
     }
 
     /**
-     * Preserves a metadata column's exact spelling using the connection's identifier delimiter.
-     * Even simple names may be reserved words or expressions such as {@code USER}. When the driver
-     * reports no quoting support, simple labels remain unquoted; non-simple labels are rejected.
+     * Renders a metadata column's exact spelling under the fixed identifier-quoting policy. With quoting disabled,
+     * rejects non-simple names, common reserved names such as {@code USER}, and labels whose case would be folded.
      *
      * @param columnLabel the exact column label from metadata
-     * @param identifierQuote the connection's identifier delimiter, or {@code null} if unsupported
+     * @param identifierQuote the connection's identifier delimiter, or {@code null} when quoting is disabled or unsupported
+     * @param unquotedIdentifierCase positive for upper-case storage, negative for lower-case storage, or zero for no folding
      * @return the rendered column label
-     * @throws IllegalArgumentException if the label is blank or cannot be rendered without quoting
+     * @throws IllegalArgumentException if the label is {@code null}, blank, or cannot be rendered without quoting
      */
-    private static String renderStoredColumnLabel(final String columnLabel, final String identifierQuote) throws IllegalArgumentException {
-        return SqlIdentifierUtil.renderStoredIdentifier(columnLabel, identifierQuote);
+    private static String renderStoredColumnLabel(final String columnLabel, final String identifierQuote, final int unquotedIdentifierCase)
+            throws IllegalArgumentException {
+        return SqlIdentifierUtil.renderStoredIdentifier(columnLabel, identifierQuote, unquotedIdentifierCase);
     }
 
     /**
-     * Renders a column label read from result-set metadata for the database product. Such a label is the column's
-     * stored spelling, so in addition to a label containing characters that always require delimiters, a label whose
-     * letter case the database would fold when unquoted (for example {@code userId} on H2/Oracle, which store unquoted
-     * identifiers in upper case, or on PostgreSQL, which stores them in lower case) is quoted; left unquoted, it would
-     * resolve to a different column.
+     * Renders a column label read from result-set metadata under the fixed identifier-quoting policy. With quoting
+     * disabled, a non-simple or common reserved name is rejected. A label whose stored letter case would be folded
+     * (for example {@code userId} on H2/Oracle or PostgreSQL) is also rejected because it could resolve to another column.
      *
      * @param columnLabel the column label to render
-     * @param dbProductInfo the database product info, or {@code null} to use standard double-quote delimiters
+     * @param dbProductInfo the database product info, used to choose delimiters only if quoting is enabled
      * @param unquotedIdentifierCase the case folding of unquoted identifiers, as returned by {@link #getUnquotedIdentifierCase(Connection)}
      * @return the rendered column label
-     * @throws IllegalArgumentException if {@code columnLabel} is {@code null} or blank.
+     * @throws IllegalArgumentException if {@code columnLabel} is {@code null}, blank, or cannot retain its identity without quoting.
      */
     static String renderColumnLabel(final String columnLabel, final ProductInfo dbProductInfo, final int unquotedIdentifierCase)
             throws IllegalArgumentException {

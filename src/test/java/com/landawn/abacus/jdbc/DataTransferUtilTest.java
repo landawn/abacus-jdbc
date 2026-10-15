@@ -724,7 +724,7 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
-    public void testCopyBetweenDataSourcesUsesTargetDialectForGeneratedInsertSql() throws SQLException {
+    public void testCopyBetweenDataSourcesLeavesGeneratedInsertUnquotedAcrossDialects() throws SQLException {
         final DataSource targetDataSource = mock(DataSource.class);
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
@@ -742,18 +742,19 @@ public class DataTransferUtilTest extends TestBase {
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
         when(targetResultSet.getMetaData()).thenReturn(targetResultSetMetaData);
         when(targetResultSetMetaData.getColumnCount()).thenReturn(1);
-        when(targetResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
+        when(targetResultSetMetaData.getColumnLabel(1)).thenReturn("created_date");
 
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
-        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created_date");
 
         final long result = DataTransferUtil.copy(mockDataSource, targetDataSource, "source_table", "target_table");
 
         assertEquals(1, result);
-        verify(targetConnection).prepareStatement("INSERT INTO target_table(\"created-date\") VALUES (?)");
-        verify(targetConnection, never()).prepareStatement("INSERT INTO target_table(`created-date`) VALUES (?)");
+        verify(targetConnection).prepareStatement("INSERT INTO target_table(created_date) VALUES (?)");
+        verify(targetConnection, never()).prepareStatement("INSERT INTO target_table(\"created_date\") VALUES (?)");
+        verify(targetConnection, never()).prepareStatement("INSERT INTO target_table(`created_date`) VALUES (?)");
     }
 
     @Test
@@ -784,57 +785,44 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
-    public void testCopyWithSelectedColumnsUsesDialectSpecificQuoting() throws SQLException {
+    public void testCopyWithSelectedColumnsRejectsNamesRequiringQuoting() throws SQLException {
         final Connection targetConnection = mock(Connection.class);
-        final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
-        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
         final Collection<String> selectColumnNames = List.of("created-date");
 
-        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
-        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
-        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
-        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
-        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
-        when(mockResultSet.next()).thenReturn(true, false);
-        when(mockResultSet.getObject(anyInt())).thenReturn("value");
-        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "target_table", selectColumnNames));
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "target_table", selectColumnNames);
-
-        assertEquals(1, result);
-        verify(mockConnection).prepareStatement("SELECT `created-date` FROM source_table", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-        verify(targetConnection).prepareStatement("INSERT INTO target_table(\"created-date\") VALUES (?)");
+        verify(mockConnection, never()).prepareStatement(anyString(), anyInt(), anyInt());
+        verify(targetConnection, never()).prepareStatement(anyString());
     }
 
     @Test
-    public void testCopyWithSelectedColumnsQuotesSinglePartIdentifierStartingWithDigit() throws SQLException {
+    public void testCopyWithSelectedColumnsRejectsIdentifiersStartingWithDigit() throws SQLException {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
-        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        final Collection<String> selectColumnNames = List.of("2024_total");
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
-        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
-        when(mockResultSet.next()).thenReturn(true, false);
-        when(mockResultSet.getObject(anyInt())).thenReturn("value");
-        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "2024_source", "2024_target", selectColumnNames);
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "2024_source", "target_table", List.of("total")));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "2024_target", List.of("total")));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "target_table", List.of("2024_total")));
 
-        assertEquals(1, result);
-        verify(mockConnection).prepareStatement("SELECT `2024_total` FROM `2024_source`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-        verify(targetConnection).prepareStatement("INSERT INTO \"2024_target\"(\"2024_total\") VALUES (?)");
+        verify(mockConnection, never()).prepareStatement(anyString(), anyInt(), anyInt());
+        verify(targetConnection, never()).prepareStatement(anyString());
     }
 
     @Test
-    public void testCopyWithSelectedColumnsQuotesQualifiedTableNamesPerPart() throws SQLException {
+    public void testCopyWithSelectedColumnsLeavesQualifiedOrdinaryNamesUnquoted() throws SQLException {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        final Collection<String> selectColumnNames = List.of("created-date");
+        final Collection<String> selectColumnNames = List.of("created_date");
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
@@ -845,59 +833,68 @@ public class DataTransferUtilTest extends TestBase {
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "sales.source-table", "archive.target-table", selectColumnNames);
+        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "sales.source_table", "archive.target_table", selectColumnNames);
 
         assertEquals(1, result);
-        // Simple parts (sales/archive) stay unquoted so plain qualified names keep resolving on
-        // case-folding databases; only the parts needing quoting are quoted.
-        verify(mockConnection).prepareStatement("SELECT `created-date` FROM sales.`source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-        verify(targetConnection).prepareStatement("INSERT INTO archive.\"target-table\"(\"created-date\") VALUES (?)");
+        verify(mockConnection).prepareStatement("SELECT created_date FROM sales.source_table", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        verify(targetConnection).prepareStatement("INSERT INTO archive.target_table(created_date) VALUES (?)");
     }
 
     @Test
-    public void testCopyWithSelectedColumnsPreservesQuotedDotsWithinSingleIdentifier() throws SQLException {
+    public void testCopyWithSelectedColumnsRejectsNonSimpleQualifiedTableParts() throws SQLException {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
-        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        final Collection<String> selectColumnNames = List.of("created-date");
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
-        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
-        when(mockResultSet.next()).thenReturn(true, false);
-        when(mockResultSet.getObject(anyInt())).thenReturn("value");
-        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "\"sales.source-table\"", "\"archive.target-table\"", selectColumnNames);
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "sales.source-table", "archive.target_table", List.of("created_date")));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "sales.source_table", "archive.target-table", List.of("created_date")));
 
-        assertEquals(1, result);
-        verify(mockConnection).prepareStatement("SELECT `created-date` FROM `sales.source-table`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-        verify(targetConnection).prepareStatement("INSERT INTO \"archive.target-table\"(\"created-date\") VALUES (?)");
+        verify(mockConnection, never()).prepareStatement(anyString(), anyInt(), anyInt());
+        verify(targetConnection, never()).prepareStatement(anyString());
     }
 
     @Test
-    public void testCopyWithSelectedColumnsEscapesEmbeddedQuoteInQuotedIdentifiers() throws SQLException {
+    public void testCopyWithSelectedColumnsRejectsQuotedDotsWithinSingleIdentifier() throws SQLException {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
-        final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
-        final Collection<String> selectColumnNames = List.of("created\"date");
 
         when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
         when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
-        when(targetConnection.prepareStatement(anyString())).thenReturn(targetPreparedStatement);
-        when(mockResultSet.next()).thenReturn(true, false);
-        when(mockResultSet.getObject(anyInt())).thenReturn("value");
-        when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "\"archive\"\"target\"", selectColumnNames);
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "\"sales.source-table\"", "target_table", List.of("created_date")));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "\"archive.target-table\"", List.of("created_date")));
 
-        assertEquals(1, result);
-        verify(mockConnection).prepareStatement("SELECT `created\"date` FROM source_table", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-        verify(targetConnection).prepareStatement("INSERT INTO \"archive\"\"target\"(\"created\"\"date\") VALUES (?)");
+        verify(mockConnection, never()).prepareStatement(anyString(), anyInt(), anyInt());
+        verify(targetConnection, never()).prepareStatement(anyString());
+    }
+
+    @Test
+    public void testCopyWithSelectedColumnsRejectsEmbeddedQuotesInIdentifiers() throws SQLException {
+        final Connection targetConnection = mock(Connection.class);
+        final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
+
+        when(targetConnection.getMetaData()).thenReturn(targetDatabaseMetaData);
+        when(targetDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(targetDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+        when(targetDatabaseMetaData.getDatabaseProductVersion()).thenReturn("16");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "target_table", List.of("created\"date")));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "\"archive\"\"target\"", List.of("created_date")));
+
+        verify(mockConnection, never()).prepareStatement(anyString(), anyInt(), anyInt());
+        verify(targetConnection, never()).prepareStatement(anyString());
     }
 
     @Test
@@ -978,7 +975,7 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
-    public void testCopyBetweenConnectionsUsesTargetDialectForGeneratedInsertSql() throws SQLException {
+    public void testCopyBetweenConnectionsLeavesGeneratedInsertUnquotedAcrossDialects() throws SQLException {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetDatabaseMetaData = mock(DatabaseMetaData.class);
         final PreparedStatement targetPreparedStatement = mock(PreparedStatement.class);
@@ -994,18 +991,19 @@ public class DataTransferUtilTest extends TestBase {
         when(targetPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
         when(targetResultSet.getMetaData()).thenReturn(targetResultSetMetaData);
         when(targetResultSetMetaData.getColumnCount()).thenReturn(1);
-        when(targetResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
+        when(targetResultSetMetaData.getColumnLabel(1)).thenReturn("created_date");
 
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(anyInt())).thenReturn("value");
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
-        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created-date");
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created_date");
 
         final long result = DataTransferUtil.copy(mockConnection, targetConnection, "source_table", "target_table");
 
         assertEquals(1, result);
-        verify(targetConnection).prepareStatement("INSERT INTO target_table(\"created-date\") VALUES (?)");
-        verify(targetConnection, never()).prepareStatement("INSERT INTO target_table(`created-date`) VALUES (?)");
+        verify(targetConnection).prepareStatement("INSERT INTO target_table(created_date) VALUES (?)");
+        verify(targetConnection, never()).prepareStatement("INSERT INTO target_table(\"created_date\") VALUES (?)");
+        verify(targetConnection, never()).prepareStatement("INSERT INTO target_table(`created_date`) VALUES (?)");
     }
 
     @Test
@@ -1806,27 +1804,23 @@ public class DataTransferUtilTest extends TestBase {
     }
 
     @Test
-    public void testCopyWithSelectedColumnsPreservesExplicitDelimitersOnSimpleIdentifierParts() throws Exception {
+    public void testCopyWithSelectedColumnsRejectsExplicitDelimitersOnSimpleIdentifierParts() throws Exception {
         final Connection targetConnection = mock(Connection.class);
         final DatabaseMetaData targetMetadata = mock(DatabaseMetaData.class);
-        final PreparedStatement targetStatement = mock(PreparedStatement.class);
 
         when(targetConnection.getMetaData()).thenReturn(targetMetadata);
         when(targetMetadata.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(targetMetadata.getIdentifierQuoteString()).thenReturn("\"");
         when(targetMetadata.getDatabaseProductVersion()).thenReturn("16");
-        when(targetConnection.prepareStatement(anyString())).thenReturn(targetStatement);
-        when(targetStatement.executeBatch()).thenReturn(new int[] { 1 });
-        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
-        when(mockResultSet.next()).thenReturn(true, false);
-        when(mockResultSet.getObject(1)).thenReturn("value");
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "sales.\"MixedSource\"", "archive.target_table", List.of("column_name")));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "sales.source_table", "archive.\"MixedTarget\"", List.of("column_name")));
+        assertThrows(IllegalArgumentException.class,
+                () -> DataTransferUtil.copy(mockConnection, targetConnection, "sales.source_table", "archive.target_table", List.of("\"MixedColumn\"")));
 
-        final long result = DataTransferUtil.copy(mockConnection, targetConnection, "sales.\"MixedSource\"", "archive.\"MixedTarget\"",
-                List.of("\"MixedColumn\""));
-
-        assertEquals(1, result);
-        verify(mockConnection).prepareStatement("SELECT `MixedColumn` FROM sales.`MixedSource`", ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
-        verify(targetConnection).prepareStatement("INSERT INTO archive.\"MixedTarget\"(\"MixedColumn\") VALUES (?)");
+        verify(mockConnection, never()).prepareStatement(anyString(), anyInt(), anyInt());
+        verify(targetConnection, never()).prepareStatement(anyString());
     }
 
     @Test
