@@ -1,7 +1,5 @@
 package com.landawn.abacus.jdbc;
 
-import static org.mockito.Mockito.when;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;

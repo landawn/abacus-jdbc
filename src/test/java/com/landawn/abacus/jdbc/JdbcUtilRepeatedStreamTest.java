@@ -16,8 +16,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.sql.Connection;
@@ -34,8 +34,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
-import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.EntityId;
 
@@ -96,8 +96,9 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
         ByteArrayInputStream input = new ByteArrayInputStream(new byte[] { 1, 2, 3 });
         JdbcUtil.setParameters(ParsedSql.parse("select :p, :p"), stmt, new Object[] { Map.of("p", input) });
         assertEquals(2, bound.size());
-        for (InputStream stream : bound)
+        for (InputStream stream : bound) {
             assertArrayEquals(new byte[] { 1, 2, 3 }, stream.readAllBytes());
+        }
         bound.clear();
         ByteArrayInputStream single = new ByteArrayInputStream(new byte[] { 4 });
         JdbcUtil.setParameters(ParsedSql.parse("select :p"), stmt, new Object[] { Map.of("p", single) });

@@ -30,16 +30,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.Table;
@@ -47,12 +48,11 @@ import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.SqlDialect;
-import com.landawn.abacus.TestBase;
+import com.landawn.abacus.util.Tuple.Tuple2;
+import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Function;
 import com.landawn.abacus.util.function.IntFunction;
-import com.landawn.abacus.util.Tuple.Tuple2;
-import com.landawn.abacus.util.Tuple.Tuple3;
 
 @Tag("2025")
 public class JoinInfoTest extends TestBase {

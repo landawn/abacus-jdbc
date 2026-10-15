@@ -16,12 +16,11 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.function.Predicate;
 import java.util.List;
+import java.util.function.Predicate;
 
 import javax.sql.DataSource;
 

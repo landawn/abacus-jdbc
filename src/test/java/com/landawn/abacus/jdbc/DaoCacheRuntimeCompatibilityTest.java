@@ -17,14 +17,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
@@ -340,7 +340,7 @@ class DaoCacheRuntimeCompatibilityTest {
 
             // An application's copy policy remains authoritative even after the built-in adapter has cached
             // an unavailable capability. Registering this instance affects only this isolated Kryo graph.
-            kryo.register(source.getClass(), new com.esotericsoftware.kryo.Serializer<Object>() {
+            kryo.register(source.getClass(), new com.esotericsoftware.kryo.Serializer<>() {
                 @Override
                 public Object copy(final com.esotericsoftware.kryo.Kryo ignored, final Object original) {
                     return original;

@@ -17,7 +17,6 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.function.Consumer;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
@@ -26,7 +25,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
 import com.landawn.abacus.util.stream.Stream;
 
 class AbstractQueryStreamTest extends AbstractQueryTestSupport {

@@ -12,8 +12,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.ImmutableList;
 
 abstract class NamedQueryTestSupport extends TestBase {

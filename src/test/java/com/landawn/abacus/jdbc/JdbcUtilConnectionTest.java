@@ -13,8 +13,6 @@ import java.sql.SQLException;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.logging.Logger;
-
 class JdbcUtilConnectionTest extends JdbcUtilTestSupport {
 
     @Test

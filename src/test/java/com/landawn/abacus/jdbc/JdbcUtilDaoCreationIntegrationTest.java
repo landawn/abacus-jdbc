@@ -8,9 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.Executor;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.AfterEach;
@@ -20,18 +20,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
+import com.landawn.abacus.jdbc.JdbcUtil.DaoCreationOptions;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.NonUpdateCrudDao;
-import com.landawn.abacus.jdbc.JdbcUtil.DaoCreationOptions;
 import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.SqlMapper;
-import com.landawn.abacus.TestBase;
 
 @Tag("integration")
 class JdbcUtilDaoCreationIntegrationTest extends TestBase {

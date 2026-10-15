@@ -22,15 +22,14 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.sql.Blob;
-import java.sql.Clob;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Collection;
-import java.util.concurrent.TimeUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,16 +40,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Transient;
-import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.Jdbc.BiRowMapper;
 import com.landawn.abacus.jdbc.Jdbc.RowFilter;
 import com.landawn.abacus.jdbc.Jdbc.RowMapper;
+import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.ImmutableMap;
 import com.landawn.abacus.util.NamingPolicy;
-import com.landawn.abacus.util.Tuple.Tuple3;
 
 class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
 

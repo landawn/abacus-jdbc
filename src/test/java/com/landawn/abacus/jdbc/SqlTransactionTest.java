@@ -38,8 +38,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.exception.UncheckedSQLException;
 
 public class SqlTransactionTest extends TestBase {
 

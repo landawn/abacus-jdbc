@@ -2,7 +2,6 @@ package com.landawn.abacus.jdbc;
 
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.sql.SQLException;
 

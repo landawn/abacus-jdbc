@@ -13,15 +13,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-
-import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;

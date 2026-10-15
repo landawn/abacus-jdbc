@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -14,16 +13,13 @@ import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.tools.ToolProvider;
 
-import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-
-import com.landawn.abacus.util.NamingPolicy;
+import org.junit.jupiter.api.io.TempDir;
 
 @Tag("integration")
 class JdbcCodeGenerationEntityIntegrationTest extends JdbcCodeGenerationUtilTestSupport {

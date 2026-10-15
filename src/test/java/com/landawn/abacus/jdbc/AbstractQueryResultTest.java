@@ -19,7 +19,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.function.Consumer;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;

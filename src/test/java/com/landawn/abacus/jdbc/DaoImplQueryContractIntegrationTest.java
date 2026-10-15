@@ -20,12 +20,12 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.EntityId;
 
 @Tag("integration")

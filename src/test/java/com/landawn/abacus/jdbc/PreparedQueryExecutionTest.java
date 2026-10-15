@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,9 +17,6 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.util.Dataset;
-import com.landawn.abacus.util.stream.Collectors;
-import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.Tuple.Tuple2;
 
 class PreparedQueryExecutionTest extends PreparedQueryTestSupport {

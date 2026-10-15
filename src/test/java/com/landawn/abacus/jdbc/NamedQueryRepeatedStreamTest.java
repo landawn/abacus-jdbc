@@ -14,8 +14,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
@@ -29,8 +29,8 @@ import java.util.List;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.query.ParsedSql;
 
 @Tag("2025")
 public class NamedQueryRepeatedStreamTest extends TestBase {

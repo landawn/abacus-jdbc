@@ -27,8 +27,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.query.SqlDialect.ProductInfo;
 
 @Tag("integration")
 class JdbcCodeGenerationIdentifierIntegrationTest extends TestBase {

@@ -23,8 +23,8 @@ import java.util.Map;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.EntityId;
 
@@ -39,18 +39,20 @@ public class NamedQueryReplayContractTest extends TestBase {
                 stmt.execute("create table t(a varbinary, b varbinary, c clob, d clob)");
                 EntityId id = EntityId.of("p", new ByteArrayInputStream(new byte[] { 1, 2 }), "r", new StringReader("a\u03b2"));
                 try (NamedQuery query = JdbcUtil.prepareNamedQuery(conn, "insert into t values(:p, :p, :r, :r)")) {
-                    if (mode == 0)
+                    if (mode == 0) {
                         query.setParameters(id);
-                    else if (mode == 1)
+                    } else if (mode == 1) {
                         query.setParameters((Object) id);
-                    else if (mode == 2)
+                    } else if (mode == 2) {
                         query.addBatchParameters(List.of(id));
-                    else
+                    } else {
                         query.addBatchParameters(List.of(id).iterator());
-                    if (mode < 2)
+                    }
+                    if (mode < 2) {
                         query.update();
-                    else
+                    } else {
                         query.batchUpdate();
+                    }
                 }
                 try (ResultSet rows = stmt.executeQuery("select * from t")) {
                     assertTrue(rows.next());
@@ -72,16 +74,18 @@ public class NamedQueryReplayContractTest extends TestBase {
                 stmt.execute("create table t(a varbinary, b varbinary, c clob, d clob)");
                 AnnotatedBean bean = new AnnotatedBean(new ByteArrayInputStream(new byte[] { 1, 2 }), new ByteArrayInputStream(new byte[] { 65, 66 }));
                 try (NamedQuery query = JdbcUtil.prepareNamedQuery(conn, "insert into t values(:p, :p, :text, :text)")) {
-                    if (mode == 0)
+                    if (mode == 0) {
                         query.setParameters(bean);
-                    else if (mode == 1)
+                    } else if (mode == 1) {
                         query.setParameters(bean, List.of("p", "text"));
-                    else
+                    } else {
                         query.addBatchParameters(List.of(bean));
-                    if (mode < 2)
+                    }
+                    if (mode < 2) {
                         query.update();
-                    else
+                    } else {
                         query.batchUpdate();
+                    }
                 }
                 try (ResultSet rows = stmt.executeQuery("select * from t")) {
                     assertTrue(rows.next());

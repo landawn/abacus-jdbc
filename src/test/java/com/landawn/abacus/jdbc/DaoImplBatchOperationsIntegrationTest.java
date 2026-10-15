@@ -22,13 +22,13 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.TestBase;
 
 @Tag("integration")
 public class DaoImplBatchOperationsIntegrationTest extends TestBase {

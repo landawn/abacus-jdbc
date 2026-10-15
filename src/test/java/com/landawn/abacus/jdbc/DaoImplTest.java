@@ -31,9 +31,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
@@ -50,12 +52,11 @@ import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.DaoBase;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.query.condition.Limit;
 import com.landawn.abacus.query.condition.SqlExpression;
-import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.ImmutableList;
@@ -1266,7 +1267,7 @@ public class DaoImplTest extends TestBase {
 
         assertSame(expected, function.apply(query, new Object[0]));
         org.mockito.Mockito.verify(query).queryForUniqueValue(TestEntity.class);
-        org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).queryForSingleValue(Mockito.any(Class.class));
+        org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).queryForSingleValue(ArgumentMatchers.any(Class.class));
     }
 
     // Control for the fix above: a Nullable-returning method without only-one/unique semantics must still
@@ -1287,7 +1288,7 @@ public class DaoImplTest extends TestBase {
 
         assertSame(expected, function.apply(query, new Object[0]));
         org.mockito.Mockito.verify(query).queryForSingleValue(TestEntity.class);
-        org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).queryForUniqueValue(Mockito.any(Class.class));
+        org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).queryForUniqueValue(ArgumentMatchers.any(Class.class));
     }
 
     // BUG FIX: a bean-returning method named queryForUnique* (or declared with op = QueryOperation.queryForUnique)
@@ -1307,11 +1308,11 @@ public class DaoImplTest extends TestBase {
             final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> function = (Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException>) factory
                     .invoke(null, TestEntity.class, method, null, null, null, false, false, false, op, false, "BeanUniqueDao.queryForUniqueByName");
             final AbstractQuery query = mock(AbstractQuery.class);
-            org.mockito.Mockito.when(query.findOnlyOne(Mockito.any(Jdbc.BiRowMapper.class))).thenReturn(Optional.of(entity));
+            org.mockito.Mockito.when(query.findOnlyOne(ArgumentMatchers.any(Jdbc.BiRowMapper.class))).thenReturn(Optional.of(entity));
 
             assertSame(entity, function.apply(query, new Object[0]));
-            org.mockito.Mockito.verify(query).findOnlyOne(Mockito.any(Jdbc.BiRowMapper.class));
-            org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).findFirst(Mockito.any(Jdbc.BiRowMapper.class));
+            org.mockito.Mockito.verify(query).findOnlyOne(ArgumentMatchers.any(Jdbc.BiRowMapper.class));
+            org.mockito.Mockito.verify(query, org.mockito.Mockito.never()).findFirst(ArgumentMatchers.any(Jdbc.BiRowMapper.class));
         }
     }
 
@@ -1620,8 +1621,8 @@ public class DaoImplTest extends TestBase {
                 null);
 
         try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class, Mockito.CALLS_REAL_METHODS)) {
-            jdbcUtil.when(() -> JdbcUtil.createCacheKey(Mockito.anyString(), Mockito.anyString(), Mockito.<Object[]> any(),
-                    Mockito.any(com.landawn.abacus.logging.Logger.class))).thenReturn(null);
+            jdbcUtil.when(() -> JdbcUtil.createCacheKey(ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.<Object[]> any(),
+                    ArgumentMatchers.any(com.landawn.abacus.logging.Logger.class))).thenReturn(null);
 
             assertEquals("refresh-result", dao.updateWithUnkeyableArgument(new Object()));
         }
@@ -1634,7 +1635,7 @@ public class DaoImplTest extends TestBase {
     void testRefreshCacheFailureIsSuppressedByInvocationFailure() throws Exception {
         final Jdbc.DaoCache failingCache = mock(Jdbc.DaoCache.class);
         final IllegalArgumentException refreshFailure = new IllegalArgumentException("cache refresh failed");
-        Mockito.doThrow(refreshFailure).when(failingCache).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.<Object[]> any(), Mockito.any());
+        Mockito.doThrow(refreshFailure).when(failingCache).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
         final CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, failingCache,
                 null);
 
@@ -1653,8 +1654,8 @@ public class DaoImplTest extends TestBase {
         final IllegalStateException primary = methodFailure ? new IllegalStateException("write failed") : null;
         final IllegalStateException localFailure = new IllegalStateException("local invalidation failed");
         final IllegalStateException daoFailure = sharedRefreshFailure ? localFailure : new IllegalStateException("DAO invalidation failed");
-        Mockito.doThrow(localFailure).when(localCache).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.<Object[]> any(), Mockito.any());
-        Mockito.doThrow(daoFailure).when(daoCache).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.<Object[]> any(), Mockito.any());
+        Mockito.doThrow(localFailure).when(localCache).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
+        Mockito.doThrow(daoFailure).when(daoCache).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
         final CacheFailureDao dao = DaoImpl.createDao(CacheFailureDao.class, null, mockDataSourceForDaoCreation(), PSC, null, daoCache, null);
 
         try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(localCache)) {
@@ -1665,9 +1666,9 @@ public class DaoImplTest extends TestBase {
             }
             assertArrayEquals(sharedRefreshFailure ? new Throwable[0] : new Throwable[] { daoFailure }, localFailure.getSuppressed());
             Mockito.verify(localCache)
-                    .update(Mockito.anyString(), Mockito.eq(methodFailure ? null : "updated"), Mockito.same(dao), Mockito.<Object[]> any(), Mockito.any());
+                    .update(ArgumentMatchers.anyString(), ArgumentMatchers.eq(methodFailure ? null : "updated"), ArgumentMatchers.same(dao), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
             Mockito.verify(daoCache)
-                    .update(Mockito.anyString(), Mockito.eq(methodFailure ? null : "updated"), Mockito.same(dao), Mockito.<Object[]> any(), Mockito.any());
+                    .update(ArgumentMatchers.anyString(), ArgumentMatchers.eq(methodFailure ? null : "updated"), ArgumentMatchers.same(dao), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
         }
     }
 
@@ -2109,7 +2110,7 @@ public class DaoImplTest extends TestBase {
         Mockito.when(conn.getMetaData()).thenReturn(meta);
         Mockito.when(meta.getDatabaseProductName()).thenReturn("MySQL");
         Mockito.when(meta.getDatabaseProductVersion()).thenReturn("8.0");
-        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+        Mockito.when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         Mockito.when(stmt.executeUpdate()).thenReturn(1);
 
         final CurrentTimeInjectionDao dao = DaoImpl.createDao(CurrentTimeInjectionDao.class, null, ds, PSC, null, null, null);
@@ -2127,12 +2128,12 @@ public class DaoImplTest extends TestBase {
         }
 
         final ArgumentCaptor<java.sql.Timestamp> timestamps = ArgumentCaptor.forClass(java.sql.Timestamp.class);
-        Mockito.verify(stmt, Mockito.times(2)).setTimestamp(Mockito.anyInt(), timestamps.capture());
+        Mockito.verify(stmt, Mockito.times(2)).setTimestamp(ArgumentMatchers.anyInt(), timestamps.capture());
         assertEquals(firstClockReading, timestamps.getAllValues().get(0));
         assertEquals(firstClockReading, timestamps.getAllValues().get(1));
 
         final ArgumentCaptor<java.sql.Date> dates = ArgumentCaptor.forClass(java.sql.Date.class);
-        Mockito.verify(stmt).setDate(Mockito.anyInt(), dates.capture());
+        Mockito.verify(stmt).setDate(ArgumentMatchers.anyInt(), dates.capture());
         assertEquals(firstClockReading.getTime(), dates.getValue().getTime());
     }
 
@@ -2170,7 +2171,7 @@ public class DaoImplTest extends TestBase {
         Mockito.when(conn.getMetaData()).thenReturn(meta);
         Mockito.when(meta.getDatabaseProductName()).thenReturn("MySQL");
         Mockito.when(meta.getDatabaseProductVersion()).thenReturn("8.0");
-        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+        Mockito.when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         Mockito.when(stmt.executeUpdate()).thenReturn(1);
         Mockito.when(stmt.executeBatch()).thenReturn(new int[] { 1, 1 });
         Mockito.when(stmt.getGeneratedKeys()).thenThrow(new SQLException("Generated keys not requested"));
@@ -2252,9 +2253,9 @@ public class DaoImplTest extends TestBase {
         final Connection conn = ds.getConnection();
         final PreparedStatement stmt = mock(PreparedStatement.class);
 
-        Mockito.when(conn.prepareStatement(Mockito.anyString(), Mockito.any(String[].class))).thenReturn(stmt);
-        Mockito.when(conn.prepareStatement(Mockito.anyString(), Mockito.anyInt())).thenReturn(stmt);
-        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
+        Mockito.when(conn.prepareStatement(ArgumentMatchers.anyString(), ArgumentMatchers.any(String[].class))).thenReturn(stmt);
+        Mockito.when(conn.prepareStatement(ArgumentMatchers.anyString(), ArgumentMatchers.anyInt())).thenReturn(stmt);
+        Mockito.when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
         Mockito.when(stmt.executeUpdate()).thenReturn(1);
         Mockito.when(stmt.executeBatch()).thenReturn(new int[] { 1, 1 });
         Mockito.when(stmt.getGeneratedKeys()).thenAnswer(inv -> generatedKeyResultSet(7L)).thenAnswer(inv -> generatedKeyResultSet(8L, 9L));
@@ -2304,7 +2305,7 @@ public class DaoImplTest extends TestBase {
         final Connection conn = ds.getConnection();
         final java.sql.CallableStatement stmt = mock(java.sql.CallableStatement.class);
 
-        Mockito.when(conn.prepareCall(Mockito.anyString())).thenReturn(stmt);
+        Mockito.when(conn.prepareCall(ArgumentMatchers.anyString())).thenReturn(stmt);
         Mockito.when(stmt.executeUpdate()).thenReturn(1);
         Mockito.when(stmt.getUpdateCount()).thenReturn(-1);
 
@@ -2317,9 +2318,9 @@ public class DaoImplTest extends TestBase {
         }
 
         Mockito.verify(stmt, Mockito.times(2)).executeUpdate();
-        Mockito.verify(localCache, Mockito.times(2)).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
-        Mockito.verify(localCache, Mockito.never()).get(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any());
-        Mockito.verify(localCache, Mockito.never()).put(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+        Mockito.verify(localCache, Mockito.times(2)).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+        Mockito.verify(localCache, Mockito.never()).get(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+        Mockito.verify(localCache, Mockito.never()).put(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
     }
 
     // Guard: a procedure executed as a query is still classified by its "get" name prefix.
@@ -2329,19 +2330,19 @@ public class DaoImplTest extends TestBase {
         final Connection conn = ds.getConnection();
         final java.sql.CallableStatement stmt = mock(java.sql.CallableStatement.class);
 
-        Mockito.when(conn.prepareCall(Mockito.anyString())).thenReturn(stmt);
+        Mockito.when(conn.prepareCall(ArgumentMatchers.anyString())).thenReturn(stmt);
 
         final ProcedureWriteCacheDao dao = DaoImpl.createDao(ProcedureWriteCacheDao.class, null, ds, PSC, null, null, null);
         final Jdbc.DaoCache localCache = mock(Jdbc.DaoCache.class);
         final List<TestEntity> cached = new java.util.ArrayList<>();
-        Mockito.when(localCache.get(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any())).thenReturn(cached);
+        Mockito.when(localCache.get(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(cached);
 
         try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(localCache)) {
             assertEquals(cached, dao.getCounters());
         }
 
-        Mockito.verify(localCache, Mockito.never()).update(Mockito.anyString(), Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
-        Mockito.verify(conn, Mockito.never()).prepareCall(Mockito.anyString());
+        Mockito.verify(localCache, Mockito.never()).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+        Mockito.verify(conn, Mockito.never()).prepareCall(ArgumentMatchers.anyString());
     }
 
     @Test
@@ -2447,8 +2448,8 @@ public class DaoImplTest extends TestBase {
         final Method sumUpdateCounts = DaoImpl.class.getDeclaredMethod("sumUpdateCounts", int[].class);
         sumUpdateCounts.setAccessible(true);
 
-        assertEquals(2L * Integer.MAX_VALUE, sumUpdateCounts.invoke(null, (Object) new int[] { Integer.MAX_VALUE, Integer.MAX_VALUE }));
-        assertEquals(3L, sumUpdateCounts.invoke(null, (Object) new int[] { 2, Statement.SUCCESS_NO_INFO, Statement.EXECUTE_FAILED, 1 }));
+        assertEquals(2L * Integer.MAX_VALUE, sumUpdateCounts.invoke(null, new int[] { Integer.MAX_VALUE, Integer.MAX_VALUE }));
+        assertEquals(3L, sumUpdateCounts.invoke(null, new int[] { 2, Statement.SUCCESS_NO_INFO, Statement.EXECUTE_FAILED, 1 }));
     }
 
     @Test
@@ -2456,10 +2457,10 @@ public class DaoImplTest extends TestBase {
         final Method sumUpdateCounts = DaoImpl.class.getDeclaredMethod("sumUpdateCounts", long[].class);
         sumUpdateCounts.setAccessible(true);
 
-        assertEquals(3L, sumUpdateCounts.invoke(null, (Object) new long[] { 2, Statement.SUCCESS_NO_INFO, Statement.EXECUTE_FAILED, 1 }));
+        assertEquals(3L, sumUpdateCounts.invoke(null, new long[] { 2, Statement.SUCCESS_NO_INFO, Statement.EXECUTE_FAILED, 1 }));
 
         final InvocationTargetException thrown = assertThrows(InvocationTargetException.class,
-                () -> sumUpdateCounts.invoke(null, (Object) new long[] { Long.MAX_VALUE, 1 }));
+                () -> sumUpdateCounts.invoke(null, new long[] { Long.MAX_VALUE, 1 }));
         assertTrue(thrown.getCause() instanceof ArithmeticException);
     }
 
@@ -2705,11 +2706,11 @@ public class DaoImplTest extends TestBase {
         final Connection conn = ds.getConnection();
         final PreparedStatement stmt = mock(PreparedStatement.class);
         final SQLException bindingFailure = new SQLException("bind failed");
-        Mockito.when(conn.prepareStatement(Mockito.anyString())).thenReturn(stmt);
-        Mockito.doThrow(bindingFailure).when(stmt).setObject(Mockito.anyInt(), Mockito.any());
-        Mockito.doThrow(bindingFailure).when(stmt).setString(Mockito.anyInt(), Mockito.any());
-        Mockito.doThrow(bindingFailure).when(stmt).setLong(Mockito.anyInt(), Mockito.anyLong());
-        Mockito.doThrow(bindingFailure).when(stmt).setInt(Mockito.anyInt(), Mockito.anyInt());
+        Mockito.when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
+        Mockito.doThrow(bindingFailure).when(stmt).setObject(ArgumentMatchers.anyInt(), ArgumentMatchers.any());
+        Mockito.doThrow(bindingFailure).when(stmt).setString(ArgumentMatchers.anyInt(), ArgumentMatchers.any());
+        Mockito.doThrow(bindingFailure).when(stmt).setLong(ArgumentMatchers.anyInt(), ArgumentMatchers.anyLong());
+        Mockito.doThrow(bindingFailure).when(stmt).setInt(ArgumentMatchers.anyInt(), ArgumentMatchers.anyInt());
 
         final UncheckedConditionPrepareDao dao = DaoImpl.createDao(UncheckedConditionPrepareDao.class, null, ds, PSC, null, null, null);
 

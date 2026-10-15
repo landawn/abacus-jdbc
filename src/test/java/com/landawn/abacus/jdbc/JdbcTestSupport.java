@@ -9,12 +9,11 @@ import java.sql.ResultSetMetaData;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.query.ParsedSql;
 
 abstract class JdbcTestSupport extends TestBase {
 

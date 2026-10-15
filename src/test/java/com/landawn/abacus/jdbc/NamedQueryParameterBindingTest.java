@@ -33,7 +33,6 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.ImmutableList;

@@ -24,8 +24,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 
 import com.landawn.abacus.TestBase;
-import com.landawn.abacus.util.function.TriConsumer;
 import com.landawn.abacus.util.Throwables;
+import com.landawn.abacus.util.function.TriConsumer;
 
 abstract class JdbcUtilTestSupport extends TestBase {
 

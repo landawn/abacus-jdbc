@@ -21,13 +21,12 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
@@ -36,8 +35,8 @@ import org.mockito.Mockito;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
-import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.Throwables;
+import com.landawn.abacus.util.stream.Stream;
 
 class AbstractQueryTest extends AbstractQueryTestSupport {
 

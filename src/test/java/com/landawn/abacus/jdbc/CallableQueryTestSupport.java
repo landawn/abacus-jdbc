@@ -1,6 +1,5 @@
 package com.landawn.abacus.jdbc;
 
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.sql.CallableStatement;

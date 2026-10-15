@@ -23,7 +23,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.query.SqlOperation;
 
 class JdbcUtilTransactionTest extends JdbcUtilTestSupport {
 
