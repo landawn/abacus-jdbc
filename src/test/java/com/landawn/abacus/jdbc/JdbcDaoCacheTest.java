@@ -53,7 +53,7 @@ class JdbcDaoCacheTest extends JdbcTestSupport {
         final Method builtInMethod = JdbcUtil.BUILT_IN_DAO_UPDATE_METHODS.iterator().next();
         final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> missingReturnType = Tuple.of(builtInMethod, ImmutableList.empty(), null);
 
-        for (final Jdbc.DaoCache cache : List.of(Jdbc.DaoCache.createByMap(), Jdbc.DaoCache.create(10, 0))) {
+        for (final Jdbc.DaoCache cache : List.of(Jdbc.DaoCache.createByMap(), Jdbc.DaoCache.createByMap(2), Jdbc.DaoCache.create(10, 0))) {
             cache.put("method#users#1", "cached", null, null, null);
             assertTrue(assertThrows(IllegalArgumentException.class, () -> cache.update("method#users#2", 1, null, null, null)).getMessage()
                     .contains("methodSignature"));

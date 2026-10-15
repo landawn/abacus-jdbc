@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 import java.nio.file.Files;
@@ -31,6 +32,8 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
@@ -41,6 +44,36 @@ import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.Tuple;
 
 public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupport {
+
+    @ParameterizedTest
+    @ValueSource(strings = { "private transient int extra = 1;", "private volatile long extra;", "private int extra[] = new int[0];",
+            "private java.util.List<String> extra = java.util.Collections.<String>emptyList();",
+            "private java.util.List<java.util.List<String>> extra = new java.util.ArrayList< java.util.List<String> >();",
+            "private char extra = '\\''; // a quoted character" })
+    void copyMethodRecognizesModifiersArraysAndGenericInitializers(final String declaration) {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .generateCopyMethod(true)
+                .additionalClassBodySource(declaration)
+                .build();
+
+        final String generated = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+
+        assertTrue(generated.contains(declaration), generated);
+        assertTrue(generated.contains("copy.extra = this.extra;"), generated);
+    }
+
+    @ParameterizedTest
+    @ValueSource(classes = { WrongTableMember.class, ExtraRequiredTableMember.class, FieldOnlyTable.class })
+    void rejectsAnnotationsThatCannotRepresentTheGeneratedTable(final Class<? extends Annotation> annotation) {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder().tableAnnotationClass(annotation).build();
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config));
+
+        assertTrue(failure.getMessage().contains("tableAnnotationClass"), failure.getMessage());
+        assertTrue(failure.getMessage().contains(annotation.getCanonicalName()), failure.getMessage());
+    }
 
     // Test generateEntityClass(Connection, tableName) overload
     @Test
@@ -1705,6 +1738,8 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
 
         assertEquals(JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, emptyConfig),
                 JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, nullLists));
+        assertEquals(JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, emptyConfig),
+                JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, new JdbcCodeGenerationUtil.EntityCodeConfig()));
     }
 
     @Test
@@ -1716,6 +1751,23 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
         assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(unusedConnection, " ", "SELECT * FROM users WHERE 1 > 2", config));
         Mockito.verifyNoInteractions(unusedConnection);
+    }
+
+    @Target(ElementType.TYPE)
+    public @interface WrongTableMember {
+        int name();
+    }
+
+    @Target(ElementType.TYPE)
+    public @interface ExtraRequiredTableMember {
+        String name();
+
+        String required();
+    }
+
+    @Target(ElementType.FIELD)
+    public @interface FieldOnlyTable {
+        String name();
     }
 
     @Target(ElementType.TYPE)

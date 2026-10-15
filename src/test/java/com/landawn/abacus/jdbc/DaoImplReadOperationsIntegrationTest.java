@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -79,6 +80,27 @@ public class DaoImplReadOperationsIntegrationTest extends TestBase {
         final List<String> actual = operation.action().apply(dao, Filters.gt("id", 0L));
         assertEquals(operation.filtered() ? FILTERED_NAMES : ALL_NAMES, actual.stream().sorted().toList());
         assertEquals(List.of(), operation.action().apply(dao, Filters.eq("id", -1L)));
+    }
+
+    @ParameterizedTest(name = "named={0}, large={1}, selected={2}")
+    @CsvSource({ "false, false, false", "true, false, false", "false, true, false", "true, true, false", "false, true, true", "true, true, true" })
+    void uncheckedConditionPreparationBindsValuesAndConfiguresLargeResults(final boolean named, final boolean large, final boolean selected)
+            throws SQLException {
+        final Condition condition = Filters.eq("id", 2L);
+        try (AbstractQuery<?, ?> query = named
+                ? (large ? (selected ? uncheckedDao.prepareNamedQueryForLargeResult(COLUMNS, condition)
+                        : uncheckedDao.prepareNamedQueryForLargeResult(condition)) : uncheckedDao.prepareNamedQuery(condition))
+                : (large ? (selected ? uncheckedDao.prepareQueryForLargeResult(COLUMNS, condition) : uncheckedDao.prepareQueryForLargeResult(condition))
+                        : uncheckedDao.prepareQuery(condition))) {
+            if (large) {
+                query.configureStatement(statement -> assertEquals(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, statement.getFetchSize()));
+            }
+            final List<Record> records = query.list(Record.class);
+            assertEquals(1, records.size());
+            assertEquals(2L, records.get(0).getId());
+            assertEquals("beta", records.get(0).getName());
+            assertEquals(20, records.get(0).getScore());
+        }
     }
 
     @ParameterizedTest(name = "{0}, {1}")

@@ -160,15 +160,47 @@ public class DaoImplIntegrationTest extends TestBase {
         @Query("SELECT age FROM user_account")
         u.OptionalDouble findOnlyOneDouble() throws SQLException;
 
-        @Query(value = "SELECT age FROM user_account", op = QueryOperation.queryForSingle)
+        @Query(value = "SELECT age FROM user_account ORDER BY id", op = QueryOperation.queryForSingle)
         u.OptionalInt queryForUniqueFirstRow() throws SQLException;
+    }
+
+    public interface FirstPrimitiveDao extends CrudDao<UserAccount, Long, FirstPrimitiveDao> {
+        @Query("SELECT age FROM user_account ORDER BY id")
+        u.OptionalBoolean booleanValue() throws SQLException;
+
+        @Query("SELECT age FROM user_account ORDER BY id")
+        u.OptionalChar charValue() throws SQLException;
+
+        @Query("SELECT age FROM user_account ORDER BY id")
+        u.OptionalByte byteValue() throws SQLException;
+
+        @Query("SELECT age FROM user_account ORDER BY id")
+        u.OptionalShort shortValue() throws SQLException;
+
+        @Query("SELECT age FROM user_account ORDER BY id")
+        u.OptionalInt intValue() throws SQLException;
+
+        @Query("SELECT age FROM user_account ORDER BY id")
+        u.OptionalLong longValue() throws SQLException;
+
+        @Query("SELECT age FROM user_account ORDER BY id")
+        u.OptionalFloat floatValue() throws SQLException;
+
+        @Query("SELECT age FROM user_account ORDER BY id")
+        u.OptionalDouble doubleValue() throws SQLException;
+
+        @Query(value = "SELECT age FROM user_account", op = QueryOperation.queryForUnique)
+        int uniqueValue() throws SQLException;
     }
 
     @Test
     public void testUniquePrimitiveOptionalsPreserveEmptyNullAndDuplicateSemantics() throws SQLException {
         final UniquePrimitiveDao uniqueDao = JdbcUtil.createDao(UniquePrimitiveDao.class, ds);
+        final FirstPrimitiveDao firstDao = JdbcUtil.createDao(FirstPrimitiveDao.class, ds);
         final List<Throwables.Supplier<?, SQLException>> queries = List.of(uniqueDao::booleanValue, uniqueDao::charValue, uniqueDao::queryForUniqueByte,
                 uniqueDao::findOnlyOneShort, uniqueDao::intValue, uniqueDao::longValue, uniqueDao::queryForUniqueFloat, uniqueDao::findOnlyOneDouble);
+        final List<Throwables.Supplier<?, SQLException>> firstQueries = List.of(firstDao::booleanValue, firstDao::charValue, firstDao::byteValue,
+                firstDao::shortValue, firstDao::intValue, firstDao::longValue, firstDao::floatValue, firstDao::doubleValue);
         final List<Object> emptyValues = List.of(u.OptionalBoolean.empty(), u.OptionalChar.empty(), u.OptionalByte.empty(), u.OptionalShort.empty(),
                 u.OptionalInt.empty(), u.OptionalLong.empty(), u.OptionalFloat.empty(), u.OptionalDouble.empty());
         final List<Object> nullValues = List.of(u.OptionalBoolean.of(false), u.OptionalChar.of((char) 0), u.OptionalByte.of((byte) 0),
@@ -178,24 +210,34 @@ public class DaoImplIntegrationTest extends TestBase {
 
         for (int i = 0; i < queries.size(); i++) {
             assertEquals(emptyValues.get(i), queries.get(i).get());
+            assertEquals(emptyValues.get(i), firstQueries.get(i).get());
         }
+        assertEquals(0, firstDao.uniqueValue());
 
         try (Connection conn = ds.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.executeUpdate("INSERT INTO user_account (age) VALUES (NULL)");
             for (int i = 0; i < queries.size(); i++) {
                 assertEquals(nullValues.get(i), queries.get(i).get());
+                assertEquals(nullValues.get(i), firstQueries.get(i).get());
             }
+            assertEquals(0, firstDao.uniqueValue());
 
             stmt.executeUpdate("UPDATE user_account SET age = 1");
             for (int i = 0; i < queries.size(); i++) {
                 assertEquals(oneValues.get(i), queries.get(i).get());
+                assertEquals(oneValues.get(i), firstQueries.get(i).get());
             }
+            assertEquals(1, firstDao.uniqueValue());
 
-            stmt.executeUpdate("INSERT INTO user_account (age) VALUES (1)");
+            stmt.executeUpdate("INSERT INTO user_account (age) VALUES (2)");
             for (final Throwables.Supplier<?, SQLException> query : queries) {
                 assertThrows(DuplicateResultException.class, query::get);
             }
+            for (int i = 0; i < firstQueries.size(); i++) {
+                assertEquals(oneValues.get(i), firstQueries.get(i).get());
+            }
+            assertThrows(DuplicateResultException.class, firstDao::uniqueValue);
             assertEquals(u.OptionalInt.of(1), uniqueDao.queryForUniqueFirstRow());
         }
     }

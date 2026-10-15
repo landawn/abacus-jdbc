@@ -17,7 +17,10 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,8 +34,10 @@ import java.sql.Array;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.Date;
+import java.sql.JDBCType;
 import java.sql.NClob;
 import java.sql.Ref;
+import java.sql.ResultSet;
 import java.sql.RowId;
 import java.sql.SQLException;
 import java.sql.SQLXML;
@@ -40,9 +45,23 @@ import java.sql.Time;
 import java.sql.Timestamp;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mockito;
 
 class ResultSetProxyUpdateTest extends ResultSetProxyTestSupport {
+
+    @ParameterizedTest
+    @CsvSource({ "false, false", "false, true", "true, false", "true, true" })
+    void updateObjectWithSqlTypeForwardsArgumentsAndDriverFailures(final boolean byLabel, final boolean withScale) throws SQLException {
+        updateDecimal(proxy, byLabel, withScale);
+        updateDecimal(verify(delegate), byLabel, withScale);
+
+        final SQLException failure = new SQLException("SQL type is not supported", "0A000");
+        updateDecimal(doThrow(failure).when(delegate), byLabel, withScale);
+
+        assertSame(failure, assertThrows(SQLException.class, () -> updateDecimal(proxy, byLabel, withScale)));
+    }
 
     @Test
     void testCancelRowUpdates() throws SQLException {
@@ -656,4 +675,20 @@ class ResultSetProxyUpdateTest extends ResultSetProxyTestSupport {
         proxy.updateTimestamp("col", ts);
         verify(delegate).updateTimestamp("col", ts);
     }
+
+    private static void updateDecimal(final ResultSet resultSet, final boolean byLabel, final boolean withScale) throws SQLException {
+        final BigDecimal value = new BigDecimal("10.25");
+        if (byLabel) {
+            if (withScale) {
+                resultSet.updateObject("amount", value, JDBCType.DECIMAL, 2);
+            } else {
+                resultSet.updateObject("amount", value, JDBCType.DECIMAL);
+            }
+        } else if (withScale) {
+            resultSet.updateObject(1, value, JDBCType.DECIMAL, 2);
+        } else {
+            resultSet.updateObject(1, value, JDBCType.DECIMAL);
+        }
+    }
+
 }

@@ -15,7 +15,10 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -27,6 +30,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 
@@ -634,6 +640,67 @@ class JdbcUtilResourceCleanupTest extends JdbcUtilTestSupport {
     @Test
     public void testWriteClobToFile_NullClob() throws SQLException, IOException {
         assertEquals(0L, JdbcUtil.writeClobToFile(null, new File("output.txt")));
+    }
+
+    @ParameterizedTest(name = "blob={0}, opening={1}")
+    @CsvSource({ "true, true", "true, false", "false, true", "false, false" })
+    void lobWritePreservesPrimaryFailureAndSuppressesCleanupFailures(final boolean binary, final boolean opening, @TempDir final Path directory)
+            throws Exception {
+        final Exception primary = opening ? new SQLException("LOB stream unavailable") : new IOException("LOB read failed");
+        final IOException closeFailure = new IOException("stream close failed");
+        final SQLException freeFailure = new SQLException("LOB free failed");
+        if (binary) {
+            if (opening) {
+                when(mockBlob.getBinaryStream()).thenThrow(primary);
+            } else {
+                when(mockBlob.getBinaryStream()).thenReturn(new InputStream() {
+                    @Override
+                    public int read() throws IOException {
+                        throw (IOException) primary;
+                    }
+
+                    @Override
+                    public void close() throws IOException {
+                        throw closeFailure;
+                    }
+                });
+            }
+            doThrow(freeFailure).when(mockBlob).free();
+        } else {
+            if (opening) {
+                when(mockClob.getCharacterStream()).thenThrow(primary);
+            } else {
+                when(mockClob.getCharacterStream()).thenReturn(new Reader() {
+                    @Override
+                    public int read(final char[] buffer, final int offset, final int length) throws IOException {
+                        throw (IOException) primary;
+                    }
+
+                    @Override
+                    public void close() throws IOException {
+                        throw closeFailure;
+                    }
+                });
+            }
+            doThrow(freeFailure).when(mockClob).free();
+        }
+
+        final File output = directory.resolve("lob.txt").toFile();
+        final Exception thrown = assertThrows(Exception.class, () -> {
+            if (binary) {
+                JdbcUtil.writeBlobToFile(mockBlob, output);
+            } else {
+                JdbcUtil.writeClobToFile(mockClob, output);
+            }
+        });
+
+        assertSame(primary, thrown);
+        assertArrayEquals(opening ? new Throwable[] { freeFailure } : new Throwable[] { closeFailure, freeFailure }, thrown.getSuppressed());
+        if (binary) {
+            verify(mockBlob).free();
+        } else {
+            verify(mockClob).free();
+        }
     }
 
     @Nested

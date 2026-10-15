@@ -21,6 +21,8 @@ import java.sql.SQLException;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 
@@ -638,6 +640,35 @@ class JdbcUtilTransactionTest extends JdbcUtilTestSupport {
             return "test";
         });
         assertEquals("test", result);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void connectionCallbackFailureSurvivesRollbackFailure(final boolean returnsValue) throws SQLException {
+        final IllegalStateException callbackFailure = new IllegalStateException("business failure");
+        final SQLException rollbackFailure = new SQLException("rollback failed");
+        doThrow(rollbackFailure).when(mockConnection).rollback();
+
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> {
+            if (returnsValue) {
+                JdbcUtil.callInTransaction(mockDataSource, connection -> {
+                    assertSame(mockConnection, connection);
+                    throw callbackFailure;
+                });
+            } else {
+                JdbcUtil.runInTransaction(mockDataSource, connection -> {
+                    assertSame(mockConnection, connection);
+                    throw callbackFailure;
+                });
+            }
+        });
+
+        assertSame(callbackFailure, thrown);
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(rollbackFailure, thrown.getSuppressed()[0].getCause());
+        verify(mockConnection).rollback();
+        verify(mockConnection, never()).commit();
+        verify(mockConnection).close();
     }
 
     @Test

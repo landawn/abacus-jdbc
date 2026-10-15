@@ -37,6 +37,21 @@ import com.zaxxer.hikari.pool.HikariProxyPreparedStatement;
 
 class JdbcUtilLoggingTest extends JdbcUtilTestSupport {
 
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void oracleSqlExtractionUsesOriginalSqlAndFallsBackAfterDriverFailure(final boolean failed) throws SQLException {
+        final oracle.jdbc.internal.OraclePreparedStatement statement = mock(oracle.jdbc.internal.OraclePreparedStatement.class);
+        when(statement.toString()).thenReturn("driver fallback");
+        if (failed) {
+            when(statement.getOriginalSql()).thenThrow(new SQLException("original SQL unavailable"));
+        } else {
+            when(statement.getOriginalSql()).thenReturn("SELECT 42 FROM DUAL");
+        }
+
+        assertEquals(failed ? "driver fallback" : "SELECT 42 FROM DUAL", JdbcUtil.DEFAULT_SQL_EXTRACTOR.apply(statement));
+        verify(statement).getOriginalSql();
+    }
+
     @ParameterizedTest(name = "{0} clears parameters, logging={1}")
     @MethodSource("executionModes")
     void execute_loggingMode_preservesResultsAndClearsParameters(final ExecutionOperation operation, final boolean logging) throws SQLException {

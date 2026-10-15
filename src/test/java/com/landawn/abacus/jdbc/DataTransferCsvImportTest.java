@@ -26,10 +26,40 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import com.landawn.abacus.exception.ParsingException;
 import com.landawn.abacus.util.Throwables;
 
 class DataTransferCsvImportTest extends DataTransferUtilTestSupport {
+
+    @Test
+    void escapedQuotesRemainInsideAMultilineCsvField() throws SQLException {
+        final List<String[]> rows = new ArrayList<>();
+        final long count = DataTransferUtil.importCsv(new StringReader("id,note\n1,\"a\"\"b\nc\""), row -> true, mockPreparedStatement, 10, 0,
+                (query, row) -> rows.add(row.clone()));
+
+        assertEquals(1, count);
+        assertEquals(List.of("1", "a\"b\nc"), Arrays.asList(rows.get(0)));
+        verify(mockPreparedStatement).addBatch();
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 20, 400 })
+    void unterminatedCsvFieldsFailWithBoundedDiagnosticText(final int length) throws SQLException {
+        final String record = "1,\"" + "x".repeat(length);
+        final ParsingException failure = assertThrows(ParsingException.class,
+                () -> DataTransferUtil.importCsv(new StringReader("id,note\n" + record), row -> true, mockPreparedStatement, 10, 0, (query, row) -> {
+                    throw new AssertionError("An incomplete row must not be bound");
+                }));
+
+        assertEquals("Un-terminated quoted field at end of CSV input: " + (record.length() > 256 ? record.substring(0, 256) + "..." : record),
+                failure.getMessage());
+        verify(mockPreparedStatement, never()).addBatch();
+        verify(mockPreparedStatement, never()).close();
+    }
 
     @Test
     public void testImportCSVWithSkippedRows() throws SQLException, IOException, Exception {

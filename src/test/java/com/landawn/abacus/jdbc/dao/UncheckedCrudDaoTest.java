@@ -16,6 +16,7 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -37,6 +38,18 @@ import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
 public class UncheckedCrudDaoTest extends TestBase {
+
+    @Test
+    void singlePropertyUpdatePreservesNullValuesAndValidatesItsArguments() {
+        final TestUncheckedCrudDao dao = Mockito.mock(TestUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final Map<String, Object> updates = java.util.Collections.singletonMap("name", null);
+        when(dao.update(updates, 7L)).thenReturn(1);
+
+        assertEquals(1, dao.update("name", null, 7L));
+        verify(dao).update(updates, 7L);
+        assertThrows(IllegalArgumentException.class, () -> dao.update("", "value", 7L));
+        assertThrows(IllegalArgumentException.class, () -> dao.update("name", "value", (Long) null));
+    }
 
     @Test
     public void testBatchUpsert_ValidatesEntitiesBeforeLaterArguments() {

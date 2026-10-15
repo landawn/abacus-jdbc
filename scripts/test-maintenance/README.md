@@ -35,6 +35,10 @@ tests beyond the historical parser's model.
 The latest [cleanup plan and implementation results](cleanup-2026-10-15.md)
 record the follow-up consolidation, preserved coverage, and random-order checks.
 
+The subsequent [coverage improvement results](coverage-push-2026-10-15.md)
+record 216 additional covered lines, 145 additional test cases, and the remaining
+gap to full line and branch coverage.
+
 ## Initial reorganization verification (2026-10-15)
 
 | Check | Result |

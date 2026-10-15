@@ -26,12 +26,54 @@ import java.util.List;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
 
 class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
+
+    @ParameterizedTest(name = "table={0}, schema={1}")
+    @CsvSource({ "MIXED, current", "mixed, current", "MIXED,", "mixed," })
+    void tableLookupRetriesCaseAndSchemaWithoutExecutingSql(final String spelling, final String schema) throws SQLException {
+        when(mockConnection.getSchema()).thenReturn("current");
+        when(mockDatabaseMetaData.getTables(null, schema, spelling, null)).thenReturn(mockResultSet);
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        when(mockResultSet.getString("TABLE_NAME")).thenReturn("unrelated", spelling);
+        when(mockResultSet.getString("TABLE_SCHEM")).thenReturn(schema);
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "MiXeD"));
+
+        verify(mockResultSet).close();
+        verify(mockConnection, never()).prepareStatement(anyString());
+    }
+
+    @ParameterizedTest(name = "columns={0}, schema={1}")
+    @CsvSource({ "MIXED, current", "mixed, current", "MIXED,", "mixed," })
+    void columnLookupRetriesCaseAndSchemaWithoutMixingTables(final String spelling, final String schema) throws SQLException {
+        when(mockConnection.getSchema()).thenReturn("current");
+        when(mockDatabaseMetaData.getColumns(null, schema, spelling, null)).thenReturn(mockResultSet);
+        when(mockResultSet.next()).thenReturn(true, true, true, false);
+        when(mockResultSet.getString("TABLE_NAME")).thenReturn("unrelated", spelling, spelling);
+        when(mockResultSet.getString("TABLE_SCHEM")).thenReturn(schema);
+        when(mockResultSet.getString("TABLE_CAT")).thenReturn("first", "first", "different");
+        when(mockResultSet.getString("COLUMN_NAME")).thenReturn("id");
+
+        assertEquals(List.of("id"), JdbcUtil.getColumnNames(mockConnection, "MiXeD"));
+
+        verify(mockResultSet).close();
+        verify(mockConnection, never()).prepareStatement(anyString());
+    }
+
+    @Test
+    void dropTablePreservesIdentifierMetadataFailureBeforeIssuingSql() throws SQLException {
+        final SQLException failure = new SQLException("identifier metadata unavailable");
+        when(mockDatabaseMetaData.storesUpperCaseIdentifiers()).thenThrow(failure);
+
+        assertSame(failure, assertThrows(UncheckedSQLException.class, () -> JdbcUtil.dropTableIfExists(mockConnection, "records")).getCause());
+        verify(mockConnection, never()).prepareStatement(anyString());
+    }
 
     @Test
     public void testGetDBProductInfo_DataSource() throws SQLException {

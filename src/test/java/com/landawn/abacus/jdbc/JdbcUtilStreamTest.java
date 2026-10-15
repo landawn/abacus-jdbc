@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -32,6 +33,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -604,6 +606,86 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
         assertSame(failure, assertThrows(UncheckedSQLException.class, () -> rowIterator(mockResultSet, variant).count()).getCause());
         assertSame(failure, assertThrows(UncheckedSQLException.class, () -> rowIterator(mockResultSet, variant).advance(1)).getCause());
         verify(mockResultSet, never()).close();
+    }
+
+    @ParameterizedTest(name = "dataSource={0}, named={1}, extractor={2}")
+    @CsvSource({ "false, false, 0", "false, false, 1", "false, false, 2", "false, true, 0", "false, true, 1", "false, true, 2", "true, false, 0",
+            "true, false, 1", "true, false, 2", "true, true, 0", "true, true, 1", "true, true, 2" })
+    @SuppressWarnings("rawtypes")
+    void pageExecutionFailurePreservesCauseAndConnectionOwnership(final boolean fromDataSource, final boolean named, final int extractorKind)
+            throws SQLException {
+        final SQLException failure = new SQLException("page query failed");
+        when(mockPreparedStatement.executeQuery()).thenThrow(failure);
+        final String sql = named ? "select :value" : "select ?";
+        final Jdbc.BiParametersSetter<AbstractQuery, Dataset> setter = (query, previous) -> query.setInt(1, 42);
+        final Jdbc.ResultExtractor<Dataset> extractor = Jdbc.ResultExtractor.TO_DATASET;
+        final Jdbc.BiResultExtractor<Dataset> biExtractor = (rows, labels) -> extractor.apply(rows);
+
+        try (Stream<Dataset> pages = fromDataSource ? switch (extractorKind) {
+            case 0 -> JdbcUtil.queryByPage(mockDataSource, sql, 10, setter);
+            case 1 -> JdbcUtil.queryByPage(mockDataSource, sql, 10, setter, extractor);
+            default -> JdbcUtil.queryByPage(mockDataSource, sql, 10, setter, biExtractor);
+        } : switch (extractorKind) {
+            case 0 -> JdbcUtil.queryByPage(mockConnection, sql, 10, setter);
+            case 1 -> JdbcUtil.queryByPage(mockConnection, sql, 10, setter, extractor);
+            default -> JdbcUtil.queryByPage(mockConnection, sql, 10, setter, biExtractor);
+        }) {
+            verify(mockPreparedStatement, never()).executeQuery();
+            assertSame(failure, assertThrows(UncheckedSQLException.class, pages::toList).getCause());
+        }
+
+        verify(mockPreparedStatement).setInt(1, 42);
+        verify(mockPreparedStatement).close();
+        if (fromDataSource) {
+            verify(mockConnection).close();
+        } else {
+            verify(mockConnection, never()).close();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void biRowIteratorPreservesMetadataFailure(final boolean filtered) throws SQLException {
+        final SQLException failure = new SQLException("column labels unavailable");
+        when(mockResultSet.next()).thenReturn(true);
+        when(mockResultSet.getMetaData()).thenThrow(failure);
+        final ObjIteratorEx<Integer> iterator = rowIterator(mockResultSet, filtered ? 3 : 2);
+
+        assertSame(failure, assertThrows(UncheckedSQLException.class, iterator::next).getCause());
+        verify(mockResultSet, never()).close();
+    }
+
+    @Test
+    void streamRejectsAnUnknownColumnLabel() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+
+        try (Stream<Object> values = JdbcUtil.stream(mockResultSet, "missing")) {
+            assertTrue(assertThrows(IllegalArgumentException.class, values::toList).getMessage().contains("missing"));
+        }
+        verify(mockResultSet, never()).close();
+    }
+
+    @Test
+    void iteratorCloseToleratesFailureToCloseAnUndeliveredResultSet() throws SQLException {
+        when(mockStatement.getResultSet()).thenReturn(mockResultSet);
+        doThrow(new SQLException("close failed")).when(mockResultSet).close();
+        final ObjIteratorEx<ResultSet> iterator = JdbcUtil.iterateAllResultSets(mockStatement, true);
+
+        assertTrue(iterator.hasNext());
+        assertDoesNotThrow(iterator::closeResource);
+        assertDoesNotThrow(iterator::closeResource);
+        verify(mockResultSet).close();
+        verify(mockStatement, never()).close();
+    }
+
+    @Test
+    void nextResultSetUnwrapsTheDriverFailure() throws SQLException {
+        final SQLException failure = new SQLException("advancing results failed");
+        when(mockStatement.getResultSet()).thenThrow(failure);
+
+        assertSame(failure, assertThrows(SQLException.class, () -> JdbcUtil.nextResultSet(JdbcUtil.iterateAllResultSets(mockStatement, true))));
     }
 
     private ObjIteratorEx<Integer> closeableRowIterator(final int variant, final Runnable onClose) {

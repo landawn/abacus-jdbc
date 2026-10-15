@@ -15,11 +15,31 @@ import java.util.List;
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.util.function.QuadFunction;
 
 class JdbcCodeGenerationSqlConversionTest extends JdbcCodeGenerationUtilTestSupport {
+
+    @ParameterizedTest
+    @ValueSource(strings = { "items[length($q$),]$q$)]", "items[length('a''b')]", "items[$1]", "items[$1 + $2]", "items[index$tag$]" })
+    void conversionPreservesQuotedAndParameterizedArraySubscripts(final String expression) throws SQLException {
+        final DataSource dataSource = dataSourceReporting("PostgreSQL");
+
+        assertEquals("UPDATE records SET score = " + expression + ", id = 1",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO records(score, id) VALUES (" + expression + ", 1)"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "INSERT", "INSERT INTO", "INSERT INTO(records) VALUES (1)", "INSERT (id) VALUES (1)" })
+    void conversionRejectsIncompleteInsertKeywords(final String sql) throws SQLException {
+        final DataSource dataSource = dataSourceReporting("PostgreSQL");
+
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, sql)).getMessage()
+                .contains("Not an INSERT INTO SQL"));
+    }
 
     // fieldTypeConverter — L485
     @Test
