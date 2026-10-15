@@ -1854,7 +1854,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 final PropInfo propInfo = propInfos[i];
                 final Object propValue = propInfo.getPropValue(entity);
 
-                if (JdbcStreamUtil.usesBuiltInBinding(propValue, propInfo.dbType)) {
+                if (JdbcUtil.usesBuiltInStreamBinding(propValue, propInfo.dbType)) {
                     if (boundStreamNames == null) {
                         boundStreamNames = N.newHashSet();
                     }

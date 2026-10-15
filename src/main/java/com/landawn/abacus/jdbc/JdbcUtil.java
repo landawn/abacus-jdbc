@@ -15,8 +15,13 @@
  */
 package com.landawn.abacus.jdbc;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.Reader;
+import java.io.StringReader;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
@@ -95,6 +100,16 @@ import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.query.SqlMapper;
 import com.landawn.abacus.query.SqlOperation;
+import com.landawn.abacus.type.AsciiStreamType;
+import com.landawn.abacus.type.BinaryStreamType;
+import com.landawn.abacus.type.BlobInputStreamType;
+import com.landawn.abacus.type.CharacterStreamType;
+import com.landawn.abacus.type.ClobAsciiStreamType;
+import com.landawn.abacus.type.ClobReaderType;
+import com.landawn.abacus.type.InputStreamType;
+import com.landawn.abacus.type.NCharacterStreamType;
+import com.landawn.abacus.type.NClobReaderType;
+import com.landawn.abacus.type.ReaderType;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Beans;
@@ -143,6 +158,8 @@ import lombok.experimental.Accessors;
  * programming approaches via {@link PreparedQuery} and Abacus {@link Stream} instances.</p>
  *
  * <p>Direct named-SQL execution and batches accept Map, bean, record and EntityId parameters.
+ * The stream/reader binding helpers in this utility are also shared by {@link AbstractQuery},
+ * {@link NamedQuery} and {@link CallableQuery}.
  * A repeated name handled by a built-in stream/reader type is buffered in memory once per parameter
  * set and bound with independent cursors. Single occurrences and positional values remain streamed;
  * custom Type handlers keep their own semantics. The caller retains ownership of the original resource.</p>
@@ -220,6 +237,18 @@ public final class JdbcUtil {
      * allowing SQL logging to be configured independently of the module's diagnostic logging.
      */
     static final Logger sqlLogger = LoggerFactory.getLogger("com.landawn.abacus.SQL");
+
+    /**
+     * Exact built-in types that consume an {@link InputStream}; custom Type subclasses keep their own binding semantics.
+     */
+    private static final Set<Class<?>> STREAM_TYPES = Set.of(InputStreamType.class, BlobInputStreamType.class, AsciiStreamType.class, BinaryStreamType.class,
+            ClobAsciiStreamType.class);
+
+    /**
+     * Exact built-in types that consume a {@link Reader}; custom Type subclasses may require the original reader.
+     */
+    private static final Set<Class<?>> READER_TYPES = Set.of(ReaderType.class, ClobReaderType.class, NClobReaderType.class, CharacterStreamType.class,
+            NCharacterStreamType.class);
 
     /**
      * Default batch size for batch operations (insert/update/delete). Value: {@code 200}.
@@ -3623,14 +3652,14 @@ public final class JdbcUtil {
      * @param bracketIdentifiers Whether brackets always delimit identifiers rather than array expressions.
      * @param checkBracketAlternatives Whether compatibility modes can also interpret brackets as identifiers.
      * @param escapeStrings Whether an {@code E'...'} prefix marks a PostgreSQL escape string, which uses backslash escapes
-     *        regardless of the session setting. Only PostgreSQL-family products have them; elsewhere (MySQL, SQL Server,
-     *        H2, Oracle, ...) {@code e'...'} is a name followed by an ordinary string.
+     *        regardless of the session setting. Only PostgreSQL-family products and Vertica have them; elsewhere (MySQL,
+     *        SQL Server, H2, Oracle, ...) {@code e'...'} is a name followed by an ordinary string.
      */
     record ScanDialect(boolean mySql, Boolean mariaDb, int serverVersion, boolean bracketIdentifiers, boolean checkBracketAlternatives, boolean escapeStrings) {
         /** Standard rules with array expressions and context-dependent bracket identifiers, without escape strings. */
         static final ScanDialect STANDARD = new ScanDialect(false, false, -1, false, false, false);
 
-        /** PostgreSQL-family rules: the standard rules plus {@code E'...'} escape strings. */
+        /** PostgreSQL-family (and Vertica) rules: the standard rules plus {@code E'...'} escape strings. */
         static final ScanDialect POSTGRESQL = new ScanDialect(false, false, -1, false, false, true);
 
         /** H2 reports the same product name in all modes; MSSQLServer mode interprets brackets as identifiers. */
@@ -3660,8 +3689,8 @@ public final class JdbcUtil {
             return true;
         }
 
-        // Only PostgreSQL-family products read e'\' as an escape string; elsewhere it is a name followed by an ordinary
-        // string. The difference only matters to the no-backslash-escape pass (see requiresTransaction).
+        // Only PostgreSQL-family products and Vertica read e'\' as an escape string; elsewhere it is a name followed by
+        // an ordinary string. The difference only matters to the no-backslash-escape pass (see requiresTransaction).
         if (sql.indexOf('\\') >= 0 && (sql.contains("e'") || sql.contains("E'"))) {
             return true;
         }
@@ -3709,7 +3738,7 @@ public final class JdbcUtil {
         }
 
         if (!Strings.containsAnyIgnoreCase(productName, "MySQL", "MariaDB")) {
-            return isPostgreSqlFamily(productName) ? ScanDialect.POSTGRESQL : ScanDialect.STANDARD;
+            return readsEscapeStrings(productName) ? ScanDialect.POSTGRESQL : ScanDialect.STANDARD;
         }
 
         final String productVersion;
@@ -3729,14 +3758,31 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns whether a database product name denotes PostgreSQL or a derivative sharing its SQL lexer (escape strings)
-     * and transaction semantics. CockroachDB, YugabyteDB, Aurora PostgreSQL and Greenplum report "PostgreSQL" through pgjdbc.
+     * Returns whether a database product name denotes PostgreSQL or a derivative sharing its transaction semantics:
+     * a failed statement aborts the enclosing transaction. CockroachDB, YugabyteDB, Aurora PostgreSQL and Greenplum
+     * report "PostgreSQL" through pgjdbc.
+     *
+     * <p>This is deliberately narrower than {@link #readsEscapeStrings(String)}: Vertica shares PostgreSQL's string
+     * lexer but is not known to abort the transaction on a failed statement.</p>
      *
      * @param productName The product name reported by the driver.
      * @return {@code true} if the product is PostgreSQL-compatible.
      */
     private static boolean isPostgreSqlFamily(final String productName) {
         return Strings.containsAnyIgnoreCase(productName, "PostgreSQL", "EnterpriseDB", "Redshift", "Greenplum");
+    }
+
+    /**
+     * Returns whether a database product reads {@code E'...'} as an escape-string literal in which a backslash escapes
+     * the next character. That is the PostgreSQL family plus Vertica (reported as "Vertica Database"), whose SQL lexer
+     * derives from PostgreSQL's and which also accepts {@code SELECT ... INTO TABLE}, so missing the prefix would let a
+     * write such as {@code SELECT E'\'' ... INTO TABLE archive} scan as a plain SELECT.
+     *
+     * @param productName The product name reported by the driver.
+     * @return {@code true} if the product treats an {@code E} prefix as starting an escape string.
+     */
+    private static boolean readsEscapeStrings(final String productName) {
+        return isPostgreSqlFamily(productName) || Strings.containsIgnoreCase(productName, "Vertica");
     }
 
     /**
@@ -6331,7 +6377,8 @@ public final class JdbcUtil {
 
     private static boolean requiresTransaction(final String sql, final ScanDialect dialect, final boolean backslashEscapes) {
         final boolean hasBracket = sql.indexOf('[') >= 0;
-        // Only PostgreSQL-family products have E'...' escape strings; elsewhere e'\' is a name followed by an ordinary string.
+        // Only PostgreSQL-family products and Vertica have E'...' escape strings; elsewhere e'\' is a name followed by an
+        // ordinary string.
         final boolean escapeStrings = dialect.escapeStrings();
 
         if (((hasBracket || !backslashEscapes) && getSqlOperation(sql, dialect.bracketIdentifiers(), backslashEscapes, escapeStrings) != SqlOperation.SELECT)
@@ -7828,6 +7875,84 @@ public final class JdbcUtil {
     }
 
     /**
+     * Returns whether the value and selected type use a built-in stream/reader JDBC binding. Exact type-class matching
+     * preserves custom Type subclasses, whose setters may require the original value instead of a buffered cursor.
+     *
+     * @param value the parameter value; may be {@code null} or a value other than a stream or reader
+     * @param type the selected JDBC binding type, or {@code null} if none was selected
+     * @return {@code true} if the value and selected built-in type form a supported stream/reader binding
+     */
+    static boolean usesBuiltInStreamBinding(final Object value, final Type<?> type) {
+        return type != null && (value instanceof InputStream && STREAM_TYPES.contains(type.getClass())
+                || value instanceof Reader && READER_TYPES.contains(type.getClass()));
+    }
+
+    /**
+     * Buffers up to {@code length} bytes or characters to replay a stream or reader across repeated JDBC parameter
+     * bindings without closing the caller's resource. Drivers may read during binding or execution, so each supplier
+     * invocation returns a fresh {@link ByteArrayInputStream} or {@link StringReader} with an independent cursor.
+     * The caller must validate length and closed state before calling this method.
+     *
+     * @param <T> the stream or reader type accepted by the selected built-in binding
+     * @param value the non-null stream or reader to buffer
+     * @param length the non-negative maximum number of bytes or characters to read
+     * @return a supplier of independent cursors over the buffered content
+     * @throws SQLException if reading the caller's resource fails, with the {@link IOException} retained as its cause
+     */
+    @SuppressWarnings("unchecked")
+    static <T> Supplier<T> bufferForRepeatedBinding(final T value, final long length) throws SQLException {
+        try {
+            long remaining = length;
+            if (value instanceof InputStream input) {
+                final ByteArrayOutputStream output = new ByteArrayOutputStream();
+                final byte[] buffer = new byte[8192];
+                while (remaining > 0) {
+                    final int count = input.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                    if (count < 0) {
+                        break;
+                    } else if (count == 0) {
+                        final int next = input.read();
+                        if (next < 0) {
+                            break;
+                        }
+                        output.write(next);
+                        remaining--;
+                    } else {
+                        output.write(buffer, 0, count);
+                        remaining -= count;
+                    }
+                }
+                final byte[] bytes = output.toByteArray();
+                return () -> (T) new ByteArrayInputStream(bytes);
+            }
+
+            final Reader reader = (Reader) value;
+            final StringBuilder output = new StringBuilder();
+            final char[] buffer = new char[8192];
+            while (remaining > 0) {
+                final int count = reader.read(buffer, 0, (int) Math.min(buffer.length, remaining));
+                if (count < 0) {
+                    break;
+                } else if (count == 0) {
+                    final int next = reader.read();
+                    if (next < 0) {
+                        break;
+                    }
+                    output.append((char) next);
+                    remaining--;
+                } else {
+                    output.append(buffer, 0, count);
+                    remaining -= count;
+                }
+            }
+            final String text = output.toString();
+            return () -> (T) new StringReader(text);
+        } catch (final IOException e) {
+            throw new SQLException("Failed to buffer stream or reader for repeated JDBC parameter", e);
+        }
+    }
+
+    /**
      * Sets the given parameters on the specified {@link PreparedStatement} according to the parsed SQL.
      * When the SQL uses named parameters, a single entity, {@link Map}, or {@link EntityId} may be passed
      * to bind them by name. Repeated built-in stream values are buffered once after all names have
@@ -7902,7 +8027,7 @@ public final class JdbcUtil {
                 if (entityInfo == null && parameterValues[i] != null) {
                     parameterTypes[i] = Type.of(parameterValues[i].getClass());
                 }
-                if (JdbcStreamUtil.usesBuiltInBinding(parameterValues[i], parameterTypes[i])) {
+                if (usesBuiltInStreamBinding(parameterValues[i], parameterTypes[i])) {
                     if (streamIndices == null) {
                         streamIndices = N.newHashMap();
                     }
@@ -7918,7 +8043,7 @@ public final class JdbcUtil {
                 }
                 final Map<String, Supplier<Object>> copies = N.newHashMap();
                 for (final String name : repeatedStreams) {
-                    copies.put(name, JdbcStreamUtil.buffer(parameterValues[streamIndices.get(name)], Long.MAX_VALUE));
+                    copies.put(name, bufferForRepeatedBinding(parameterValues[streamIndices.get(name)], Long.MAX_VALUE));
                 }
                 for (int i = 0; i < parameterCount; i++) {
                     final Supplier<Object> supplier = copies.get(namedParameters.get(i));

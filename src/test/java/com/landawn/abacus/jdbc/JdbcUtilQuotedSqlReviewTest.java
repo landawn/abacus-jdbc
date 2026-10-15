@@ -41,10 +41,10 @@ class JdbcUtilQuotedSqlReviewTest {
     }
 
     @Test
-    void escapeStringPrefixIsOnlyRecognizedForPostgreSqlFamilies() throws SQLException {
-        // Only PostgreSQL-family products have E'...' strings. Elsewhere e'\' is a name (or MySQL's user variable @e)
-        // followed by an ordinary string whose backslash does not escape the closing quote, so the INTO clause is real
-        // and the statement must stay in the transaction. The dialect must be looked up for such SQL even without a
+    void escapeStringPrefixFollowsTheDatabaseDialect() throws SQLException {
+        // PostgreSQL-family products and Vertica support E'...' strings. In the other tested dialects, e'\' is a name
+        // (or MySQL's user variable @e) followed by an ordinary string whose backslash does not escape the closing quote.
+        // The INTO clause is real and the statement must stay in the transaction. Look up the dialect even without a
         // comment or bracket. The CTE fixture only classifies as a write when the CTE scanner also drops the prefix:
         // read as an escape string, its body swallows the UPDATE and a plain SELECT follows the CTE.
         final String[] generic = { "SELECT e'\\' INTO archive FROM (VALUES (1)) AS t(e)", "SELECT E'\\' INTO archive FROM source /* comment */",
@@ -69,13 +69,18 @@ class JdbcUtilQuotedSqlReviewTest {
         }
 
         // PostgreSQL and its derivatives read the same text as an escape string, which hides the INTO and the UPDATE.
-        for (final String product : new String[] { "PostgreSQL", "EnterpriseDB", "Redshift" }) {
+        // Vertica (reported as "Vertica Database") shares that lexer and also has SELECT ... INTO TABLE: an escape
+        // string followed by an ordinary backslash string hides the INTO from a scanner that ignores the E prefix,
+        // so the write must still join the transaction.
+        final String verticaWrite = "SELECT E'a\\'b' AS escaped, '\\' AS ordinary INTO TABLE archive";
+        for (final String product : new String[] { "PostgreSQL", "EnterpriseDB", "Redshift", "Vertica Database" }) {
             final DataSource ds = mockDataSource(product);
             final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
             try {
                 for (final String sql : generic) {
                     assertNull(JdbcUtil.getTransaction(ds, sql, SqlTransaction.CreatedBy.JDBC_UTIL), product + ": " + sql);
                 }
+                assertSame(tran, JdbcUtil.getTransaction(ds, verticaWrite, SqlTransaction.CreatedBy.JDBC_UTIL), product + ": " + verticaWrite);
             } finally {
                 tran.rollbackIfNotCommitted();
             }

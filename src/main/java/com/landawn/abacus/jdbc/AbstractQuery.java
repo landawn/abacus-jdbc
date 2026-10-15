@@ -3841,11 +3841,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
         if (parameterIndices.length > 1 && (value instanceof InputStream || value instanceof Reader)) {
             final Type<Object> type = Type.of(value.getClass());
-            if (JdbcStreamUtil.usesBuiltInBinding(value, type)) {
+            if (JdbcUtil.usesBuiltInStreamBinding(value, type)) {
                 assertNotClosed();
                 final Supplier<Object> copies;
                 try {
-                    copies = JdbcStreamUtil.buffer(value, Long.MAX_VALUE);
+                    copies = JdbcUtil.bufferForRepeatedBinding(value, Long.MAX_VALUE);
                 } catch (final SQLException | RuntimeException | Error e) {
                     closeSuppressingFailure(e);
                     throw e;

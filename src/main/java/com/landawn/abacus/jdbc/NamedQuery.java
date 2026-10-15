@@ -257,7 +257,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         }
         assertNotClosed();
         try {
-            return JdbcStreamUtil.buffer(value, length);
+            return JdbcUtil.bufferForRepeatedBinding(value, length);
         } catch (final SQLException | RuntimeException | Error e) {
             closeSuppressingFailure(e);
             throw e;
@@ -278,7 +278,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     private <T> Supplier<T> repeatableParameter(final String parameterName, final T value, final Type<T> type) throws SQLException {
         // Custom Types may serialize a stream object without reading it, or require its concrete
         // subclass. Replay only the built-in stream handlers and keep invoking the originally chosen Type.
-        if (JdbcStreamUtil.usesBuiltInBinding(value, type)) {
+        if (JdbcUtil.usesBuiltInStreamBinding(value, type)) {
             return value instanceof InputStream ? (Supplier<T>) repeatableStream(parameterName, (InputStream) value, Long.MAX_VALUE)
                     : (Supplier<T>) repeatableStream(parameterName, (Reader) value, Long.MAX_VALUE);
         }
@@ -291,7 +291,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             Map<String, Supplier<?>> repeatedValues) throws SQLException {
         if (type == null) {
             stmt.setObject(parameterIndex, value);
-        } else if (JdbcStreamUtil.usesBuiltInBinding(value, type) && isRepeatedParameter(parameterName)) {
+        } else if (JdbcUtil.usesBuiltInStreamBinding(value, type) && isRepeatedParameter(parameterName)) {
             if (repeatedValues == null) {
                 repeatedValues = N.newHashMap();
             }
@@ -4469,7 +4469,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 final Type<Object> dbType = propInfo.dbType;
                 final IntList indexes = parameterIndexes[parameter];
 
-                if (JdbcStreamUtil.usesBuiltInBinding(propValue, dbType)) {
+                if (JdbcUtil.usesBuiltInStreamBinding(propValue, dbType)) {
                     if (boundStreamNames == null) {
                         boundStreamNames = N.newHashSet();
                     }

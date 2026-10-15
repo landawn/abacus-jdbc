@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -19,6 +20,7 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,7 +39,11 @@ import com.landawn.abacus.util.ImmutableNavigableMap;
 import com.landawn.abacus.util.ImmutableNavigableSet;
 import com.landawn.abacus.util.ImmutableSortedMap;
 import com.landawn.abacus.util.ImmutableSortedSet;
+import com.landawn.abacus.util.IntFunctions;
+import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.u;
+
+import jdbc.testsupport.RegisteredFactoryList;
 
 @Tag("2025")
 class DaoCacheJsonComparatorTest {
@@ -228,6 +234,28 @@ class DaoCacheJsonComparatorTest {
         @SuppressWarnings("rawtypes")
         default u.Optional getRawOptional(final String key) {
             return (u.Optional) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default java.util.Optional<Object> getUnknownJdkOptional(final String key) {
+            return (java.util.Optional<Object>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        @SuppressWarnings("rawtypes")
+        default java.util.Optional getRawJdkOptional(final String key) {
+            return (java.util.Optional) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        default u.Nullable<Object> getUnknownNullable(final String key) {
+            return (u.Nullable<Object>) results.get(key);
+        }
+
+        @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
+        @SuppressWarnings("rawtypes")
+        default u.Nullable getRawNullable(final String key) {
+            return (u.Nullable) results.get(key);
         }
 
         @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
@@ -538,6 +566,44 @@ class DaoCacheJsonComparatorTest {
             assertTrue(failure.getMessage().contains("No default constructor"), failure.getMessage());
             assertTrue(failure.getMessage().contains("Csv"), failure.getMessage());
         }
+    }
+
+    @TestFactory
+    List<DynamicTest> unresolvedHoldersCopyEmptyRegisteredCollections() {
+        // Empty collections can use registered factories without a default constructor. Rejecting that runtime
+        // type made raw holders fail with a null type and Object holders return the serialized JSON String.
+        // The parser's two construction paths have separate registries; both registrations use only our fixture type.
+        assertTrue(Suppliers.registerForCollection(RegisteredFactoryList.class, () -> new RegisteredFactoryList("factory")));
+        assertTrue(IntFunctions.registerForCollection(RegisteredFactoryList.class, capacity -> new RegisteredFactoryList("factory")));
+
+        record HolderCase(String name, Function<RegisteredFactoryList, Object> wrap, Function<String, Object> read) {
+        }
+
+        final List<HolderCase> holders = List.of(new HolderCase("rawOptional", u.Optional::of, key -> dao.getRawOptional(key).get()),
+                new HolderCase("objectOptional", u.Optional::of, key -> dao.getUnknownOptional(key).get()),
+                new HolderCase("rawJdkOptional", java.util.Optional::of, key -> dao.getRawJdkOptional(key).get()),
+                new HolderCase("objectJdkOptional", java.util.Optional::of, key -> dao.getUnknownJdkOptional(key).get()),
+                new HolderCase("rawNullable", u.Nullable::of, key -> dao.getRawNullable(key).get()),
+                new HolderCase("objectNullable", u.Nullable::of, key -> dao.getUnknownNullable(key).get()));
+
+        return holders.stream().map(holder -> dynamicTest(holder.name(), () -> {
+            final String key = "emptyFactory_" + holder.name();
+            final RegisteredFactoryList source = new RegisteredFactoryList("source");
+            results.put(key, holder.wrap().apply(source));
+            holder.read().apply(key); // The cache miss returns the original holder and stores its copy.
+            source.add("changed after write");
+
+            RegisteredFactoryList previous = source;
+            for (int read = 0; read < 3; read++) {
+                final RegisteredFactoryList copy = assertInstanceOf(RegisteredFactoryList.class, holder.read().apply(key));
+                assertNotSame(source, copy);
+                assertNotSame(previous, copy);
+                assertEquals("factory", copy.getConstructorState());
+                assertTrue(copy.isEmpty());
+                copy.add("changed after read");
+                previous = copy;
+            }
+        })).toList();
     }
 
     @Test
