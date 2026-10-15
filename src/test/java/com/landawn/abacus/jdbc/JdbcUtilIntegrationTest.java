@@ -25,19 +25,20 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.Dataset;
+import com.landawn.abacus.util.stream.ObjIteratorEx;
 import com.landawn.abacus.util.Throwables;
 import com.landawn.abacus.util.u.Nullable;
 import com.landawn.abacus.util.u.Optional;
 import com.landawn.abacus.util.u.OptionalInt;
-import com.landawn.abacus.util.stream.ObjIteratorEx;
 
 /**
  * Integration coverage for {@link JdbcUtil}'s query/transaction execution paths against a
@@ -45,6 +46,7 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * {@code beginTransaction}, and the {@code AbstractQuery} execution methods that
  * mock-based unit tests cannot drive end to end.
  */
+@Tag("integration")
 @TestInstance(Lifecycle.PER_CLASS)
 public class JdbcUtilIntegrationTest extends TestBase {
 

@@ -23,6 +23,7 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
@@ -39,6 +40,7 @@ import com.landawn.abacus.util.Throwables;
  * helpers ({@code generateSelectSql}/{@code generateInsertSql}), the streaming copy loop and the
  * file-based CSV round-trip never actually execute. This test drives them against live tables.
  */
+@Tag("integration")
 @TestInstance(Lifecycle.PER_CLASS)
 public class DataTransferUtilIntegrationTest extends TestBase {
 

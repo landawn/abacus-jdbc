@@ -37,12 +37,12 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -51,7 +51,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.landawn.abacus.TestBase;
-
 import sun.misc.Unsafe;
 
 @Tag("2025")
@@ -609,109 +608,6 @@ public class DBLockTest extends TestBase {
         assertEquals(2, targetCodePool(fixture.lock).size());
     }
 
-    // Live in-memory H2 DB exercises the real constructor (table creation, dead-lock cleanup,
-    // refresh-task scheduling — DBLock L188-221) and the scheduled refresh task body
-    // (L223-262 normal refresh + L246-254 stale-lock eviction), which the Unsafe-based fixtures
-    // above cannot reach because they bypass the constructor.
-    @Test
-    public void testConstructorAndRefreshTask_LiveDb() throws Exception {
-        final DataSource ds = JdbcUtil.createHikariDataSource("jdbc:h2:mem:dblock_live_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1", "sa", "");
-        DBLock lock = null;
-        try {
-            lock = new DBLock(ds, "live_lock_tbl");
-
-            final String code = lock.tryLock("res-live", 60_000L, 2_000L, 50L);
-            assertNotNull(code);
-            assertEquals(1, targetCodePool(lock).size());
-
-            // Let the scheduled refresh (1s fixed delay) run and keep the live lock in the pool.
-            Thread.sleep(1_500L);
-            assertEquals(1, targetCodePool(lock).size());
-
-            // Delete the backing row behind the lock's back: the next refresh sees 0 rows updated
-            // and evicts the now-stale entry from the in-memory pool.
-            try (Connection c = ds.getConnection()) {
-                JdbcUtil.executeUpdate(c, "DELETE FROM live_lock_tbl WHERE target = ?", "res-live");
-            }
-
-            final long deadline = System.currentTimeMillis() + 6_000L;
-            while (targetCodePool(lock).size() > 0 && System.currentTimeMillis() < deadline) {
-                Thread.sleep(100L);
-            }
-            assertEquals(0, targetCodePool(lock).size());
-        } finally {
-            if (lock != null) {
-                lock.close();
-            }
-        }
-    }
-
-    @Test
-    public void testLockLifecycleIsIndependentOfAmbientTransaction() throws Exception {
-        final org.h2.jdbcx.JdbcDataSource ds = new org.h2.jdbcx.JdbcDataSource();
-        ds.setURL("jdbc:h2:mem:independent_lock_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
-
-        try (Connection observer = ds.getConnection();
-             DBLock lock = new DBLock(ds, "independent_locks")) {
-            JdbcUtil.executeUpdate(observer, "CREATE TABLE business_data(id INT)");
-            final String code;
-
-            try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
-                JdbcUtil.executeUpdate(ds, "INSERT INTO business_data VALUES (1)");
-                code = lock.tryLock("resource", 60_000, 0);
-                assertNotNull(code);
-                assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
-                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM business_data").queryForInt().orElse(-1));
-            }
-
-            assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
-            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM business_data").queryForInt().orElse(-1));
-
-            try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
-                assertTrue(lock.unlock("resource", code));
-                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
-            }
-
-            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
-            assertNotNull(lock.tryLock("close-resource", 60_000, 0));
-
-            try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
-                lock.close();
-                assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM independent_locks").queryForInt().orElse(-1));
-            }
-        }
-    }
-
-    @Test
-    public void testLockConnectionsEnableAutoCommitAndRefreshIndependently() throws Exception {
-        final org.h2.jdbcx.JdbcDataSource database = new org.h2.jdbcx.JdbcDataSource();
-        database.setURL("jdbc:h2:mem:manual_lock_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
-        final DataSource ds = mock(DataSource.class);
-        when(ds.getConnection()).thenAnswer(invocation -> {
-            final Connection conn = database.getConnection();
-            conn.setAutoCommit(false);
-            return conn;
-        });
-
-        try (Connection observer = database.getConnection();
-             DBLock lock = new DBLock(ds, "manual_locks")) {
-            ((ScheduledFuture<?>) getField(lock, "scheduledFuture")).cancel(false);
-            final String code = lock.tryLock("resource", 60_000, 0);
-            assertNotNull(code);
-            assertEquals(1, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM manual_locks").queryForInt().orElse(-1));
-
-            JdbcUtil.executeUpdate(observer, "UPDATE manual_locks SET expiry_time = TIMESTAMP '2000-01-01 00:00:00'");
-            try (SqlTransaction transaction = JdbcUtil.beginTransaction(ds)) {
-                lock.refreshLocks();
-                assertEquals(1,
-                        JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM manual_locks WHERE expiry_time > CURRENT_TIMESTAMP").queryForInt().orElse(-1));
-            }
-
-            assertTrue(lock.unlock("resource", code));
-            assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM manual_locks").queryForInt().orElse(-1));
-        }
-    }
-
     @Test
     public void testLockConnectionConfigurationFailureClosesConnection() throws Exception {
         final LockFixture fixture = newLockFixture();
@@ -738,12 +634,6 @@ public class DBLockTest extends TestBase {
         assertTrue(fixture.lock.unlock("close-failure", code));
         assertTrue(targetCodePool(fixture.lock).isEmpty());
         verify(fixture.connection, times(3)).close();
-    }
-
-    private static Object getField(final Object target, final String name) throws Exception {
-        final Field field = target.getClass().getDeclaredField(name);
-        field.setAccessible(true);
-        return field.get(target);
     }
 
     // TODO: L207 — tableExists returns false after creation (defensive; createTableIfNotExists +

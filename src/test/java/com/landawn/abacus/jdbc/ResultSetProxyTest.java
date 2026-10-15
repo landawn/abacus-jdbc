@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -1992,5 +1993,24 @@ public class ResultSetProxyTest extends TestBase {
 
         assertThrows(SQLException.class, () -> proxy.getObject("c"));
         Mockito.verify(clob).free();
+    }
+
+    @Test
+    void proxyConstructorRejectsNullWhileTheFactoryStillAcceptsIt() {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> new ResultSetProxy(null));
+
+        assertTrue(failure.getMessage().contains("delegate"));
+        assertNull(ResultSetProxy.wrap(null));
+    }
+
+    @Test
+    void proxyPreservesDriverNullArgumentExceptions() throws Exception {
+        final ResultSet delegate = mock(ResultSet.class);
+        final NullPointerException failure = new NullPointerException("driver requires a column label");
+        when(delegate.getString((String) null)).thenThrow(failure);
+        final ResultSetProxy proxy = ResultSetProxy.wrap(delegate);
+
+        assertSame(failure, assertThrows(NullPointerException.class, () -> proxy.getString((String) null)));
+        verify(delegate).getString((String) null);
     }
 }

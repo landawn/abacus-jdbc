@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
+@Tag("integration")
 @Tag("2025")
 public class ResultSetProxyPolymorphicColumnTest extends TestBase {
 

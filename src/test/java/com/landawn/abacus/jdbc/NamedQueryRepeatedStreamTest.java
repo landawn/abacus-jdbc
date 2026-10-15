@@ -14,8 +14,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
@@ -29,12 +29,13 @@ import java.util.List;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.TestBase;
 
 @Tag("2025")
 public class NamedQueryRepeatedStreamTest extends TestBase {
 
+    @Tag("integration")
     @Test
     void repeatedByteStreamsBindCompleteValuesWithAnEagerDriver() throws Exception {
         final byte[] expected = "abc".getBytes(StandardCharsets.US_ASCII);
@@ -62,6 +63,7 @@ public class NamedQueryRepeatedStreamTest extends TestBase {
         }
     }
 
+    @Tag("integration")
     @Test
     void repeatedReadersBindCompleteValuesWithAnEagerDriver() throws Exception {
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:repeated_reader")) {

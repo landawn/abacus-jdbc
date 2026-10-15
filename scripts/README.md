@@ -1,5 +1,10 @@
 # scripts/ — Javadoc "Usage Examples" toolkit
 
+For unit-test ownership, grouping, duplicate candidates, and assertion audits,
+use [`test-maintenance.mjs`](test-maintenance.mjs). Its
+[usage guide](test-maintenance/README.md) and the
+[test conventions](../src/test/README.md) cover the current test workflow.
+
 Project-agnostic tooling for auditing and tidying the Javadoc **Usage Examples**
 blocks — the `<pre>{@code ... }</pre>` snippets — on public methods of public
 classes anywhere under `src/main/java/`. Nothing is tied to a package or class

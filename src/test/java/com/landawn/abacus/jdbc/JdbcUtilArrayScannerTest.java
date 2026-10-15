@@ -13,9 +13,10 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.SqlOperation;
+import com.landawn.abacus.TestBase;
 
+@Tag("integration")
 @Tag("2025")
 public class JdbcUtilArrayScannerTest extends TestBase {
     @Test

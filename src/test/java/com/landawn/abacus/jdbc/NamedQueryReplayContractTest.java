@@ -23,13 +23,14 @@ import java.util.Map;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.EntityId;
 
 @Tag("2025")
 public class NamedQueryReplayContractTest extends TestBase {
+    @Tag("integration")
     @Test
     void entityIdReplayWorksThroughBothSettersAndBatches() throws Exception {
         for (int mode = 0; mode < 4; mode++) {
@@ -62,6 +63,7 @@ public class NamedQueryReplayContractTest extends TestBase {
         }
     }
 
+    @Tag("integration")
     @Test
     void annotatedBeanReplaysBinaryAndClobAsciiProperties() throws Exception {
         for (int mode = 0; mode < 3; mode++) {
@@ -117,6 +119,7 @@ public class NamedQueryReplayContractTest extends TestBase {
         }
     }
 
+    @Tag("integration")
     @Test
     void singleAndNullStreamBindingsStillReportDriverClosedStatementFailures() throws Exception {
         try (Connection conn = DriverManager.getConnection("jdbc:h2:mem:closed_stream_contract")) {

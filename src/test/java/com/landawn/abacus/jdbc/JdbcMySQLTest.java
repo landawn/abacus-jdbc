@@ -12,26 +12,26 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import javax.sql.DataSource;
 
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.Dataset;
+import com.landawn.abacus.util.stream.Stream;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.Tuple.Tuple4;
-import com.landawn.abacus.util.stream.Stream;
+import com.zaxxer.hikari.HikariDataSource;
 
 /**
  * Integration coverage against a live MySQL database for paths that mock-based unit tests
@@ -44,22 +44,27 @@ import com.landawn.abacus.util.stream.Stream;
  *       (plus update counts), so the drain behaviour can actually fail if broken.</li>
  * </ul>
  *
- * <p>If MySQL is not reachable at {@code localhost:3306/stock} the tests are skipped
- * (JUnit assumption) rather than failing, so the rest of the suite is unaffected.
+ * <p>Enable explicitly with the {@code mysql-tests} Maven profile and configure an isolated
+ * database through {@code jdbc.mysql.url/user/password} or {@code ABACUS_JDBC_MYSQL_URL/USER/PASSWORD}.
+ * Once enabled, connection and fixture failures fail the build.
  */
+@Tag("mysql")
+@EnabledIfSystemProperty(named = "jdbc.mysql.enabled", matches = "true")
 @TestInstance(Lifecycle.PER_CLASS)
 public class JdbcMySQLTest extends TestBase {
 
-    private static final String URL = "jdbc:mysql://localhost:3306/stock";
-    private static final String USER = "root";
-    private static final String PASSWORD = "admin";
+    private static final String URL = System.getProperty("jdbc.mysql.url", System.getenv("ABACUS_JDBC_MYSQL_URL"));
+    private static final String USER = System.getProperty("jdbc.mysql.user", System.getenv("ABACUS_JDBC_MYSQL_USER"));
+    private static final String PASSWORD = System.getProperty("jdbc.mysql.password", System.getenv("ABACUS_JDBC_MYSQL_PASSWORD"));
 
-    private DataSource ds;
+    private HikariDataSource ds;
 
     @BeforeAll
     public void initDb() {
+        assertTrue(URL != null && !URL.isBlank(), "Configure jdbc.mysql.url or ABACUS_JDBC_MYSQL_URL for an isolated test database");
+        assertTrue(USER != null && !USER.isBlank(), "Configure jdbc.mysql.user or ABACUS_JDBC_MYSQL_USER");
         try {
-            ds = JdbcUtil.createHikariDataSource(URL, USER, PASSWORD);
+            ds = (HikariDataSource) JdbcUtil.createHikariDataSource(URL, USER, PASSWORD);
 
             try (Connection conn = ds.getConnection();
                  Statement st = conn.createStatement()) {
@@ -174,8 +179,7 @@ public class JdbcMySQLTest extends TestBase {
                         + "END");
             }
         } catch (final SQLException | RuntimeException e) {
-            // MySQL not available in this environment — skip the whole class.
-            Assumptions.abort("MySQL not reachable at " + URL + " (" + e.getMessage() + ")");
+            org.junit.jupiter.api.Assertions.fail("MySQL test fixture initialization failed", e);
         }
     }
 
@@ -194,6 +198,8 @@ public class JdbcMySQLTest extends TestBase {
             }
             st.execute("DROP TABLE IF EXISTS cq_drain_widget");
             st.execute("DROP TABLE IF EXISTS cq_drain_scratch");
+        } finally {
+            ds.close();
         }
     }
 
@@ -255,9 +261,9 @@ public class JdbcMySQLTest extends TestBase {
     // multi-result-set Statement; streamAllResultSets walks every SELECT's result set.
     @Test
     public void testStreamAllResultSets_MultiQueryScript_TwoResults() throws SQLException {
-        final DataSource mqDs = JdbcUtil.createHikariDataSource(URL + "?allowMultiQueries=true", USER, PASSWORD);
-
-        try (Connection conn = mqDs.getConnection();
+        try (HikariDataSource mqDs = (HikariDataSource) JdbcUtil.createHikariDataSource(URL + (URL.contains("?") ? "&" : "?") + "allowMultiQueries=true", USER,
+                PASSWORD);
+             Connection conn = mqDs.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute("SELECT name FROM sars_widget WHERE id = 1; " + "SELECT name, qty FROM sars_widget ORDER BY id");
 

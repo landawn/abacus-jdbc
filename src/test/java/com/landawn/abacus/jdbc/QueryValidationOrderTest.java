@@ -18,15 +18,15 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.SQLType;
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.TestBase;
 
 @Tag("2025")
 public class QueryValidationOrderTest extends TestBase {
@@ -164,6 +164,7 @@ public class QueryValidationOrderTest extends TestBase {
         verifyNoInteractions(preparedStmt, namedStmt, callableStmt);
     }
 
+    @Tag("integration")
     @Test
     void closedJdbcStatementsReportSqlExceptionsFromBinding() throws SQLException {
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:closed-query-input-binding");

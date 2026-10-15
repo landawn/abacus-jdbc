@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.sql.DataSource;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
@@ -36,8 +38,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
+import com.landawn.abacus.TestBase;
 
 public class SqlTransactionTest extends TestBase {
 
@@ -47,9 +49,11 @@ public class SqlTransactionTest extends TestBase {
     @Mock
     private Connection connection;
 
+    private AutoCloseable mocks;
+
     @BeforeEach
     public void setUp() throws SQLException {
-        MockitoAnnotations.openMocks(this);
+        mocks = MockitoAnnotations.openMocks(this);
         when(dataSource.getConnection()).thenReturn(connection);
         when(connection.getAutoCommit()).thenReturn(true);
         when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
@@ -1726,6 +1730,7 @@ public class SqlTransactionTest extends TestBase {
         assertEquals(0, thrown.getSuppressed().length);
     }
 
+    @Tag("integration")
     @Test
     public void testFailedRollbackDoesNotImplicitlyCommitPendingWork() throws Exception {
         final String url = "jdbc:h2:mem:failed_rollback_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1";
@@ -1902,5 +1907,12 @@ public class SqlTransactionTest extends TestBase {
             throw new RuntimeException("post-rollback-action-boom");
         }));
         assertEquals("post-rollback-action-boom", ex.getMessage());
+    }
+
+    @AfterEach
+    void closeMocks() throws Exception {
+        if (mocks != null) {
+            mocks.close();
+        }
     }
 }

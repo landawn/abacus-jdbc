@@ -15,6 +15,7 @@ import com.landawn.abacus.jdbc.dao.NonUpdateCrudDao;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.Tuple.Tuple3;
 
+@Tag("integration")
 @Tag("2025")
 class DaoLocalHandlerResolutionTest {
     @AfterEach

@@ -9,31 +9,32 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
-import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
+import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlDialect;
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.NamingPolicy;
 import com.landawn.abacus.util.u.Optional;
@@ -47,6 +48,7 @@ import com.landawn.abacus.util.u.Optional;
  * wires a genuine {@code @JoinedBy} relationship (with two same-type join properties so the
  * multi-property transaction branches are reached) so those bodies actually execute.
  */
+@Tag("integration")
 @TestInstance(Lifecycle.PER_CLASS)
 public class JoinEntityHelperIntegrationTest extends TestBase {
 

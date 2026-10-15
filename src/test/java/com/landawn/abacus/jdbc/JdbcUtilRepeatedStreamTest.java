@@ -34,13 +34,14 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.ParsedSql;
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.EntityId;
 
 @Tag("2025")
 public class JdbcUtilRepeatedStreamTest extends TestBase {
+    @Tag("integration")
     @Test
     void directAndBatchExecutionReplayNamedStreamsAndReaders() throws Exception {
         for (int mode = 0; mode < 3; mode++) {
@@ -117,6 +118,7 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
         verify(stmt, never()).setBinaryStream(anyInt(), any(InputStream.class));
     }
 
+    @Tag("integration")
     @Test
     void repeatedBeanGetterIsEvaluatedOnce() throws Exception {
         CountingBean bean = new CountingBean();

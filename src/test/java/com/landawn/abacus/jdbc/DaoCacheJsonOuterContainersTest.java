@@ -9,13 +9,13 @@ import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.function.Supplier;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.SortedSet;
-import java.util.function.Supplier;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,6 +35,7 @@ import com.landawn.abacus.util.ImmutableSet;
 import com.landawn.abacus.util.ImmutableSortedMap;
 import com.landawn.abacus.util.ImmutableSortedSet;
 
+@Tag("integration")
 @Tag("2025")
 class DaoCacheJsonOuterContainersTest {
     private static final Map<String, Object> results = new LinkedHashMap<>();

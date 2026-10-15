@@ -17,14 +17,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
@@ -37,26 +37,31 @@ class DaoCacheRuntimeCompatibilityTest {
     @TempDir
     Path directory;
 
+    @Tag("integration")
     @Test
     void disabledUnsafePreservesOtherCacheModesAndHasAClearAdapterFailure() throws Exception {
         runProbe("noUnsafe", System.getProperty("java.class.path"));
     }
 
+    @Tag("integration")
     @Test
     void deniedUnsafeMemoryAccessHasACachedActionableFailure() throws Exception {
         runProbe("deniedUnsafeAdapter", System.getProperty("java.class.path"));
     }
 
+    @Tag("integration")
     @Test
     void deniedUnsafeMemoryAccessExplainsUnavailableParserAndPreservesOtherModes() throws Exception {
         runProbe("deniedUnsafe", System.getProperty("java.class.path"));
     }
 
+    @Tag("integration")
     @Test
     void deniedMemoryAccessWithKryoUnsafeDisabledPreservesOrdinaryCopies() throws Exception {
         runProbe("deniedUnsafeDisabled", System.getProperty("java.class.path"));
     }
 
+    @Tag("integration")
     @Test
     void optionalKryoDoesNotPreventDaoCreationOrOtherCacheModes() throws Exception {
         final String classpath = Arrays.stream(System.getProperty("java.class.path").split(Pattern.quote(File.pathSeparator)))
@@ -65,6 +70,7 @@ class DaoCacheRuntimeCompatibilityTest {
         runProbe("noKryo", classpath);
     }
 
+    @Tag("integration")
     @Test
     void missingKryoDependencyIsNamedByTheDiagnostic() throws Exception {
         final String classpath = Arrays.stream(System.getProperty("java.class.path").split(Pattern.quote(File.pathSeparator)))

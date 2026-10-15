@@ -15,18 +15,19 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
-import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
+import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.query.Filters;
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.u.Optional;
 
 /**
@@ -44,6 +45,7 @@ import com.landawn.abacus.util.u.Optional;
  * (the read-only DAO has no insert), and exercises every read-side join path — {@code loadJoinEntities},
  * {@code loadAllJoinEntities}, {@code get(id, Class)}, and {@code findFirst(..., Class, cond)}.
  */
+@Tag("integration")
 @TestInstance(Lifecycle.PER_CLASS)
 public class ReadOnlyJoinEntityHelperIntegrationTest extends TestBase {
 

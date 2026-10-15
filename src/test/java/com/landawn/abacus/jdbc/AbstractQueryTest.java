@@ -1,10 +1,8 @@
 package com.landawn.abacus.jdbc;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,506 +15,31 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.math.BigInteger;
-import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.SQLType;
 import java.sql.Statement;
-import java.sql.Timestamp;
-import java.sql.Types;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.List;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import com.landawn.abacus.TestBase;
-import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.type.Type;
-import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.NoCachingNoUpdating.DisposableObjArray;
-import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Throwables;
-import com.landawn.abacus.util.u.OptionalBoolean;
-import com.landawn.abacus.util.u.OptionalByte;
-import com.landawn.abacus.util.u.OptionalChar;
-import com.landawn.abacus.util.u.OptionalDouble;
-import com.landawn.abacus.util.u.OptionalFloat;
-import com.landawn.abacus.util.u.OptionalInt;
-import com.landawn.abacus.util.u.OptionalLong;
-import com.landawn.abacus.util.u.OptionalShort;
 import com.landawn.abacus.util.stream.Stream;
+import com.landawn.abacus.util.Throwables;
 
-public class AbstractQueryTest extends TestBase {
-
-    static final class TestQuery extends AbstractQuery<PreparedStatement, TestQuery> {
-        TestQuery(final PreparedStatement stmt) {
-            super(stmt);
-        }
-    }
-
-    public static final class QueryEntity {
-        private String value;
-
-        public String getValue() {
-            return value;
-        }
-
-        public void setValue(final String value) {
-            this.value = value;
-        }
-    }
-
-    static final class CoordinatedCloseQuery extends AbstractQuery<PreparedStatement, CoordinatedCloseQuery> {
-        final CountDownLatch stateChecked = new CountDownLatch(1);
-        final CountDownLatch continueRegistration = new CountDownLatch(1);
-
-        CoordinatedCloseQuery(final PreparedStatement stmt) {
-            super(stmt);
-        }
-
-        @Override
-        void assertNotClosed() {
-            super.assertNotClosed();
-            if (!Thread.holdsLock(this)) {
-                return;
-            }
-            stateChecked.countDown();
-
-            try {
-                continueRegistration.await();
-            } catch (final InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new AssertionError(e);
-            }
-        }
-    }
-
-    private PreparedStatement preparedStatement;
-    private TestQuery query;
-
-    @BeforeEach
-    public void setUp() throws SQLException {
-        preparedStatement = Mockito.mock(PreparedStatement.class);
-        Connection connection = Mockito.mock(Connection.class);
-
-        Mockito.when(preparedStatement.getConnection()).thenReturn(connection);
-        query = new TestQuery(preparedStatement);
-    }
-
-    @Test
-    public void testConstructorRejectsNullStatement() {
-        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> new TestQuery(null));
-
-        assertTrue(thrown.getMessage().contains("stmt"));
-    }
-
-    @Test
-    public void testQueryForBigIntegerPropagatesInvalidIntegerText() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getString(1)).thenReturn("not-an-integer");
-
-        assertThrows(NumberFormatException.class, query::queryForBigInteger);
-
-        verify(rs).close();
-        verify(preparedStatement).close();
-    }
-
-    @Test
-    public void testQueryRejectsLiveResultSetReturnedByExtractor() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-
-        assertThrows(UnsupportedOperationException.class, () -> query.query(resultSet -> resultSet));
-
-        verify(rs).close();
-        verify(preparedStatement).close();
-    }
-
-    @Test
-    public void testQueryRejectsLiveResultSetReturnedByBiExtractor() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
-
-        assertThrows(UnsupportedOperationException.class, () -> query.query((resultSet, labels) -> resultSet));
-
-        verify(rs).close();
-        verify(preparedStatement).close();
-    }
-
-    @Test
-    public void testStreamAllResultSetsRejectsLiveResultSetDuringConsumption() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(rs);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-        when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
-
-        try (Stream<ResultSet> results = query.streamAllResultSets((resultSet, labels) -> resultSet)) {
-            verify(preparedStatement, never()).execute();
-            assertThrows(UnsupportedOperationException.class, results::toList);
-        }
-
-        verify(rs, Mockito.atLeastOnce()).close();
-        verify(preparedStatement).close();
-    }
-
-    @Test
-    public void testSetParameters_IntArray() throws SQLException {
-        TestQuery result = query.setParameters(new int[] { 1, 2, 3 });
-
-        assertSame(query, result);
-        verify(preparedStatement).setInt(1, 1);
-        verify(preparedStatement).setInt(2, 2);
-        verify(preparedStatement).setInt(3, 3);
-    }
-
-    @Test
-    public void testSetParametersFrom_Collection() throws SQLException {
-        TestQuery result = query.setParametersFrom(2, List.of("a", "b"));
-
-        assertSame(query, result);
-        verify(preparedStatement).setString(2, "a");
-        verify(preparedStatement).setString(3, "b");
-    }
-
-    // A null element takes the setObject(idx, null) branch (AbstractQuery L3021) rather than the
-    // type-resolved path; non-null neighbours still use their resolved Type.
-    @Test
-    public void testSetParametersFrom_Collection_WithNullElement() throws SQLException {
-        TestQuery result = query.setParametersFrom(1, Arrays.asList("a", null, "b"));
-
-        assertSame(query, result);
-        verify(preparedStatement).setString(1, "a");
-        verify(preparedStatement).setObject(2, null);
-        verify(preparedStatement).setString(3, "b");
-    }
-
-    @Test
-    public void testSetParametersFromRejectsNonPositiveStartIndexForEmptyInput() throws SQLException {
-        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> query.setParametersFrom(0, new int[0]));
-
-        assertTrue(thrown.getMessage().contains("startParameterIndex"));
-        assertTrue(query.isClosed);
-        verify(preparedStatement, never()).setInt(anyInt(), anyInt());
-    }
-
-    @Test
-    public void testSetNullForIndices() throws SQLException {
-        TestQuery result = query.setNullForIndices(Types.INTEGER, 1, 3);
-
-        assertSame(query, result);
-        verify(preparedStatement).setNull(1, Types.INTEGER);
-        verify(preparedStatement).setNull(3, Types.INTEGER);
-    }
-
-    // setObject(int, Object, int) validates sqlType against the standard java.sql.Types / JDBCType
-    // constants (rejecting garbage up front with a clear IAE) and routes a null value through the spec'd
-    // setNull path rather than setObject(i, null, sqlType).
-    @Test
-    public void testSetObject_IntSqlType_NonNull_PassesThrough() throws SQLException {
-        query.setObject(1, "x", Types.VARCHAR);
-
-        verify(preparedStatement).setObject(1, "x", Types.VARCHAR);
-        verify(preparedStatement, never()).setNull(1, Types.VARCHAR);
-    }
-
-    @Test
-    public void testSetObject_IntSqlType_Null_RoutesToSetNull() throws SQLException {
-        query.setObject(1, null, Types.VARCHAR);
-
-        verify(preparedStatement).setNull(1, Types.VARCHAR);
-        verify(preparedStatement, never()).setObject(1, null, Types.VARCHAR);
-    }
-
-    @Test
-    public void testSetObject_IntSqlType_Invalid_ThrowsIAE() {
-        // 99999 is not a standard java.sql.Types / JDBCType constant.
-        assertThrows(IllegalArgumentException.class, () -> query.setObject(1, "x", 99999));
-    }
-
-    @Test
-    public void testSetObject_IntSqlType_Scale_Invalid_ThrowsIAE() {
-        // The 4-arg int overload validates sqlType too.
-        assertThrows(IllegalArgumentException.class, () -> query.setObject(1, "x", 99999, 2));
-    }
-
-    // Close-before-throw contract: an invalid sqlType closes the query (checkSqlType → closeSuppressingFailure),
-    // so a later execution attempt fails with ISE instead of running on a half-configured statement.
-    @Test
-    @Tag("2025")
-    public void testSetObject_IntSqlType_Invalid_ClosesQuery() {
-        assertThrows(IllegalArgumentException.class, () -> query.setObject(1, "x", 99999));
-
-        assertTrue(query.isClosed);
-        assertThrows(IllegalStateException.class, () -> query.update());
-    }
-
-    // Mixed-shape batch rows: the first element fixes the row shape; a later element of a different
-    // shape fails with ClassCastException and the query closes on the failure path.
-    @Test
-    @Tag("2025")
-    public void testAddBatchParameters_Iterator_MixedShapes_ClosesQuery() {
-        final List<Object> rows = new ArrayList<>();
-        rows.add(List.of("a"));
-        rows.add(new Object[] { "b" });
-
-        assertThrows(ClassCastException.class, () -> query.addBatchParameters(rows.iterator()));
-        assertTrue(query.isClosed);
-    }
-
-    // A null FIRST row fixes the single-value shape (documented): later collection rows are bound as one
-    // value at position 1, parameters are never cleared, and no IllegalArgumentException is raised.
-    @Test
-    public void testAddBatchParameters_Iterator_NullFirstRow_FixesSingleValueShape() throws SQLException {
-        final List<Object> rows = new ArrayList<>();
-        rows.add(null);
-        rows.add(List.of("a", "b"));
-
-        assertSame(query, query.addBatchParameters(rows.iterator()));
-
-        verify(preparedStatement).setObject(1, null);
-        verify(preparedStatement, never()).setString(2, "b");
-        verify(preparedStatement, never()).clearParameters();
-        verify(preparedStatement, times(2)).addBatch();
-        assertFalse(query.isClosed);
-    }
-
-    // An empty typed iterator adds no batch rows and leaves the query open and reusable.
-    @Test
-    @Tag("2025")
-    public void testAddBatchParameters_TypedIterator_Empty_NoOp() throws SQLException {
-        final TestQuery result = query.addBatchParameters(List.<String> of().iterator(), String.class);
-
-        assertSame(query, result);
-        assertFalse(query.isClosed);
-        verify(preparedStatement, never()).addBatch();
-    }
-
-    @Test
-    public void testSetObject_SQLType_Null_ThrowsIAE() {
-        assertThrows(IllegalArgumentException.class, () -> query.setObject(1, "x", (SQLType) null));
-    }
-
-    @Test
-    public void testSetFetchSize() throws SQLException {
-        TestQuery result = query.setFetchSize(-1);
-
-        assertSame(query, result);
-        verify(preparedStatement).setFetchSize(-1);
-    }
-
-    @Test
-    public void testCloseAfterExecution_ClosedQuery() throws SQLException {
-        query.close();
-
-        // Changing the automatic-close policy only stores a flag and does not access the statement.
-        assertSame(query, query.closeAfterExecution(false));
-    }
-
-    // Statement settings, batch staging, configuration, and execution retain the query-state check.
-    @Test
-    @Tag("2025")
-    public void testStatementOperations_ClosedQuery_ThrowIllegalState() throws SQLException {
-        query.close();
-
-        assertThrows(IllegalStateException.class, () -> query.setFetchSize(100));
-        assertThrows(IllegalStateException.class, () -> query.setMaxRows(10));
-        assertThrows(IllegalStateException.class, () -> query.setLargeMaxRows(10L));
-        assertThrows(IllegalStateException.class, () -> query.setMaxFieldSize(256));
-        assertThrows(IllegalStateException.class, () -> query.setQueryTimeout(5));
-        assertThrows(IllegalStateException.class, () -> query.setFetchDirection(FetchDirection.FORWARD));
-        assertThrows(IllegalStateException.class, () -> query.addBatch());
-        assertThrows(IllegalStateException.class, () -> query.configureStatement(stmt -> stmt.setPoolable(false)));
-
-        // Execution methods keep the fail-fast IllegalStateException.
-        assertThrows(IllegalStateException.class, () -> query.exists());
-        assertThrows(IllegalStateException.class, () -> query.update());
-        assertThrows(IllegalStateException.class, () -> query.list());
-    }
-
-    // Tests for setBoolean with defaultValueForNull
-    @Test
-    public void testSetBoolean_WithDefault_Null() throws SQLException {
-        TestQuery result = query.setBoolean(1, (Boolean) null, true);
-        assertSame(query, result);
-        verify(preparedStatement).setBoolean(1, true);
-    }
-
-    @Test
-    public void testSetBoolean_WithDefault_NonNull() throws SQLException {
-        TestQuery result = query.setBoolean(1, Boolean.FALSE, true);
-        assertSame(query, result);
-        verify(preparedStatement).setBoolean(1, false);
-    }
-
-    // Tests for setByte with defaultValueForNull
-    @Test
-    public void testSetByte_Wrapper_Null() throws SQLException {
-        TestQuery result = query.setByte(1, (Byte) null);
-        assertSame(query, result);
-        verify(preparedStatement).setNull(1, Types.TINYINT);
-    }
-
-    @Test
-    public void testSetByte_Wrapper_NonNull() throws SQLException {
-        TestQuery result = query.setByte(1, (Byte) (byte) 5);
-        assertSame(query, result);
-        verify(preparedStatement).setByte(1, (byte) 5);
-    }
-
-    // Tests for setShort with null
-    @Test
-    public void testSetShort_Wrapper_Null() throws SQLException {
-        TestQuery result = query.setShort(1, (Short) null);
-        assertSame(query, result);
-        verify(preparedStatement).setNull(1, Types.SMALLINT);
-    }
-
-    @Test
-    public void testSetShort_Wrapper_NonNull() throws SQLException {
-        TestQuery result = query.setShort(1, (Short) (short) 100);
-        assertSame(query, result);
-        verify(preparedStatement).setShort(1, (short) 100);
-    }
-
-    @Test
-    public void testSetShort_WithDefault_Null() throws SQLException {
-        TestQuery result = query.setShort(1, (Short) null, (short) 0);
-        assertSame(query, result);
-        verify(preparedStatement).setShort(1, (short) 0);
-    }
-
-    @Test
-    public void testSetShort_WithDefault_NonNull() throws SQLException {
-        TestQuery result = query.setShort(1, (short) 7, (short) 0);
-        assertSame(query, result);
-        verify(preparedStatement).setShort(1, (short) 7);
-    }
-
-    // Tests for setInt with null wrapper
-    @Test
-    public void testSetInt_Wrapper_Null() throws SQLException {
-        TestQuery result = query.setInt(1, (Integer) null);
-        assertSame(query, result);
-        verify(preparedStatement).setNull(1, Types.INTEGER);
-    }
-
-    @Test
-    public void testSetInt_Wrapper_NonNull() throws SQLException {
-        TestQuery result = query.setInt(1, (Integer) 42);
-        assertSame(query, result);
-        verify(preparedStatement).setInt(1, 42);
-    }
-
-    @Test
-    public void testSetInt_WithDefault_NonNull() throws SQLException {
-        TestQuery result = query.setInt(1, Integer.valueOf(7), 0);
-        assertSame(query, result);
-        verify(preparedStatement).setInt(1, 7);
-    }
-
-    @Test
-    public void testSetInt_CharacterWrapper_NonNull() throws SQLException {
-        TestQuery result = query.setInt(1, Character.valueOf('A'));
-        assertSame(query, result);
-        verify(preparedStatement).setInt(1, 'A');
-    }
-
-    // Tests for setLong with null wrapper
-    @Test
-    public void testSetLong_Wrapper_Null() throws SQLException {
-        TestQuery result = query.setLong(1, (Long) null);
-        assertSame(query, result);
-        verify(preparedStatement).setNull(1, Types.BIGINT);
-    }
-
-    @Test
-    public void testSetLong_Wrapper_NonNull() throws SQLException {
-        TestQuery result = query.setLong(1, (Long) 1000L);
-        assertSame(query, result);
-        verify(preparedStatement).setLong(1, 1000L);
-    }
-
-    @Test
-    public void testSetLong_WithDefault_NonNull() throws SQLException {
-        TestQuery result = query.setLong(1, Long.valueOf(99L), -1L);
-        assertSame(query, result);
-        verify(preparedStatement).setLong(1, 99L);
-    }
-
-    // Tests for setFloat with null wrapper
-    @Test
-    public void testSetFloat_Wrapper_Null() throws SQLException {
-        TestQuery result = query.setFloat(1, (Float) null);
-        assertSame(query, result);
-        // Per JDBC spec, Java float maps to SQL REAL. (Types.FLOAT is the alias for Types.DOUBLE.)
-        verify(preparedStatement).setNull(1, Types.REAL);
-    }
-
-    @Test
-    public void testSetFloat_Wrapper_NonNull() throws SQLException {
-        TestQuery result = query.setFloat(1, (Float) 1.5f);
-        assertSame(query, result);
-        verify(preparedStatement).setFloat(1, 1.5f);
-    }
-
-    // Tests for setDouble with null wrapper
-    @Test
-    public void testSetDouble_Wrapper_Null() throws SQLException {
-        TestQuery result = query.setDouble(1, (Double) null);
-        assertSame(query, result);
-        verify(preparedStatement).setNull(1, Types.DOUBLE);
-    }
-
-    @Test
-    public void testSetDouble_Wrapper_NonNull() throws SQLException {
-        TestQuery result = query.setDouble(1, (Double) 3.14);
-        assertSame(query, result);
-        verify(preparedStatement).setDouble(1, 3.14);
-    }
-
-    @Test
-    public void testAddBatchParameters_EmptyCollection() throws SQLException {
-        TestQuery result = query.addBatchParameters(List.of());
-
-        assertSame(query, result);
-        verify(preparedStatement, never()).addBatch();
-    }
-
-    @Test
-    public void testAddBatchParameters_IteratorOfScalarValues() throws SQLException {
-        TestQuery result = query.addBatchParameters(List.of(1, 2).iterator());
-
-        assertSame(query, result);
-        verify(preparedStatement).setInt(1, 1);
-        verify(preparedStatement).setInt(1, 2);
-        verify(preparedStatement, times(2)).addBatch();
-    }
+class AbstractQueryTest extends AbstractQueryTestSupport {
 
     // Custom batch actions bypass the default PreparedStatement.addBatch call.
     @Test
@@ -544,184 +67,58 @@ public class AbstractQueryTest extends TestBase {
         Mockito.verifyNoInteractions(preparedStatement);
     }
 
-    // addBatch() must close the statement when the addBatchAction throws, otherwise a
-    // fluent chain that fails mid-way (e.g. query.setX(...).addBatch()) leaks the statement
-    // because batchUpdate()/closeAfterExecutionIfAllowed() will never run.
+    // ifExistsOrElse(BiRowConsumer, Runnable) – orElseAction runs when no rows (L7972)
     @Test
-    public void testAddBatch_ExceptionClosesQuery() throws SQLException {
-        doThrow(new SQLException("addBatch failed")).when(preparedStatement).addBatch();
-
-        assertThrows(SQLException.class, () -> query.addBatch());
-
-        verify(preparedStatement).close();
-    }
-
-    @Test
-    public void testGetFetchSettings() throws SQLException {
-        when(preparedStatement.getFetchSize()).thenReturn(128);
-        when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_REVERSE);
-
-        assertEquals(128, query.getFetchSize());
-        assertEquals(ResultSet.FETCH_REVERSE, query.getFetchDirection());
-    }
-
-    // setFloat(int, Float, float) - non-null branch (line 867) was not covered
-    @Test
-    public void testSetFloat_WithDefault_NonNull() throws SQLException {
-        TestQuery result = query.setFloat(1, Float.valueOf(2.5f), 0.0f);
-        assertSame(query, result);
-        verify(preparedStatement).setFloat(1, 2.5f);
-    }
-
-    // setDouble(int, Double, double) - non-null branch (line 965) was not covered
-    @Test
-    public void testSetDouble_WithDefault_NonNull() throws SQLException {
-        TestQuery result = query.setDouble(1, Double.valueOf(1.23), 0.0);
-        assertSame(query, result);
-        verify(preparedStatement).setDouble(1, 1.23);
-    }
-
-    // addBatchParameters(Collection<T>, Class<T>) with empty collection should return early
-    @Test
-    public void testAddBatchParameters_EmptyCollectionWithType() throws SQLException {
-        TestQuery result = query.addBatchParameters(List.of(), String.class);
-        assertSame(query, result);
-        verify(preparedStatement, never()).addBatch();
-    }
-
-    // addBatchParameters(Iterator) with empty iterator should return early (line 3679-3680)
-    @Test
-    public void testAddBatchParameters_EmptyIterator() throws SQLException {
-        TestQuery result = query.addBatchParameters(List.of().iterator());
-        assertSame(query, result);
-        verify(preparedStatement, never()).addBatch();
-    }
-
-    // addBatchParameters(Iterator, BiParametersSetter) - lines 3867-3891
-    @Test
-    public void testAddBatchParameters_IteratorWithBiParametersSetter() throws SQLException {
-        final List<String> items = List.of("a", "b");
-        TestQuery result = query.addBatchParameters(items.iterator(), (Jdbc.BiParametersSetter<TestQuery, String>) (q, s) -> preparedStatement.setString(1, s));
-        assertSame(query, result);
-        verify(preparedStatement).setString(1, "a");
-        verify(preparedStatement).setString(1, "b");
-        verify(preparedStatement, times(2)).addBatch();
-    }
-
-    // addBatchParameters(Collection, BiParametersSetter) - lines 3838-3843
-    @Test
-    public void testAddBatchParameters_CollectionWithBiParametersSetter() throws SQLException {
-        final List<Integer> items = List.of(10, 20);
-        TestQuery result = query.addBatchParameters(items, (Jdbc.BiParametersSetter<TestQuery, Integer>) (q, v) -> preparedStatement.setInt(1, v));
-        assertSame(query, result);
-        verify(preparedStatement).setInt(1, 10);
-        verify(preparedStatement).setInt(1, 20);
-        verify(preparedStatement, times(2)).addBatch();
-    }
-
-    @Test
-    public void testSetObject_WithType_DelegatesToType() throws SQLException {
-        final Type<String> strType = TypeFactory.getType(String.class);
-
-        TestQuery result = query.setObject(1, "hello", strType);
-
-        assertSame(query, result);
-        verify(preparedStatement).setString(1, "hello");
-    }
-
-    @Test
-    public void testFindOnlyOneOrNull_Class_NoResult_ReturnsNull() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-
-        assertNull(query.findOnlyOneOrNull(String.class));
-    }
-
-    @Test
-    public void testFindOnlyOneOrNull_Class_DuplicateResultThrows() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final java.sql.ResultSetMetaData meta = Mockito.mock(java.sql.ResultSetMetaData.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, true);
-        when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(1);
-        when(meta.getColumnLabel(1)).thenReturn("val");
-        when(rs.getString(1)).thenReturn("first");
-
-        assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull(String.class));
-    }
-
-    @Test
-    public void testFindOnlyOneOrNull_RowMapper_NoResult_ReturnsNull() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-
-        assertNull(query.findOnlyOneOrNull(r -> r.getString(1)));
-    }
-
-    @Test
-    public void testFindOnlyOneOrNull_RowMapper_DuplicateResultThrows() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, true);
-        when(rs.getString(1)).thenReturn("value");
-
-        assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull(r -> r.getString(1)));
-    }
-
-    // Regression for exception-priority inversion in findOnlyOneOrNull: the duplicate-row check
-    // must run BEFORE the null-mapped-value check, so that a query returning 2+ rows (whose first
-    // row maps to null) throws DuplicateResultException, not NullPointerException. Mirrors the
-    // established ordering of queryForUniqueNonNull / queryForUniqueValue.
-    @Test
-    @Tag("2025")
-    public void testFindOnlyOneOrNull_RowMapper_NullMappingWithDuplicate_ThrowsDuplicateNotNpe() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, true);
-
-        assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull(r -> null));
-    }
-
-    @Test
-    @Tag("2025")
-    public void testFindOnlyOneOrNull_RowMapper_NullMappingSingleRow_ThrowsNpe() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, false);
-
-        // Exactly one row but the mapper yields null -> documented NullPointerException.
-        assertThrows(NullPointerException.class, () -> query.findOnlyOneOrNull(r -> null));
-    }
-
-    @Test
-    @Tag("2025")
-    public void testFindOnlyOneOrNull_BiRowMapper_NullMappingWithDuplicate_ThrowsDuplicateNotNpe() throws SQLException {
+    public void testIfExistsOrElse_BiRowConsumer_OrElseActionRuns() throws SQLException {
         final ResultSet rs = Mockito.mock(ResultSet.class);
         final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
         when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, true);
         when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(1);
-        when(meta.getColumnLabel(1)).thenReturn("val");
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(false); // no rows
 
-        assertThrows(DuplicateResultException.class, () -> query.findOnlyOneOrNull((r, labels) -> null));
+        final boolean[] called = { false };
+        query.ifExistsOrElse((r, labels) -> {
+        }, () -> called[0] = true);
+
+        assertTrue(called[0]);
     }
 
+    // allMatch(BiRowFilter) returns false when a row fails the filter (L8302)
     @Test
-    @Tag("2025")
-    public void testFindOnlyOneOrNull_BiRowMapper_NullMappingSingleRow_ThrowsNpe() throws SQLException {
+    public void testAllMatch_BiRowFilter_ReturnsFalseWhenRowFails() throws SQLException {
         final ResultSet rs = Mockito.mock(ResultSet.class);
         final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
         when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, false);
         when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(1);
-        when(meta.getColumnLabel(1)).thenReturn("val");
+        when(meta.getColumnCount()).thenReturn(0);
+        when(rs.next()).thenReturn(true, false);
 
-        assertThrows(NullPointerException.class, () -> query.findOnlyOneOrNull((r, labels) -> null));
+        final boolean result = query.allMatch((r, labels) -> false);
+
+        assertFalse(result);
+    }
+
+    // insert(BiRowMapper, Predicate): rs.next() returns false → returns Optional.empty() (L8844)
+    @Test
+    public void testInsert_NoGeneratedKey_ReturnsEmpty() throws SQLException {
+        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
+        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
+        when(generatedKeys.next()).thenReturn(false);
+
+        com.landawn.abacus.util.u.Optional<?> result = query.insert((Jdbc.BiRowMapper<Long>) (rs, cols) -> rs.getLong(1), id -> id == null || (Long) id == 0L);
+        assertTrue(result.isEmpty());
+    }
+
+    @Tag("2025")
+    @DisplayName("assertNotClosed should include class name in error message")
+    @Test
+    public void testAssertNotClosed_ErrorMessageContainsClassName() {
+        query.close();
+
+        final IllegalStateException ise = assertThrows(IllegalStateException.class, () -> query.update());
+        assertTrue(ise.getMessage().contains("TestQuery"));
+        assertTrue(ise.getMessage().contains("closed"));
     }
 
     @Test
@@ -778,60 +175,6 @@ public class AbstractQueryTest extends TestBase {
         assertSame(closeEx, iae.getSuppressed()[0]);
     }
 
-    // setParameters(ParametersSetter<Stmt>) — exception path closes the query (line 2791)
-    @Test
-    public void testSetParameters_ParametersSetter_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () -> query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) stmt -> {
-            throw new SQLException("setter failed");
-        }));
-    }
-
-    @Test
-    public void testSetParametersPreservesPrimaryFailureWhenCloseHandlerThrowsSameInstance() {
-        final RuntimeException primaryFailure = new RuntimeException("setter and close failed");
-        query.onClose(() -> {
-            throw primaryFailure;
-        });
-
-        final RuntimeException thrown = assertThrows(RuntimeException.class, () -> query.setParameters((Jdbc.ParametersSetter<PreparedStatement>) stmt -> {
-            throw primaryFailure;
-        }));
-
-        assertSame(primaryFailure, thrown);
-        assertEquals(0, thrown.getSuppressed().length);
-    }
-
-    // setParameters(T, BiParametersSetter<Stmt,T>) — exception path closes (line 2855)
-    @Test
-    public void testSetParameters_BiParametersSetter_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () -> query.setParameters("data", (Jdbc.BiParametersSetter<PreparedStatement, String>) (stmt, s) -> {
-            throw new SQLException("bi-setter failed");
-        }));
-    }
-
-    // settParameters(ParametersSetter<This>) — exception path closes (line 3117)
-    @Test
-    public void testSettParameters_ParametersSetter_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () -> query.settParameters((Jdbc.ParametersSetter<TestQuery>) q -> {
-            throw new SQLException("settParameters failed");
-        }));
-    }
-
-    // settParameters(T, BiParametersSetter<This,T>) — exception path closes (line 3165)
-    @Test
-    public void testSettParameters_BiParametersSetter_ThrowsClosesQuery() {
-        assertThrows(SQLException.class, () -> query.settParameters("params", (Jdbc.BiParametersSetter<TestQuery, String>) (q, s) -> {
-            throw new SQLException("bi-settParameters failed");
-        }));
-    }
-
-    // addBatchParameters(Iterator<T>, Class<T>) — empty iterator early return (lines 3752-3753)
-    @Test
-    public void testAddBatchParameters_TypedIterator_EmptyIterator() throws SQLException {
-        TestQuery result = query.addBatchParameters(List.<String> of().iterator(), String.class);
-        assertSame(query, result);
-    }
-
     // configureStatement(Consumer<Stmt>) — exception path closes (line 4305)
     @Test
     public void testConfigStmt_Consumer_ThrowsClosesQuery() {
@@ -848,1281 +191,141 @@ public class AbstractQueryTest extends TestBase {
         }));
     }
 
-    // queryForChar() — no rows returns OptionalChar.empty() (line 4415)
     @Test
-    public void testQueryForChar_NoResult_ReturnsEmpty() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-        // OptionalChar.empty() is returned; verify it is absent (isEmpty)
-        assertTrue(query.queryForChar().isEmpty());
+    public void testConstructorRejectsNullStatement() {
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> new TestQuery(null));
+
+        assertTrue(thrown.getMessage().contains("stmt"));
     }
 
-    // queryForChar() — a row whose column is SQL NULL yields a PRESENT OptionalChar holding (char) 0;
-    // empty() is reserved for the no-row case (documented present-with-default contract).
+    // Closed-query state is checked before input-parameter validation on execution methods.
+    @Test
     @Tag("2025")
-    @Test
-    public void testQueryForChar_SqlNull_PresentWithDefault() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getString(1)).thenReturn(null);
+    public void testDelegatingOverloads_ClosedQueryValidationPriority() {
+        query.close();
 
-        assertEquals(OptionalChar.of((char) 0), query.queryForChar());
-    }
-
-    // queryForChar() — an empty string column also maps to a PRESENT (char) 0, per AbstractCharacterType.
-    @Tag("2025")
-    @Test
-    public void testQueryForChar_EmptyString_PresentWithDefault() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getString(1)).thenReturn("");
-
-        assertEquals(OptionalChar.of((char) 0), query.queryForChar());
-    }
-
-    // queryForChar() reads the column as a string and returns its first character, so a numeric 65
-    // yields '6' rather than the code point 'A' (pins the documented getString-based conversion).
-    @Test
-    public void testQueryForChar_NumericColumn_ReturnsFirstCharacterOfStringForm() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getInt(1)).thenReturn(65);
-        when(rs.getString(1)).thenReturn("65");
-
-        assertEquals(OptionalChar.of('6'), query.queryForChar());
-    }
-
-    // queryForInt() — SQL NULL maps to a PRESENT OptionalInt.of(0) (ResultSet.getInt contract), not empty().
-    @Tag("2025")
-    @Test
-    public void testQueryForInt_SqlNull_PresentWithZero() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getInt(1)).thenReturn(0);
-
-        assertEquals(OptionalInt.of(0), query.queryForInt());
-    }
-
-    // queryForBoolean() — SQL NULL maps to a PRESENT OptionalBoolean.of(false), not empty().
-    @Tag("2025")
-    @Test
-    public void testQueryForBoolean_SqlNull_PresentWithFalse() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getBoolean(1)).thenReturn(false);
-
-        assertEquals(OptionalBoolean.of(false), query.queryForBoolean());
+        assertThrows(IllegalStateException.class, () -> query.query((Class<?>) null));
+        assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null));
+        assertThrows(IllegalStateException.class, () -> query.stream((Class<String>) null));
+        assertThrows(IllegalStateException.class, () -> query.foreach((Consumer<DisposableObjArray>) null));
+        assertThrows(IllegalStateException.class, () -> query.foreach(String.class, null));
     }
 
     @Test
-    public void testQueryForUniqueResult_NullFirstValueWithSecondRowThrowsDuplicate() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, true);
-        when(rs.getString(1)).thenReturn(null);
-        when(rs.getObject(1)).thenReturn("second");
-
-        assertThrows(DuplicateResultException.class, () -> query.queryForUniqueValue(String.class));
-    }
-
-    @Test
-    public void testQueryForUniqueNonNull_NullFirstValueWithSecondRowThrowsDuplicate() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, true);
-        when(rs.getString(1)).thenReturn(null);
-        when(rs.getObject(1)).thenReturn("second");
-
-        assertThrows(DuplicateResultException.class, () -> query.queryForUniqueNonNull(String.class));
-    }
-
-    // findFirstOrNull(Class) — no rows returns null (line 6079)
-    @Test
-    public void testFindFirstOrNull_Class_NoResult_ReturnsNull() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-        assertNull(query.findFirstOrNull(String.class));
-    }
-
-    // findFirstOrNull(RowMapper) — no rows returns null (line 6114)
-    @Test
-    public void testFindFirstOrNull_RowMapper_NoResult_ReturnsNull() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-        assertNull(query.findFirstOrNull(r -> r.getString(1)));
-    }
-
-    // findFirstOrNull(RowFilter, RowMapper) — no rows returns null (line 6157)
-    @Test
-    public void testFindFirstOrNull_RowFilter_RowMapper_NoResult() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-        assertNull(query.findFirstOrNull(r -> true, r -> r.getString(1)));
-    }
-
-    // list(RowFilter, RowMapper) — delegates and returns empty list (line 6442)
-    @Test
-    public void testList_RowFilter_RowMapper_EmptyResult() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-        List<String> result = query.list(r -> true, r -> r.getString(1));
-        assertTrue(result.isEmpty());
-    }
-
-    // list(BiRowFilter, BiRowMapper) — delegates and returns empty list (line 6587)
-    @Test
-    public void testList_BiRowFilter_BiRowMapper_EmptyResult() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(0);
-        when(rs.next()).thenReturn(false);
-        List<String> result = query.list((r, labels) -> true, (r, labels) -> r.getString(1));
-        assertTrue(result.isEmpty());
-    }
-
-    // allMatch(BiRowFilter) returns false when a row fails the filter (L8302)
-    @Test
-    public void testAllMatch_BiRowFilter_ReturnsFalseWhenRowFails() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(0);
-        when(rs.next()).thenReturn(true, false);
-
-        final boolean result = query.allMatch((r, labels) -> false);
-
-        assertFalse(result);
-    }
-
-    // setLong(int, BigInteger) when stmt.setLong throws → close() is called (L795)
-    @Test
-    public void testSetLong_BigInteger_WhenSetLongThrows_ClosesQuery() throws SQLException {
-        doThrow(new SQLException("setLong failed")).when(preparedStatement).setLong(anyInt(), anyLong());
-
-        assertThrows(SQLException.class, () -> query.setLong(1, BigInteger.valueOf(42L)));
-        // after exception, query should be closed
-        verify(preparedStatement).close();
-    }
-
-    @Test
-    public void testSetLongBigIntegerPreservesConversionFailureWhenCloseHandlerThrows() {
+    public void testExecutionFailureRemainsPrimaryWhenAutomaticCloseHandlerFails() throws SQLException {
+        final SQLException executionFailure = new SQLException("query failed");
         final RuntimeException closeFailure = new RuntimeException("close handler failed");
+        when(preparedStatement.executeQuery()).thenThrow(executionFailure);
         query.onClose(() -> {
             throw closeFailure;
         });
 
-        final ArithmeticException thrown = assertThrows(ArithmeticException.class,
-                () -> query.setLong(1, BigInteger.valueOf(Long.MAX_VALUE).add(BigInteger.ONE)));
+        final SQLException thrown = assertThrows(SQLException.class, query::queryForBoolean);
 
-        assertEquals(1, thrown.getSuppressed().length);
-        assertSame(closeFailure, thrown.getSuppressed()[0]);
+        assertSame(executionFailure, thrown);
+        assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
     }
 
-    // findFirst(RowFilter, RowMapper) returns empty Optional when no row matches filter (L5962 / L6240)
     @Test
-    @SuppressWarnings("deprecation")
-    public void testFindFirst_RowFilter_RowMapper_NoMatchingRow() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, false); // one row but filter rejects it
-
-        final com.landawn.abacus.util.u.Optional<String> result = query.findFirst(r -> false, r -> r.getString(1));
-
-        assertNotNull(result);
-        assertFalse(result.isPresent());
-    }
-
-    // close() logs warning when stmt.setFetchDirection throws during reset (L9919-9920)
-    @Test
-    public void testClose_WhenResetFetchDirectionFails_LogsWarning() throws SQLException {
+    public void testGetFetchSettings() throws SQLException {
+        when(preparedStatement.getFetchSize()).thenReturn(128);
         when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_REVERSE);
-        // Only throw on reset call (FETCH_REVERSE), not on the initial set call (FETCH_FORWARD)
-        doThrow(new SQLException("reset fetch dir failed")).when(preparedStatement).setFetchDirection(ResultSet.FETCH_REVERSE);
 
-        query.setFetchDirection(FetchDirection.FORWARD); // stores defaultFetchDirection = FETCH_REVERSE
-
-        // close() resets to FETCH_REVERSE which throws, but is swallowed
-        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
-    }
-
-    // close() logs warning when stmt.setFetchSize throws during reset (L9927-9928)
-    @Test
-    public void testClose_WhenResetFetchSizeFails_LogsWarning() throws SQLException {
-        when(preparedStatement.getFetchSize()).thenReturn(100);
-        doThrow(new SQLException("reset fetch size failed")).when(preparedStatement).setFetchSize(100);
-
-        query.setFetchSize(500); // stores defaultFetchSize = 100
-
-        // close() resets to 100 which throws, but is swallowed
-        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
-    }
-
-    // close() logs warning when stmt.setQueryTimeout throws during reset (L9943-9944)
-    @Test
-    public void testClose_WhenResetQueryTimeoutFails_LogsWarning() throws SQLException {
-        when(preparedStatement.getQueryTimeout()).thenReturn(30);
-        doThrow(new SQLException("reset timeout failed")).when(preparedStatement).setQueryTimeout(30);
-
-        query.setQueryTimeout(60); // stores defaultQueryTimeout = 30
-
-        // close() resets to 30 which throws, but is swallowed
-        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
-    }
-
-    // close() logs warning when stmt.setMaxFieldSize throws during reset (L9935-9936)
-    @Test
-    public void testClose_WhenResetMaxFieldSizeFails_LogsWarning() throws SQLException {
-        when(preparedStatement.getMaxFieldSize()).thenReturn(100);
-        doThrow(new SQLException("reset maxFieldSize failed")).when(preparedStatement).setMaxFieldSize(100);
-
-        query.setMaxFieldSize(512); // stores defaultMaxFieldSize = 100
-
-        // close() resets to 100 which throws, but is swallowed
-        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
-    }
-
-    // Regression: setMaxRows used to skip both capture and restore (twin-divergence with the four
-    // sibling setters). When the underlying PreparedStatement comes from a statement pool (the
-    // closeAfterExecution(false) path, or driver-side statement caching), a stale max-rows limit
-    // from a prior caller would silently truncate later result sets.
-    @Test
-    public void testClose_RestoresMaxRows() throws SQLException {
-        when(preparedStatement.getMaxRows()).thenReturn(50);
-
-        query.setMaxRows(200); // capture default = 50, then apply 200
-
-        verify(preparedStatement).setMaxRows(200);
-
-        query.close();
-
-        verify(preparedStatement).setMaxRows(50); // restored on close
-    }
-
-    @Test
-    public void testClose_WhenResetMaxRowsFails_LogsWarning() throws SQLException {
-        when(preparedStatement.getMaxRows()).thenReturn(50);
-        doThrow(new SQLException("reset maxRows failed")).when(preparedStatement).setMaxRows(50);
-
-        query.setMaxRows(200);
-
-        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
-    }
-
-    // Regression: setLargeMaxRows used to skip both capture and restore.
-    @Test
-    public void testClose_RestoresLargeMaxRows() throws SQLException {
-        when(preparedStatement.getLargeMaxRows()).thenReturn(75L);
-
-        query.setLargeMaxRows(500L);
-
-        verify(preparedStatement).setLargeMaxRows(500L);
-
-        query.close();
-
-        verify(preparedStatement).setLargeMaxRows(75L);
-    }
-
-    @Test
-    public void testClose_RestoresOriginalLimitAfterMixingMaxRowsSetters() throws SQLException {
-        final AtomicReference<Long> rowLimit = new AtomicReference<>(50L);
-        when(preparedStatement.getMaxRows()).thenAnswer(invocation -> rowLimit.get().intValue());
-        when(preparedStatement.getLargeMaxRows()).thenAnswer(invocation -> rowLimit.get());
-        Mockito.doAnswer(invocation -> {
-            rowLimit.set(((Integer) invocation.getArgument(0)).longValue());
-            return null;
-        }).when(preparedStatement).setMaxRows(anyInt());
-        Mockito.doAnswer(invocation -> {
-            rowLimit.set(invocation.getArgument(0));
-            return null;
-        }).when(preparedStatement).setLargeMaxRows(anyLong());
-
-        query.setMaxRows(200).setLargeMaxRows(300L).setMaxRows(400);
-        assertEquals(400L, rowLimit.get().longValue());
-
-        query.close();
-
-        assertEquals(50L, rowLimit.get().longValue());
-        verify(preparedStatement, never()).getLargeMaxRows();
-    }
-
-    @Test
-    public void testClose_RestoresOriginalLargeLimitAfterUsingMaxRows() throws SQLException {
-        final long originalLimit = (long) Integer.MAX_VALUE + 100;
-        when(preparedStatement.getLargeMaxRows()).thenReturn(originalLimit);
-        when(preparedStatement.getMaxRows()).thenThrow(new SQLException("Row limit exceeds the int range"));
-
-        query.setLargeMaxRows(500L).setMaxRows(200).setLargeMaxRows(300L);
-        query.close();
-
-        verify(preparedStatement).setLargeMaxRows(originalLimit);
-        verify(preparedStatement, never()).getMaxRows();
-        verify(preparedStatement).close();
-    }
-
-    @Test
-    public void testClose_WhenResetLargeMaxRowsFails_LogsWarning() throws SQLException {
-        when(preparedStatement.getLargeMaxRows()).thenReturn(75L);
-        doThrow(new SQLException("reset largeMaxRows failed")).when(preparedStatement).setLargeMaxRows(75L);
-
-        query.setLargeMaxRows(500L);
-
-        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
-    }
-
-    // Regression: a driver without setLargeMaxRows support (JDBC 4.2 default throws UnsupportedOperationException)
-    // used to leave the captured default behind, so closing the query replayed setLargeMaxRows and hit the UOE again.
-    @Test
-    public void testSetLargeMaxRows_UnsupportedByDriver_DoesNotReplayOnClose() throws SQLException {
-        final UnsupportedOperationException unsupported = new UnsupportedOperationException("setLargeMaxRows not implemented");
-        when(preparedStatement.getLargeMaxRows()).thenReturn(75L);
-        doThrow(unsupported).when(preparedStatement).setLargeMaxRows(anyLong());
-
-        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class, () -> query.setLargeMaxRows(500L));
-
-        assertSame(unsupported, thrown);
-        assertEquals(0, thrown.getSuppressed().length);
-        verify(preparedStatement, times(1)).setLargeMaxRows(anyLong()); // only the user's failed call; no replay on close
-        verify(preparedStatement).close();
-        assertDoesNotThrow((org.junit.jupiter.api.function.Executable) query::close);
-    }
-
-    // Regression: the statement-config setters used to leave the query open when the driver failed. In the fluent
-    // idiom `JdbcUtil.prepareQuery(ds, sql).setFetchSize(n)...` the caller never gets the query back, so the statement
-    // (and, for DataSource-based queries, the pooled connection released by the close handler) leaked.
-    @Test
-    public void testStatementConfigSetters_DriverFailure_ClosesQueryAndRethrows() throws SQLException {
-        final List<Throwables.Consumer<TestQuery, Exception>> setterCalls = Arrays.asList( //
-                q -> q.setFetchDirection(FetchDirection.FORWARD), //
-                TestQuery::setFetchDirectionToForward, //
-                q -> q.setFetchSize(100), //
-                q -> q.setMaxFieldSize(1024), //
-                q -> q.setMaxRows(10), //
-                q -> q.setLargeMaxRows(10L), //
-                q -> q.setQueryTimeout(30));
-
-        for (int i = 0; i < setterCalls.size(); i++) {
-            final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-            final SQLException driverFailure = new SQLException("driver rejected setter " + i);
-            doThrow(driverFailure).when(stmt).setFetchDirection(anyInt());
-            doThrow(driverFailure).when(stmt).setFetchSize(anyInt());
-            doThrow(driverFailure).when(stmt).setMaxFieldSize(anyInt());
-            doThrow(driverFailure).when(stmt).setMaxRows(anyInt());
-            doThrow(driverFailure).when(stmt).setLargeMaxRows(anyLong());
-            doThrow(driverFailure).when(stmt).setQueryTimeout(anyInt());
-
-            final TestQuery q = new TestQuery(stmt);
-            final AtomicInteger closeHandlerCalls = new AtomicInteger();
-            q.onClose(closeHandlerCalls::incrementAndGet);
-
-            final Throwables.Consumer<TestQuery, Exception> setterCall = setterCalls.get(i);
-            final SQLException thrown = assertThrows(SQLException.class, () -> setterCall.accept(q));
-
-            assertSame(driverFailure, thrown, "setter " + i);
-            verify(stmt).close();
-            assertEquals(1, closeHandlerCalls.get(), "close handler (e.g. connection release) must run for setter " + i);
-            assertThrows(IllegalStateException.class, q::query, "query must be closed after failing setter " + i);
-        }
-    }
-
-    // A failure while capturing the original value (before anything is changed) closes the query too.
-    @Test
-    public void testSetFetchSize_CaptureFailure_ClosesQuery() throws SQLException {
-        final SQLException captureFailure = new SQLException("getFetchSize failed");
-        when(preparedStatement.getFetchSize()).thenThrow(captureFailure);
-
-        assertSame(captureFailure, assertThrows(SQLException.class, () -> query.setFetchSize(100)));
-
-        verify(preparedStatement, never()).setFetchSize(anyInt());
-        verify(preparedStatement).close();
-    }
-
-    // setMaxRows second call should reuse the captured default (covers the
-    // `if (defaultMaxRows < 0)` else branch).
-    @Test
-    public void testSetMaxRows_SecondCallDoesNotRecaptureDefault() throws SQLException {
-        when(preparedStatement.getMaxRows()).thenReturn(50);
-
-        query.setMaxRows(200);
-        query.setMaxRows(300);
-
-        // getMaxRows captured exactly once
-        verify(preparedStatement, times(1)).getMaxRows();
-        verify(preparedStatement).setMaxRows(200);
-        verify(preparedStatement).setMaxRows(300);
-
-        query.close();
-
-        verify(preparedStatement).setMaxRows(50); // still restored to original
-    }
-
-    @Test
-    public void testSetLargeMaxRows_SecondCallDoesNotRecaptureDefault() throws SQLException {
-        when(preparedStatement.getLargeMaxRows()).thenReturn(75L);
-
-        query.setLargeMaxRows(500L);
-        query.setLargeMaxRows(600L);
-
-        verify(preparedStatement, times(1)).getLargeMaxRows();
-        verify(preparedStatement).setLargeMaxRows(500L);
-        verify(preparedStatement).setLargeMaxRows(600L);
-
-        query.close();
-
-        verify(preparedStatement).setLargeMaxRows(75L);
-    }
-
-    // findFirst(BiRowFilter, BiRowMapper) no match returns empty Optional (L5962 + L6240)
-    @Test
-    public void testFindFirst_BiRowFilter_BiRowMapper_NoMatchingRow() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(0);
-        when(rs.next()).thenReturn(true, false);
-
-        com.landawn.abacus.util.u.Optional<String> result = query.findFirst((r, labels) -> false, (r, labels) -> "val");
-
-        assertNotNull(result);
-        assertFalse(result.isPresent());
-    }
-
-    // addBatchParameters(Iterator) exception closes query (L3717)
-    @Test
-    public void testAddBatchParameters_Iterator_ExceptionClosesQuery() throws SQLException {
-        doThrow(new SQLException("addBatch failed")).when(preparedStatement).addBatch();
-        assertThrows(SQLException.class, () -> query.addBatchParameters(Arrays.asList("x").iterator()));
-        verify(preparedStatement).close();
-    }
-
-    // addBatchParameters(Iterator, Class) exception closes query (L3764)
-    @Test
-    public void testAddBatchParameters_IteratorWithClass_ExceptionClosesQuery() throws SQLException {
-        doThrow(new SQLException("addBatch failed")).when(preparedStatement).addBatch();
-        assertThrows(SQLException.class, () -> query.addBatchParameters(Arrays.asList("x").iterator(), String.class));
-        verify(preparedStatement).close();
-    }
-
-    // addBatchParameters(Iterator, BiParametersSetter) exception closes query (L3887)
-    @Test
-    public void testAddBatchParameters_BiSetter_ExceptionClosesQuery() throws SQLException {
-        assertThrows(RuntimeException.class, () -> query.addBatchParameters(Arrays.asList("x").iterator(), (q, val) -> {
-            throw new RuntimeException("setter error");
-        }));
-        verify(preparedStatement).close();
-    }
-
-    // addBatchParameters(Iterator, TriParametersSetter) exception closes query (L4018)
-    @Test
-    public void testAddBatchParameters_TriSetter_ExceptionClosesQuery() throws SQLException {
-        assertThrows(RuntimeException.class, () -> query.addBatchParameters(Arrays.asList("x").iterator(), (q, stmt2, val) -> {
-            throw new RuntimeException("setter error");
-        }));
-        verify(preparedStatement).close();
-    }
-
-    // stream(RowFilter, RowMapper) creates stream pipeline (L7375-7384)
-    @Test
-    public void testStream_WithRowFilter_CreatesPipeline() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-
-        try (com.landawn.abacus.util.stream.Stream<String> s = query.stream((r) -> true, r -> r.getString(1))) {
-            assertNotNull(s);
-        }
-    }
-
-    // stream(BiRowFilter, BiRowMapper) creates stream pipeline (L7425-7434)
-    @Test
-    public void testStream_WithBiRowFilter_CreatesPipeline() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(0);
-        when(rs.next()).thenReturn(false);
-
-        try (com.landawn.abacus.util.stream.Stream<String> s = query.stream((r, labels) -> true, (r, labels) -> "val")) {
-            assertNotNull(s);
-        }
-    }
-
-    // streamAllResultSets() – no-arg delegates to ResultExtractor.TO_DATASET (L7601)
-    @Test
-    public void testStreamAllResultSets_NoArg() throws SQLException {
-        when(preparedStatement.execute()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-
-        try (com.landawn.abacus.util.stream.Stream<?> s = query.streamAllResultSets()) {
-            assertNotNull(s);
-        }
-    }
-
-    // streamAllResultSets(ResultExtractor) creates stream pipeline (L7638-7646)
-    @Test
-    public void testStreamAllResultSets_WithResultExtractor() throws SQLException {
-        when(preparedStatement.execute()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-
-        try (com.landawn.abacus.util.stream.Stream<String> s = query.streamAllResultSets(Jdbc.ResultExtractor.TO_DATASET.andThen(ds -> "result"))) {
-            assertNotNull(s);
-        }
-    }
-
-    // streamAllResultSets(BiResultExtractor) creates stream pipeline (L7691-7699)
-    @Test
-    public void testStreamAllResultSets_WithBiResultExtractor() throws SQLException {
-        when(preparedStatement.execute()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-
-        try (com.landawn.abacus.util.stream.Stream<String> s = query.streamAllResultSets(Jdbc.BiResultExtractor.TO_DATASET.andThen(ds -> "result"))) {
-            assertNotNull(s);
-        }
-    }
-
-    // ifExistsOrElse(BiRowConsumer, Runnable) – orElseAction runs when no rows (L7972)
-    @Test
-    public void testIfExistsOrElse_BiRowConsumer_OrElseActionRuns() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(0);
-        when(rs.next()).thenReturn(false); // no rows
-
-        final boolean[] called = { false };
-        query.ifExistsOrElse((r, labels) -> {
-        }, () -> called[0] = true);
-
-        assertTrue(called[0]);
-    }
-
-    // forEach(RowFilter, RowConsumer) – filter rejects row so consumer not called (L8455-8469)
-    @Test
-    public void testForEach_WithRowFilter_FilterRejectsRow() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, false);
-
-        final boolean[] consumed = { false };
-        query.forEach((r) -> false, r -> consumed[0] = true);
-
-        assertFalse(consumed[0]);
-    }
-
-    // foreach(Class, Consumer<DisposableObjArray>) delegates to forEach(RowConsumer) (L8686-8689)
-    @Test
-    public void testForeach_WithEntityClassAndConsumer() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(0);
-        when(rs.next()).thenReturn(false);
-
-        // No rows, so the consumer must never be invoked and the delegation must not throw.
-        final boolean[] consumed = { false };
-        assertDoesNotThrow(() -> query.foreach(String.class, arr -> consumed[0] = true));
-        assertFalse(consumed[0]);
-    }
-
-    // foreach(Class, Consumer<DisposableObjArray>) — null entityClass must throw IllegalArgumentException (bug fix)
-    @Test
-    public void testForeach_NullEntityClass_ThrowsIllegalArgumentException() {
-        assertThrows(IllegalArgumentException.class, () -> query.foreach(null, arr -> {
-        }));
-    }
-
-    @Test
-    public void testSetNString_NonNull() throws SQLException {
-        TestQuery result = query.setNString(1, (CharSequence) "hello");
-        assertSame(query, result);
-        verify(preparedStatement).setNString(1, "hello");
-    }
-
-    @Test
-    public void testSetNString_Null() throws SQLException {
-        query.setNString(1, (CharSequence) null);
-        verify(preparedStatement).setNString(1, null);
-    }
-
-    // setDate(int, java.util.Date) - converts non-sql Date to java.sql.Date
-    @Test
-    public void testSetDate_UtilDate_NonNull() throws SQLException {
-        java.util.Date utilDate = new java.util.Date(1000L);
-        query.setDate(1, utilDate);
-        verify(preparedStatement).setDate(1, new java.sql.Date(1000L));
-    }
-
-    @Test
-    public void testSetDate_UtilDate_Null() throws SQLException {
-        query.setDate(1, (java.util.Date) null);
-        verify(preparedStatement).setDate(1, (java.sql.Date) null);
-    }
-
-    @Test
-    public void testSetDate_SqlDate_WithCalendar() throws SQLException {
-        java.sql.Date sqlDate = new java.sql.Date(2000L);
-        Calendar cal = Calendar.getInstance();
-        query.setDate(1, sqlDate, cal);
-        verify(preparedStatement).setDate(1, sqlDate, cal);
-    }
-
-    @Test
-    public void testSetDate_LocalDate_NonNull() throws SQLException {
-        LocalDate ld = LocalDate.of(2024, 1, 15);
-        query.setDate(1, ld);
-        verify(preparedStatement).setDate(1, java.sql.Date.valueOf(ld));
-    }
-
-    @Test
-    public void testSetDate_LocalDate_Null() throws SQLException {
-        query.setDate(1, (LocalDate) null);
-        verify(preparedStatement).setDate(1, (java.sql.Date) null);
-    }
-
-    // setTime(int, java.util.Date) - converts non-sql Time
-    @Test
-    public void testSetTime_UtilDate_NonNull() throws SQLException {
-        java.util.Date utilDate = new java.util.Date(3000L);
-        query.setTime(1, utilDate);
-        verify(preparedStatement).setTime(1, new java.sql.Time(3000L));
-    }
-
-    @Test
-    public void testSetTime_UtilDate_Null() throws SQLException {
-        query.setTime(1, (java.util.Date) null);
-        verify(preparedStatement).setTime(1, (java.sql.Time) null);
-    }
-
-    @Test
-    public void testSetTime_SqlTime_WithCalendar() throws SQLException {
-        java.sql.Time sqlTime = new java.sql.Time(4000L);
-        Calendar cal = Calendar.getInstance();
-        query.setTime(1, sqlTime, cal);
-        verify(preparedStatement).setTime(1, sqlTime, cal);
-    }
-
-    @Test
-    public void testSetTime_LocalTime_NonNull() throws SQLException {
-        LocalTime lt = LocalTime.of(14, 30, 0);
-        query.setTime(1, lt);
-        verify(preparedStatement).setTime(1, java.sql.Time.valueOf(lt));
-    }
-
-    @Test
-    public void testSetTime_LocalTime_Null() throws SQLException {
-        query.setTime(1, (LocalTime) null);
-        verify(preparedStatement).setTime(1, (java.sql.Time) null);
-    }
-
-    // setTimestamp variants
-    @Test
-    public void testSetTimestamp_UtilDate_NonNull() throws SQLException {
-        java.util.Date utilDate = new java.util.Date(5000L);
-        query.setTimestamp(1, utilDate);
-        verify(preparedStatement).setTimestamp(1, new Timestamp(5000L));
-    }
-
-    @Test
-    public void testSetTimestamp_UtilDate_Null() throws SQLException {
-        query.setTimestamp(1, (java.util.Date) null);
-        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
-    }
-
-    @Test
-    public void testSetTimestamp_SqlTimestamp_WithCalendar() throws SQLException {
-        Timestamp ts = new Timestamp(6000L);
-        Calendar cal = Calendar.getInstance();
-        query.setTimestamp(1, ts, cal);
-        verify(preparedStatement).setTimestamp(1, ts, cal);
-    }
-
-    @Test
-    public void testSetTimestamp_LocalDateTime_NonNull() throws SQLException {
-        LocalDateTime ldt = LocalDateTime.of(2024, 6, 15, 10, 30, 0);
-        query.setTimestamp(1, ldt);
-        verify(preparedStatement).setTimestamp(1, Timestamp.valueOf(ldt));
-    }
-
-    @Test
-    public void testSetTimestamp_LocalDateTime_Null() throws SQLException {
-        query.setTimestamp(1, (LocalDateTime) null);
-        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
-    }
-
-    @Test
-    public void testSetTimestamp_ZonedDateTime_NonNull() throws SQLException {
-        ZonedDateTime zdt = ZonedDateTime.now();
-        query.setTimestamp(1, zdt);
-        verify(preparedStatement).setTimestamp(1, Timestamp.from(zdt.toInstant()));
-    }
-
-    @Test
-    public void testSetTimestamp_ZonedDateTime_Null() throws SQLException {
-        query.setTimestamp(1, (ZonedDateTime) null);
-        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
-    }
-
-    @Test
-    public void testSetTimestamp_OffsetDateTime_NonNull() throws SQLException {
-        OffsetDateTime odt = OffsetDateTime.now();
-        query.setTimestamp(1, odt);
-        verify(preparedStatement).setTimestamp(1, Timestamp.from(odt.toInstant()));
-    }
-
-    @Test
-    public void testSetTimestamp_OffsetDateTime_Null() throws SQLException {
-        query.setTimestamp(1, (OffsetDateTime) null);
-        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
-    }
-
-    @Test
-    public void testSetTimestamp_Instant_NonNull() throws SQLException {
-        Instant instant = Instant.ofEpochMilli(7000L);
-        query.setTimestamp(1, instant);
-        verify(preparedStatement).setTimestamp(1, Timestamp.from(instant));
-    }
-
-    @Test
-    public void testSetTimestamp_Instant_Null() throws SQLException {
-        query.setTimestamp(1, (Instant) null);
-        verify(preparedStatement).setTimestamp(1, (Timestamp) null);
-    }
-
-    // setFetchDirection: first call saves default (defaultFetchDirection < 0 branch)
-    @Test
-    public void testSetFetchDirection_FirstCall_SavesDefault() throws SQLException {
-        when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_FORWARD);
-        query.setFetchDirection(FetchDirection.FORWARD);
-        verify(preparedStatement).getFetchDirection();
-        verify(preparedStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
-    }
-
-    // forEach(RowFilter, RowConsumer): rowFilter returns true → rowConsumer.accept called (L8463)
-    @Test
-    public void testForEach_WithRowFilter_MatchingRow_CallsConsumer() throws SQLException {
-        ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true, false);
-
-        List<ResultSet> consumed = new ArrayList<>();
-        query.forEach(r -> true, consumed::add);
-        assertEquals(1, consumed.size());
-    }
-
-    // insert(BiRowMapper, Predicate): rs.next() returns false → returns Optional.empty() (L8844)
-    @Test
-    public void testInsert_NoGeneratedKey_ReturnsEmpty() throws SQLException {
-        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
-        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
-        when(generatedKeys.next()).thenReturn(false);
-
-        com.landawn.abacus.util.u.Optional<?> result = query.insert((Jdbc.BiRowMapper<Long>) (rs, cols) -> rs.getLong(1), id -> id == null || (Long) id == 0L);
-        assertTrue(result.isEmpty());
-    }
-
-    // batchInsert(RowMapper, Predicate): all IDs are null → returns empty list (L8961)
-    @Test
-    public void testBatchInsert_RowMapper_AllNullIds_ReturnsEmptyList() throws SQLException {
-        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1 });
-        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
-        when(generatedKeys.next()).thenReturn(true, false);
-
-        @SuppressWarnings("unchecked")
-        Predicate<Object> isDefault = id -> id == null;
-        List<?> result = query.batchInsert((Jdbc.RowMapper<Long>) rs -> null, isDefault);
-        assertEquals(0, result.size());
-    }
-
-    // batchInsert keeps the full key list (one id per row) when at least one key is non-default,
-    // so a legitimate explicit id of 0 is preserved and the 1:1 row-to-id correspondence is not broken.
-    @Test
-    public void testBatchInsert_RowMapper_MixedDefaultIds_ReturnsAll() throws SQLException {
-        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1, 1, 1 });
-        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
-        when(generatedKeys.next()).thenReturn(true, true, true, false);
-        when(generatedKeys.getLong(1)).thenReturn(10L, 0L, 20L);
-
-        Predicate<Object> isDefault = id -> id == null || (Long) id == 0L;
-        List<Long> result = query.batchInsert((Jdbc.RowMapper<Long>) rs -> rs.getLong(1), isDefault);
-
-        assertEquals(List.of(10L, 0L, 20L), result);
-    }
-
-    // listAllResultSets(Class): no result sets → returns empty list (L6685-6709)
-    @Test
-    public void testListAllResultSets_Class_ReturnsEmptyList() throws SQLException {
-        when(preparedStatement.execute()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-        List<List<String>> result = query.listAllResultSets(String.class);
-        assertTrue(result.isEmpty());
-    }
-
-    // createQuerySupplier lambda: executeQuery() throws SQLException → wrapped in UncheckedSQLException (L7706-7707)
-    @Test
-    public void testStream_RowMapper_ExecuteQueryThrows_WrapsUncheckedSQLException() throws SQLException {
-        when(preparedStatement.executeQuery()).thenThrow(new SQLException("forced"));
-        Stream<String> stream = query.stream(rs -> rs.getString(1));
-        assertThrows(UncheckedSQLException.class, stream::toList);
-        verify(preparedStatement).close();
-    }
-
-    // createExecuteSupplier lambda: stmt.execute() throws SQLException → wrapped in UncheckedSQLException (L7715-7717)
-    @Test
-    public void testStreamAllResultSets_ResultExtractor_ExecuteThrows_WrapsUncheckedSQLException() throws SQLException {
-        when(preparedStatement.execute()).thenThrow(new SQLException("forced"));
-        Stream<List<String>> stream = query.streamAllResultSets((Jdbc.ResultExtractor<List<String>>) rs -> new ArrayList<>());
-        assertThrows(UncheckedSQLException.class, stream::toList);
-        verify(preparedStatement).close();
-    }
-
-    // batchInsert(BiRowMapper, Predicate): all IDs are null → returns empty list (L9001)
-    @Test
-    public void testBatchInsert_BiRowMapper_AllNullIds_ReturnsEmptyList() throws SQLException {
-        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
-        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1 });
-        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
-        when(generatedKeys.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(1);
-        when(meta.getColumnLabel(1)).thenReturn("id");
-        when(generatedKeys.next()).thenReturn(true, false);
-
-        @SuppressWarnings("unchecked")
-        Predicate<Object> isDefault = id -> id == null;
-        List<?> result = query.batchInsert((Jdbc.BiRowMapper<Long>) (rs, cols) -> null, isDefault);
-        assertEquals(0, result.size());
-    }
-
-    // batchInsert keeps the full key list (one id per row) when at least one key is non-default,
-    // so a legitimate explicit id of 0 is preserved and the 1:1 row-to-id correspondence is not broken.
-    @Test
-    public void testBatchInsert_BiRowMapper_MixedDefaultIds_ReturnsAll() throws SQLException {
-        ResultSet generatedKeys = Mockito.mock(ResultSet.class);
-        ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1, 1, 1 });
-        when(preparedStatement.getGeneratedKeys()).thenReturn(generatedKeys);
-        when(generatedKeys.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(1);
-        when(meta.getColumnLabel(1)).thenReturn("id");
-        when(generatedKeys.next()).thenReturn(true, true, true, false);
-        when(generatedKeys.getLong(1)).thenReturn(10L, 0L, 20L);
-
-        Predicate<Object> isDefault = id -> id == null || (Long) id == 0L;
-        List<Long> result = query.batchInsert((Jdbc.BiRowMapper<Long>) (rs, cols) -> rs.getLong(1), isDefault);
-
-        assertEquals(List.of(10L, 0L, 20L), result);
-    }
-
-    @Tag("2025")
-    @DisplayName("list(null) should throw IllegalArgumentException mentioning targetType")
-    @Test
-    public void testList_NullTargetType_ThrowsIllegalArgumentException() {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.list((Class<?>) null));
-        assertTrue(iae.getMessage().contains("targetType"));
-    }
-
-    @Tag("2025")
-    @DisplayName("stream(null) should throw IllegalArgumentException mentioning targetType")
-    @Test
-    public void testStream_NullTargetType_ThrowsIllegalArgumentException() {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.stream((Class<?>) null));
-        assertTrue(iae.getMessage().contains("targetType"));
-    }
-
-    @Tag("2025")
-    @DisplayName("listThenApply(null, func) should throw IllegalArgumentException mentioning targetType")
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testListThenApply_NullTargetType_ThrowsIllegalArgumentException() {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.listThenApply((Class<String>) null, (Throwables.Function<List<String>, String, RuntimeException>) list -> "ok"));
-        assertTrue(iae.getMessage().contains("targetType"));
-    }
-
-    @Tag("2025")
-    @DisplayName("listThenAccept(null, consumer) should throw IllegalArgumentException mentioning targetType")
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testListThenAccept_NullTargetType_ThrowsIllegalArgumentException() {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.listThenAccept((Class<String>) null, (Throwables.Consumer<List<String>, RuntimeException>) list -> {
-                }));
-        assertTrue(iae.getMessage().contains("targetType"));
-    }
-
-    @Tag("2025")
-    @DisplayName("assertNotClosed should include class name in error message")
-    @Test
-    public void testAssertNotClosed_ErrorMessageContainsClassName() {
-        query.close();
-
-        final IllegalStateException ise = assertThrows(IllegalStateException.class, () -> query.update());
-        assertTrue(ise.getMessage().contains("TestQuery"));
-        assertTrue(ise.getMessage().contains("closed"));
-    }
-
-    @Tag("2025")
-    @DisplayName("onClose handler registered after close should throw IllegalStateException")
-    @Test
-    public void testOnClose_AfterClose_ThrowsIllegalStateException() {
-        query.close();
-
-        assertThrows(IllegalStateException.class, () -> query.onClose(() -> {
-        }));
-    }
-
-    @Test
-    public void testOnCloseChecksClosedStateBeforeNullHandler() throws SQLException {
-        query.close();
-
-        assertThrows(IllegalStateException.class, () -> query.onClose(null));
-
-        verify(preparedStatement, times(1)).close();
-    }
-
-    @Tag("2025")
-    @DisplayName("list(Class, int) with null targetType should throw IllegalArgumentException")
-    @Test
-    @SuppressWarnings("deprecation")
-    public void testList_WithLimit_NullTargetType_ThrowsIllegalArgumentException() {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.list((Class<?>) null, 10));
-        assertTrue(iae.getMessage().contains("targetType"));
-    }
-
-    @Test
-    @SuppressWarnings("deprecation")
-    public void testListRejectsNegativeLimitBeforeExecution() throws SQLException {
-        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> query.list(String.class, -1));
-
-        assertTrue(failure.getMessage().contains("maxResult"));
-        verify(preparedStatement, never()).executeQuery();
-        verify(preparedStatement).close();
-    }
-
-    // queryForUniqueValue(Type) - no rows returns Nullable.empty() (L4998)
-    @Test
-    public void testQueryForUniqueValue_Type_NoResult_ReturnsEmpty() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-
-        final com.landawn.abacus.util.u.Nullable<String> result = query.queryForUniqueValue(Type.of(String.class));
-
-        assertFalse(result.isPresent());
-    }
-
-    // queryForUniqueNonNull(Type) - no rows returns Optional.empty() (L5074)
-    @Test
-    public void testQueryForUniqueNonNull_Type_NoResult_ReturnsEmpty() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-
-        final com.landawn.abacus.util.u.Optional<String> result = query.queryForUniqueNonNull(Type.of(String.class));
-
-        assertFalse(result.isPresent());
-    }
-
-    // setDate(int, java.util.Date) with java.sql.Date instance when instanceof check is true (L1251)
-    @Test
-    public void testSetDate_UtilDate_WithSqlDateInstance() throws SQLException {
-        final java.sql.Date sqlDate = new java.sql.Date(5000L);
-        query.setDate(1, (java.util.Date) sqlDate);
-        verify(preparedStatement).setDate(1, sqlDate);
-    }
-
-    // setTime(int, java.util.Date) with java.sql.Time instance when instanceof check is true (L1333)
-    @Test
-    public void testSetTime_UtilDate_WithSqlTimeInstance() throws SQLException {
-        final java.sql.Time sqlTime = new java.sql.Time(6000L);
-        query.setTime(1, (java.util.Date) sqlTime);
-        verify(preparedStatement).setTime(1, sqlTime);
-    }
-
-    // setTimestamp(int, java.util.Date) with java.sql.Timestamp instance when instanceof check is true (L1415)
-    @Test
-    public void testSetTimestamp_UtilDate_WithSqlTimestampInstance() throws SQLException {
-        final java.sql.Timestamp sqlTs = new java.sql.Timestamp(7000L);
-        query.setTimestamp(1, (java.util.Date) sqlTs);
-        verify(preparedStatement).setTimestamp(1, sqlTs);
-    }
-
-    // Consume streamAllResultSets to trigger createExecuteSupplier -> JdbcUtil.execute(stmt) (L7759)
-    @Test
-    public void testStreamAllResultSets_ConsumeStream_HitsExecuteSupplier() throws SQLException {
-        when(preparedStatement.execute()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-
-        try (com.landawn.abacus.util.stream.Stream<com.landawn.abacus.util.Dataset> s = query.streamAllResultSets()) {
-            assertNotNull(s);
-            final java.util.List<com.landawn.abacus.util.Dataset> results = s.toList();
-            assertEquals(0, results.size());
-        }
-    }
-
-    // listAllResultSets(Class) with at least one ResultSet → covers NC L6739 (while loop body)
-    @Test
-    public void testListAllResultSets_Class_WithResultSet() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(0);
-        when(rs.next()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-
-        final List<List<String>> result = query.listAllResultSets(String.class);
-
-        assertEquals(1, result.size());
-        assertTrue(result.get(0).isEmpty());
-    }
-
-    // setFetchDirection second call → default already saved, covers PC L4130 else branch
-    @Test
-    public void testSetFetchDirection_SecondCall_DoesNotResaveDefault() throws SQLException {
-        when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_FORWARD);
-        query.setFetchDirection(FetchDirection.FORWARD);
-        query.setFetchDirection(FetchDirection.REVERSE);
-        verify(preparedStatement, times(1)).getFetchDirection();
-    }
-
-    // setFetchSize second call → default already saved, covers PC L4180 else branch
-    @Test
-    public void testSetFetchSize_SecondCall_DoesNotResaveDefault() throws SQLException {
-        when(preparedStatement.getFetchSize()).thenReturn(100);
-        query.setFetchSize(50);
-        query.setFetchSize(200);
-        verify(preparedStatement, times(1)).getFetchSize();
-    }
-
-    // setMaxFieldSize second call → default already saved, covers PC L4208 else branch
-    @Test
-    public void testSetMaxFieldSize_SecondCall_DoesNotResaveDefault() throws SQLException {
-        when(preparedStatement.getMaxFieldSize()).thenReturn(1024);
-        query.setMaxFieldSize(512);
-        query.setMaxFieldSize(2048);
-        verify(preparedStatement, times(1)).getMaxFieldSize();
-    }
-
-    // setQueryTimeout second call → default already saved, covers PC L4281 else branch
-    @Test
-    public void testSetQueryTimeout_SecondCall_DoesNotResaveDefault() throws SQLException {
-        when(preparedStatement.getQueryTimeout()).thenReturn(30);
-        query.setQueryTimeout(10);
-        query.setQueryTimeout(60);
-        verify(preparedStatement, times(1)).getQueryTimeout();
-    }
-
-    // queryForByte with result row → covers PC L4464 true branch
-    @Test
-    public void testQueryForByte_WithResult() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getByte(1)).thenReturn((byte) 42);
-
-        assertEquals(OptionalByte.of((byte) 42), query.queryForByte());
-    }
-
-    // queryForShort with result row → covers PC L4492 true branch
-    @Test
-    public void testQueryForShort_WithResult() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getShort(1)).thenReturn((short) 999);
-
-        assertEquals(OptionalShort.of((short) 999), query.queryForShort());
-    }
-
-    // queryForLong with result row → covers PC L4551 true branch
-    @Test
-    public void testQueryForLong_WithResult() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getLong(1)).thenReturn(888L);
-
-        assertEquals(OptionalLong.of(888L), query.queryForLong());
-    }
-
-    // queryForFloat with result row → covers PC L4579 true branch
-    @Test
-    public void testQueryForFloat_WithResult() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getFloat(1)).thenReturn(3.14f);
-
-        assertEquals(OptionalFloat.of(3.14f), query.queryForFloat());
-    }
-
-    // queryForDouble with result row → covers PC L4607 true branch
-    @Test
-    public void testQueryForDouble_WithResult() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(true);
-        when(rs.getDouble(1)).thenReturn(2.718);
-
-        assertEquals(OptionalDouble.of(2.718), query.queryForDouble());
-    }
-
-    // ---- addBatchParameters(Iterator) must clear parameters before every row ----
-    // Regression: AbstractQuery.addBatchParameters(Iterator) iterated setParameters(Collection)/setParameters(Object[])
-    // without calling stmt.clearParameters() first — so when a follow-up row was shorter than the first, positions
-    // beyond the new row's length retained values from the earlier row. AbstractQuery now clears before every row
-    // (including the first, to also drop any positions pre-bound via setXxx), matching NamedQuery's pattern.
-
-    @Test
-    public void testAddBatchParameters_Iterator_Collection_ClearsBetweenRows() throws SQLException {
-        final java.util.List<java.util.Collection<?>> rows = new java.util.ArrayList<>();
-        rows.add(java.util.Arrays.asList("a", "b", "c"));
-        rows.add(java.util.Arrays.asList("x", "y"));
-
-        query.addBatchParameters(rows.iterator());
-
-        // clearParameters() is called before every row (including the first) — twice for two rows.
-        verify(preparedStatement, times(2)).clearParameters();
-        // Both rows reached addBatch.
-        verify(preparedStatement, times(2)).addBatch();
-    }
-
-    @Test
-    public void testAddBatchParameters_Iterator_ObjectArray_ClearsBetweenRows() throws SQLException {
-        final java.util.List<Object[]> rows = new java.util.ArrayList<>();
-        rows.add(new Object[] { "a", "b", "c" });
-        rows.add(new Object[] { "x", "y" });
-
-        query.addBatchParameters(rows.iterator());
-
-        verify(preparedStatement, times(2)).clearParameters();
-        verify(preparedStatement, times(2)).addBatch();
-    }
-
-    @Test
-    public void testQueryThenApplyRejectsNullFunctionBeforeQueryExecution() throws SQLException {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.queryThenApply((Throwables.Function<? super com.landawn.abacus.util.Dataset, Object, RuntimeException>) null));
-
-        assertTrue(iae.getMessage().contains("func"));
-        verify(preparedStatement, never()).executeQuery();
-    }
-
-    @Test
-    public void testQueryThenApplyClassRejectsNullFunctionBeforeQueryExecution() throws SQLException {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.queryThenApply(QueryEntity.class, (Throwables.Function<? super com.landawn.abacus.util.Dataset, Object, RuntimeException>) null));
-
-        assertTrue(iae.getMessage().contains("func"));
-        verify(preparedStatement, never()).executeQuery();
-    }
-
-    @Test
-    public void testQueryThenAcceptRejectsNullConsumerBeforeQueryExecution() throws SQLException {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.queryThenAccept((Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
-
-        assertTrue(iae.getMessage().contains("consumer"));
-        verify(preparedStatement, never()).executeQuery();
-    }
-
-    @Test
-    public void testQueryThenAcceptClassRejectsNullConsumerBeforeQueryExecution() throws SQLException {
-        final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class,
-                () -> query.queryThenAccept(QueryEntity.class, (Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
-
-        assertTrue(iae.getMessage().contains("consumer"));
-        verify(preparedStatement, never()).executeQuery();
-    }
-
-    @Test
-    public void testQueryThenApplyChecksEntityTypeBeforeNullFunction() throws SQLException {
-        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> query.queryThenApply(String.class, (Throwables.Function<? super com.landawn.abacus.util.Dataset, Object, RuntimeException>) null));
-
-        assertTrue(failure.getMessage().contains("not a valid entity class"));
-        verify(preparedStatement, never()).executeQuery();
-        verify(preparedStatement, never()).close();
-    }
-
-    @Test
-    public void testQueryThenAcceptChecksEntityTypeBeforeNullConsumer() throws SQLException {
-        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> query.queryThenAccept(String.class, (Throwables.Consumer<? super com.landawn.abacus.util.Dataset, RuntimeException>) null));
-
-        assertTrue(failure.getMessage().contains("not a valid entity class"));
-        verify(preparedStatement, never()).executeQuery();
-        verify(preparedStatement, never()).close();
-    }
-
-    @Test
-    public void testStreamAllResultSets_CloseClosesBufferedResultSetAndDrainsReusableStatement() throws SQLException {
-        final ResultSet first = Mockito.mock(ResultSet.class);
-        final ResultSet second = Mockito.mock(ResultSet.class);
-
-        when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(first, second);
-        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, false);
-        when(preparedStatement.getMoreResults()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-        query.closeAfterExecution(false);
-
-        try (Stream<String> stream = query.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
-            final java.util.Iterator<String> iter = stream.iterator();
-            assertTrue(iter.hasNext());
-            assertEquals("value", iter.next());
-            assertTrue(iter.hasNext());
-        }
-
-        verify(first).close();
-        verify(second).close();
-        verify(preparedStatement).getMoreResults();
-        verify(preparedStatement, never()).close();
+        assertEquals(128, query.getFetchSize());
+        assertEquals(ResultSet.FETCH_REVERSE, query.getFetchDirection());
     }
 
     @Test
-    public void testRowStreamsRejectQueryClosedBeforeTraversal() throws SQLException {
-        for (final boolean closeAfterExecution : new boolean[] { false, true }) {
-            for (int mapperVariant = 0; mapperVariant < 4; mapperVariant++) {
-                final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
-                final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution);
-
-                try (Stream<String> rows = switch (mapperVariant) {
-                    case 0 -> streamQuery.stream((Jdbc.RowMapper<String>) rs -> "value");
-                    case 1 -> streamQuery.stream((Jdbc.BiRowMapper<String>) (rs, labels) -> "value");
-                    case 2 -> streamQuery.stream(rs -> true, rs -> "value");
-                    default -> streamQuery.stream((rs, labels) -> true, (rs, labels) -> "value");
-                }) {
-                    streamQuery.close();
+    public void testNullOnCloseDoesNotRunCloseHandlersUnderQueryMonitor() {
+        final CountDownLatch registrationFinished = new CountDownLatch(1);
+        final AtomicReference<Throwable> registrationFailure = new AtomicReference<>();
 
-                    final IllegalStateException failure = assertThrows(IllegalStateException.class, rows::toList);
-                    assertTrue(failure.getMessage().contains("already been closed"));
+        query.onClose(() -> {
+            final Thread registration = new Thread(() -> {
+                try {
+                    assertThrows(IllegalStateException.class, () -> query.onClose(() -> {
+                    }));
+                } catch (final Throwable e) {
+                    registrationFailure.set(e);
+                } finally {
+                    registrationFinished.countDown();
                 }
+            }, "registration-from-close-handler");
 
-                verify(statement, never()).getFetchDirection();
-                verify(statement, never()).executeQuery();
-                verify(statement).close();
+            registration.start();
+
+            try {
+                assertTrue(registrationFinished.await(1, TimeUnit.SECONDS), "close handler must not hold the monitor needed by another lifecycle call");
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError(e);
             }
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> query.onClose(null));
+        assertTrue(query.isClosed);
+        assertNull(registrationFailure.get());
+    }
+
+    @Test
+    public void testResultSetStreamExtractorFailureKeepsReusableDrainFailureSuppressed() throws SQLException {
+        for (final boolean withColumnLabels : new boolean[] { false, true }) {
+            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+            final ResultSet rs = Mockito.mock(ResultSet.class);
+            final SQLException extractionFailure = new SQLException("result extraction failed");
+            final SQLException drainFailure = new SQLException("remaining result drain failed");
+            final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(false);
+            when(statement.execute()).thenReturn(true);
+            when(statement.getResultSet()).thenReturn(rs);
+            when(statement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(false);
+            when(statement.getMoreResults()).thenThrow(drainFailure);
+            when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
+            final Jdbc.ResultExtractor<String> extractor = result -> {
+                throw extractionFailure;
+            };
+            final Jdbc.BiResultExtractor<String> biExtractor = (result, labels) -> {
+                throw extractionFailure;
+            };
+
+            try (Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets(biExtractor) : streamQuery.streamAllResultSets(extractor)) {
+                final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
+                assertSame(extractionFailure, thrown.getCause());
+                assertEquals(1, thrown.getSuppressed().length);
+                assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
+                assertSame(drainFailure, thrown.getSuppressed()[0].getCause());
+            }
+
+            verify(rs).close();
+            verify(statement).getMoreResults();
+            verify(statement, never()).close();
+            assertFalse(streamQuery.isClosed);
+        }
+    }
+
+    @Test
+    public void testResultSetStreamReadFailureKeepsCloseHandlerFailureSuppressed() throws SQLException {
+        for (final boolean withColumnLabels : new boolean[] { false, true }) {
+            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+            final ResultSet rs = Mockito.mock(ResultSet.class);
+            final SQLException readFailure = new SQLException("advancing result sets failed");
+            final IllegalStateException closeFailure = new IllegalStateException("query close handler failed");
+            final TestQuery streamQuery = new TestQuery(statement).onClose(() -> {
+                throw closeFailure;
+            });
+            when(statement.execute()).thenReturn(true);
+            when(statement.getResultSet()).thenReturn(rs);
+            when(statement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(readFailure);
+
+            try (Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (result, labels) -> "value")
+                    : streamQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) result -> "value")) {
+                final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
+                assertSame(readFailure, thrown.getCause());
+                assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
+            }
+
+            verify(rs).close();
+            verify(statement).close();
+            assertTrue(streamQuery.isClosed);
         }
     }
 
@@ -2145,53 +348,6 @@ public class AbstractQueryTest extends TestBase {
                 verify(statement, never()).execute();
                 verify(statement, never()).getMoreResults();
                 verify(statement).close();
-            }
-        }
-    }
-
-    @Test
-    public void testRowStreamTerminalPathsRemainLazyAndCloseOnce() throws SQLException {
-        for (final boolean closeAfterExecution : new boolean[] { false, true }) {
-            for (int mapperVariant = 0; mapperVariant < 4; mapperVariant++) {
-                for (int terminalVariant = 0; terminalVariant < 4; terminalVariant++) {
-                    final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
-                    final ResultSet rs = Mockito.mock(ResultSet.class);
-                    final AtomicInteger mappedRows = new AtomicInteger();
-                    final AtomicInteger closeHandlerCalls = new AtomicInteger();
-                    final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution).onClose(closeHandlerCalls::incrementAndGet);
-                    when(statement.executeQuery()).thenReturn(rs);
-                    when(rs.next()).thenReturn(true, true, true, false);
-                    when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
-                    final Jdbc.RowMapper<Integer> rowMapper = row -> mappedRows.incrementAndGet();
-                    final Jdbc.BiRowMapper<Integer> biRowMapper = (row, labels) -> mappedRows.incrementAndGet();
-
-                    try (Stream<Integer> rows = switch (mapperVariant) {
-                        case 0 -> streamQuery.stream(rowMapper);
-                        case 1 -> streamQuery.stream(biRowMapper);
-                        case 2 -> streamQuery.stream(row -> true, rowMapper);
-                        default -> streamQuery.stream((row, labels) -> true, biRowMapper);
-                    }) {
-                        Mockito.verifyNoInteractions(statement, rs);
-
-                        switch (terminalVariant) {
-                            case 0 -> assertEquals(3, rows.count());
-                            case 1 -> assertArrayEquals(new Object[] { 3 }, rows.skip(2).toArray());
-                            case 2 -> assertArrayEquals(new Integer[] { 1, 2, 3 }, rows.toArray(Integer[]::new));
-                            default -> assertEquals(0, rows.limit(0).count());
-                        }
-                    }
-
-                    assertEquals(terminalVariant == 3 ? 0 : 3, mappedRows.get());
-                    verify(statement, times(terminalVariant == 3 ? 0 : 1)).executeQuery();
-                    verify(rs, times(terminalVariant == 3 ? 0 : 4)).next();
-                    verify(rs, times(terminalVariant == 3 ? 0 : 1)).close();
-                    verify(statement, times(closeAfterExecution ? 1 : 0)).close();
-                    assertEquals(closeAfterExecution ? 1 : 0, closeHandlerCalls.get());
-                    assertEquals(closeAfterExecution, streamQuery.isClosed);
-                    streamQuery.close();
-                    verify(statement).close();
-                    assertEquals(1, closeHandlerCalls.get());
-                }
             }
         }
     }
@@ -2284,538 +440,134 @@ public class AbstractQueryTest extends TestBase {
     }
 
     @Test
-    public void testResultSetStreamExtractorFailureKeepsReusableDrainFailureSuppressed() throws SQLException {
-        for (final boolean withColumnLabels : new boolean[] { false, true }) {
-            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
-            final ResultSet rs = Mockito.mock(ResultSet.class);
-            final SQLException extractionFailure = new SQLException("result extraction failed");
-            final SQLException drainFailure = new SQLException("remaining result drain failed");
-            final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(false);
-            when(statement.execute()).thenReturn(true);
-            when(statement.getResultSet()).thenReturn(rs);
-            when(statement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(false);
-            when(statement.getMoreResults()).thenThrow(drainFailure);
-            when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
-            final Jdbc.ResultExtractor<String> extractor = result -> {
-                throw extractionFailure;
-            };
-            final Jdbc.BiResultExtractor<String> biExtractor = (result, labels) -> {
-                throw extractionFailure;
-            };
+    public void testRowStreamsRejectQueryClosedBeforeTraversal() throws SQLException {
+        for (final boolean closeAfterExecution : new boolean[] { false, true }) {
+            for (int mapperVariant = 0; mapperVariant < 4; mapperVariant++) {
+                final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+                final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution);
 
-            try (Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets(biExtractor) : streamQuery.streamAllResultSets(extractor)) {
-                final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
-                assertSame(extractionFailure, thrown.getCause());
-                assertEquals(1, thrown.getSuppressed().length);
-                assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
-                assertSame(drainFailure, thrown.getSuppressed()[0].getCause());
-            }
+                try (Stream<String> rows = switch (mapperVariant) {
+                    case 0 -> streamQuery.stream((Jdbc.RowMapper<String>) rs -> "value");
+                    case 1 -> streamQuery.stream((Jdbc.BiRowMapper<String>) (rs, labels) -> "value");
+                    case 2 -> streamQuery.stream(rs -> true, rs -> "value");
+                    default -> streamQuery.stream((rs, labels) -> true, (rs, labels) -> "value");
+                }) {
+                    streamQuery.close();
 
-            verify(rs).close();
-            verify(statement).getMoreResults();
-            verify(statement, never()).close();
-            assertFalse(streamQuery.isClosed);
-        }
-    }
-
-    // Regression: with closeAfterExecution(false), closing a partially consumed streamAllResultSets stream after
-    // the caller had already closed the query still drained the (closed) statement, so Stream.close() threw the
-    // driver's "statement is closed" SQLException wrapped in UncheckedSQLException.
-    @Test
-    public void testStreamAllResultSetsClosedAfterQueryCloseDoesNotDrainClosedStatement() throws SQLException {
-        for (final boolean withColumnLabels : new boolean[] { false, true }) {
-            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
-            final ResultSet rs = Mockito.mock(ResultSet.class);
-            final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(false);
-            when(statement.execute()).thenReturn(true);
-            when(statement.getResultSet()).thenReturn(rs);
-            when(statement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true);
-            when(statement.getMoreResults()).thenThrow(new SQLException("Statement is closed"));
-            when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
-
-            final Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (result, labels) -> "value")
-                    : streamQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) result -> "value");
-            final java.util.Iterator<String> iter = results.iterator();
-            assertEquals("value", iter.next());
-
-            streamQuery.close();
-            assertDoesNotThrow(results::close);
-
-            verify(statement, never()).getMoreResults();
-            verify(statement).close();
-        }
-    }
-
-    @Test
-    public void testResultSetStreamReadFailureKeepsCloseHandlerFailureSuppressed() throws SQLException {
-        for (final boolean withColumnLabels : new boolean[] { false, true }) {
-            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
-            final ResultSet rs = Mockito.mock(ResultSet.class);
-            final SQLException readFailure = new SQLException("advancing result sets failed");
-            final IllegalStateException closeFailure = new IllegalStateException("query close handler failed");
-            final TestQuery streamQuery = new TestQuery(statement).onClose(() -> {
-                throw closeFailure;
-            });
-            when(statement.execute()).thenReturn(true);
-            when(statement.getResultSet()).thenReturn(rs);
-            when(statement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(readFailure);
-
-            try (Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (result, labels) -> "value")
-                    : streamQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) result -> "value")) {
-                final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
-                assertSame(readFailure, thrown.getCause());
-                assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
-            }
-
-            verify(rs).close();
-            verify(statement).close();
-            assertTrue(streamQuery.isClosed);
-        }
-    }
-
-    @Test
-    public void testStreamAllResultSetsClosingBeforeTraversalLeavesReusableStatementUntouched() throws SQLException {
-        query.closeAfterExecution(false);
-        when(preparedStatement.getMoreResults()).thenThrow(new SQLException("Statement has not been executed"));
-
-        try (Stream<String> results = query.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
-            assertNotNull(results);
-        }
-        try (Stream<String> results = query.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")) {
-            assertNotNull(results);
-        }
-
-        verify(preparedStatement, never()).execute();
-        verify(preparedStatement, never()).getMoreResults();
-        verify(preparedStatement, never()).getUpdateCount();
-        verify(preparedStatement, never()).close();
-        assertFalse(query.isClosed);
-    }
-
-    @Test
-    public void testStreamAllResultSetsClosingBeforeTraversalStillClosesOwnedStatement() throws SQLException {
-        for (final boolean withColumnLabels : new boolean[] { false, true }) {
-            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
-            final TestQuery ownedQuery = new TestQuery(statement);
-
-            try (Stream<String> results = withColumnLabels ? ownedQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")
-                    : ownedQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
-                assertNotNull(results);
-            }
-
-            verify(statement, never()).execute();
-            verify(statement, never()).getMoreResults();
-            verify(statement).close();
-            assertTrue(ownedQuery.isClosed);
-        }
-    }
-
-    @Test
-    public void testStreamAllResultSetsFailedExecutionDoesNotDrainReusableStatementOnClose() throws SQLException {
-        final SQLException executionFailure = new SQLException("execution failed");
-        when(preparedStatement.execute()).thenThrow(executionFailure);
-        when(preparedStatement.getMoreResults()).thenThrow(new SQLException("Statement has not been executed"));
-        query.closeAfterExecution(false);
-
-        try (Stream<String> results = query.streamAllResultSets((Jdbc.ResultExtractor<String>) rs -> "value")) {
-            final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
-            assertSame(executionFailure, thrown.getCause());
-        }
-        try (Stream<String> results = query.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")) {
-            final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, results::toList);
-            assertSame(executionFailure, thrown.getCause());
-        }
-
-        verify(preparedStatement, never()).getMoreResults();
-        verify(preparedStatement, never()).close();
-    }
-
-    // TODO: L142 (static initializer) - uncovered branch requires method with parameterTypes[0] != int, edge case not testable
-    // TODO: L7427, L7477 (stream(RowFilter/BiRowFilter) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods
-    // TODO: L7688-L7689, L7741-L7742 (streamAllResultSets(Extractor/BiExtractor) lambdas) - partially covered, requires stream consumption through JdbcUtil static methods
-
-    // Regression: setFloat(int, Float) used Types.FLOAT for SQL null. Per JDBC spec Appendix B.4,
-    // Java float maps to SQL REAL (4-byte); Types.FLOAT is an alias for Types.DOUBLE (8-byte).
-    // Strict drivers reject the SQL-type/value mismatch or coerce, losing precision metadata.
-    // Sibling setDouble correctly uses Types.DOUBLE.
-    @Test
-    public void testSetFloat_NullUsesTypesREAL() throws SQLException {
-        query.setFloat(1, (Float) null);
-        verify(preparedStatement).setNull(1, Types.REAL);
-        // Pre-fix this was setNull(1, Types.FLOAT) — make sure the wrong type is NOT used.
-        verify(preparedStatement, never()).setNull(1, Types.FLOAT);
-    }
-
-    // Regression: executeQuery() forced FETCH_FORWARD without capturing the driver-default
-    // direction first, so closeStatement() couldn't restore it. For pooled PreparedStatements
-    // this silently leaked the FETCH_FORWARD setting to the next caller.
-    // executeQuery is protected; we exercise it via reflection through a TestQuery instance.
-    @Test
-    public void testExecuteQuery_CapturesDefaultFetchDirectionForRestoration() throws Exception {
-        // Pre-set the "current" fetch direction the driver would report (e.g., FETCH_REVERSE).
-        when(preparedStatement.getFetchDirection()).thenReturn(ResultSet.FETCH_REVERSE);
-
-        // Invoke the protected executeQuery via reflection.
-        final java.lang.reflect.Method m = AbstractQuery.class.getDeclaredMethod("executeQuery");
-        m.setAccessible(true);
-        m.invoke(query);
-
-        // The fix captures the prior fetch direction before forcing FORWARD.
-        verify(preparedStatement).getFetchDirection();
-        verify(preparedStatement).setFetchDirection(ResultSet.FETCH_FORWARD);
-
-        // close() must restore the original FETCH_REVERSE direction. Pre-fix the capture never
-        // happened and the restoration in closeStatement was a no-op (default == -1).
-        query.close();
-        verify(preparedStatement).setFetchDirection(ResultSet.FETCH_REVERSE);
-    }
-
-    // Consuming stream(RowFilter, RowMapper) forces the flatMap lambda (L7686) to run:
-    // map(Supplier::get) executes the query, flatMap builds JdbcUtil.stream(rs, filter, mapper).
-    @Test
-    public void testStream_WithRowFilter_Consumed() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.next()).thenReturn(false);
-
-        try (Stream<String> s = query.stream((r) -> true, r -> r.getString(1))) {
-            final List<String> result = s.toList();
-            assertEquals(0, result.size());
-        }
-    }
-
-    // Consuming stream(BiRowFilter, BiRowMapper) forces the flatMap lambda (L7734) to run;
-    // the BiRowFilter iterate path reads column labels first, so metadata must be stubbed.
-    @Test
-    public void testStream_WithBiRowFilter_Consumed() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-        when(preparedStatement.executeQuery()).thenReturn(rs);
-        when(rs.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(0);
-        when(rs.next()).thenReturn(false);
-
-        try (Stream<String> s = query.stream((r, labels) -> true, (r, labels) -> "val")) {
-            final List<String> result = s.toList();
-            assertEquals(0, result.size());
-        }
-    }
-
-    // Fully consuming streamAllResultSets(BiResultExtractor) over two result sets drives the
-    // iterateAllResultSets flatMap + mapE + onClose path (L7874-7884). The BiResultExtractor
-    // receives column labels via getColumnLabels(rs), so each ResultSet needs metadata.
-    @Test
-    public void testStreamAllResultSets_WithBiResultExtractor_MultipleResultSets() throws SQLException {
-        final ResultSet first = Mockito.mock(ResultSet.class);
-        final ResultSet second = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
-
-        when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(first, second);
-        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, false);
-        // -1 update count signals "no more results" so the fully-drained iterator terminates.
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-        when(first.getMetaData()).thenReturn(meta);
-        when(second.getMetaData()).thenReturn(meta);
-        when(meta.getColumnCount()).thenReturn(0);
-
-        try (Stream<String> stream = query.streamAllResultSets((Jdbc.BiResultExtractor<String>) (rs, labels) -> "value")) {
-            final List<String> result = stream.toList();
-            assertEquals(List.of("value", "value"), result);
-        }
-
-        verify(first).close();
-        verify(second).close();
-    }
-
-    // Closed-query state is checked before input-parameter validation on execution methods.
-    @Test
-    @Tag("2025")
-    public void testDelegatingOverloads_ClosedQueryValidationPriority() {
-        query.close();
-
-        assertThrows(IllegalStateException.class, () -> query.query((Class<?>) null));
-        assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null));
-        assertThrows(IllegalStateException.class, () -> query.stream((Class<String>) null));
-        assertThrows(IllegalStateException.class, () -> query.foreach((Consumer<DisposableObjArray>) null));
-        assertThrows(IllegalStateException.class, () -> query.foreach(String.class, null));
-    }
-
-    @Test
-    @Tag("2025")
-    @SuppressWarnings("deprecation")
-    public void testListWithMaxResult_ClosedQueryWithNullArg_ThrowsIllegalStateNotIllegalArgument() {
-        query.close();
-
-        assertThrows(IllegalStateException.class, () -> query.list((Class<String>) null, 10));
-    }
-
-    // Closed-query state is checked before null functional-argument validation.
-    @Test
-    @Tag("2025")
-    public void testQueryThenListThenHelpers_ClosedQueryWithNullArg_ThrowsIllegalState() {
-        query.close();
-
-        assertThrows(IllegalStateException.class, () -> query.queryThenApply(null));
-        assertThrows(IllegalStateException.class, () -> query.queryThenApply(String.class, null));
-        assertThrows(IllegalStateException.class, () -> query.queryThenAccept(null));
-        assertThrows(IllegalStateException.class, () -> query.queryThenAccept(String.class, null));
-        assertThrows(IllegalStateException.class, () -> query.listThenApply(String.class, null));
-        assertThrows(IllegalStateException.class, () -> query.listThenApply((Jdbc.RowMapper<String>) rs -> "x", null));
-        assertThrows(IllegalStateException.class, () -> query.listThenApply((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
-        assertThrows(IllegalStateException.class, () -> query.listThenAccept(String.class, null));
-        assertThrows(IllegalStateException.class, () -> query.listThenAccept((Jdbc.RowMapper<String>) rs -> "x", null));
-        assertThrows(IllegalStateException.class, () -> query.listThenAccept((Jdbc.BiRowMapper<String>) (rs, labels) -> "x", null));
-    }
-
-    // The open-query behavior is unchanged: a null argument still fails fast with
-    // IllegalArgumentException, and checkArgNotNull still closes the query before throwing.
-    @Test
-    @Tag("2025")
-    public void testQueryByEntityClass_OpenQueryWithNullArg_StillThrowsIllegalArgumentAndClosesQuery() {
-        assertThrows(IllegalArgumentException.class, () -> query.query((Class<?>) null));
-
-        // checkArgNotNull closed the query, so the same call now reports the closed state.
-        assertThrows(IllegalStateException.class, () -> query.query((Class<?>) null));
-    }
-
-    @Test
-    public void testOnCloseRegistrationCannotRacePastClose() throws Exception {
-        final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
-        final CoordinatedCloseQuery coordinatedQuery = new CoordinatedCloseQuery(stmt);
-        final AtomicInteger closeCalls = new AtomicInteger();
-        final Thread registration = new Thread(() -> coordinatedQuery.onClose(closeCalls::incrementAndGet), "query-close-handler-registration");
-
-        registration.start();
-        assertTrue(coordinatedQuery.stateChecked.await(1, TimeUnit.SECONDS));
-
-        final Thread closer = new Thread(coordinatedQuery::close, "query-close");
-        closer.start();
-
-        // The synchronized registration section holds the same monitor used by close() until the callback has
-        // been linked. The pre-fix implementation let close() finish here and then installed a
-        // callback into an already-closed query, so the callback was permanently lost.
-        final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(1);
-        while (closer.isAlive() && closer.getState() != Thread.State.BLOCKED && System.nanoTime() < deadline) {
-            Thread.yield();
-        }
-
-        coordinatedQuery.continueRegistration.countDown();
-        registration.join(TimeUnit.SECONDS.toMillis(1));
-        closer.join(TimeUnit.SECONDS.toMillis(1));
-
-        assertFalse(registration.isAlive());
-        assertFalse(closer.isAlive());
-        assertEquals(1, closeCalls.get());
-        verify(stmt).close();
-    }
-
-    @Test
-    public void testNullOnCloseDoesNotRunCloseHandlersUnderQueryMonitor() {
-        final CountDownLatch registrationFinished = new CountDownLatch(1);
-        final AtomicReference<Throwable> registrationFailure = new AtomicReference<>();
-
-        query.onClose(() -> {
-            final Thread registration = new Thread(() -> {
-                try {
-                    assertThrows(IllegalStateException.class, () -> query.onClose(() -> {
-                    }));
-                } catch (final Throwable e) {
-                    registrationFailure.set(e);
-                } finally {
-                    registrationFinished.countDown();
+                    final IllegalStateException failure = assertThrows(IllegalStateException.class, rows::toList);
+                    assertTrue(failure.getMessage().contains("already been closed"));
                 }
-            }, "registration-from-close-handler");
 
-            registration.start();
-
-            try {
-                assertTrue(registrationFinished.await(1, TimeUnit.SECONDS), "close handler must not hold the monitor needed by another lifecycle call");
-            } catch (final InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new AssertionError(e);
+                verify(statement, never()).getFetchDirection();
+                verify(statement, never()).executeQuery();
+                verify(statement).close();
             }
-        });
-
-        assertThrows(IllegalArgumentException.class, () -> query.onClose(null));
-        assertTrue(query.isClosed);
-        assertNull(registrationFailure.get());
+        }
     }
 
     @Test
-    public void testQuery2ResultSetsDrainsTrailingResultsWhenStatementIsReusable() throws SQLException {
-        final ResultSet rs1 = Mockito.mock(ResultSet.class);
-        final ResultSet rs2 = Mockito.mock(ResultSet.class);
-        final ResultSet rs3 = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
-        when(rs1.getMetaData()).thenReturn(metadata);
-        when(rs2.getMetaData()).thenReturn(metadata);
-        when(metadata.getColumnCount()).thenReturn(0);
-        when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2, rs3);
-        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, true);
-        when(preparedStatement.getMoreResults()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-        query.closeAfterExecution(false);
+    public void testRowStreamTerminalPathsRemainLazyAndCloseOnce() throws SQLException {
+        for (final boolean closeAfterExecution : new boolean[] { false, true }) {
+            for (int mapperVariant = 0; mapperVariant < 4; mapperVariant++) {
+                for (int terminalVariant = 0; terminalVariant < 4; terminalVariant++) {
+                    final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+                    final ResultSet rs = Mockito.mock(ResultSet.class);
+                    final AtomicInteger mappedRows = new AtomicInteger();
+                    final AtomicInteger closeHandlerCalls = new AtomicInteger();
+                    final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution).onClose(closeHandlerCalls::incrementAndGet);
+                    when(statement.executeQuery()).thenReturn(rs);
+                    when(rs.next()).thenReturn(true, true, true, false);
+                    when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
+                    final Jdbc.RowMapper<Integer> rowMapper = row -> mappedRows.incrementAndGet();
+                    final Jdbc.BiRowMapper<Integer> biRowMapper = (row, labels) -> mappedRows.incrementAndGet();
 
-        final com.landawn.abacus.util.Tuple.Tuple2<String, String> result = query.query2ResultSets((rs, labels) -> "first", (rs, labels) -> "second");
+                    try (Stream<Integer> rows = switch (mapperVariant) {
+                        case 0 -> streamQuery.stream(rowMapper);
+                        case 1 -> streamQuery.stream(biRowMapper);
+                        case 2 -> streamQuery.stream(row -> true, rowMapper);
+                        default -> streamQuery.stream((row, labels) -> true, biRowMapper);
+                    }) {
+                        Mockito.verifyNoInteractions(statement, rs);
 
-        assertEquals("first", result._1);
-        assertEquals("second", result._2);
-        verify(rs3).close();
-        verify(preparedStatement).getMoreResults();
-        verify(preparedStatement, never()).close();
+                        switch (terminalVariant) {
+                            case 0 -> assertEquals(3, rows.count());
+                            case 1 -> assertArrayEquals(new Object[] { 3 }, rows.skip(2).toArray());
+                            case 2 -> assertArrayEquals(new Integer[] { 1, 2, 3 }, rows.toArray(Integer[]::new));
+                            default -> assertEquals(0, rows.limit(0).count());
+                        }
+                    }
+
+                    assertEquals(terminalVariant == 3 ? 0 : 3, mappedRows.get());
+                    verify(statement, times(terminalVariant == 3 ? 0 : 1)).executeQuery();
+                    verify(rs, times(terminalVariant == 3 ? 0 : 4)).next();
+                    verify(rs, times(terminalVariant == 3 ? 0 : 1)).close();
+                    verify(statement, times(closeAfterExecution ? 1 : 0)).close();
+                    assertEquals(closeAfterExecution ? 1 : 0, closeHandlerCalls.get());
+                    assertEquals(closeAfterExecution, streamQuery.isClosed);
+                    streamQuery.close();
+                    verify(statement).close();
+                    assertEquals(1, closeHandlerCalls.get());
+                }
+            }
+        }
     }
 
+    // Regression: the statement-config setters used to leave the query open when the driver failed. In the fluent
+    // idiom `JdbcUtil.prepareQuery(ds, sql).setFetchSize(n)...` the caller never gets the query back, so the statement
+    // (and, for DataSource-based queries, the pooled connection released by the close handler) leaked.
     @Test
-    public void testQuery3ResultSetsDrainsTrailingResultsWhenStatementIsReusable() throws SQLException {
-        final ResultSet rs1 = Mockito.mock(ResultSet.class);
-        final ResultSet rs2 = Mockito.mock(ResultSet.class);
-        final ResultSet rs3 = Mockito.mock(ResultSet.class);
-        final ResultSet rs4 = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
-        when(rs1.getMetaData()).thenReturn(metadata);
-        when(rs2.getMetaData()).thenReturn(metadata);
-        when(rs3.getMetaData()).thenReturn(metadata);
-        when(metadata.getColumnCount()).thenReturn(0);
-        when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2, rs3, rs4);
-        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, true, true);
-        when(preparedStatement.getMoreResults()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-        query.closeAfterExecution(false);
+    public void testStatementConfigSetters_DriverFailure_ClosesQueryAndRethrows() throws SQLException {
+        final List<Throwables.Consumer<TestQuery, Exception>> setterCalls = Arrays.asList( //
+                q -> q.setFetchDirection(FetchDirection.FORWARD), //
+                TestQuery::setFetchDirectionToForward, //
+                q -> q.setFetchSize(100), //
+                q -> q.setMaxFieldSize(1024), //
+                q -> q.setMaxRows(10), //
+                q -> q.setLargeMaxRows(10L), //
+                q -> q.setQueryTimeout(30));
 
-        final com.landawn.abacus.util.Tuple.Tuple3<String, String, String> result = query.query3ResultSets((rs, labels) -> "first", (rs, labels) -> "second",
-                (rs, labels) -> "third");
+        for (int i = 0; i < setterCalls.size(); i++) {
+            final PreparedStatement stmt = Mockito.mock(PreparedStatement.class);
+            final SQLException driverFailure = new SQLException("driver rejected setter " + i);
+            doThrow(driverFailure).when(stmt).setFetchDirection(anyInt());
+            doThrow(driverFailure).when(stmt).setFetchSize(anyInt());
+            doThrow(driverFailure).when(stmt).setMaxFieldSize(anyInt());
+            doThrow(driverFailure).when(stmt).setMaxRows(anyInt());
+            doThrow(driverFailure).when(stmt).setLargeMaxRows(anyLong());
+            doThrow(driverFailure).when(stmt).setQueryTimeout(anyInt());
 
-        assertEquals("first", result._1);
-        assertEquals("second", result._2);
-        assertEquals("third", result._3);
-        verify(rs4).close();
-        verify(preparedStatement).getMoreResults();
-        verify(preparedStatement, never()).close();
+            final TestQuery q = new TestQuery(stmt);
+            final AtomicInteger closeHandlerCalls = new AtomicInteger();
+            q.onClose(closeHandlerCalls::incrementAndGet);
+
+            final Throwables.Consumer<TestQuery, Exception> setterCall = setterCalls.get(i);
+            final SQLException thrown = assertThrows(SQLException.class, () -> setterCall.accept(q));
+
+            assertSame(driverFailure, thrown, "setter " + i);
+            verify(stmt).close();
+            assertEquals(1, closeHandlerCalls.get(), "close handler (e.g. connection release) must run for setter " + i);
+            assertThrows(IllegalStateException.class, q::query, "query must be closed after failing setter " + i);
+        }
     }
 
+    // Statement settings, batch staging, configuration, and execution retain the query-state check.
     @Test
-    public void testQuery2ResultSetsPreservesExtractorFailureWhenDrainFails() throws SQLException {
-        final ResultSet rs1 = Mockito.mock(ResultSet.class);
-        final ResultSet rs2 = Mockito.mock(ResultSet.class);
-        final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
-        final SQLException extractorFailure = new SQLException("extractor failed");
-        final SQLException drainFailure = new SQLException("drain failed");
-        when(rs1.getMetaData()).thenReturn(metadata);
-        when(metadata.getColumnCount()).thenReturn(0);
-        when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2);
-        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true);
-        when(preparedStatement.getMoreResults()).thenThrow(drainFailure);
-        query.closeAfterExecution(false);
-
-        final SQLException thrown = assertThrows(SQLException.class, () -> query.query2ResultSets((rs, labels) -> {
-            throw extractorFailure;
-        }, (rs, labels) -> "second"));
-
-        assertSame(extractorFailure, thrown);
-        assertArrayEquals(new Throwable[] { drainFailure }, thrown.getSuppressed());
-        verify(rs2).close();
-        verify(preparedStatement).getMoreResults();
-        verify(preparedStatement, never()).close();
-    }
-
-    @Test
-    public void testCloseReleasesCapturedHandlerChain() {
-        query.onClose(() -> {
-        });
-
+    @Tag("2025")
+    public void testStatementOperations_ClosedQuery_ThrowIllegalState() throws SQLException {
         query.close();
 
-        assertNull(query.closeHandler);
-    }
+        assertThrows(IllegalStateException.class, () -> query.setFetchSize(100));
+        assertThrows(IllegalStateException.class, () -> query.setMaxRows(10));
+        assertThrows(IllegalStateException.class, () -> query.setLargeMaxRows(10L));
+        assertThrows(IllegalStateException.class, () -> query.setMaxFieldSize(256));
+        assertThrows(IllegalStateException.class, () -> query.setQueryTimeout(5));
+        assertThrows(IllegalStateException.class, () -> query.setFetchDirection(FetchDirection.FORWARD));
+        assertThrows(IllegalStateException.class, () -> query.addBatch());
+        assertThrows(IllegalStateException.class, () -> query.configureStatement(stmt -> stmt.setPoolable(false)));
 
-    @Test
-    public void testClosePreservesFailuresFromEveryCloseHandler() {
-        final RuntimeException olderFailure = new RuntimeException("older handler failed");
-        final RuntimeException newerFailure = new RuntimeException("newer handler failed");
-
-        query.onClose(() -> {
-            throw olderFailure;
-        }).onClose(() -> {
-            throw newerFailure;
-        });
-
-        final RuntimeException thrown = assertThrows(RuntimeException.class, query::close);
-
-        assertSame(newerFailure, thrown);
-        assertArrayEquals(new Throwable[] { olderFailure }, thrown.getSuppressed());
-    }
-
-    @Test
-    public void testClosePreservesStatementCleanupFailureWhenCloseHandlerAlsoFails() throws SQLException {
-        final RuntimeException statementFailure = new RuntimeException("statement reset failed");
-        final AssertionError handlerFailure = new AssertionError("close handler failed");
-        when(preparedStatement.getFetchSize()).thenReturn(10);
-        query.setFetchSize(20);
-        doThrow(statementFailure).when(preparedStatement).setFetchSize(10);
-        query.onClose(() -> {
-            throw handlerFailure;
-        });
-
-        final RuntimeException thrown = assertThrows(RuntimeException.class, query::close);
-
-        assertSame(statementFailure, thrown);
-        assertArrayEquals(new Throwable[] { handlerFailure }, thrown.getSuppressed());
-        verify(preparedStatement).close();
-        assertDoesNotThrow(query::close);
-    }
-
-    @Test
-    public void testCloseDoesNotSuppressStatementCleanupFailureOntoItself() throws SQLException {
-        final AssertionError failure = new AssertionError("cleanup failed");
-        when(preparedStatement.getFetchSize()).thenReturn(10);
-        query.setFetchSize(20);
-        doThrow(failure).when(preparedStatement).setFetchSize(10);
-        query.onClose(() -> {
-            throw failure;
-        });
-
-        final AssertionError thrown = assertThrows(AssertionError.class, query::close);
-
-        assertSame(failure, thrown);
-        assertEquals(0, thrown.getSuppressed().length);
-        verify(preparedStatement).close();
-    }
-
-    @Test
-    public void testExecutionFailureRemainsPrimaryWhenAutomaticCloseHandlerFails() throws SQLException {
-        final SQLException executionFailure = new SQLException("query failed");
-        final RuntimeException closeFailure = new RuntimeException("close handler failed");
-        when(preparedStatement.executeQuery()).thenThrow(executionFailure);
-        query.onClose(() -> {
-            throw closeFailure;
-        });
-
-        final SQLException thrown = assertThrows(SQLException.class, query::queryForBoolean);
-
-        assertSame(executionFailure, thrown);
-        assertArrayEquals(new Throwable[] { closeFailure }, thrown.getSuppressed());
-    }
-
-    @Test
-    public void testQueryAllResultSetsDrainsAfterExtractorFailureWhenStatementIsReusable() throws SQLException {
-        final ResultSet rs = Mockito.mock(ResultSet.class);
-        final SQLException extractorFailure = new SQLException("extractor failed");
-        when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(rs);
-        when(preparedStatement.getMoreResults()).thenReturn(false);
-        when(preparedStatement.getUpdateCount()).thenReturn(-1);
-        query.closeAfterExecution(false);
-
-        final SQLException thrown = assertThrows(SQLException.class, () -> query.queryAllResultSets(resultSet -> {
-            throw extractorFailure;
-        }));
-
-        assertSame(extractorFailure, thrown);
-        verify(preparedStatement).getMoreResults();
-        verify(preparedStatement, never()).close();
+        // Execution methods keep the fail-fast IllegalStateException.
+        assertThrows(IllegalStateException.class, () -> query.exists());
+        assertThrows(IllegalStateException.class, () -> query.update());
+        assertThrows(IllegalStateException.class, () -> query.list());
     }
 }

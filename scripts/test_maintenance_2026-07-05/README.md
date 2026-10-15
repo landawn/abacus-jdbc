@@ -1,5 +1,12 @@
 # Test-maintenance scripts (2026-07-05)
 
+This directory preserves the July maintenance tools and reports. For the current
+suite, use [`test-maintenance.mjs`](../test-maintenance.mjs) and the
+[current test conventions](../../src/test/README.md). The current scanner handles
+focused ownership groups, nested fixtures, parameterized tests, and dynamic
+factories. The historical reports and strict filename mapping below are not
+current acceptance checks.
+
 Reusable, dependency-free (Python 3, stdlib only) tooling for three recurring
 test-hygiene tasks over `src/test/java`. **Run every command from the repo
 root** — the scripts use repo-root-relative paths (`src/test/java`,
@@ -52,8 +59,9 @@ python scripts/test_maintenance_2026-07-05/find_no_assert.py
 
 ## Verifying results
 
-The test suite uses JUnit Jupiter with `testFailureIgnore`/`@Suite`, so the
-Maven exit code is not a reliable pass/fail signal. Parse the XML instead:
+At the time of this snapshot, `testFailureIgnore` made the Maven exit code an
+unreliable pass/fail signal. The current build has `testFailureIgnore=false` and
+fails on test errors. The XML summary below remains useful for comparing runs:
 
 ```bash
 python - <<'PY'

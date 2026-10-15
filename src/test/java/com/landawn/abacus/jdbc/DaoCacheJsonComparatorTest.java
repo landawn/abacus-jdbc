@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.function.Function;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,6 @@ import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.function.Function;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -42,9 +42,9 @@ import com.landawn.abacus.util.ImmutableSortedSet;
 import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.Suppliers;
 import com.landawn.abacus.util.u;
-
 import jdbc.testsupport.RegisteredFactoryList;
 
+@Tag("integration")
 @Tag("2025")
 class DaoCacheJsonComparatorTest {
     private static final Map<String, Object> results = new LinkedHashMap<>();

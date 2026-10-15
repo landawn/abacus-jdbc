@@ -21,12 +21,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.TestBase;
-import com.landawn.abacus.jdbc.DaoReviewRegressionTest.ReviewRow;
-import com.landawn.abacus.jdbc.DaoReviewRegressionTest.ScoreRecord;
 import com.landawn.abacus.jdbc.annotation.Bind;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.dao.CrudDao;
+import com.landawn.abacus.jdbc.DaoImplQueryContractIntegrationTest.ReviewRow;
+import com.landawn.abacus.jdbc.DaoImplQueryContractIntegrationTest.ScoreRecord;
+import com.landawn.abacus.TestBase;
 import com.landawn.abacus.util.EntityId;
 
 /**

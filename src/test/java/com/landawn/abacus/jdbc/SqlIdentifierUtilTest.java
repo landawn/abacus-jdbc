@@ -12,9 +12,12 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import java.sql.Connection;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import com.landawn.abacus.TestBase;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
+import com.landawn.abacus.TestBase;
 
 public class SqlIdentifierUtilTest extends TestBase {
 
@@ -215,5 +218,16 @@ public class SqlIdentifierUtilTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderStoredIdentifier("MixedCase", "\"", -1));
         assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderStoredIdentifier("a.b", "\"", 0));
         assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.renderStoredIdentifier("USER", "\"", 1));
+    }
+
+    @ParameterizedTest(name = "identifier={0}, quote={1}, invalid parameter={2}")
+    @MethodSource("invalidQuoteArguments")
+    void quoteIdentifier_invalidArgument_reportsParameter(final String identifier, final String quote, final String parameter) {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> SqlIdentifierUtil.quoteIdentifier(identifier, quote));
+        assertTrue(failure.getMessage().contains(parameter), failure.getMessage());
+    }
+
+    private static java.util.stream.Stream<Arguments> invalidQuoteArguments() {
+        return java.util.stream.Stream.of(Arguments.of(null, "\"", "identifier"), Arguments.of("name", null, "quote"), Arguments.of("name", "", "quote"));
     }
 }

@@ -1,0 +1,46 @@
+{
+  "prefixes": {
+    "JdbcCodeGeneration": [
+      "JdbcCodeGenerationUtil"
+    ],
+    "DataTransfer": [
+      "DataTransferUtil"
+    ],
+    "DaoCache": [
+      "DaoImpl"
+    ],
+    "HandlerFactory": [
+      "Jdbc"
+    ]
+  },
+  "classes": {
+    "CapabilityGatingTest": [
+      "DaoImpl",
+      "CrudDao",
+      "ReadOnlyDao",
+      "NonUpdateDao"
+    ],
+    "ForUpdateOnlyNonSelectFastPathTest": [
+      "JdbcUtil",
+      "SqlTransaction"
+    ],
+    "FunctionalInterfaceNullValidationTest": [
+      "Jdbc",
+      "JdbcUtil",
+      "AbstractQuery"
+    ],
+    "H2BracketTransactionTest": [
+      "JdbcUtil",
+      "SqlTransaction"
+    ],
+    "JavadocCodeExampleTest": [
+      "Jdbc",
+      "JdbcUtil",
+      "DataTransferUtil"
+    ],
+    "ProcedureEntityParameterBindingTest": [
+      "DaoImpl",
+      "CallableQuery"
+    ]
+  }
+}

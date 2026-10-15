@@ -41,6 +41,9 @@
 		<junit.jupiter.version>6.1.3</junit.jupiter.version>
 		<junit.platform.version>6.1.3</junit.platform.version>
 		<mockito.version>5.24.0</mockito.version>
+		<!-- Populated by JaCoCo; empty when coverage is explicitly skipped. -->
+		<jacocoArgLine></jacocoArgLine>
+		<jdbc.mysql.enabled>false</jdbc.mysql.enabled>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 	</properties>
@@ -180,6 +183,12 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-params</artifactId>
+			<version>${junit.jupiter.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.junit.platform</groupId>
 			<artifactId>junit-platform-suite-api</artifactId>
 			<version>${junit.platform.version}</version>
@@ -301,9 +310,13 @@
 						<include>**/AbacusJdbcTestSuite.java</include>
 					</includes>
 					<useModulePath>false</useModulePath>
-					<testFailureIgnore>true</testFailureIgnore> <!-- set to false
-					if you want failures to fail the build -->
+					<testFailureIgnore>false</testFailureIgnore>
+					<failIfNoTests>true</failIfNoTests>
+					<systemPropertyVariables>
+						<jdbc.mysql.enabled>${jdbc.mysql.enabled}</jdbc.mysql.enabled>
+					</systemPropertyVariables>
 					<argLine>
+						@{jacocoArgLine}
 						-Dfile.encoding=UTF-8
 						--add-opens java.base/java.lang=ALL-UNNAMED
 						--add-opens java.base/java.lang.reflect=ALL-UNNAMED
@@ -321,6 +334,9 @@
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
 				<version>0.8.15</version>
+				<configuration>
+					<propertyName>jacocoArgLine</propertyName>
+				</configuration>
 				<executions>
 					<!-- Prepare agent in all modules via inheritance -->
 					<execution>
@@ -367,4 +383,12 @@
 			</plugin>
 		</plugins>
 	</build>
+	<profiles>
+		<profile>
+			<id>mysql-tests</id>
+			<properties>
+				<jdbc.mysql.enabled>true</jdbc.mysql.enabled>
+			</properties>
+		</profile>
+	</profiles>
 </project>

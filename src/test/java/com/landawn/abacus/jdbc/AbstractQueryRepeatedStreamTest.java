@@ -15,8 +15,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.sql.Connection;
@@ -36,6 +36,7 @@ import com.landawn.abacus.type.Type;
 @Tag("2025")
 public class AbstractQueryRepeatedStreamTest extends TestBase {
 
+    @Tag("integration")
     @Test
     void repeatedByteStreamIndicesBindCompleteValuesWithAnEagerDriver() throws Exception {
         final byte[] expected = { 1, 2, 3 };
@@ -53,6 +54,7 @@ public class AbstractQueryRepeatedStreamTest extends TestBase {
         assertFalse(input.closed, "The caller owns the stream");
     }
 
+    @Tag("integration")
     @Test
     void repeatedReaderIndicesBindCompleteValuesWithAnEagerDriver() throws Exception {
         final TrackingReader reader = new TrackingReader("a\u03b2c");

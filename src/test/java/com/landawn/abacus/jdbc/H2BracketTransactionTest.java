@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.TestBase;
 
+@Tag("integration")
 @Tag("2025")
 public class H2BracketTransactionTest extends TestBase {
     private static final String WRITE = " FROM FINAL TABLE (UPDATE t SET id = 2) WHERE 'a]' = 'a]'";
