@@ -1,12 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
@@ -22,15 +17,16 @@ import java.sql.SQLXML;
 import java.sql.Types;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.type.TypeFactory;
-import com.landawn.abacus.util.ImmutableList;
 
-class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
+class NamedQueryObjectBindingTest extends NamedQueryBindingTestSupport {
 
     @Test
-    public void testSetURL() throws SQLException, MalformedURLException {
+    void testSetURL() throws SQLException, MalformedURLException {
         String paramName = "param1";
         URL value = new URL("http://example.com");
 
@@ -40,53 +36,15 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
         assertSame(namedQuery, result);
     }
 
-    // --- setURL all paths ---
-
-    @Test
-    public void testSetURL_LoopBranch_ParamNotFound() throws Exception {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setURL("unknown", new URL("http://example.com")));
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setURL_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException, MalformedURLException {
+        final URL url = new URL("http://example.com");
+        assertNamedBinding(layout, (query, parameter) -> query.setURL(parameter, url), (statement, index) -> statement.setURL(index, url));
     }
 
     @Test
-    public void testSetURL_MapBranch_NotFound() throws Exception {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setURL("unknown", new URL("http://example.com")));
-    }
-
-    @Test
-    public void testSetURL_MapBranch_OneOccurrence() throws Exception {
-        URL url = new URL("http://example.com");
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setURL("a", url);
-        verify(mockPreparedStatement).setURL(1, url);
-    }
-
-    @Test
-    public void testSetURL_MapBranch_TwoOccurrences() throws Exception {
-        URL url = new URL("http://example.com");
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setURL("p", url);
-        verify(mockPreparedStatement, times(2)).setURL(anyInt(), eq(url));
-    }
-
-    @Test
-    public void testSetURL_MapBranch_ThreeOccurrences() throws Exception {
-        URL url = new URL("http://example.com");
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setURL("p", url);
-        verify(mockPreparedStatement, times(3)).setURL(anyInt(), eq(url));
-    }
-
-    @Test
-    public void testSetURL_MapBranch_FourOccurrences() throws Exception {
-        URL url = new URL("http://example.com");
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setURL("p", url);
-        verify(mockPreparedStatement, times(4)).setURL(anyInt(), eq(url));
-    }
-
-    @Test
-    public void testSetSQLXML() throws SQLException {
+    void testSetSQLXML() throws SQLException {
         String paramName = "param1";
         java.sql.SQLXML value = mock(java.sql.SQLXML.class);
 
@@ -96,53 +54,15 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
         assertSame(namedQuery, result);
     }
 
-    // --- setSQLXML all paths ---
-
-    @Test
-    public void testSetSQLXML_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setSQLXML("unknown", mock(SQLXML.class)));
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setSQLXML_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
+        final SQLXML xml = mock(SQLXML.class);
+        assertNamedBinding(layout, (query, parameter) -> query.setSQLXML(parameter, xml), (statement, index) -> statement.setSQLXML(index, xml));
     }
 
     @Test
-    public void testSetSQLXML_MapBranch_NotFound() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setSQLXML("unknown", mock(SQLXML.class)));
-    }
-
-    @Test
-    public void testSetSQLXML_MapBranch_OneOccurrence() throws SQLException {
-        SQLXML xml = mock(SQLXML.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setSQLXML("b", xml);
-        verify(mockPreparedStatement).setSQLXML(2, xml);
-    }
-
-    @Test
-    public void testSetSQLXML_MapBranch_TwoOccurrences() throws SQLException {
-        SQLXML xml = mock(SQLXML.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setSQLXML("p", xml);
-        verify(mockPreparedStatement, times(2)).setSQLXML(anyInt(), eq(xml));
-    }
-
-    @Test
-    public void testSetSQLXML_MapBranch_ThreeOccurrences() throws SQLException {
-        SQLXML xml = mock(SQLXML.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setSQLXML("p", xml);
-        verify(mockPreparedStatement, times(3)).setSQLXML(anyInt(), eq(xml));
-    }
-
-    @Test
-    public void testSetSQLXML_MapBranch_FourOccurrences() throws SQLException {
-        SQLXML xml = mock(SQLXML.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setSQLXML("p", xml);
-        verify(mockPreparedStatement, times(4)).setSQLXML(anyInt(), eq(xml));
-    }
-
-    @Test
-    public void testSetRowId() throws SQLException {
+    void testSetRowId() throws SQLException {
         String paramName = "param1";
         java.sql.RowId value = mock(java.sql.RowId.class);
 
@@ -152,53 +72,15 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
         assertSame(namedQuery, result);
     }
 
-    // --- setRowId all paths ---
-
-    @Test
-    public void testSetRowId_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setRowId("unknown", mock(RowId.class)));
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setRowId_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
+        final RowId rowId = mock(RowId.class);
+        assertNamedBinding(layout, (query, parameter) -> query.setRowId(parameter, rowId), (statement, index) -> statement.setRowId(index, rowId));
     }
 
     @Test
-    public void testSetRowId_MapBranch_NotFound() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setRowId("unknown", mock(RowId.class)));
-    }
-
-    @Test
-    public void testSetRowId_MapBranch_OneOccurrence() throws SQLException {
-        RowId rowId = mock(RowId.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setRowId("c", rowId);
-        verify(mockPreparedStatement).setRowId(3, rowId);
-    }
-
-    @Test
-    public void testSetRowId_MapBranch_TwoOccurrences() throws SQLException {
-        RowId rowId = mock(RowId.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setRowId("p", rowId);
-        verify(mockPreparedStatement, times(2)).setRowId(anyInt(), eq(rowId));
-    }
-
-    @Test
-    public void testSetRowId_MapBranch_ThreeOccurrences() throws SQLException {
-        RowId rowId = mock(RowId.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setRowId("p", rowId);
-        verify(mockPreparedStatement, times(3)).setRowId(anyInt(), eq(rowId));
-    }
-
-    @Test
-    public void testSetRowId_MapBranch_FourOccurrences() throws SQLException {
-        RowId rowId = mock(RowId.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setRowId("p", rowId);
-        verify(mockPreparedStatement, times(4)).setRowId(anyInt(), eq(rowId));
-    }
-
-    @Test
-    public void testSetRef() throws SQLException {
+    void testSetRef() throws SQLException {
         String paramName = "param1";
         java.sql.Ref value = mock(java.sql.Ref.class);
 
@@ -208,53 +90,15 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
         assertSame(namedQuery, result);
     }
 
-    // --- setRef all paths ---
-
-    @Test
-    public void testSetRef_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setRef("unknown", mock(Ref.class)));
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setRef_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
+        final Ref ref = mock(Ref.class);
+        assertNamedBinding(layout, (query, parameter) -> query.setRef(parameter, ref), (statement, index) -> statement.setRef(index, ref));
     }
 
     @Test
-    public void testSetRef_MapBranch_NotFound() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setRef("unknown", mock(Ref.class)));
-    }
-
-    @Test
-    public void testSetRef_MapBranch_OneOccurrence() throws SQLException {
-        Ref ref = mock(Ref.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setRef("d", ref);
-        verify(mockPreparedStatement).setRef(4, ref);
-    }
-
-    @Test
-    public void testSetRef_MapBranch_TwoOccurrences() throws SQLException {
-        Ref ref = mock(Ref.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setRef("p", ref);
-        verify(mockPreparedStatement, times(2)).setRef(anyInt(), eq(ref));
-    }
-
-    @Test
-    public void testSetRef_MapBranch_ThreeOccurrences() throws SQLException {
-        Ref ref = mock(Ref.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setRef("p", ref);
-        verify(mockPreparedStatement, times(3)).setRef(anyInt(), eq(ref));
-    }
-
-    @Test
-    public void testSetRef_MapBranch_FourOccurrences() throws SQLException {
-        Ref ref = mock(Ref.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setRef("p", ref);
-        verify(mockPreparedStatement, times(4)).setRef(anyInt(), eq(ref));
-    }
-
-    @Test
-    public void testSetArray() throws SQLException {
+    void testSetArray() throws SQLException {
         String paramName = "param1";
         java.sql.Array value = mock(java.sql.Array.class);
 
@@ -264,53 +108,15 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
         assertSame(namedQuery, result);
     }
 
-    // --- setArray all paths ---
-
-    @Test
-    public void testSetArray_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setArray("unknown", mock(Array.class)));
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setArray_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
+        final Array arr = mock(Array.class);
+        assertNamedBinding(layout, (query, parameter) -> query.setArray(parameter, arr), (statement, index) -> statement.setArray(index, arr));
     }
 
     @Test
-    public void testSetArray_MapBranch_NotFound() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setArray("unknown", mock(Array.class)));
-    }
-
-    @Test
-    public void testSetArray_MapBranch_OneOccurrence() throws SQLException {
-        Array arr = mock(Array.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setArray("e", arr);
-        verify(mockPreparedStatement).setArray(5, arr);
-    }
-
-    @Test
-    public void testSetArray_MapBranch_TwoOccurrences() throws SQLException {
-        Array arr = mock(Array.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setArray("p", arr);
-        verify(mockPreparedStatement, times(2)).setArray(anyInt(), eq(arr));
-    }
-
-    @Test
-    public void testSetArray_MapBranch_ThreeOccurrences() throws SQLException {
-        Array arr = mock(Array.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setArray("p", arr);
-        verify(mockPreparedStatement, times(3)).setArray(anyInt(), eq(arr));
-    }
-
-    @Test
-    public void testSetArray_MapBranch_FourOccurrences() throws SQLException {
-        Array arr = mock(Array.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setArray("p", arr);
-        verify(mockPreparedStatement, times(4)).setArray(anyInt(), eq(arr));
-    }
-
-    @Test
-    public void testSetObject() throws SQLException {
+    void testSetObject() throws SQLException {
         String paramName = "param1";
         Object value = "test object";
 
@@ -321,7 +127,7 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
     }
 
     @Test
-    public void testSetObjectWithSqlType() throws SQLException {
+    void testSetObjectWithSqlType() throws SQLException {
         String paramName = "param1";
         Object value = "test";
         int sqlType = Types.VARCHAR;
@@ -333,7 +139,7 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
     }
 
     @Test
-    public void testSetObjectWithSqlTypeAndScale() throws SQLException {
+    void testSetObjectWithSqlTypeAndScale() throws SQLException {
         String paramName = "param1";
         Object value = new BigDecimal("123.45");
         int sqlType = Types.DECIMAL;
@@ -346,7 +152,7 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
     }
 
     @Test
-    public void testSetObjectWithSQLType() throws SQLException {
+    void testSetObjectWithSQLType() throws SQLException {
         String paramName = "param1";
         Object value = "test";
         SQLType sqlType = mock(SQLType.class);
@@ -358,7 +164,7 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
     }
 
     @Test
-    public void testSetObjectWithSQLTypeAndScale() throws SQLException {
+    void testSetObjectWithSQLTypeAndScale() throws SQLException {
         String paramName = "param1";
         Object value = new BigDecimal("123.45");
         SQLType sqlType = mock(SQLType.class);
@@ -371,7 +177,7 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
     }
 
     @Test
-    public void testSetObjectWithType() throws SQLException {
+    void testSetObjectWithType() throws SQLException {
         String paramName = "param1";
         String value = "test";
         Type<String> type = TypeFactory.getType(String.class);
@@ -382,260 +188,50 @@ class NamedQueryObjectBindingTest extends NamedQueryTestSupport {
         assertSame(namedQuery, result);
     }
 
-    // --- setObject(Object) all paths ---
-
-    @Test
-    public void testSetObject_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", (Object) null));
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setObject_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
+        assertNamedBinding(layout, (query, parameter) -> query.setObject(parameter, (Object) null),
+                (statement, index) -> statement.setObject(index, (Object) null));
     }
 
-    @Test
-    public void testSetObject_MapBranch_NotFound() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", (Object) null));
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setObjectWithSqlType_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
+        assertNamedBinding(layout, (query, parameter) -> query.setObject(parameter, "val", Types.VARCHAR),
+                (statement, index) -> statement.setObject(index, "val", Types.VARCHAR));
     }
 
-    @Test
-    public void testSetObject_MapBranch_OneOccurrence() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setObject("a", (Object) null); // null goes through stmt.setObject directly
-        verify(mockPreparedStatement).setObject(1, (Object) null);
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setObjectWithSqlTypeScale_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
+        assertNamedBinding(layout, (query, parameter) -> query.setObject(parameter, "9.99", Types.DECIMAL, 2),
+                (statement, index) -> statement.setObject(index, "9.99", Types.DECIMAL, 2));
     }
 
-    @Test
-    public void testSetObject_MapBranch_TwoOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setObject("p", (Object) null);
-        verify(mockPreparedStatement, times(2)).setObject(anyInt(), isNull());
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setObjectWithJDBCType_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
+        assertNamedBinding(layout, (query, parameter) -> query.setObject(parameter, "val", JDBCType.VARCHAR),
+                (statement, index) -> statement.setObject(index, "val", JDBCType.VARCHAR));
     }
 
-    @Test
-    public void testSetObject_MapBranch_ThreeOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setObject("p", (Object) null);
-        verify(mockPreparedStatement, times(3)).setObject(anyInt(), isNull());
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setObjectWithJDBCTypeScale_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
+        assertNamedBinding(layout, (query, parameter) -> query.setObject(parameter, "9.99", JDBCType.DECIMAL, 2),
+                (statement, index) -> statement.setObject(index, "9.99", JDBCType.DECIMAL, 2));
     }
 
-    @Test
-    public void testSetObject_MapBranch_FourOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setObject("p", (Object) null);
-        verify(mockPreparedStatement, times(4)).setObject(anyInt(), isNull());
-    }
-
-    // --- setObject(Object, int) all paths ---
-
-    @Test
-    public void testSetObjectWithSqlType_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "value", Types.VARCHAR));
-    }
-
-    @Test
-    public void testSetObjectWithSqlType_MapBranch_NotFound() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "value", Types.VARCHAR));
-    }
-
-    @Test
-    public void testSetObjectWithSqlType_MapBranch_OneOccurrence() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setObject("b", "val", Types.VARCHAR);
-        verify(mockPreparedStatement).setObject(2, "val", Types.VARCHAR);
-    }
-
-    @Test
-    public void testSetObjectWithSqlType_MapBranch_TwoOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setObject("p", "val", Types.VARCHAR);
-        verify(mockPreparedStatement, times(2)).setObject(anyInt(), eq("val"), eq(Types.VARCHAR));
-    }
-
-    @Test
-    public void testSetObjectWithSqlType_MapBranch_ThreeOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setObject("p", "val", Types.VARCHAR);
-        verify(mockPreparedStatement, times(3)).setObject(anyInt(), eq("val"), eq(Types.VARCHAR));
-    }
-
-    @Test
-    public void testSetObjectWithSqlType_MapBranch_FourOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setObject("p", "val", Types.VARCHAR);
-        verify(mockPreparedStatement, times(4)).setObject(anyInt(), eq("val"), eq(Types.VARCHAR));
-    }
-
-    // --- setObject(Object, int, int) all paths ---
-
-    @Test
-    public void testSetObjectWithSqlTypeScale_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "value", Types.DECIMAL, 2));
-    }
-
-    @Test
-    public void testSetObjectWithSqlTypeScale_MapBranch_NotFound() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "value", Types.DECIMAL, 2));
-    }
-
-    @Test
-    public void testSetObjectWithSqlTypeScale_MapBranch_OneOccurrence() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setObject("c", "9.99", Types.DECIMAL, 2);
-        verify(mockPreparedStatement).setObject(3, "9.99", Types.DECIMAL, 2);
-    }
-
-    @Test
-    public void testSetObjectWithSqlTypeScale_MapBranch_TwoOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setObject("p", "9.99", Types.DECIMAL, 2);
-        verify(mockPreparedStatement, times(2)).setObject(anyInt(), eq("9.99"), eq(Types.DECIMAL), eq(2));
-    }
-
-    @Test
-    public void testSetObjectWithSqlTypeScale_MapBranch_ThreeOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setObject("p", "9.99", Types.DECIMAL, 2);
-        verify(mockPreparedStatement, times(3)).setObject(anyInt(), eq("9.99"), eq(Types.DECIMAL), eq(2));
-    }
-
-    @Test
-    public void testSetObjectWithSqlTypeScale_MapBranch_FourOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setObject("p", "9.99", Types.DECIMAL, 2);
-        verify(mockPreparedStatement, times(4)).setObject(anyInt(), eq("9.99"), eq(Types.DECIMAL), eq(2));
-    }
-
-    // --- setObject(Object, SQLType) all paths ---
-
-    @Test
-    public void testSetObjectWithJDBCType_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "value", JDBCType.VARCHAR));
-    }
-
-    @Test
-    public void testSetObjectWithJDBCType_MapBranch_NotFound() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "value", JDBCType.VARCHAR));
-    }
-
-    @Test
-    public void testSetObjectWithJDBCType_MapBranch_OneOccurrence() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setObject("d", "val", JDBCType.VARCHAR);
-        verify(mockPreparedStatement).setObject(4, "val", JDBCType.VARCHAR);
-    }
-
-    @Test
-    public void testSetObjectWithJDBCType_MapBranch_TwoOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setObject("p", "val", JDBCType.VARCHAR);
-        verify(mockPreparedStatement, times(2)).setObject(anyInt(), eq("val"), eq((SQLType) JDBCType.VARCHAR));
-    }
-
-    @Test
-    public void testSetObjectWithJDBCType_MapBranch_ThreeOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setObject("p", "val", JDBCType.VARCHAR);
-        verify(mockPreparedStatement, times(3)).setObject(anyInt(), eq("val"), eq((SQLType) JDBCType.VARCHAR));
-    }
-
-    @Test
-    public void testSetObjectWithJDBCType_MapBranch_FourOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setObject("p", "val", JDBCType.VARCHAR);
-        verify(mockPreparedStatement, times(4)).setObject(anyInt(), eq("val"), eq((SQLType) JDBCType.VARCHAR));
-    }
-
-    // --- setObject(Object, SQLType, int) all paths ---
-
-    @Test
-    public void testSetObjectWithJDBCTypeScale_LoopBranch_ParamNotFound() throws SQLException {
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "val", JDBCType.DECIMAL, 2));
-    }
-
-    @Test
-    public void testSetObjectWithJDBCTypeScale_MapBranch_NotFound() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "val", JDBCType.DECIMAL, 2));
-    }
-
-    @Test
-    public void testSetObjectWithJDBCTypeScale_MapBranch_OneOccurrence() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setObject("e", "9.99", JDBCType.DECIMAL, 2);
-        verify(mockPreparedStatement).setObject(5, "9.99", JDBCType.DECIMAL, 2);
-    }
-
-    @Test
-    public void testSetObjectWithJDBCTypeScale_MapBranch_TwoOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setObject("p", "9.99", JDBCType.DECIMAL, 2);
-        verify(mockPreparedStatement, times(2)).setObject(anyInt(), eq("9.99"), eq((SQLType) JDBCType.DECIMAL), eq(2));
-    }
-
-    @Test
-    public void testSetObjectWithJDBCTypeScale_MapBranch_ThreeOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setObject("p", "9.99", JDBCType.DECIMAL, 2);
-        verify(mockPreparedStatement, times(3)).setObject(anyInt(), eq("9.99"), eq((SQLType) JDBCType.DECIMAL), eq(2));
-    }
-
-    @Test
-    public void testSetObjectWithJDBCTypeScale_MapBranch_FourOccurrences() throws SQLException {
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setObject("p", "9.99", JDBCType.DECIMAL, 2);
-        verify(mockPreparedStatement, times(4)).setObject(anyInt(), eq("9.99"), eq((SQLType) JDBCType.DECIMAL), eq(2));
-    }
-
-    // --- setObject(String, Object, Type): all uncovered paths (L3811-3836) ---
-
-    @Test
-    public void testSetObjectWithType_LoopBranch_ParamNotFound() throws SQLException {
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(ParameterLayout.class)
+    void setObjectWithType_matchesNamedParameterPositions(final ParameterLayout layout) throws SQLException {
         final Type<String> type = TypeFactory.getType(String.class);
-        assertThrows(IllegalArgumentException.class, () -> namedQuery.setObject("unknown", "val", type));
+        assertNamedBinding(layout, (query, parameter) -> query.setObject(parameter, "hello", type), (statement, index) -> statement.setString(index, "hello"));
     }
 
     @Test
-    public void testSetObjectWithType_MapBranch_NotFound() throws SQLException {
-        final Type<String> type = TypeFactory.getType(String.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        assertThrows(IllegalArgumentException.class, () -> q.setObject("unknown", "val", type));
-    }
-
-    @Test
-    public void testSetObjectWithType_MapBranch_OneOccurrence() throws SQLException {
-        final Type<String> type = TypeFactory.getType(String.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "d", "e"));
-        q.setObject("a", "hello", type);
-        verify(mockPreparedStatement).setString(1, "hello");
-    }
-
-    @Test
-    public void testSetObjectWithType_MapBranch_TwoOccurrences() throws SQLException {
-        final Type<String> type = TypeFactory.getType(String.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p"));
-        q.setObject("p", "hi", type);
-        verify(mockPreparedStatement, times(2)).setString(anyInt(), eq("hi"));
-    }
-
-    @Test
-    public void testSetObjectWithType_MapBranch_ThreeOccurrences() throws SQLException {
-        final Type<String> type = TypeFactory.getType(String.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "b", "c", "p", "p", "p"));
-        q.setObject("p", "hi", type);
-        verify(mockPreparedStatement, times(3)).setString(anyInt(), eq("hi"));
-    }
-
-    @Test
-    public void testSetObjectWithType_MapBranch_FourOccurrences() throws SQLException {
-        final Type<String> type = TypeFactory.getType(String.class);
-        NamedQuery q = createMapBranchQuery(ImmutableList.of("a", "p", "p", "p", "p"));
-        q.setObject("p", "hi", type);
-        verify(mockPreparedStatement, times(4)).setString(anyInt(), eq("hi"));
-    }
-
-    @Test
-    public void testSetObjectNull() throws SQLException {
+    void testSetObjectNull() throws SQLException {
         String paramName = "param1";
         Object value = null;
 

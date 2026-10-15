@@ -34,9 +34,10 @@ behavior instead of creating numbered, dated, or `Review` classes.
 | Production owner | Test groups |
 | --- | --- |
 | `AbstractQuery`, `PreparedQuery`, `CallableQuery` | Core, parameter binding, execution, results, streams, and lifecycle as applicable |
-| `NamedQuery` | Core, named parameters, scalar, temporal, stream, and object binding |
+| `NamedQuery` | Core, named parameters, scalar, temporal, stream, and object binding; shared parameter-layout contracts |
 | `JdbcUtil` | Connections, parameters, batches, result mapping, streams, transactions, metadata, resource cleanup, logging, and DAO caches |
 | `Jdbc` | Column access, row callbacks/mapping, result extraction, parameter/out-parameter binding, handler factories, and DAO caches |
+| `ResultSetProxy` | Core/wrappers, column access, object mapping, cursor behavior, and updates |
 | `JdbcCodeGenerationUtil` | Entities, SQL, SQL conversion, and identifier contracts |
 | `DataTransferUtil` | Imports, copies, CSV import/export, argument validation, and batch failures |
 
@@ -48,7 +49,8 @@ many-to-one: several focused test classes can cover one production class.
 Within each class, put fields first, lifecycle methods next, related test cases
 together, then helpers and fixture types. Preserve field initialization order.
 Group tests by the API they exercise, then normal, boundary, invalid-input, and
-failure/cleanup behavior. Prefer `operation_condition_expectedBehavior` for new
+failure/cleanup behavior. This is source organization, not an execution dependency:
+do not add ordered execution to make shared mutable fixtures work. Prefer `operation_condition_expectedBehavior` for new
 methods; descriptive existing regression names can remain. Use `@Nested` when
 independent fixture setup makes a behavior group clearer.
 
@@ -97,6 +99,18 @@ successful execution alone is often insufficient.
 
 Recent consolidation examples:
 
+- NamedQuery binding families share eight parameter layouts through
+  `NamedQueryBindingTestSupport`. Each overload verifies exact JDBC positions and
+  call order, fluent return values, and missing-name cleanup. Repeated streams and
+  readers are read back to check the payload at every occurrence.
+- Keep direct collection/array overloads separate from values passed as `Object`.
+  They dispatch differently and have different failure cleanup contracts; names
+  and assertions should make that distinction clear.
+- ResultSetProxy delegates use one mock fixture and separate column access, object
+  mapping, cursor, and update classes. Corresponding index/label cases stay adjacent.
+- Constants use individually named parameterized cases. Known field names remain
+  explicit so removed constants fail; newly declared constants join the same
+  deduplicated parameter source.
 - Five matching integer/large-batch pairs now use five parameterized tests with
   both overloads. Distinct execution-versus-commit self-suppression cases remain.
 - JDBC-typed and object-bound stream replay variants now run as individually
@@ -117,3 +131,6 @@ after, run the full suite from a fresh build, inspect line/branch coverage for t
 affected production classes, and exercise changed families in random order when
 shared state is involved. Method counts and invocation counts are different for
 parameterized and dynamic tests.
+
+The [2026-10-15 follow-up cleanup plan and results](../../scripts/test-maintenance/cleanup-2026-10-15.md)
+record the latest consolidation and validation.

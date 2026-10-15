@@ -32,7 +32,10 @@ The dated `test_maintenance_2026-07-05` tools and reports are historical. Use th
 entry point for the current suite, which has focused classes and parameterized
 tests beyond the historical parser's model.
 
-## Reorganization verification (2026-10-15)
+The latest [cleanup plan and implementation results](cleanup-2026-10-15.md)
+record the follow-up consolidation, preserved coverage, and random-order checks.
+
+## Initial reorganization verification (2026-10-15)
 
 | Check | Result |
 | --- | --- |
