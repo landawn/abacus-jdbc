@@ -1635,7 +1635,10 @@ public class DaoImplTest extends TestBase {
     void testRefreshCacheFailureIsSuppressedByInvocationFailure() throws Exception {
         final Jdbc.DaoCache failingCache = mock(Jdbc.DaoCache.class);
         final IllegalArgumentException refreshFailure = new IllegalArgumentException("cache refresh failed");
-        Mockito.doThrow(refreshFailure).when(failingCache).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
+        Mockito.doThrow(refreshFailure)
+                .when(failingCache)
+                .update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.<Object[]> any(),
+                        ArgumentMatchers.any());
         final CacheDisabledOverrideDao dao = DaoImpl.createDao(CacheDisabledOverrideDao.class, null, mockDataSourceForDaoCreation(), PSC, null, failingCache,
                 null);
 
@@ -1654,8 +1657,14 @@ public class DaoImplTest extends TestBase {
         final IllegalStateException primary = methodFailure ? new IllegalStateException("write failed") : null;
         final IllegalStateException localFailure = new IllegalStateException("local invalidation failed");
         final IllegalStateException daoFailure = sharedRefreshFailure ? localFailure : new IllegalStateException("DAO invalidation failed");
-        Mockito.doThrow(localFailure).when(localCache).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
-        Mockito.doThrow(daoFailure).when(daoCache).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
+        Mockito.doThrow(localFailure)
+                .when(localCache)
+                .update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.<Object[]> any(),
+                        ArgumentMatchers.any());
+        Mockito.doThrow(daoFailure)
+                .when(daoCache)
+                .update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.<Object[]> any(),
+                        ArgumentMatchers.any());
         final CacheFailureDao dao = DaoImpl.createDao(CacheFailureDao.class, null, mockDataSourceForDaoCreation(), PSC, null, daoCache, null);
 
         try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope(localCache)) {
@@ -1666,9 +1675,11 @@ public class DaoImplTest extends TestBase {
             }
             assertArrayEquals(sharedRefreshFailure ? new Throwable[0] : new Throwable[] { daoFailure }, localFailure.getSuppressed());
             Mockito.verify(localCache)
-                    .update(ArgumentMatchers.anyString(), ArgumentMatchers.eq(methodFailure ? null : "updated"), ArgumentMatchers.same(dao), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
+                    .update(ArgumentMatchers.anyString(), ArgumentMatchers.eq(methodFailure ? null : "updated"), ArgumentMatchers.same(dao),
+                            ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
             Mockito.verify(daoCache)
-                    .update(ArgumentMatchers.anyString(), ArgumentMatchers.eq(methodFailure ? null : "updated"), ArgumentMatchers.same(dao), ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
+                    .update(ArgumentMatchers.anyString(), ArgumentMatchers.eq(methodFailure ? null : "updated"), ArgumentMatchers.same(dao),
+                            ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any());
         }
     }
 
@@ -2318,9 +2329,11 @@ public class DaoImplTest extends TestBase {
         }
 
         Mockito.verify(stmt, Mockito.times(2)).executeUpdate();
-        Mockito.verify(localCache, Mockito.times(2)).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+        Mockito.verify(localCache, Mockito.times(2))
+                .update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
         Mockito.verify(localCache, Mockito.never()).get(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
-        Mockito.verify(localCache, Mockito.never()).put(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+        Mockito.verify(localCache, Mockito.never())
+                .put(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
     }
 
     // Guard: a procedure executed as a query is still classified by its "get" name prefix.
@@ -2341,7 +2354,8 @@ public class DaoImplTest extends TestBase {
             assertEquals(cached, dao.getCounters());
         }
 
-        Mockito.verify(localCache, Mockito.never()).update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
+        Mockito.verify(localCache, Mockito.never())
+                .update(ArgumentMatchers.anyString(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any());
         Mockito.verify(conn, Mockito.never()).prepareCall(ArgumentMatchers.anyString());
     }
 
