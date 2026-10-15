@@ -63,16 +63,15 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
 
         for (final String additionalFields : List.of("", "private static final long version = 1L;", "private final String note = \"fixed\";",
-                "private String note;", "String note;", "@Deprecated private String note;",
-                "@lombok.Builder.Default private final String note = \"fixed\";",
+                "private String note;", "String note;", "@Deprecated private String note;", "@lombok.Builder.Default private final String note = \"fixed\";",
                 "@lombok.Builder.Default\nprivate final String note = \"fixed\";", "private String\n    note;",
                 "private static int first; private final String note = \"fixed\", other = \"second\"; // recognized fields")) {
             config.setAdditionalClassBodySource(additionalFields);
             Files.writeString(source, JdbcCodeGenerationUtil.generateEntityClass("empty_entity", resultSet, config), StandardCharsets.UTF_8);
             diagnostics.reset();
-            final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
-                    System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d",
-                    directory.toString(), source.toString());
+            final int exitCode = ToolProvider.getSystemJavaCompiler()
+                    .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                            "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
             assertEquals(0, exitCode, diagnostics.toString(StandardCharsets.UTF_8));
         }
     }
@@ -102,7 +101,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     public void testNullOptionalConfigurationListsStillMeanNoOverrides() {
         final JdbcCodeGenerationUtil.EntityCodeConfig emptyConfig = JdbcCodeGenerationUtil.EntityCodeConfig.builder().build();
         final JdbcCodeGenerationUtil.EntityCodeConfig nullLists = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .customFieldMappings(null).fieldTypeAnnotationArguments(null).build();
+                .customFieldMappings(null)
+                .fieldTypeAnnotationArguments(null)
+                .build();
 
         assertEquals(JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, emptyConfig),
                 JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, nullLists));
@@ -574,12 +575,11 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
             // The positional forms remain usable.
             assertEquals("UPDATE dollar_guard SET \"PRICE$USD\" = ? WHERE \"ID\" = ?", JdbcCodeGenerationUtil.generateUpdateSql(conn, "dollar_guard", "id"));
 
-            assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", "id"))
-                    .getMessage()
-                    .contains("PRICE$USD"));
+            assertTrue(
+                    assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", "id")).getMessage()
+                            .contains("PRICE$USD"));
             assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard"));
-            assertThrows(IllegalArgumentException.class,
-                    () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", null, List.of("id"), null));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "dollar_guard", null, List.of("id"), null));
             assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(conn, "dollar_guard"));
             // Excluding the column leaves only valid parameter names.
             assertEquals("UPDATE dollar_guard SET \"ID\" = :id",
@@ -723,9 +723,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         assertTrue(ex.getMessage().contains("lombok.Data"), ex.getMessage());
 
         // Also the always-used column annotation, and the nested property-name interface (JLS 8.1).
-        assertThrows(IllegalArgumentException.class,
-                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2",
-                        JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("Column").build()));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history",
+                "SELECT * FROM order_history WHERE 1 > 2", JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("Column").build()));
         assertThrows(IllegalArgumentException.class,
                 () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", "SELECT * FROM order_history WHERE 1 > 2",
                         JdbcCodeGenerationUtil.EntityCodeConfig.builder().className(JdbcCodeGenerationUtil.X).generatePropNameTable(true).build()));
@@ -747,21 +746,35 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
         assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("string", resultSet,
                 JdbcCodeGenerationUtil.EntityCodeConfig.builder().generatePropNameTable(true).build()));
-        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet,
-                JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("Integer").customFieldMappings(List.of(new FieldMapping("id", null, Integer.class))).build()));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet,
+                        JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                                .className("Integer")
+                                .customFieldMappings(List.of(new FieldMapping("id", null, Integer.class)))
+                                .build()));
 
         // A java.lang name the generated source doesn't refer to by its simple name is not shadowed.
-        assertTrue(JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet,
-                JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("Integer").customFieldMappings(List.of(new FieldMapping("id", null, java.math.BigInteger.class))).build())
-                .contains("public class Integer {"));
+        assertTrue(
+                JdbcCodeGenerationUtil
+                        .generateEntityClass("order_history", resultSet,
+                                JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                                        .className("Integer")
+                                        .customFieldMappings(List.of(new FieldMapping("id", null, java.math.BigInteger.class)))
+                                        .build())
+                        .contains("public class Integer {"));
 
         // A type argument refers to the name as well; a qualified name doesn't (this last case passed before the fix too).
-        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet,
-                JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("String").fieldTypeConverter((entity, field, column, type) -> "java.util.List<String>").build()));
-        final String qualified = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .className("String")
-                .fieldTypeConverter((entity, field, column, type) -> "java.util.List<java.lang.String>")
-                .build());
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet,
+                        JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                                .className("String")
+                                .fieldTypeConverter((entity, field, column, type) -> "java.util.List<String>")
+                                .build()));
+        final String qualified = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet,
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                        .className("String")
+                        .fieldTypeConverter((entity, field, column, type) -> "java.util.List<java.lang.String>")
+                        .build());
         assertTrue(qualified.contains("    private java.util.List<java.lang.String> status;"), qualified);
     }
 
@@ -1409,9 +1422,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
 
-        assertEquals("UPDATE order_history SET id = 1 -- first value\n, status = 2 -- last value\n WHERE id = 42",
-                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
-                        "INSERT INTO order_history(id, status) VALUES (1 -- first value\n, 2 -- last value\n)", "id = 42"));
+        assertEquals("UPDATE order_history SET id = 1 -- first value\n, status = 2 -- last value\n WHERE id = 42", JdbcCodeGenerationUtil
+                .convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id, status) VALUES (1 -- first value\n, 2 -- last value\n)", "id = 42"));
     }
 
     @Test
@@ -1419,11 +1431,10 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
 
-        assertEquals("UPDATE order_history SET id = 1 /* ), ' */ + 2, status = 3 -- ), ' ignored\n WHERE id = 42",
-                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
-                        "INSERT INTO order_history(id, status) VALUES (1 /* ), ' */ + 2, 3 -- ), ' ignored\n)", "id = 42"));
-        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
-                "INSERT INTO order_history(id) VALUES (1 /* unclosed )"));
+        assertEquals("UPDATE order_history SET id = 1 /* ), ' */ + 2, status = 3 -- ), ' ignored\n WHERE id = 42", JdbcCodeGenerationUtil
+                .convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id, status) VALUES (1 /* ), ' */ + 2, 3 -- ), ' ignored\n)", "id = 42"));
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(id) VALUES (1 /* unclosed )"));
     }
 
     private static DataSource dataSourceReporting(final String productName) throws SQLException {
@@ -1433,7 +1444,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         when(dataSource.getConnection()).thenReturn(conn);
         when(conn.getMetaData()).thenReturn(metaData);
         when(metaData.getDatabaseProductName()).thenReturn(productName);
-        when(metaData.getIdentifierQuoteString()).thenReturn(SqlIdentifierUtil.quoteString(com.landawn.abacus.query.SqlDialect.ProductInfo.of(productName, "1")));
+        when(metaData.getIdentifierQuoteString())
+                .thenReturn(SqlIdentifierUtil.quoteString(com.landawn.abacus.query.SqlDialect.ProductInfo.of(productName, "1")));
         when(metaData.getDatabaseProductVersion()).thenReturn("1.0");
         return dataSource;
     }
@@ -1469,8 +1481,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                     JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(flat, "INSERT INTO order_history(id) VALUES (1 /* literal /* marker */ + 2)"),
                     productName);
             assertEquals("UPDATE order_history SET id = 1 /* a /* b */, status = 2",
-                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(flat, "INSERT INTO order_history(id, status) VALUES (1 /* a /* b */, 2)"),
-                    productName);
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(flat, "INSERT INTO order_history(id, status) VALUES (1 /* a /* b */, 2)"), productName);
             assertThrows(IllegalArgumentException.class,
                     () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(flat, "INSERT INTO order_history(id, status) VALUES (5--1, 2)"), productName);
             assertEquals("UPDATE order_history SET id = 5 # 3, status = 2",
@@ -1491,8 +1502,7 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                     JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO order_history(id, status) VALUES (5--1, 2)"));
             // "-- " followed by whitespace or a control character is still a line comment.
             assertEquals("UPDATE order_history SET id = 1 -- c\n, status = 2 --\t),\n",
-                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql,
-                            "INSERT INTO order_history(id, status) VALUES (1 -- c\n, 2 --\t),\n)"));
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO order_history(id, status) VALUES (1 -- c\n, 2 --\t),\n)"));
         }
     }
 
@@ -1511,11 +1521,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
             assertEquals("UPDATE t SET a = 1, b = 2",
                     JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a # first, (x)\n, b) VALUES (1, 2)"));
             // "#" inside a quoted value is text.
-            assertEquals("UPDATE t SET a = '#1'",
-                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a) VALUES ('#1')"));
+            assertEquals("UPDATE t SET a = '#1'", JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a) VALUES ('#1')"));
             // A "#" comment reaching the end of the statement leaves the value list unclosed.
-            assertThrows(IllegalArgumentException.class,
-                    () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a) VALUES (1 # )"));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a) VALUES (1 # )"));
         }
     }
 
@@ -1527,7 +1535,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         dataSource.setUser("sa");
         dataSource.setPassword("");
 
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE comment_values (id INTEGER PRIMARY KEY, amount INTEGER)");
             stmt.execute("INSERT INTO comment_values VALUES (1, 10), (2, 20)");
 
@@ -1542,7 +1551,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
                 assertEquals(20, rows.getInt(1));
             }
         } finally {
-            try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
+            try (Connection conn = dataSource.getConnection();
+                 Statement stmt = conn.createStatement()) {
                 stmt.execute("DROP TABLE IF EXISTS comment_values");
             }
         }
@@ -1553,9 +1563,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);
 
-        assertEquals("UPDATE order_history SET id = 1, status = 2 WHERE id = 42",
-                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
-                        "INSERT INTO order_history(id /* pk, (x) */, -- ), '\n status -- last\n) VALUES (1, 2)", "id = 42"));
+        assertEquals("UPDATE order_history SET id = 1, status = 2 WHERE id = 42", JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource,
+                "INSERT INTO order_history(id /* pk, (x) */, -- ), '\n status -- last\n) VALUES (1, 2)", "id = 42"));
         // Comment text inside a quoted identifier is part of the name, not a comment.
         assertEquals("UPDATE order_history SET `a--b` = 1",
                 JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(dataSource, "INSERT INTO order_history(`a--b`) VALUES (1)"));
@@ -1569,7 +1578,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final org.h2.jdbcx.JdbcDataSource dataSource = new org.h2.jdbcx.JdbcDataSource();
         dataSource.setURL("jdbc:h2:mem:converter_line_comments");
 
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = dataSource.getConnection();
+             Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE comment_values (id INTEGER PRIMARY KEY, amount INTEGER)");
             stmt.execute("INSERT INTO comment_values VALUES (1, 10), (2, 20)");
 
@@ -1844,9 +1854,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final Path source = directory.resolve("OrderHistory.java");
         final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
         Files.writeString(source, code, StandardCharsets.UTF_8);
-        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
-                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
-                source.toString());
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
         assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
     }
 
@@ -1880,9 +1890,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final Path source = directory.resolve("OrderHistory.java");
         final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
         Files.writeString(source, code, StandardCharsets.UTF_8);
-        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
-                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
-                source.toString());
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
         assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
     }
 
@@ -2327,9 +2337,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
             final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
             Files.writeString(source, code, StandardCharsets.UTF_8);
             diagnostics.reset();
-            final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
-                    System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d",
-                    directory.toString(), source.toString());
+            final int exitCode = ToolProvider.getSystemJavaCompiler()
+                    .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                            "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
             assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
         }
     }
@@ -2362,9 +2372,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final Path source = directory.resolve("OrderHistory.java");
         final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
         Files.writeString(source, code, StandardCharsets.UTF_8);
-        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
-                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
-                source.toString());
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
         assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
     }
 
@@ -2390,7 +2400,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     public void testGenerateEntityClass_AdditionalGenericFieldDoesNotImportNonPublicJavaUtilClass() {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .className("OrderHistory")
-                .additionalClassBodySource("    private TaskQueue<String> tasks;\n    private KeyValueHolder<String, Integer> pair;\n    private List<String> tags;")
+                .additionalClassBodySource(
+                        "    private TaskQueue<String> tasks;\n    private KeyValueHolder<String, Integer> pair;\n    private List<String> tags;")
                 .build();
         final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
 
@@ -2413,9 +2424,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
         Files.writeString(source, code, StandardCharsets.UTF_8);
 
-        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
-                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
-                source.toString());
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
         assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
         assertFalse(JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, null).contains("NonUpdatable"));
     }
@@ -2484,7 +2495,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     @Test
     public void testGenerateEntityClass_CustomizedFieldTypeKeepsJavaLangSubpackageQualifier() {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
-                .customFieldMappings(List.of(new FieldMapping("status", null, ElementType.class), new FieldMapping("created_at", null, Character.UnicodeScript.class)))
+                .customFieldMappings(
+                        List.of(new FieldMapping("status", null, ElementType.class), new FieldMapping("created_at", null, Character.UnicodeScript.class)))
                 .build();
         final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
 
@@ -3451,9 +3463,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final Path source = directory.resolve("OrderHistory.java");
         final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
         Files.writeString(source, code, StandardCharsets.UTF_8);
-        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
-                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
-                source.toString());
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
         assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
     }
 
@@ -3492,9 +3504,9 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
         final Path source = directory.resolve("OrderHistory.java");
         final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
         Files.writeString(source, code, StandardCharsets.UTF_8);
-        final int exitCode = ToolProvider.getSystemJavaCompiler().run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath",
-                System.getProperty("java.class.path"), "-processor", "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(),
-                source.toString());
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
         assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
     }
 
@@ -3712,7 +3724,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
 
     @Test
     public void testSplitSqlList_UnmatchedClosingParenthesis_Reflection() throws Exception {
-        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(), boolean.class, boolean.class);
+        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(),
+                boolean.class, boolean.class);
         m.setAccessible(true);
 
         final java.lang.reflect.InvocationTargetException ex = assertThrows(java.lang.reflect.InvocationTargetException.class,
@@ -3726,7 +3739,8 @@ public class JdbcCodeGenerationUtilTest extends TestBase {
     // exercised directly via reflection (an unterminated single-quote literal).
     @Test
     public void testSplitSqlList_UnclosedToken_Reflection() throws Exception {
-        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(), boolean.class, boolean.class);
+        final java.lang.reflect.Method m = JdbcCodeGenerationUtil.class.getDeclaredMethod("splitSqlList", String.class, String.class, commentStyleClass(),
+                boolean.class, boolean.class);
         m.setAccessible(true);
 
         final java.lang.reflect.InvocationTargetException ex = assertThrows(java.lang.reflect.InvocationTargetException.class,

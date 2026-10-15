@@ -58,7 +58,8 @@ public class DaoUtilTest extends TestBase {
         }));
         assertSame(sqlFailure, translated.getCause());
 
-        final CannotGetJdbcConnectionException stateFailure = new CannotGetJdbcConnectionException("no connection", new IllegalStateException("null connection"));
+        final CannotGetJdbcConnectionException stateFailure = new CannotGetJdbcConnectionException("no connection",
+                new IllegalStateException("null connection"));
         assertSame(stateFailure, assertThrows(CannotGetJdbcConnectionException.class, () -> DaoUtil.uncheckedSql(() -> {
             throw stateFailure;
         })));

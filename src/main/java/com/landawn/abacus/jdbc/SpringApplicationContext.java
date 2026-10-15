@@ -17,11 +17,14 @@
 package com.landawn.abacus.jdbc;
 
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.BeanNotOfRequiredTypeException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationListener;
+import org.springframework.context.event.ContextClosedEvent;
 
 import com.landawn.abacus.annotation.Internal;
 
@@ -36,7 +39,9 @@ import com.landawn.abacus.annotation.Internal;
  * and is stored in a process-wide holder shared by all instances — so the instance the framework constructs
  * internally (e.g. in {@code Jdbc.HandlerFactory}) can resolve beans once any instance has been registered.
  * Once injected, it provides the framework's handler registry with methods to retrieve beans by name or
- * type from the Spring container.</p>
+ * type from the Spring container. Closing the registered context clears the shared holder so the
+ * framework does not retain a stopped application and its beans. Destroying the bridge bean also
+ * releases its context if initialization fails before the context can publish a close event.</p>
  *
  * <p><b>Framework Integration:</b></p>
  * <p>This class must be registered as a Spring bean for the JDBC framework to access Spring-managed handlers.
@@ -72,7 +77,7 @@ import com.landawn.abacus.annotation.Internal;
  * @see org.springframework.context.ApplicationContext
  */
 @Internal
-public final class SpringApplicationContext {
+public final class SpringApplicationContext implements ApplicationListener<ContextClosedEvent>, DisposableBean {
 
     /**
      * Process-wide holder for the Spring {@link ApplicationContext} injected by Spring; shared by
@@ -84,6 +89,9 @@ public final class SpringApplicationContext {
     // instance in a static initializer, which Spring never injects. Spring ignores @Autowired on
     // static fields, so injection is routed through the instance setter below into this holder.
     private static volatile ApplicationContext appContext; // NOSONAR
+
+    /** The context injected into this bean, guarded by the class monitor along with the shared holder. */
+    private ApplicationContext injectedContext;
 
     /**
      * Invoked by Spring to supply the {@link ApplicationContext} when an instance of this class is
@@ -97,7 +105,49 @@ public final class SpringApplicationContext {
      */
     @Autowired // NOSONAR
     public void setApplicationContext(final ApplicationContext applicationContext) {
-        appContext = applicationContext; // NOSONAR
+        synchronized (SpringApplicationContext.class) {
+            injectedContext = applicationContext;
+            appContext = applicationContext; // NOSONAR
+        }
+    }
+
+    /**
+     * Releases this bean's context when Spring destroys it, including after a failed context refresh.
+     * A context installed by another bridge remains available. Calling this more than once is harmless.
+     *
+     * <p>Two boundaries are accepted: if this bean's own creation fails after the setter has run (for example
+     * a {@code BeanPostProcessor} throws), Spring never registers it as disposable, so the holder keeps that
+     * context until another bridge replaces it or clears it; and destroying this bean individually while its
+     * context is still running releases the holder for that running context, because Spring does not tell a
+     * destruction callback why it is invoked.</p>
+     */
+    @Override
+    public void destroy() {
+        synchronized (SpringApplicationContext.class) {
+            // A failed refresh destroys initialized singletons without publishing ContextClosedEvent.
+            // Only this bean's injected context belongs to its destruction callback.
+            if (appContext == injectedContext) {
+                appContext = null; // NOSONAR
+            }
+
+            injectedContext = null;
+        }
+    }
+
+    /**
+     * Releases the shared reference when its registered Spring context closes.
+     *
+     * @param event the context shutdown event.
+     */
+    @Override
+    public void onApplicationEvent(final ContextClosedEvent event) {
+        synchronized (SpringApplicationContext.class) {
+            // Context replacement and shutdown may overlap. An older context (or a child context
+            // whose event reaches its parent) must not clear a different, still-active context.
+            if (appContext == event.getApplicationContext()) {
+                appContext = null; // NOSONAR
+            }
+        }
     }
 
     /**
@@ -131,12 +181,12 @@ public final class SpringApplicationContext {
      * Object dataSource = springAppContext.getBean("myDataSource");
      * }</pre>
      *
-     * <p>Returns {@code null} only when the context has not been initialized; if the context is
-     * initialized but no bean with the given name exists, {@code NoSuchBeanDefinitionException}
-     * is thrown.</p>
+     * <p>Returns {@code null} only when no context is held: none has been injected yet, or the held
+     * context has since closed or its bridge bean was destroyed. If a context is held but no bean with
+     * the given name exists, {@code NoSuchBeanDefinitionException} is thrown.</p>
      *
      * @param name the name of the bean to retrieve.
-     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
+     * @return the bean instance, or {@code null} if no ApplicationContext is held (not yet injected, or released after close/destruction).
      * @throws IllegalStateException if the supplied context has not been refreshed or has already been closed.
      * @throws IllegalArgumentException if the context is initialized and {@code name} is {@code null}.
      * @throws NoSuchBeanDefinitionException if no bean with the specified name is found.
@@ -160,7 +210,7 @@ public final class SpringApplicationContext {
      *
      * @param <T> the bean type to be retrieved from the Spring context.
      * @param requiredType the class object representing the type of bean to retrieve.
-     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
+     * @return the bean instance, or {@code null} if no ApplicationContext is held (not yet injected, or released after close/destruction).
      * @throws IllegalStateException if the supplied context has not been refreshed or has already been closed.
      * @throws IllegalArgumentException if the context is initialized and {@code requiredType} is {@code null}.
      * @throws NoSuchBeanDefinitionException if no bean of the given type exists.
@@ -189,7 +239,7 @@ public final class SpringApplicationContext {
      * @param <T> the bean type to be retrieved from the Spring context.
      * @param name the name of the bean to retrieve.
      * @param requiredType the class object representing the required type of the bean.
-     * @return the bean instance, or {@code null} if the ApplicationContext is not initialized.
+     * @return the bean instance, or {@code null} if no ApplicationContext is held (not yet injected, or released after close/destruction).
      * @throws IllegalStateException if the supplied context has not been refreshed or has already been closed.
      * @throws IllegalArgumentException if the context is initialized and {@code name} is {@code null}.
      * @throws NoSuchBeanDefinitionException if no bean with the specified name is found.

@@ -39,6 +39,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.RandomAccess;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
@@ -414,8 +415,17 @@ public final class Jdbc {
                         fieldTypes = localFieldTypes;
                     }
 
-                    for (int i = 0; i < len; i++) {
-                        fieldTypes[i].set(stmt, i + 1, params.get(i));
+                    if (params instanceof RandomAccess) {
+                        for (int i = 0; i < len; i++) {
+                            fieldTypes[i].set(stmt, i + 1, params.get(i));
+                        }
+                    } else {
+                        // A sequential list must be traversed once; get(i) would make binding quadratic.
+                        int i = 0;
+                        for (final T param : params) {
+                            fieldTypes[i].set(stmt, i + 1, param);
+                            i++;
+                        }
                     }
                 }
             };
@@ -7047,16 +7057,8 @@ public final class Jdbc {
          * @param outParamValues a map of output parameter values, keyed by index or name.
          */
         OutParamResult(final List<OutParam> outParams, final Map<Object, Object> outParamValues) {
-            if (N.isEmpty(outParams)) {
-                this.outParams = N.emptyList();
-            } else {
-                this.outParams = new ArrayList<>(outParams.size());
-
-                for (final OutParam outParam : outParams) {
-                    this.outParams.add(outParam == null ? null
-                            : new OutParam(outParam.parameterIndex(), outParam.parameterName(), outParam.sqlType(), outParam.typeName(), outParam.scale()));
-                }
-            }
+            // OutParam is an immutable record of primitives and Strings; only its containing list needs a snapshot.
+            this.outParams = N.isEmpty(outParams) ? N.emptyList() : new ArrayList<>(outParams);
 
             this.outParamValues = N.isEmpty(outParamValues) ? N.emptyMap() : new LinkedHashMap<>(outParamValues);
         }
@@ -7126,9 +7128,9 @@ public final class Jdbc {
          * int firstIndex = defs.get(0).parameterIndex(); // 1-based index of the first out-param
          * }</pre>
          *
-         * @return an unmodifiable snapshot of the list of {@code OutParam} objects. The definitions
-         *         are copied when this result is created, so later changes to the query's registrations
-         *         do not alter this result.
+         * @return an unmodifiable snapshot of the list of {@code OutParam} objects. The list is copied
+         *         when this result is created, while its immutable definitions are shared. Later changes
+         *         to the query's registrations do not alter this result.
          */
         public List<OutParam> getOutParams() {
             return ImmutableList.wrap(outParams);
@@ -7236,7 +7238,7 @@ public final class Jdbc {
         };
 
         /**
-         * Registry of {@code Handler} instances keyed by qualifier (canonical class name).
+         * Registry of explicitly registered {@code Handler} instances keyed by qualifier (canonical class name).
          */
         private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>();
         /**
@@ -7341,9 +7343,9 @@ public final class Jdbc {
          * Retrieves a handler by its qualifier. It first checks the internal registry, and if not found,
          * it attempts to retrieve it from the Spring application context if available.
          *
-         * <p>A handler resolved from the Spring context is cached into the internal registry only if no
-         * entry already exists for this qualifier (first-wins), so a Spring bean can never silently
-         * overwrite a handler explicitly registered via {@link #register(String, Handler)}.</p>
+         * <p>Spring-resolved handlers retain their Spring scope and lifecycle and are not stored in the
+         * process-wide registry. An explicitly registered handler takes precedence, including when
+         * registration races with the Spring lookup.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -7363,24 +7365,26 @@ public final class Jdbc {
 
             Handler<?> result = handlerPool.get(qualifier);
 
-            if (result == null && springAppContext != null) {
-                try {
-                    final Object bean = springAppContext.getBean(qualifier);
+            if (result != null || springAppContext == null) {
+                return result;
+            }
 
-                    if (bean instanceof Handler) {
-                        final Handler<?> springHandler = (Handler<?>) bean;
-                        final Handler<?> existingHandler = handlerPool.putIfAbsent(qualifier, springHandler);
+            try {
+                final Object bean = springAppContext.getBean(qualifier);
 
-                        result = existingHandler == null ? springHandler : existingHandler;
-                    }
-                } catch (final Exception | LinkageError e) {
-                    // Spring lookup is optional; the registry is rechecked below in case registration raced with it.
+                if (bean instanceof Handler) {
+                    // Spring owns the bean's scope and destruction. Caching it here would retain
+                    // a stopped application's beans and reuse them after context replacement.
+                    result = (Handler<?>) bean;
                 }
+            } catch (final Exception | LinkageError e) {
+                // Spring lookup is optional; the registry is rechecked below in case registration raced with it.
             }
 
             // A registration may have won while Spring lookup was in progress, including while a
             // failing lookup was unwinding through the catch block.
-            return result == null ? handlerPool.get(qualifier) : result;
+            final Handler<?> registeredHandler = handlerPool.get(qualifier);
+            return registeredHandler == null ? result : registeredHandler;
         }
 
         /**
@@ -7388,8 +7392,9 @@ public final class Jdbc {
          * canonical name as the qualifier. If not found, it attempts to retrieve it from the Spring
          * application context.
          *
-         * <p>A handler resolved from the Spring context is cached only if no entry already exists for this
-         * qualifier. This preserves an explicitly registered handler if registration races with resolution.</p>
+         * <p>Spring-resolved handlers retain their Spring scope and lifecycle and are not stored in the
+         * process-wide registry. An explicitly registered handler takes precedence, including when
+         * registration races with the Spring lookup.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -7411,41 +7416,39 @@ public final class Jdbc {
 
             Handler<?> result = handlerPool.get(qualifier);
 
-            if (result == null && springAppContext != null) {
+            if (result != null || springAppContext == null) {
+                return result;
+            }
+
+            try {
+                result = springAppContext.getBean(handlerClass);
+            } catch (final Exception | LinkageError e) {
+                // Fall back to lookup by qualifier, then recheck the registry.
+            }
+
+            if (result == null) {
                 try {
-                    result = springAppContext.getBean(handlerClass);
+                    final Object bean = springAppContext.getBean(qualifier);
+
+                    if (bean instanceof Handler) {
+                        result = (Handler<?>) bean;
+                    }
                 } catch (final Exception | LinkageError e) {
-                    // Fall back to lookup by qualifier, then recheck the registry.
-                }
-
-                if (result == null) {
-                    try {
-                        final Object bean = springAppContext.getBean(qualifier);
-
-                        if (bean instanceof Handler) {
-                            result = (Handler<?>) bean;
-                        }
-                    } catch (final Exception | LinkageError e) {
-                        // The registry is rechecked below in case registration raced with Spring lookup.
-                    }
-                }
-
-                if (result != null) {
-                    final Handler<?> existingHandler = handlerPool.putIfAbsent(qualifier, result);
-
-                    if (existingHandler != null) {
-                        result = existingHandler;
-                    }
+                    // The registry is rechecked below in case registration raced with Spring lookup.
                 }
             }
 
             // Recheck after Spring lookup for the same race covered by get(String).
-            return result == null ? handlerPool.get(qualifier) : result;
+            final Handler<?> registeredHandler = handlerPool.get(qualifier);
+            return registeredHandler == null ? result : registeredHandler;
         }
 
         /**
          * Retrieves a handler by its class. If the handler is not found in the registry or Spring context,
          * a new instance is created, registered, and returned.
+         *
+         * <p>Spring-resolved handlers retain their configured scope; in particular, a prototype bean can
+         * produce a distinct handler on each call without adding it to the registry.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code

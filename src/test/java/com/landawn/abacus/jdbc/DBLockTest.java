@@ -399,9 +399,7 @@ public class DBLockTest extends TestBase {
     @Test
     public void testTryLockRetriesDriverIllegalStateException() throws Exception {
         final LockFixture fixture = newLockFixture();
-        when(fixture.preparedStatement.executeUpdate()).thenReturn(0)
-                .thenThrow(new IllegalStateException("transient driver failure"))
-                .thenReturn(0, 1);
+        when(fixture.preparedStatement.executeUpdate()).thenReturn(0).thenThrow(new IllegalStateException("transient driver failure")).thenReturn(0, 1);
 
         final String code = fixture.lock.tryLock("driver-state-retry", 60_000, 5_000, 1);
 

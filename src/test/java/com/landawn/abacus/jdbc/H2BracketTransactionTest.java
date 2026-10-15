@@ -27,11 +27,8 @@ public class H2BracketTransactionTest extends TestBase {
     @Test
     void mixedArraysAndBracketAliasesRollBackInEitherProjectionOrder() throws Exception {
         // MSSQLServer mode accepts array query constructors, but reserves square brackets for identifiers.
-        assertWritesRollBack("h2_mixed_brackets",
-                "SELECT id [x'], ARRAY(SELECT 1)" + WRITE,
-                "SELECT ARRAY(SELECT 1), id [x']" + WRITE,
-                "SELECT id [x/*], ARRAY(SELECT 1)" + WRITE + " /* end */",
-                "SELECT id [x--], ARRAY(SELECT 1)" + WRITE + "\n");
+        assertWritesRollBack("h2_mixed_brackets", "SELECT id [x'], ARRAY(SELECT 1)" + WRITE, "SELECT ARRAY(SELECT 1), id [x']" + WRITE,
+                "SELECT id [x/*], ARRAY(SELECT 1)" + WRITE + " /* end */", "SELECT id [x--], ARRAY(SELECT 1)" + WRITE + "\n");
     }
 
     @Test
@@ -43,7 +40,8 @@ public class H2BracketTransactionTest extends TestBase {
     @Test
     void changingModeAfterDialectResolutionDoesNotLetWritesEscape() throws Exception {
         JdbcDataSource ds = source("h2_changed_mode", false);
-        try (Connection setup = ds.getConnection(); Statement stmt = setup.createStatement()) {
+        try (Connection setup = ds.getConnection();
+             Statement stmt = setup.createStatement()) {
             stmt.execute("CREATE TABLE t(id INT)");
             stmt.execute("INSERT INTO t VALUES (1)");
             SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.READ_COMMITTED, true);
@@ -66,10 +64,10 @@ public class H2BracketTransactionTest extends TestBase {
             String[] queries = sqlServerMode
                     ? new String[] { "SELECT abs(1) [x'] WHERE 'a]' = 'a]'", "SELECT ARRAY(SELECT 1) [x'] WHERE 'a]' = 'a]'",
                             "WITH c AS (SELECT 1 [x]) SELECT * FROM c" }
-                    : new String[] { "SELECT ARRAY[ARRAY[1]]", "SELECT (ARRAY[10, 20])[1]",
-                            "SELECT (ARRAY[10, 20])[CASE WHEN 'a]' = 'a]' THEN 1 ELSE 2 END]",
+                    : new String[] { "SELECT ARRAY[ARRAY[1]]", "SELECT (ARRAY[10, 20])[1]", "SELECT (ARRAY[10, 20])[CASE WHEN 'a]' = 'a]' THEN 1 ELSE 2 END]",
                             "WITH c AS (SELECT ARRAY[ARRAY[1]] AS a) SELECT a FROM c" };
-            try (Connection setup = ds.getConnection(); Statement stmt = setup.createStatement()) {
+            try (Connection setup = ds.getConnection();
+                 Statement stmt = setup.createStatement()) {
                 SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.READ_COMMITTED, true);
                 try {
                     for (String sql : queries) {
@@ -87,7 +85,8 @@ public class H2BracketTransactionTest extends TestBase {
 
     private static void assertWritesRollBack(String name, String... statements) throws Exception {
         JdbcDataSource ds = source(name, true);
-        try (Connection setup = ds.getConnection(); Statement stmt = setup.createStatement()) {
+        try (Connection setup = ds.getConnection();
+             Statement stmt = setup.createStatement()) {
             assertEquals("H2", setup.getMetaData().getDatabaseProductName());
             stmt.execute("CREATE TABLE t(id INT)");
             stmt.execute("INSERT INTO t VALUES (1)");

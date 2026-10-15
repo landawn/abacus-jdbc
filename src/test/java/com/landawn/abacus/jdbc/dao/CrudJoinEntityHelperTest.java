@@ -243,13 +243,17 @@ public class CrudJoinEntityHelperTest extends TestBase {
         final TestCrudJoinDao dao = Mockito.mock(TestCrudJoinDao.class, Mockito.CALLS_REAL_METHODS);
         final List<Class<?>> classes = java.util.Arrays.asList(String.class, null);
 
-        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.get(1L, null, classes)).getMessage()
+        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.get(1L, null, classes))
+                .getMessage()
                 .contains("joinEntityClasses"));
-        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.getOrNull(1L, null, classes)).getMessage()
+        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.getOrNull(1L, null, classes))
+                .getMessage()
                 .contains("joinEntityClasses"));
-        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.batchGet(List.of(1L), null, classes)).getMessage()
+        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.batchGet(List.of(1L), null, classes))
+                .getMessage()
                 .contains("joinEntityClasses"));
-        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.batchGet(List.of(1L), null, classes, 2)).getMessage()
+        assertTrue(org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> dao.batchGet(List.of(1L), null, classes, 2))
+                .getMessage()
                 .contains("joinEntityClasses"));
 
         verify(dao, never()).getOrNull(ArgumentMatchers.any(), ArgumentMatchers.<Collection<String>> any());

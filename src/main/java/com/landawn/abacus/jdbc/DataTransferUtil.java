@@ -153,6 +153,12 @@ import com.landawn.abacus.util.Throwables;
  * internally. Methods that accept a {@link javax.sql.DataSource} obtain a connection and release it
  * back to the data source before returning.</p>
  *
+ * <p><b>Failed imports and copies:</b> If a failure leaves rows queued by the transfer, the target batch is
+ * cleared on a best-effort basis without closing the target statement. Cleanup failures are suppressed on
+ * the original failure. Batch execution and cleanup affect the entire statement batch, including rows
+ * previously queued by its caller; a failure before the transfer attempts to add any row leaves an existing
+ * batch untouched. Clearing a pending batch does not roll back rows that have already executed.</p>
+ *
  * <p><b>&#9888; Warning:</b> Import and copy return values count source rows submitted for execution,
  * not the sum of JDBC update counts reported by the target database. A successful return therefore
  * does not prove that every submitted row changed one target row.</p>
@@ -181,10 +187,11 @@ import com.landawn.abacus.util.Throwables;
  * {@link Predicate} filter or {@code parameterSetter} propagates out of the enclosing
  * {@code importData}, {@code importCsv} or {@code copy} call unchanged &mdash; it is neither wrapped
  * nor translated, and the method's row count is lost. Batches already executed before the failure
- * stay executed (see the transaction warning above); the rows added to the current batch since the
- * last execution are left unexecuted and are not cleared from the caller's
- * {@link PreparedStatement}, so a later {@code executeBatch} on that statement would still submit
- * them.</p>
+ * stay executed (see the transaction warning above). If the transfer may have queued rows since
+ * the last successful batch execution, clearing the pending batch on the caller's
+ * {@link PreparedStatement} is attempted without closing it. The original failure remains primary;
+ * distinct cleanup failures are attached as suppressed exceptions. Clearing is best-effort: if it
+ * fails, rows may remain queued for a later {@code executeBatch}.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -1146,38 +1153,47 @@ public final class DataTransferUtil {
         final Object[] row = new Object[columnCount];
         int result = 0;
         boolean hasExecutedBatch = false;
+        boolean hasPendingBatch = false;
 
         logger.debug("Importing Dataset(rows={}, columns={}, batchSize={}, batchIntervalInMillis={})", dataset.size(), columnCount, batchSize,
                 batchIntervalInMillis);
 
-        for (int i = 0, size = dataset.size(); i < size; i++) {
-            // Read by (row, column) instead of moveToRow + get(column): moving the cursor would change the caller's
-            // Dataset state and let concurrent imports of one shared (e.g. frozen) Dataset read each other's rows.
-            for (int j = 0; j < columnCount; j++) {
-                row[j] = dataset.get(i, j);
+        try {
+            for (int i = 0, size = dataset.size(); i < size; i++) {
+                // Read by (row, column) instead of moveToRow + get(column): moving the cursor would change the caller's
+                // Dataset state and let concurrent imports of one shared (e.g. frozen) Dataset read each other's rows.
+                for (int j = 0; j < columnCount; j++) {
+                    row[j] = dataset.get(i, j);
+                }
+
+                if (filter != null && !filter.test(row)) {
+                    continue;
+                }
+
+                parameterSetter.accept(stmtForSetter, row);
+
+                // Call stmt.addBatch() directly rather than stmtForSetter.addBatch(), because the
+                // latter (via AbstractQuery.addBatch) closes the underlying stmt on failure — which
+                // would break the documented contract that this method does not close the caller's stmt.
+                hasPendingBatch = true;
+                stmt.addBatch();
+
+                if ((++result % batchSize) == 0) {
+                    pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
+                    JdbcUtil.executeBatch(stmt);
+                    hasPendingBatch = false;
+                    hasExecutedBatch = true;
+                }
             }
 
-            if (filter != null && !filter.test(row)) {
-                continue;
-            }
-
-            parameterSetter.accept(stmtForSetter, row);
-
-            // Call stmt.addBatch() directly rather than stmtForSetter.addBatch(), because the
-            // latter (via AbstractQuery.addBatch) closes the underlying stmt on failure — which
-            // would break the documented contract that this method does not close the caller's stmt.
-            stmt.addBatch();
-
-            if ((++result % batchSize) == 0) {
+            if ((result % batchSize) > 0) {
                 pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                 JdbcUtil.executeBatch(stmt);
-                hasExecutedBatch = true;
+                hasPendingBatch = false;
             }
-        }
-
-        if ((result % batchSize) > 0) {
-            pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
-            JdbcUtil.executeBatch(stmt);
+        } catch (final SQLException | RuntimeException | Error e) {
+            clearFailedBatch(stmt, hasPendingBatch, e);
+            throw e;
         }
 
         logger.info("Imported Dataset rows(imported={}, sourceRows={}, columns={})", result, dataset.size(), columnCount);
@@ -1406,32 +1422,40 @@ public final class DataTransferUtil {
         final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
         long result = 0;
         boolean hasExecutedBatch = false;
+        boolean hasPendingBatch = false;
 
         logger.debug("Importing iterator data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
 
-        T next = null;
-        while (iter.hasNext()) {
-            next = iter.next();
+        try {
+            while (iter.hasNext()) {
+                final T next = iter.next();
 
-            if (filter != null && !filter.test(next)) {
-                continue;
+                if (filter != null && !filter.test(next)) {
+                    continue;
+                }
+
+                parameterSetter.accept(stmtForSetter, next);
+                // Call stmt.addBatch() directly to avoid AbstractQuery.addBatch closing the caller's
+                // stmt on failure (the doc guarantees this method does not close it).
+                hasPendingBatch = true;
+                stmt.addBatch();
+
+                if ((++result % batchSize) == 0) {
+                    pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
+                    JdbcUtil.executeBatch(stmt);
+                    hasPendingBatch = false;
+                    hasExecutedBatch = true;
+                }
             }
 
-            parameterSetter.accept(stmtForSetter, next);
-            // Call stmt.addBatch() directly to avoid AbstractQuery.addBatch closing the caller's
-            // stmt on failure (the doc guarantees this method does not close it).
-            stmt.addBatch();
-
-            if ((++result % batchSize) == 0) {
+            if ((result % batchSize) > 0) {
                 pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                 JdbcUtil.executeBatch(stmt);
-                hasExecutedBatch = true;
+                hasPendingBatch = false;
             }
-        }
-
-        if ((result % batchSize) > 0) {
-            pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
-            JdbcUtil.executeBatch(stmt);
+        } catch (final SQLException | RuntimeException | Error e) {
+            clearFailedBatch(stmt, hasPendingBatch, e);
+            throw e;
         }
 
         logger.info("Imported iterator data rows(imported={})", result);
@@ -1960,6 +1984,7 @@ public final class DataTransferUtil {
         final boolean logicalCsvRows = lineParser == CsvUtil.CSV_LINE_PARSER;
         long result = 0;
         boolean hasExecutedBatch = false;
+        boolean hasPendingBatch = false;
 
         logger.debug("Importing CSV data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
 
@@ -1987,11 +2012,13 @@ public final class DataTransferUtil {
                 parameterSetter.accept(stmtForSetter, output);
                 // Call stmt.addBatch() directly to avoid AbstractQuery.addBatch closing the caller's
                 // stmt on failure (the doc guarantees this method does not close it).
+                hasPendingBatch = true;
                 stmt.addBatch();
 
                 if ((++result % batchSize) == 0) {
                     pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                     JdbcUtil.executeBatch(stmt);
+                    hasPendingBatch = false;
                     hasExecutedBatch = true;
                 }
 
@@ -2001,11 +2028,17 @@ public final class DataTransferUtil {
             if ((result % batchSize) > 0) {
                 pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                 JdbcUtil.executeBatch(stmt);
+                hasPendingBatch = false;
             }
 
             logger.info("Imported CSV data rows(imported={}, columns={})", result, columnCount);
         } catch (final IOException e) {
-            throw new UncheckedIOException(e);
+            final UncheckedIOException failure = new UncheckedIOException(e);
+            clearFailedBatch(stmt, hasPendingBatch, failure);
+            throw failure;
+        } catch (final SQLException | RuntimeException | Error e) {
+            clearFailedBatch(stmt, hasPendingBatch, e);
+            throw e;
         } finally {
             if (!isBufferedReader) {
                 Objectory.recycle(br);
@@ -2332,8 +2365,8 @@ public final class DataTransferUtil {
      * This method executes the statement and writes all results to the specified file.
      *
      * <p>This method is useful when you need to set parameters on the statement before execution
-     * or when you want to reuse a prepared statement for multiple exports. The statement's parameters are cleared
-     * after it executes, so bind them again before reusing it.</p>
+     * or when you want to reuse a prepared statement for multiple exports. Parameter clearing is attempted after
+     * execution, except for {@link java.sql.CallableStatement}; bind parameters again before reusing the statement.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3854,8 +3887,9 @@ public final class DataTransferUtil {
      *
      * <p>The method executes the select statement, iterates through the results, and uses the
      * statement setter to map data to the insert statement parameters. Data is inserted in
-     * batches with optional delays between batches. Neither statement is closed; the select statement's
-     * parameters are cleared after it executes, so bind them again before reusing it.</p>
+     * batches with optional delays between batches. Neither statement is closed. Parameter clearing is attempted
+     * on the select statement after execution, except for {@link java.sql.CallableStatement}; bind parameters
+     * again before reusing it.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3899,6 +3933,7 @@ public final class DataTransferUtil {
         final PreparedQuery preparedQueryForInsert = new PreparedQuery(insertStmt);
 
         ResultSet rs = null;
+        boolean hasPendingBatch = false;
 
         logger.debug("Copying data(batchSize={}, batchIntervalInMillis={})", batchSize, batchIntervalInMillis);
 
@@ -3912,11 +3947,13 @@ public final class DataTransferUtil {
                 cnt++;
 
                 parameterSetter.accept(preparedQueryForInsert, rs);
+                hasPendingBatch = true;
                 insertStmt.addBatch();
 
                 if (cnt % batchSize == 0) {
                     pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                     JdbcUtil.executeBatch(insertStmt);
+                    hasPendingBatch = false;
                     hasExecutedBatch = true;
                 }
             }
@@ -3924,15 +3961,34 @@ public final class DataTransferUtil {
             if (cnt % batchSize > 0) {
                 pauseBeforeSubsequentBatch(hasExecutedBatch, batchIntervalInMillis);
                 JdbcUtil.executeBatch(insertStmt);
+                hasPendingBatch = false;
             }
-
-            // insertStmt.clearBatch();   // clearBatch() is called in JdbcUtil.executeBatch(insertStmt)
 
             logger.info("Copied rows(copied={})", cnt);
 
             return cnt;
+        } catch (final SQLException | RuntimeException | Error e) {
+            clearFailedBatch(insertStmt, hasPendingBatch, e);
+            throw e;
         } finally {
             JdbcUtil.closeQuietly(rs);
+        }
+    }
+
+    private static void clearFailedBatch(final PreparedStatement stmt, final boolean hasPendingBatch, final Throwable failure) {
+        // A binding, filter or input failure can leave rows queued on the caller's reusable statement. Mark the batch
+        // pending before addBatch as a driver may enqueue a row before throwing; leave unrelated batches alone when
+        // no rows were added by this transfer. Cleanup must preserve the original failure and must not close the stmt.
+        // An execution failure intentionally leaves the flag set: JdbcUtil's cleanup may have failed or been
+        // interrupted by a logging failure, so retry even though executeBatch normally already attempts clearing.
+        if (hasPendingBatch) {
+            try {
+                stmt.clearBatch();
+            } catch (final SQLException | RuntimeException | Error cleanupFailure) {
+                if (cleanupFailure != failure) {
+                    failure.addSuppressed(cleanupFailure);
+                }
+            }
         }
     }
 
@@ -4313,6 +4369,9 @@ public final class DataTransferUtil {
         /**
          * Runs the import against the given PreparedStatement. The statement is not closed by this method.
          *
+         * <p>On failure, the pending batch is cleared best-effort if this transfer attempted to queue rows.
+         * Cleanup failures are suppressed on the original failure; already executed batches are not rolled back.</p>
+         *
          * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
          * @return the number of source rows submitted; not the sum of JDBC update counts
          * @throws IllegalArgumentException if more than one value-mapping strategy is configured, {@code batchSize <= 0}, a configured column or
@@ -4625,6 +4684,9 @@ public final class DataTransferUtil {
          * Runs the import against the given PreparedStatement. A caller-supplied {@code Reader}/{@code Iterator} is
          * not closed; a {@code File} source is opened and closed by this method.
          *
+         * <p>On failure, the pending batch is cleared best-effort if this transfer attempted to queue rows.
+         * Cleanup failures are suppressed on the original failure; already executed batches are not rolled back.</p>
+         *
          * @param stmt the PreparedStatement to be used for the import (will not be closed by this method)
          * @return the number of source rows submitted; not the sum of JDBC update counts
          * @throws IllegalStateException if the builder does not have exactly one source (an iterator, reader or file) configured; normally guaranteed
@@ -4778,8 +4840,8 @@ public final class DataTransferUtil {
     /**
      * Creates a fluent builder for exporting the result of executing the given {@link PreparedStatement} to CSV. The
      * statement is executed when a terminal {@code to(...)} runs; the statement is NOT closed by the builder (the
-     * {@code ResultSet} it produces is). The statement's parameters are cleared after it executes, so bind them again
-     * before reusing it.
+     * {@code ResultSet} it produces is). Parameter clearing is attempted after execution, except for
+     * {@link java.sql.CallableStatement}; bind parameters again before reusing the statement.
      *
      * @param stmt the PreparedStatement to execute (must not be {@code null}; not closed by the builder)
      * @return a {@link CsvExportBuilder}
@@ -5122,8 +5184,8 @@ public final class DataTransferUtil {
      * target {@link PreparedStatement}.
      *
      * <p>Because the select statement is supplied directly, the fetch size is whatever the caller configured on
-     * it; the builder does not expose {@code fetchSize}. The select statement's parameters are cleared after it
-     * executes, so bind them again before reusing it.</p>
+     * it; the builder does not expose {@code fetchSize}. Parameter clearing is attempted after execution, except
+     * for {@link java.sql.CallableStatement}; bind parameters again before reusing the select statement.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5464,8 +5526,9 @@ public final class DataTransferUtil {
      * copy. Each configuration method returns {@code this}.
      *
      * <p>The fetch size is whatever the caller already configured on the source statement, so this builder does
-     * not expose a {@code fetchSize} option. Neither the source nor the target statement is closed by the copy; the
-     * source statement's parameters are cleared after it executes, so bind them again before reusing it.</p>
+     * not expose a {@code fetchSize} option. Neither the source nor the target statement is closed by the copy.
+     * Parameter clearing is attempted on the source statement after execution, except for
+     * {@link java.sql.CallableStatement}; bind parameters again before reusing it.</p>
      *
      * @see DataTransferUtil#copyFrom(PreparedStatement)
      */
@@ -5541,6 +5604,10 @@ public final class DataTransferUtil {
 
         /**
          * Runs the copy into the given target statement.
+         *
+         * <p>On failure, the pending target batch is cleared best-effort if this transfer attempted to queue rows.
+         * Cleanup failures are suppressed on the original failure; already executed batches are not rolled back.
+         * Both caller-supplied statements remain open.</p>
          *
          * @param insertStmt the statement to insert into (not closed by this method)
          * @return the number of rows copied

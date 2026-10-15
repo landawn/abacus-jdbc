@@ -38,7 +38,7 @@ public class NamedQueryJdbcTypedStreamTest extends TestBase {
         final JDBCType sqlType = binary ? JDBCType.BLOB : JDBCType.CLOB;
 
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:jdbc_typed_stream");
-                NamedQuery query = JdbcUtil.prepareNamedQuery(connection, "select :payload, :payload")) {
+             NamedQuery query = JdbcUtil.prepareNamedQuery(connection, "select :payload, :payload")) {
             switch (variant) {
                 case 0 -> query.setObject("payload", value, sqlType.getVendorTypeNumber());
                 case 1 -> query.setObject("payload", value, sqlType.getVendorTypeNumber(), 3);

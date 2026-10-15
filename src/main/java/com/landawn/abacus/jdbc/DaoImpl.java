@@ -243,9 +243,19 @@ final class DaoImpl {
     private static final JsonParser jsonParser = ParserFactory.createJsonParser();
 
     /**
-     * Shared Kryo parser used to deep-copy cached query results; {@code null} when Kryo is not available on the classpath.
+     * Shared Kryo parser used to deep-copy cached query results; {@code null} when Kryo is absent from the classpath
+     * or cannot initialize under the current runtime settings.
      */
     private static final KryoParser kryoParser = ParserFactory.isKryoParserAvailable() ? ParserFactory.createKryoParser() : null;
+
+    /**
+     * Lazily explains why {@link #kryoParser} is {@code null}. The probe runs on the first KRYO failure rather than
+     * during class initialization, so a classloader or runtime that rejects the probe can only affect a KRYO caller,
+     * never DAO creation or the JSON/NONE cache paths.
+     */
+    private static final class KryoUnavailability {
+        static final String REASON = describeKryoUnavailability();
+    }
 
     /**
      * Marks whether the current thread is already executing inside a DAO method invocation, so nested DAO calls
@@ -2433,9 +2443,73 @@ final class DaoImpl {
     }
 
     /**
+     * Distinguishes a missing Kryo dependency from a Kryo parser that is present but failed to initialize.
+     * {@code ParserFactory} only exposes a combined availability flag and discards the failure, so the Kryo entry
+     * class is probed directly and the parser is created once more to quote the actual failure instead of guessing
+     * at a cause. Nothing thrown by the probes escapes: a diagnostic must never fail harder than the condition it
+     * describes.
+     *
+     * @return a sentence naming the cause and the remedy for the Kryo parser being unavailable
+     */
+    private static String describeKryoUnavailability() {
+        try {
+            try {
+                Class.forName("com.esotericsoftware.kryo.Kryo", false, DaoImpl.class.getClassLoader());
+            } catch (final ClassNotFoundException e) {
+                return "Kryo is absent from the classpath. Add the Kryo dependency.";
+            } catch (final Throwable e) {
+                // A restrictive classloader can reject the package outright; the parser attempt below reports it.
+            }
+
+            final Throwable failure;
+
+            try {
+                ParserFactory.createKryoParser();
+
+                return "Kryo was unavailable when this DAO class initialized but its parser can be created now; the DAO keeps its "
+                        + "start-up decision. Check for classpath or JVM access changes during start-up.";
+            } catch (final Throwable e) {
+                failure = e;
+            }
+
+            Throwable root = failure;
+
+            while (root.getCause() != null && root.getCause() != root) {
+                root = root.getCause();
+            }
+
+            // The JVM reports a class whose initializer already failed as "Could not initialize class X" with a
+            // synthetic ExceptionInInitializerError cause whose message names the original exception.
+            final String cause = root instanceof ExceptionInInitializerError && Strings.isNotEmpty(root.getMessage()) ? root.getMessage() : root.toString();
+            final boolean missingClass = (cause.contains("NoClassDefFoundError") || cause.contains("ClassNotFoundException"))
+                    && !cause.contains("Could not initialize class");
+
+            if (missingClass && (cause.contains("com/esotericsoftware/kryo/") || cause.contains("com.esotericsoftware.kryo."))) {
+                return "Kryo is absent from the classpath (" + cause + "). Add the Kryo dependency.";
+            } else if (missingClass) {
+                return "Kryo is on the classpath but one of its dependencies is missing (" + cause + "). Add Kryo's transitive dependencies "
+                        + "(minlog, objenesis, reflectasm).";
+            } else if (root instanceof SecurityException) {
+                return "Kryo is on the classpath but loading it was denied (" + cause + "). Check the classloader or security policy.";
+            }
+
+            return "Kryo is on the classpath but its parser failed to initialize (" + cause + "). Check the JVM's Unsafe/module access options "
+                    + "(for example --sun-misc-unsafe-memory-access) and the Kryo dependency versions.";
+        } catch (final Throwable e) {
+            return "Kryo is unavailable and the cause could not be determined (" + e + ").";
+        }
+    }
+
+    /**
      * Returns {@code declaredType} when it is resolved to something more specific than {@code Object}; otherwise the
      * type of the runtime class shared by all non-{@code null} elements of {@code elements}, falling back to
-     * {@code declaredType} (possibly {@code null}) when the elements have no single common class.
+     * {@code declaredType} (possibly {@code null}) when the elements have no single common class or share a
+     * container class the copy cannot build.
+     *
+     * <p>A JDK view such as {@code Collections.unmodifiableSortedMap}, {@code TreeMap.descendingMap} or
+     * {@code List.of} has no default constructor, so naming it as the element type would fail the copy with
+     * "No default constructor found". Left untyped, such an element is rebuilt from its runtime shape instead
+     * (a sorted one keeps its comparator, an ordinary one becomes the JSON default container).</p>
      *
      * @param declaredType the declared element type, or {@code null} if unknown
      * @param elements the runtime elements to inspect
@@ -2448,7 +2522,35 @@ final class DaoImpl {
 
         final Class<?> elementClass = uniformElementClass(elements);
 
-        return elementClass == null ? declaredType : N.typeOf(elementClass);
+        if (elementClass == null) {
+            return declaredType;
+        }
+
+        final com.landawn.abacus.type.Type<?> runtimeType = N.typeOf(elementClass);
+
+        return isUsableJsonElementType(runtimeType) ? runtimeType : declaredType;
+    }
+
+    /**
+     * Returns whether {@code type} can be named as a JSON element type: any type the parser does not treat as a
+     * container (scalars, beans, and application-registered types with their own string form), a library immutable
+     * wrapper (rebuilt by name), or a container class with a no-argument constructor for the parser.
+     *
+     * @param type the type resolved for the runtime class shared by the elements
+     * @return {@code true} if the copy can deserialize elements as {@code type}
+     */
+    private static boolean isUsableJsonElementType(final com.landawn.abacus.type.Type<?> type) {
+        if (!(type.isCollection() || type.isMap()) || com.landawn.abacus.util.Immutable.class.isAssignableFrom(type.javaType())) {
+            return true;
+        }
+
+        for (final Constructor<?> constructor : type.javaType().getDeclaredConstructors()) {
+            if (constructor.getParameterCount() == 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -5981,6 +6083,8 @@ final class DaoImpl {
                                         .batchSelectSqlPlan(parameterizedDsl);
 
                                 Stream.of(entities).split(JdbcUtil.DEFAULT_BATCH_SIZE).forEach(bp -> {
+                                    // Keep missing keys absent: JoinInfo clears them with a separate empty collection per
+                                    // source entity, avoiding both a copied grouping map and shared mutable empty lists.
                                     if (propJoinInfo.isManyToManyJoin()) {
                                         final Jdbc.BiRowMapper<Pair<Object, Object>> pairBiRowMapper = new Jdbc.BiRowMapper<>() {
                                             private Jdbc.BiRowMapper<Object> biRowMapper = null;
@@ -6017,13 +6121,13 @@ final class DaoImpl {
                                                 .setParameters(bp, tp._2)
                                                 .list(pairBiRowMapper);
 
-                                        replaceLoadedJoinPropEntities(propJoinInfo, bp, Stream.of(joinPropEntities).groupTo(Pair::left, Pair::right));
+                                        propJoinInfo.setJoinPropEntities(bp, Stream.of(joinPropEntities).groupTo(Pair::left, Pair::right));
                                     } else {
                                         final List<?> joinPropEntities = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
                                                 .setParameters(bp, tp._2)
                                                 .list(propJoinInfo.referencedEntityClass);
 
-                                        replaceLoadedJoinPropEntities(propJoinInfo, bp,
+                                        propJoinInfo.setJoinPropEntities(bp,
                                                 Stream.of((Collection<Object>) joinPropEntities).groupTo(propJoinInfo.referencedEntityKeyExtractor));
                                     }
                                 });
@@ -7391,7 +7495,10 @@ final class DaoImpl {
 
                     final Predicate<Object> serializationNotRequired = r -> {
                         final Class<?> cls = r.getClass();
-                        return !isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r) && isImmutableTester.test(cls);
+                        // Immutable containers protect their structure, but their elements/values may still be mutable
+                        // entities. Copy them on both cache writes and reads so callers cannot modify cached state.
+                        return !(r instanceof Collection || r instanceof Map) && !isValuePresentMap.getOrDefault(cls, Fn.alwaysFalse()).test(r)
+                                && isImmutableTester.test(cls);
                     };
 
                     // A JSON round trip through the runtime class alone erases generic type arguments (a cached
@@ -7420,15 +7527,25 @@ final class DaoImpl {
                             }
 
                             if (kryoParser == null) {
-                                throw new UnsupportedOperationException(
-                                        "Kryo is not available for cache serialization. Please add Kryo to the classpath or use CacheSerialization.JSON instead.");
+                                throw new UnsupportedOperationException("Kryo is not available for cache serialization: " + KryoUnavailability.REASON
+                                        + " Use CacheSerialization.JSON when its copy semantics are suitable.");
                             }
 
-                            return kryoParser.deepCopy(r);
+                            // Enter the same Kryo graph at the original root: copying a temporary mutable container
+                            // loses references back to the immutable root and cannot handle nested immutable containers.
+                            return kryoParser.deepCopy((Object) new KryoCacheCopy(r));
                         };
                         case JSON -> r -> {
                             if (serializationNotRequired.test(r)) {
                                 return r;
+                            }
+
+                            if (r instanceof Collection || r instanceof Map || r instanceof Object[] || r instanceof u.Optional || r instanceof u.Nullable
+                                    || r instanceof java.util.Optional) {
+                                final Map<Object, Boolean> sortedContainers = new java.util.IdentityHashMap<>();
+                                if (hasSortedJsonContainer(r, sortedContainers)) {
+                                    return copyJsonContainerTree(r, declaredReturnType, sortedContainers, true);
+                                }
                             }
 
                             // A value holder is copied by its value and re-wrapped. Built-in methods declare holders over type
@@ -7598,9 +7715,18 @@ final class DaoImpl {
                         .filter(anno -> anno.annotationType().equals(Handler.class) || anno.annotationType().equals(Handlers.class))
                         .flatmap(anno -> anno.annotationType().equals(Handler.class) ? N.asList((Handler) anno) : N.toList(((Handlers) anno).value()))
                         .prepend(Stream.of(daoClassHandlerList).filter(h -> Stream.of(h.filter()).anyMatch(filterByMethodName)))
-                        .map(handlerAnno -> Tuple.of((Jdbc.Handler) (Strings.isNotEmpty(handlerAnno.qualifier())
-                                ? daoClassHandlerMap.getOrDefault(handlerAnno.qualifier(), HandlerFactory.get(handlerAnno.qualifier()))
-                                : HandlerFactory.getOrCreate(handlerAnno.impl())), handlerAnno.externalCallsOnly()))
+                        .map(handlerAnno -> {
+                            final Jdbc.Handler<?> handler;
+                            if (Strings.isNotEmpty(handlerAnno.qualifier())) {
+                                // Resolve lazily: a Spring lookup can create a prototype that the DAO-local handler replaces.
+                                handler = daoClassHandlerMap.containsKey(handlerAnno.qualifier()) ? daoClassHandlerMap.get(handlerAnno.qualifier())
+                                        : HandlerFactory.get(handlerAnno.qualifier());
+                            } else {
+                                handler = HandlerFactory.getOrCreate(handlerAnno.impl());
+                            }
+
+                            return Tuple.of((Jdbc.Handler) handler, handlerAnno.externalCallsOnly());
+                        })
                         .onEach(handler -> N.checkArgNotNull(handler._1,
                                 "No handler found/registered with qualifier or type in class/method: " + fullClassMethodName))
                         .toList();
@@ -7858,8 +7984,340 @@ final class DaoImpl {
     }
 
     /**
+     * Classifies structural container paths requiring comparator-aware or order-preserving copying. Bean
+     * properties remain governed by the JSON parser, including its annotation and property-format rules. Identity
+     * memoization avoids rescanning shared/deep container trees; a null entry marks an active path, since JSON
+     * cannot copy cycles.
+     *
+     * <p>Besides comparator-bearing sorted containers, plain {@code ImmutableSet}, {@code ImmutableMap} and
+     * {@code ImmutableBiMap} instances are flagged: their own factories promise insertion order, which the JSON
+     * parser's HashSet/HashMap/BiMap stand-ins for those target classes would replace with hash order.</p>
+     *
+     * @param value the container or value to inspect
+     * @param classified per-copy identity map of completed results and active paths
+     * @return whether this container tree contains a sorted map or set with a comparator, or a plain immutable
+     *         set, map or bi-map wrapper
+     */
+    private static boolean hasSortedJsonContainer(final Object value, final Map<Object, Boolean> classified) {
+        if (!(value instanceof Collection || value instanceof Map || value instanceof Object[] || value instanceof u.Optional || value instanceof u.Nullable
+                || value instanceof java.util.Optional)) {
+            return false;
+        }
+        if (classified.containsKey(value)) {
+            final Boolean result = classified.get(value);
+            if (result == null) {
+                throw new ParsingException("Cyclic containers are not supported by JSON cache serialization");
+            }
+            return result;
+        }
+        classified.put(value, null);
+        boolean sorted = value instanceof final java.util.SortedMap<?, ?> map && map.comparator() != null
+                || value instanceof final java.util.SortedSet<?> set && set.comparator() != null || value.getClass() == ImmutableSet.class
+                || value.getClass() == ImmutableMap.class || value.getClass() == com.landawn.abacus.util.ImmutableBiMap.class;
+        if (value instanceof final Map<?, ?> map) {
+            for (final Map.Entry<?, ?> entry : map.entrySet()) {
+                sorted |= hasSortedJsonContainer(entry.getKey(), classified);
+                sorted |= hasSortedJsonContainer(entry.getValue(), classified);
+            }
+        } else if (value instanceof final Collection<?> collection) {
+            for (final Object element : collection) {
+                sorted |= hasSortedJsonContainer(element, classified);
+            }
+        } else if (value instanceof final Object[] array) {
+            for (final Object element : array) {
+                sorted |= hasSortedJsonContainer(element, classified);
+            }
+        } else if (value instanceof final u.Optional<?> optional) {
+            sorted = optional.isPresent() && hasSortedJsonContainer(optional.get(), classified);
+        } else if (value instanceof final u.Nullable<?> nullable) {
+            sorted = nullable.isPresent() && hasSortedJsonContainer(nullable.get(), classified);
+        } else if (value instanceof final java.util.Optional<?> optional) {
+            sorted = optional.isPresent() && hasSortedJsonContainer(optional.get(), classified);
+        }
+        classified.put(value, sorted);
+        return sorted;
+    }
+
+    /**
+     * Copies only container paths containing sorted nodes or plain immutable set/map wrappers; other values retain
+     * the parser's declared-type and Object/default-number behavior. Standard/library containers receive the
+     * source comparator before parsing: a natural-order intermediate can reject valid non-Comparable keys or
+     * irreversibly merge comparator-distinct entries. Custom sorted classes retain their constructor-created
+     * comparator and validate the copied contents. Plain {@code ImmutableSet}, {@code ImmutableMap} and
+     * {@code ImmutableBiMap} copies are built on insertion-ordered backing containers so that they iterate like
+     * their source.
+     *
+     * @param value the value to copy
+     * @param declaredType the resolved type at this position, or null for the JSON default type
+     * @param sortedContainers the classification for this source container tree (sorted nodes and plain
+     *        immutable set/map wrappers are flagged {@code true})
+     * @param inferTypes whether this is the root result, retaining its runtime class and common-runtime-type fallback
+     * @return the JSON copy, retaining source comparators for supported standard/library containers and
+     *         constructor-created comparators for custom sorted classes
+     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    private static Object copyJsonContainerTree(final Object value, final com.landawn.abacus.type.Type<?> declaredType,
+            final Map<Object, Boolean> sortedContainers, final boolean inferTypes) {
+        if (value == null || !Boolean.TRUE.equals(sortedContainers.get(value))) {
+            // Parse in element/value context. Root deserialization does not accept every scalar type, and
+            // Object positions must keep JSON's normal number and bean-to-map conversions.
+            final com.landawn.abacus.parser.JsonDeserConfig config = com.landawn.abacus.parser.JsonDeserConfig.create();
+            if (declaredType != null) {
+                config.setElementType(declaredType);
+            }
+            return jsonParser.deserialize(jsonParser.serialize(java.util.Collections.singletonList(value)), config, List.class).get(0);
+        }
+
+        if (value instanceof u.Optional || value instanceof u.Nullable || value instanceof java.util.Optional) {
+            final Object held = value instanceof u.Optional ? ((u.Optional<?>) value).get()
+                    : value instanceof u.Nullable ? ((u.Nullable<?>) value).get() : ((java.util.Optional<?>) value).get();
+            final com.landawn.abacus.type.Type<?> heldType = declaredType != null && N.size(declaredType.parameterTypes()) == 1
+                    ? declaredType.parameterTypes().get(0)
+                    : null;
+            final Object copy = copyJsonContainerTree(held, resolvedOrRuntimeType(heldType, java.util.Collections.singletonList(held)), sortedContainers,
+                    false);
+            return value instanceof u.Optional ? u.Optional.of(copy) : value instanceof u.Nullable ? u.Nullable.of(copy) : java.util.Optional.of(copy);
+        }
+        if (value instanceof final Object[] array) {
+            if (!inferTypes && (declaredType == null || declaredType.isObject())) {
+                final List<Object> copy = new ArrayList<>(array.length);
+                for (final Object element : array) {
+                    copy.add(copyJsonContainerTree(element, null, sortedContainers, false));
+                }
+                return copy;
+            }
+            // Nested arrays are constructed from their declared component type. A Map[] slot can hold an
+            // ImmutableSortedMap[] source, but comparator-aware children may be ordinary TreeMap copies.
+            final Class<?> componentClass = !inferTypes && declaredType != null && declaredType.isArray() ? declaredType.javaType().getComponentType()
+                    : value.getClass().getComponentType();
+            final Object[] copy = (Object[]) java.lang.reflect.Array.newInstance(componentClass, array.length);
+            com.landawn.abacus.type.Type<?> elementType = declaredType != null && declaredType.isArray() ? declaredType.elementType()
+                    : N.typeOf(value.getClass().getComponentType());
+            if (inferTypes && (elementType == null || elementType.isObject())) {
+                // The root copy keeps its runtime component type, so unresolved elements must be parsed as
+                // something storable in it: a declared Object[] holding a TreeMap[] would otherwise read a
+                // natural-order member back as a Map and fail to store it.
+                elementType = resolvedOrRuntimeType(elementType, java.util.Arrays.asList(array));
+                if (elementType == null || elementType.isObject()) {
+                    elementType = N.typeOf(componentClass);
+                }
+            }
+            for (int i = 0; i < array.length; i++) {
+                copy[i] = copyJsonContainerTree(array[i], elementType, sortedContainers, false);
+            }
+            return copy;
+        }
+
+        final Class<?> runtimeClass = value.getClass();
+        // A nested declared List/Map can contain a private JDK view. The parser normally constructs the
+        // declared interface's default implementation, rather than trying to instantiate that view class.
+        final boolean declaredContainer = declaredType != null && (declaredType.isCollection() || declaredType.isMap());
+        final boolean untypedChild = !inferTypes && (declaredType == null || declaredType.isObject());
+        final Class<?> declaredContainerClass = !inferTypes && declaredContainer ? declaredType.javaType()
+                : untypedChild && !(value instanceof java.util.SortedSet || value instanceof java.util.SortedMap)
+                        ? value instanceof Collection ? List.class : Map.class
+                        : runtimeClass;
+        // Immutable sorted wrappers are also valid values of their immutable base declarations. Keep that
+        // compatible sorted family, since a plain ImmutableMap/Set has no place to retain a comparator. A plain
+        // sorted runtime container (e.g. a TreeMap under a declared ImmutableMap) is not assignable to the base,
+        // so it is rebuilt as the base's navigable member: an empty ImmutableMap/Set cannot be populated.
+        final Class<?> containerClass;
+        if (value instanceof java.util.SortedMap && declaredContainerClass == ImmutableMap.class) {
+            containerClass = declaredContainerClass.isAssignableFrom(runtimeClass) ? runtimeClass : com.landawn.abacus.util.ImmutableNavigableMap.class;
+        } else if (value instanceof java.util.SortedSet
+                && (declaredContainerClass == ImmutableSet.class || declaredContainerClass == com.landawn.abacus.util.ImmutableCollection.class)) {
+            containerClass = declaredContainerClass.isAssignableFrom(runtimeClass) ? runtimeClass : com.landawn.abacus.util.ImmutableNavigableSet.class;
+        } else {
+            containerClass = declaredContainerClass;
+        }
+        if (value instanceof final Collection<?> source) {
+            com.landawn.abacus.type.Type<?> elementType = declaredType != null && declaredType.isCollection() ? declaredType.elementType() : null;
+            if (inferTypes || source instanceof java.util.SortedSet) {
+                elementType = resolvedOrRuntimeType(elementType, source);
+            }
+            final com.landawn.abacus.parser.JsonDeserConfig config = com.landawn.abacus.parser.JsonDeserConfig.create();
+            if (elementType != null) {
+                config.setElementType(elementType);
+            }
+            final Collection copy;
+            boolean verifySortedCopy = false;
+            if (source instanceof final java.util.SortedSet<?> sorted) {
+                final java.util.Comparator comparator = sorted.comparator();
+                if (containerClass == com.landawn.abacus.util.ImmutableNavigableSet.class || containerClass == com.landawn.abacus.util.ImmutableSortedSet.class
+                        || containerClass.isAssignableFrom(java.util.TreeSet.class) || untypedChild) {
+                    copy = new java.util.TreeSet(comparator);
+                } else if (containerClass == java.util.concurrent.ConcurrentSkipListSet.class) {
+                    copy = new java.util.concurrent.ConcurrentSkipListSet(comparator);
+                } else {
+                    copy = (Collection) jsonParser.deserialize("[]", config, containerClass);
+                    verifySortedCopy = true;
+                }
+            } else if (ImmutableList.class.isAssignableFrom(containerClass) || containerClass == com.landawn.abacus.util.ImmutableCollection.class) {
+                copy = new ArrayList<>(source.size());
+            } else if (containerClass == ImmutableSet.class) {
+                // ImmutableSet's own factories back onto a LinkedHashSet and promise insertion order, so the copy
+                // keeps the source's current iteration order instead of reordering it by hash code.
+                copy = N.newLinkedHashSet(source.size());
+            } else {
+                copy = (Collection) jsonParser.deserialize("[]", config, containerClass);
+            }
+
+            if (source.stream().noneMatch(element -> Boolean.TRUE.equals(sortedContainers.get(element)))) {
+                jsonParser.parseInto(jsonParser.serialize(source), config, copy);
+            } else {
+                for (final Object element : source) {
+                    copy.add(copyJsonContainerTree(element, elementType, sortedContainers, false));
+                }
+            }
+            if (verifySortedCopy) {
+                verifyJsonSortedCopy(source, copy, ((java.util.SortedSet<?>) source).comparator(), containerClass);
+            }
+            if (containerClass == com.landawn.abacus.util.ImmutableNavigableSet.class) {
+                return com.landawn.abacus.util.ImmutableNavigableSet.wrap((java.util.NavigableSet) copy);
+            } else if (containerClass == com.landawn.abacus.util.ImmutableSortedSet.class) {
+                return com.landawn.abacus.util.ImmutableSortedSet.wrap((java.util.SortedSet) copy);
+            } else if (ImmutableList.class.isAssignableFrom(containerClass)) {
+                return ImmutableList.wrap((List) copy);
+            } else if (containerClass == ImmutableSet.class) {
+                return ImmutableSet.wrap((Set) copy);
+            } else if (containerClass == com.landawn.abacus.util.ImmutableCollection.class) {
+                return com.landawn.abacus.util.ImmutableCollection.wrap(copy);
+            }
+            return copy;
+        }
+
+        final Map<?, ?> source = (Map<?, ?>) value;
+        final boolean declaredMap = declaredType != null && declaredType.isMap() && N.size(declaredType.parameterTypes()) == 2;
+        com.landawn.abacus.type.Type<?> keyType = declaredMap ? declaredType.parameterTypes().get(0) : null;
+        com.landawn.abacus.type.Type<?> valueType = declaredMap ? declaredType.parameterTypes().get(1) : null;
+        if (inferTypes || source instanceof java.util.SortedMap) {
+            keyType = resolvedOrRuntimeType(keyType, source.keySet());
+        }
+        if (inferTypes) {
+            valueType = resolvedOrRuntimeType(valueType, source.values());
+        }
+        final com.landawn.abacus.parser.JsonDeserConfig config = com.landawn.abacus.parser.JsonDeserConfig.create();
+        if (keyType != null) {
+            config.setMapKeyType(keyType);
+        }
+        if (valueType != null) {
+            config.setMapValueType(valueType);
+        }
+        final Map copy;
+        boolean verifySortedCopy = false;
+        if (source instanceof final java.util.SortedMap<?, ?> sorted) {
+            final java.util.Comparator comparator = sorted.comparator();
+            if (containerClass == com.landawn.abacus.util.ImmutableNavigableMap.class || containerClass == com.landawn.abacus.util.ImmutableSortedMap.class
+                    || containerClass.isAssignableFrom(java.util.TreeMap.class) || untypedChild) {
+                copy = new java.util.TreeMap(comparator);
+            } else if (containerClass.isAssignableFrom(java.util.concurrent.ConcurrentSkipListMap.class)) {
+                copy = new java.util.concurrent.ConcurrentSkipListMap(comparator);
+            } else {
+                copy = (Map) jsonParser.deserialize("{}", config, containerClass);
+                verifySortedCopy = true;
+            }
+        } else if (containerClass == ImmutableMap.class) {
+            // ImmutableMap's and ImmutableBiMap's own factories back onto LinkedHashMaps and promise insertion
+            // order, so the copies keep the source's current entry order instead of reordering it by hash code.
+            copy = N.newLinkedHashMap(source.size());
+        } else if (containerClass == com.landawn.abacus.util.ImmutableBiMap.class) {
+            copy = new com.landawn.abacus.util.BiMap(Suppliers.ofLinkedHashMap(), Suppliers.ofLinkedHashMap());
+        } else {
+            copy = (Map) jsonParser.deserialize("{}", config, containerClass);
+        }
+
+        final boolean hasNullSortedKey = source instanceof java.util.SortedMap && source.keySet().stream().anyMatch(java.util.Objects::isNull);
+        if (!hasNullSortedKey && source.entrySet()
+                .stream()
+                .noneMatch(entry -> Boolean.TRUE.equals(sortedContainers.get(entry.getKey())) || Boolean.TRUE.equals(sortedContainers.get(entry.getValue())))) {
+            jsonParser.parseInto(jsonParser.serialize(source), config, copy);
+        } else {
+            final com.landawn.abacus.parser.JsonDeserConfig keyConfig = com.landawn.abacus.parser.JsonDeserConfig.create();
+            if (keyType != null) {
+                keyConfig.setMapKeyType(keyType);
+            }
+            for (final Map.Entry<?, ?> entry : source.entrySet()) {
+                // A null-friendly comparator accepts a real null key. With no non-null key to infer a type
+                // from, JSON's default quoted map-key syntax would otherwise change it to the String "null".
+                final Object key = hasNullSortedKey && entry.getKey() == null ? null
+                        : Boolean.TRUE.equals(sortedContainers.get(entry.getKey())) ? copyJsonContainerTree(entry.getKey(), keyType, sortedContainers, false)
+                                : copyJsonMapKey(entry.getKey(), keyConfig);
+                copy.put(key, copyJsonContainerTree(entry.getValue(), valueType, sortedContainers, false));
+            }
+        }
+        if (verifySortedCopy) {
+            verifyJsonSortedCopy(source.keySet(), copy.keySet(), ((java.util.SortedMap<?, ?>) source).comparator(), containerClass);
+        }
+        if (containerClass == com.landawn.abacus.util.ImmutableNavigableMap.class) {
+            return com.landawn.abacus.util.ImmutableNavigableMap.wrap((java.util.NavigableMap) copy);
+        } else if (containerClass == com.landawn.abacus.util.ImmutableSortedMap.class) {
+            return com.landawn.abacus.util.ImmutableSortedMap.wrap((java.util.SortedMap) copy);
+        } else if (containerClass == ImmutableMap.class) {
+            return ImmutableMap.wrap(copy);
+        } else if (containerClass == com.landawn.abacus.util.ImmutableBiMap.class) {
+            return com.landawn.abacus.util.ImmutableBiMap.wrap((com.landawn.abacus.util.BiMap) copy);
+        }
+        return copy;
+    }
+
+    /**
+     * Verifies a custom sorted class's current JSON snapshot without assuming comparator identity or equality.
+     * This does not establish comparator equivalence for values outside the snapshot.
+     *
+     * @param source the source keys or set elements in iteration order
+     * @param copy the copied keys or set elements in iteration order
+     * @param comparator the source comparator, or null for natural ordering
+     * @param containerClass the reconstructed container class for diagnostics
+     * @throws UnsupportedOperationException if copying changes the size, comparison keys or order, or the
+     *         source comparator cannot compare a copied value
+     */
+    @SuppressWarnings("unchecked")
+    private static void verifyJsonSortedCopy(final Collection<?> source, final Collection<?> copy, final java.util.Comparator<?> comparator,
+            final Class<?> containerClass) {
+        // A constructor can create an equivalent comparator with its own mutable owner state. Retain that state
+        // instead of injecting the source comparator. Compare corresponding keys as well as size: a constructor's
+        // prepopulated key could otherwise conceal an entry collapsed by a different comparison policy.
+        if (source.size() != copy.size()) {
+            throw new UnsupportedOperationException("JSON cache copying changed the size of sorted container class: " + containerClass.getName());
+        }
+        final Iterator<?> copiedElements = copy.iterator();
+        for (final Object sourceElement : source) {
+            final Object copiedElement = copiedElements.next();
+            final int comparison;
+            try {
+                comparison = comparator == null ? ((Comparable<Object>) sourceElement).compareTo(copiedElement)
+                        : ((java.util.Comparator<Object>) comparator).compare(sourceElement, copiedElement);
+            } catch (final RuntimeException e) {
+                throw new UnsupportedOperationException("JSON cache copying cannot verify the order of sorted container class: " + containerClass.getName(), e);
+            }
+            if (comparison != 0) {
+                throw new UnsupportedOperationException(
+                        "JSON cache copying changed the order or keys/elements of sorted container class: " + containerClass.getName());
+            }
+        }
+    }
+
+    /**
+     * Copies a key in map context, where JSON quotes scalar keys by default. Reading the same scalar as a root
+     * or collection element changes Object-typed numeric, boolean and null keys.
+     *
+     * @param key the source key
+     * @param config the declared key type, without a map-value type
+     * @return the key produced by the JSON parser
+     */
+    private static Object copyJsonMapKey(final Object key, final com.landawn.abacus.parser.JsonDeserConfig config) {
+        return jsonParser.deserialize(jsonParser.serialize(java.util.Collections.singletonMap(key, Boolean.TRUE)), config, Map.class)
+                .keySet()
+                .iterator()
+                .next();
+    }
+
+    /**
      * Copies the value held by an {@code Optional}/{@code Nullable} result for the JSON-serialized DAO cache, through
-     * {@code declaredValueType} when it is resolved, otherwise through the value's runtime class.
+     * {@code declaredValueType} when it is resolved, otherwise through the value's runtime class. A single held value
+     * has no untyped fallback: a raw holder declares nothing, and an {@code Object} type would read the value back as
+     * its JSON String. So a runtime container class the parser cannot construct is still used here, and the parser's
+     * own "no default constructor" failure names the class.
      *
      * @param value the held value; may be {@code null} (a present {@code null} of a {@code Nullable})
      * @param declaredValueType the declared value type of the holder, or {@code null} if unknown
@@ -7871,10 +8329,289 @@ final class DaoImpl {
             return null;
         }
 
-        final com.landawn.abacus.type.Type<Object> valueType = (com.landawn.abacus.type.Type<Object>) resolvedOrRuntimeType(declaredValueType,
-                java.util.Collections.singletonList(value));
+        final com.landawn.abacus.type.Type<?> resolvedType = resolvedOrRuntimeType(declaredValueType, java.util.Collections.singletonList(value));
+        final com.landawn.abacus.type.Type<Object> valueType = (com.landawn.abacus.type.Type<Object>) (resolvedType == null || resolvedType.isObject()
+                ? N.typeOf(value.getClass())
+                : resolvedType);
 
         return valueType.valueOf(valueType.stringOf(value));
+    }
+
+    /**
+     * Configures immutable-container copying on the DAO's private, copy-only Kryo parser. Keeping the Kryo-linked
+     * implementation in a nested class allows DAO creation and JSON/NONE caching without Kryo on the classpath.
+     *
+     * @param source the non-null cached result graph to copy
+     */
+    private record KryoCacheCopy(Object source) implements com.esotericsoftware.kryo.KryoCopyable<Object> {
+        @Override
+        @SuppressWarnings("unchecked")
+        public Object copy(final com.esotericsoftware.kryo.Kryo kryo) {
+            // ParserFactory creates a separate parser/pool for DaoImpl. Defaults are installed before any result
+            // graph is visited; explicit application serializers remain authoritative. Kryo's context survives
+            // graph resets, so a pooled instance receives the defaults only once.
+            if (!kryo.getContext().containsKey(KryoCacheCopy.class)) {
+                final ImmutableContainerCopySerializer serializer = new ImmutableContainerCopySerializer();
+                for (final Class<?> type : serializer.supportedTypes()) {
+                    kryo.addDefaultSerializer(type, serializer);
+                    final com.esotericsoftware.kryo.Registration registration = kryo.getClassResolver().getRegistration(type);
+                    if (registration != null) {
+                        final Class<?> registeredSerializer = registration.getSerializer().getClass();
+                        if (!registration.getSerializer().isImmutable()
+                                && (registeredSerializer == com.esotericsoftware.kryo.serializers.CollectionSerializer.class
+                                        || registeredSerializer == com.esotericsoftware.kryo.serializers.MapSerializer.class)) {
+                            // Class/ID-only ParserFactory registrations precede these defaults. Replace only the
+                            // stock copy implementation, retaining its registration ID and any application serializer.
+                            registration.setSerializer(serializer);
+                        }
+                    }
+                }
+                kryo.getContext().put(KryoCacheCopy.class, Boolean.TRUE);
+            }
+
+            final Object copy = kryo.copy(source);
+            final List<Runnable> viewRepairs = (List<Runnable>) kryo.getGraphContext().get(ContainerCopyLayout.class);
+            if (viewRepairs != null) {
+                viewRepairs.forEach(Runnable::run);
+            }
+            return copy;
+        }
+    }
+
+    /** Copies wrapper structure while delegating native backing containers and arbitrary values to Kryo. */
+    private static final class ImmutableContainerCopySerializer extends com.esotericsoftware.kryo.Serializer<Object> {
+        private final ClassValue<ContainerCopyLayout> layouts = new ClassValue<>() {
+            @Override
+            protected ContainerCopyLayout computeValue(final Class<?> type) {
+                return new ContainerCopyLayout(type);
+            }
+        };
+
+        /** Returns the bounded wrapper families and JDK views whose fields need constructor-free copying. */
+        private Set<Class<?>> supportedTypes() {
+            final Set<Class<?>> types = new java.util.LinkedHashSet<>(List.of(com.landawn.abacus.util.ImmutableCollection.class, ImmutableList.class,
+                    ImmutableSet.class, com.landawn.abacus.util.ImmutableSortedSet.class, com.landawn.abacus.util.ImmutableNavigableSet.class,
+                    ImmutableMap.class, com.landawn.abacus.util.ImmutableSortedMap.class, com.landawn.abacus.util.ImmutableNavigableMap.class,
+                    com.landawn.abacus.util.ImmutableBiMap.class, com.landawn.abacus.util.BiMap.class));
+            final Class<?>[] permittedListTypes = ImmutableList.class.getPermittedSubclasses();
+            if (permittedListTypes != null) {
+                java.util.Collections.addAll(types, permittedListTypes);
+            }
+
+            // Obtain private JDK implementation classes from public factories instead of naming VM internals.
+            final List<Object> list = new ArrayList<>();
+            final java.util.TreeSet<Object> set = new java.util.TreeSet<>();
+            final java.util.TreeMap<Object, Object> map = new java.util.TreeMap<>();
+            types.add(java.util.Collections.unmodifiableCollection(list).getClass());
+            types.add(java.util.Collections.unmodifiableList(list).getClass());
+            types.add(java.util.Collections.unmodifiableList(new java.util.LinkedList<>()).getClass());
+            types.add(java.util.Collections.unmodifiableSet(set).getClass());
+            types.add(java.util.Collections.unmodifiableSortedSet(set).getClass());
+            types.add(java.util.Collections.unmodifiableNavigableSet(set).getClass());
+            types.add(java.util.Collections.unmodifiableMap(map).getClass());
+            types.add(java.util.Collections.unmodifiableSortedMap(map).getClass());
+            types.add(java.util.Collections.unmodifiableNavigableMap(map).getClass());
+            types.add(java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>()).getClass());
+            types.add(list.subList(0, 0).getClass());
+            types.add(new java.util.LinkedList<>().subList(0, 0).getClass());
+            types.add(java.util.Arrays.asList(new Object[0]).subList(0, 0).getClass());
+            types.add(map.headMap(0, true).getClass());
+            types.add(map.descendingMap().getClass());
+            return types;
+        }
+
+        @Override
+        public Object copy(final com.esotericsoftware.kryo.Kryo kryo, final Object original) {
+            ContainerCopyAccess.requireAvailable();
+            return layouts.get(original.getClass()).copy(kryo, original);
+        }
+
+        @Override
+        public void write(final com.esotericsoftware.kryo.Kryo kryo, final com.esotericsoftware.kryo.io.Output output, final Object object) {
+            throw new UnsupportedOperationException("DAO cache container serializers support copying only");
+        }
+
+        @Override
+        public Object read(final com.esotericsoftware.kryo.Kryo kryo, final com.esotericsoftware.kryo.io.Input input, final Class<?> type) {
+            throw new UnsupportedOperationException("DAO cache container serializers support copying only");
+        }
+    }
+
+    /** Checks and caches actual Unsafe access only when an adapted wrapper needs copying. */
+    private static final class ContainerCopyAccess {
+        private static final Availability availability = checkAvailability();
+
+        private static void requireAvailable() {
+            if (availability.failure() != null) {
+                // Keep one capability failure, but give each invocation its own exception and call-site stack.
+                throw new UnsupportedOperationException(
+                        "KRYO cache copying of immutable containers requires sun.misc.Unsafe memory access. " + availability.failure()
+                                + " Register an application serializer that avoids Unsafe, or choose a compatible cache serialization mode.",
+                        availability.cause());
+            }
+        }
+
+        private static Availability checkAvailability() {
+            try {
+                if (!com.esotericsoftware.kryo.util.Util.unsafe) {
+                    return new Availability("false".equals(System.getProperty("kryo.unsafe")) ? "Kryo support is disabled by -Dkryo.unsafe=false."
+                            : "Kryo reports Unsafe unavailable in this runtime.", null);
+                }
+
+                // Kryo can retain a non-null Unsafe handle while the JVM denies its memory operations. Probe
+                // offsets, allocation and primitive/reference access on a private disposable object before
+                // entering ClassValue: failed computeValue calls are otherwise retried for every cache copy.
+                final sun.misc.Unsafe unsafe = com.esotericsoftware.kryo.unsafe.UnsafeUtil.unsafe;
+                final long referenceOffset = unsafe.objectFieldOffset(AccessProbe.class.getDeclaredField("reference"));
+                final long numberOffset = unsafe.objectFieldOffset(AccessProbe.class.getDeclaredField("number"));
+                final AccessProbe probe = (AccessProbe) unsafe.allocateInstance(AccessProbe.class);
+                unsafe.putObject(probe, referenceOffset, probe);
+                unsafe.putLong(probe, numberOffset, 1L);
+                if (unsafe.getObject(probe, referenceOffset) != probe || unsafe.getLong(probe, numberOffset) != 1L) {
+                    throw new IllegalStateException("Unsafe field access did not preserve the probe values");
+                }
+                return new Availability(null, null);
+            } catch (final UnsupportedOperationException e) {
+                return new Availability("The JVM does not permit the required operations (for example, --sun-misc-unsafe-memory-access=deny).", e);
+            } catch (final ReflectiveOperationException | RuntimeException | LinkageError e) {
+                return new Availability("The required Unsafe operations are unavailable under the current JVM or dependency settings.", e);
+            }
+        }
+
+        private record Availability(String failure, Throwable cause) {
+        }
+
+        private static final class AccessProbe {
+            private Object reference;
+            private long number;
+        }
+    }
+
+    /**
+     * Cached field metadata for wrapper copying. Unsafe is loaded only when a supported wrapper is visited;
+     * ordinary Kryo graphs keep working when Unsafe is unavailable. FieldSerializer cannot handle the JDK's
+     * unmodifiable decorators without module opens. Copying their fields preserves backing equality policies,
+     * view relationships and application-subclass state without making those fields reflectively accessible.
+     */
+    private static final class ContainerCopyLayout {
+        private static final sun.misc.Unsafe unsafe = com.esotericsoftware.kryo.unsafe.UnsafeUtil.unsafe;
+        private final Class<?> type;
+        private final CopiedContainerField[] fields;
+        private final long setMapOffset;
+        private final long setViewOffset;
+        private final long listRootOffset;
+        private final long listModCountOffset;
+
+        private ContainerCopyLayout(final Class<?> type) {
+            this.type = type;
+            final List<CopiedContainerField> copiedFields = new ArrayList<>();
+            long setMap = -1;
+            long setView = -1;
+            long listRoot = -1;
+            long listModCount = -1;
+            for (Class<?> declaring = type; declaring != Object.class; declaring = declaring.getSuperclass()) {
+                // "Is this a JDK class?" is the question: every adapted view lives in java.util, so key off the
+                // module name rather than relying on the bootstrap loader being represented as null.
+                final boolean jdkType = "java.base".equals(declaring.getModule().getName());
+                for (final java.lang.reflect.Field field : declaring.getDeclaredFields()) {
+                    final int modifiers = field.getModifiers();
+                    if (java.lang.reflect.Modifier.isStatic(modifiers)) {
+                        continue;
+                    }
+                    final long offset = unsafe.objectFieldOffset(field);
+                    if (jdkType && declaring.getSimpleName().equals("SetFromMap")) {
+                        if (field.getName().equals("m")) {
+                            setMap = offset;
+                        } else if (field.getName().equals("s")) {
+                            setView = offset;
+                        }
+                    }
+                    if (jdkType && field.getName().equals("root") && java.util.AbstractList.class.isAssignableFrom(declaring)) {
+                        listRoot = offset;
+                    } else if (declaring == java.util.AbstractList.class && field.getName().equals("modCount")) {
+                        listModCount = offset;
+                    }
+
+                    // JDK view caches are derived from their backing container. BiMap's inverse participates in
+                    // the graph, but its key/value/entry-set caches can be rebuilt lazily; suppliers are policies.
+                    if (java.lang.reflect.Modifier.isTransient(modifiers)
+                            && (jdkType || declaring == com.landawn.abacus.util.BiMap.class && !field.getName().equals("invertedView"))) {
+                        continue;
+                    }
+                    final boolean shared = jdkType && java.util.Comparator.class.isAssignableFrom(field.getType())
+                            || declaring == com.landawn.abacus.util.BiMap.class && java.util.function.Supplier.class.isAssignableFrom(field.getType());
+                    copiedFields.add(new CopiedContainerField(offset, field.getType(), shared));
+                }
+            }
+            fields = copiedFields.toArray(new CopiedContainerField[0]);
+            setMapOffset = setMap;
+            setViewOffset = setView;
+            listRootOffset = listRoot;
+            listModCountOffset = listModCount;
+        }
+
+        @SuppressWarnings("unchecked")
+        private Object copy(final com.esotericsoftware.kryo.Kryo kryo, final Object original) {
+            final Object copy;
+            try {
+                copy = unsafe.allocateInstance(type);
+            } catch (final InstantiationException e) {
+                throw new com.esotericsoftware.kryo.KryoException("Cannot allocate cache container: " + type.getName(), e);
+            }
+            // Reference the final runtime type before descending so all cycles and aliases point to this copy.
+            kryo.reference(copy);
+            for (final CopiedContainerField field : fields) {
+                field.copy(kryo, original, copy);
+            }
+            if (setViewOffset >= 0) {
+                // SetFromMap's transient key view is required state, unlike an optional unmodifiable-map cache.
+                unsafe.putObject(copy, setViewOffset, ((Map<?, ?>) unsafe.getObject(copy, setMapOffset)).keySet());
+            }
+            if (listRootOffset >= 0 && listModCountOffset >= 0) {
+                // Kryo rebuilds the native list through add(), so a sublist must observe the copied root's new
+                // modification count. Defer until the graph is complete: the root may itself contain this view.
+                List<Runnable> viewRepairs = (List<Runnable>) kryo.getGraphContext().get(ContainerCopyLayout.class);
+                if (viewRepairs == null) {
+                    viewRepairs = new ArrayList<>();
+                    kryo.getGraphContext().put(ContainerCopyLayout.class, viewRepairs);
+                }
+                viewRepairs.add(() -> unsafe.putInt(copy, listModCountOffset, unsafe.getInt(unsafe.getObject(copy, listRootOffset), listModCountOffset)));
+            }
+            return copy;
+        }
+    }
+
+    /**
+     * One cached field operation; policy objects are retained as in Kryo's sorted-container serializers.
+     *
+     * @param offset the instance-field offset supplied by Unsafe
+     * @param type the declared field type
+     * @param shared whether the field is a comparator or BiMap factory to retain by reference
+     */
+    private record CopiedContainerField(long offset, Class<?> type, boolean shared) {
+        private void copy(final com.esotericsoftware.kryo.Kryo kryo, final Object source, final Object target) {
+            final sun.misc.Unsafe unsafe = ContainerCopyLayout.unsafe;
+            if (!type.isPrimitive()) {
+                final Object value = unsafe.getObject(source, offset);
+                unsafe.putObject(target, offset, shared ? value : kryo.copy(value));
+            } else if (type == boolean.class) {
+                unsafe.putBoolean(target, offset, unsafe.getBoolean(source, offset));
+            } else if (type == byte.class) {
+                unsafe.putByte(target, offset, unsafe.getByte(source, offset));
+            } else if (type == char.class) {
+                unsafe.putChar(target, offset, unsafe.getChar(source, offset));
+            } else if (type == short.class) {
+                unsafe.putShort(target, offset, unsafe.getShort(source, offset));
+            } else if (type == int.class) {
+                unsafe.putInt(target, offset, unsafe.getInt(source, offset));
+            } else if (type == long.class) {
+                unsafe.putLong(target, offset, unsafe.getLong(source, offset));
+            } else if (type == float.class) {
+                unsafe.putFloat(target, offset, unsafe.getFloat(source, offset));
+            } else if (type == double.class) {
+                unsafe.putDouble(target, offset, unsafe.getDouble(source, offset));
+            }
+        }
     }
 
     /**
@@ -8035,35 +8772,6 @@ final class DaoImpl {
         } else if (N.notEmpty(ids) && daoLogger.isWarnEnabled()) {
             daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(), entities.size());
         }
-    }
-
-    /**
-     * Replaces join-property values after a batch load. Query result grouping omits keys with no
-     * matching row, so explicit empty groups are added to prevent stale values from surviving only
-     * because the caller supplied more than one source entity.
-     *
-     * @param joinInfo the join metadata of the {@code @JoinedBy} property being populated
-     * @param entities the source entities whose join property is replaced
-     * @param groupedPropEntities the loaded joined entities, grouped by join key
-     * @throws IllegalArgumentException if a source entity is {@code null}, or a join key is null/default when disallowed by the DAO configuration,
-     *                                  or a map-valued join has multiple matching rows, or the join property's
-     *                                  collection or map type cannot be constructed
-     * @throws UnsupportedOperationException if the {@code @JoinedBy} join property is read-only, so the matched join
-     *                                  entities cannot be stored back onto the source entity
-     */
-    private static void replaceLoadedJoinPropEntities(final JoinInfo joinInfo, final Collection<?> entities,
-            final Map<Object, List<Object>> groupedPropEntities) throws IllegalArgumentException, UnsupportedOperationException {
-        final Map<Object, List<Object>> completeGroups = new HashMap<>(groupedPropEntities);
-
-        for (final Object entity : entities) {
-            final Object joinKey = joinInfo.srcEntityKeyExtractor.apply(entity);
-
-            if (!completeGroups.containsKey(joinKey)) {
-                completeGroups.put(joinKey, new ArrayList<>(0));
-            }
-        }
-
-        joinInfo.setJoinPropEntities(entities, completeGroups);
     }
 
     /**

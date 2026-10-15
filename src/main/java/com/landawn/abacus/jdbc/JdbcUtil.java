@@ -3033,6 +3033,16 @@ public final class JdbcUtil {
 
     /** Classifies a statement using the target dialect's bracket rules when scanning CTE bodies. */
     private static SqlOperation getSqlOperation(final String sql, final boolean bracketIdentifiers) {
+        return getSqlOperation(sql, bracketIdentifiers, true, true);
+    }
+
+    /**
+     * @param backslashEscapes whether ordinary quoted text interprets backslashes as escapes
+     * @param escapeStrings whether an {@code E'...'} prefix marks a PostgreSQL escape string; {@code false} for
+     *        MySQL/MariaDB, where {@code e'...'} is a name followed by an ordinary string
+     */
+    private static SqlOperation getSqlOperation(final String sql, final boolean bracketIdentifiers, final boolean backslashEscapes,
+            final boolean escapeStrings) {
         String trimmedSql = sql.trim();
 
         // Skip leading parentheses and comments so queries like "(SELECT ...) UNION ALL (SELECT ...)",
@@ -3050,7 +3060,7 @@ public final class JdbcUtil {
         }
 
         if (startsWithSqlToken(trimmedSql, "with")) {
-            final int operationStart = findOperationAfterWith(trimmedSql, bracketIdentifiers);
+            final int operationStart = findOperationAfterWith(trimmedSql, bracketIdentifiers, backslashEscapes, escapeStrings);
 
             if (operationStart >= 0) {
                 trimmedSql = trimmedSql.substring(operationStart);
@@ -3107,7 +3117,7 @@ public final class JdbcUtil {
      * parenthesized section is required before an operation is accepted, preventing a CTE whose
      * name happens to resemble an operation from being misclassified.
      */
-    private static int findOperationAfterWith(final String sql, final boolean bracketIdentifiers) {
+    private static int findOperationAfterWith(final String sql, final boolean bracketIdentifiers, final boolean backslashEscapes, final boolean escapeStrings) {
         int parenthesisDepth = 0;
         int arrayDepth = 0;
         int previousTokenStart = -1;
@@ -3130,12 +3140,12 @@ public final class JdbcUtil {
 
             final int tokenStart = i;
             if (ch == '\'' || ch == '"' || ch == '`') {
-                i = skipQuotedSqlText(sql, i, ch);
+                i = skipQuotedSqlText(sql, i, ch, backslashEscapes, escapeStrings);
             } else if (ch == '[') {
                 // Consecutive array closers are nesting, not the escaped ']' of a bracketed name.
                 // Share the codegen distinction to retain aliases and escaped SQL Server identifiers.
                 if (arrayDepth > 0 || JdbcCodeGenerationUtil.startsArrayExpression(sql, i, previousTokenStart, previousTokenEnd,
-                        JdbcCodeGenerationUtil.SqlCommentStyle.NESTED_BLOCKS, bracketIdentifiers)) {
+                        JdbcCodeGenerationUtil.SqlCommentStyle.NESTED_BLOCKS, bracketIdentifiers, backslashEscapes, escapeStrings)) {
                     arrayDepth++;
                     i++;
                 } else {
@@ -3240,28 +3250,35 @@ public final class JdbcUtil {
     }
 
     /**
-     * Skips over a quoted string or delimited identifier. Like
-     * {@code com.landawn.abacus.query.SqlParser}, this accepts the union of the dialect escaping
-     * styles &mdash; doubled delimiters (SQL standard) and backslash escapes (MySQL/MariaDB) &mdash;
-     * so SQL is tokenized the same way here as by the parser the rest of the framework uses. A
-     * standard-SQL literal whose body ends with a backslash therefore reads as unterminated; the
-     * scan then finds no leading operation keyword and the statement is classified
-     * {@code UNKNOWN} rather than being misclassified.
+     * Skips quoted text using doubled delimiters and, when enabled, backslash escapes.
+     * Transaction routing checks both interpretations because connection metadata does not
+     * describe session settings such as MySQL's NO_BACKSLASH_ESCAPES. PostgreSQL's explicit
+     * E-string prefix enables backslash escapes independently of the session interpretation,
+     * including subsequent segments of a newline-continued string. {@code escapeStrings} is
+     * {@code false} for MySQL/MariaDB, which have no such prefix: there {@code e'...'} is a name
+     * followed by an ordinary string.
      */
-    private static int skipQuotedSqlText(final String sql, int index, final char quote) {
+    private static int skipQuotedSqlText(final String sql, int index, final char quote, final boolean backslashEscapes, final boolean escapeStrings) {
         final int len = sql.length();
+        final boolean escapeBackslashes = backslashEscapes || (escapeStrings && quote == '\'' && JdbcCodeGenerationUtil.startsEscapeString(sql, index));
         index++;
 
         while (index < len) {
             final char ch = sql.charAt(index++);
 
-            if (ch == '\\' && index < len) {
+            if (escapeBackslashes && ch == '\\' && index < len) {
                 index++;
             } else if (ch == quote) {
                 if (index < len && sql.charAt(index) == quote) {
                     index++;
                 } else {
-                    break;
+                    // Only an explicit E-string needs to carry its escape mode into a continuation:
+                    // ordinary strings already use the same mode whenever the scanner reaches them.
+                    final int continuation = escapeBackslashes && !backslashEscapes ? JdbcCodeGenerationUtil.findStringLiteralContinuation(sql, index) : -1;
+                    if (continuation < 0) {
+                        break;
+                    }
+                    index = continuation + 1;
                 }
             }
         }
@@ -3348,10 +3365,12 @@ public final class JdbcUtil {
      *
      * @param sql The SQL text to scan.
      * @param dialect The dialect facts the scan depends on.
+     * @param backslashEscapes Whether ordinary quoted text interprets backslashes as escapes.
      * @return {@code true} if a parenthesized section begins with a data-modifying keyword or an {@code INTO} keyword occurs.
      */
-    private static boolean isDataModifyingSelect(final String sql, final ScanDialect dialect) {
+    private static boolean isDataModifyingSelect(final String sql, final ScanDialect dialect, final boolean backslashEscapes) {
         final boolean mySqlDialect = dialect.mySql();
+        final boolean escapeStrings = dialect.escapeStrings();
         int arrayDepth = 0;
         int parenthesisDepth = 0;
         List<Integer> arrayParenthesisDepths = null;
@@ -3437,16 +3456,16 @@ public final class JdbcUtil {
             final int tokenStart = i;
 
             if (ch == '\'') {
-                i = skipQuotedSqlText(sql, i, ch);
+                i = skipQuotedSqlText(sql, i, ch, backslashEscapes, escapeStrings);
             } else if (ch == '"' || ch == '`') {
-                i = skipQuotedSqlText(sql, i, ch);
+                i = skipQuotedSqlText(sql, i, ch, backslashEscapes, escapeStrings);
                 isName = true;
             } else if (ch == '[') {
                 // Scan array contents as code: skipping them as a quoted name can swallow a later
                 // INTO or FINAL TABLE write and incorrectly route it outside the active transaction.
                 if (arrayDepth > 0 || JdbcCodeGenerationUtil.startsArrayExpression(sql, i, previousTokenStart, previousTokenEnd,
                         mySqlDialect ? JdbcCodeGenerationUtil.SqlCommentStyle.MYSQL : JdbcCodeGenerationUtil.SqlCommentStyle.NESTED_BLOCKS,
-                        dialect.bracketIdentifiers())) {
+                        dialect.bracketIdentifiers(), backslashEscapes, escapeStrings)) {
                     if (arrayParenthesisDepths == null) {
                         arrayParenthesisDepths = new ArrayList<>();
                     }
@@ -3595,7 +3614,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * The database facts {@link #isDataModifyingSelect(String, ScanDialect)} depends on.
+     * The database facts {@link #isDataModifyingSelect(String, ScanDialect, boolean)} depends on.
      *
      * @param mySql Whether MySQL/MariaDB rules apply.
      * @param mariaDb Whether the server is MariaDB, or {@code null} if unknown; MariaDB-only executable comments run only
@@ -3603,19 +3622,25 @@ public final class JdbcUtil {
      * @param serverVersion The server version as {@code major * 10000 + minor * 100 + patch}, or {@code -1} if unknown.
      * @param bracketIdentifiers Whether brackets always delimit identifiers rather than array expressions.
      * @param checkBracketAlternatives Whether compatibility modes can also interpret brackets as identifiers.
+     * @param escapeStrings Whether an {@code E'...'} prefix marks a PostgreSQL escape string, which uses backslash escapes
+     *        regardless of the session setting. Only PostgreSQL-family products have them; elsewhere (MySQL, SQL Server,
+     *        H2, Oracle, ...) {@code e'...'} is a name followed by an ordinary string.
      */
-    record ScanDialect(boolean mySql, Boolean mariaDb, int serverVersion, boolean bracketIdentifiers, boolean checkBracketAlternatives) {
-        /** Standard rules with array expressions and context-dependent bracket identifiers. */
-        static final ScanDialect STANDARD = new ScanDialect(false, false, -1, false, false);
+    record ScanDialect(boolean mySql, Boolean mariaDb, int serverVersion, boolean bracketIdentifiers, boolean checkBracketAlternatives, boolean escapeStrings) {
+        /** Standard rules with array expressions and context-dependent bracket identifiers, without escape strings. */
+        static final ScanDialect STANDARD = new ScanDialect(false, false, -1, false, false, false);
+
+        /** PostgreSQL-family rules: the standard rules plus {@code E'...'} escape strings. */
+        static final ScanDialect POSTGRESQL = new ScanDialect(false, false, -1, false, false, true);
 
         /** H2 reports the same product name in all modes; MSSQLServer mode interprets brackets as identifiers. */
-        static final ScanDialect H2 = new ScanDialect(false, false, -1, false, true);
+        static final ScanDialect H2 = new ScanDialect(false, false, -1, false, true, false);
 
         /** SQL Server/ASE: bracket-delimited names are opaque regardless of their contents or preceding token. */
-        static final ScanDialect BRACKET_IDENTIFIERS = new ScanDialect(false, false, -1, true, false);
+        static final ScanDialect BRACKET_IDENTIFIERS = new ScanDialect(false, false, -1, true, false, false);
 
         /** MySQL/MariaDB rules with unknown vendor and version: every executable comment counts as run. */
-        static final ScanDialect MYSQL_UNKNOWN_SERVER = new ScanDialect(true, null, -1, false, false);
+        static final ScanDialect MYSQL_UNKNOWN_SERVER = new ScanDialect(true, null, -1, false, false, false);
     }
 
     /** Leading {@code major.minor[.patch]} of a database product version. */
@@ -3623,14 +3648,21 @@ public final class JdbcUtil {
 
     /**
      * Returns whether the scan of {@code sql} can depend on the database: on its comment rules ({@code #}, {@code --},
-     * {@code /*}), bracket delimiters, or whether a digit-leading word with underscores ({@code 1_000}) is a number or an identifier.
-     * The database product only needs to be looked up for such SQL.
+     * {@code /*}), bracket delimiters, whether a digit-leading word with underscores ({@code 1_000}) is a number or an identifier,
+     * or whether an {@code E'...'} prefix marks a PostgreSQL escape string. The database product only needs to be looked up for such SQL.
      *
      * @param sql The SQL text.
-     * @return {@code true} if the SQL contains {@code [}, {@code #}, {@code --}, {@code /*}, or a digit followed by {@code _}.
+     * @return {@code true} if the SQL contains {@code [}, {@code #}, {@code --}, {@code /*}, a digit followed by {@code _},
+     *         or both a backslash and an {@code e'} / {@code E'} prefix.
      */
     private static boolean dependsOnDialect(final String sql) {
         if (sql.indexOf('[') >= 0 || sql.indexOf('#') >= 0 || sql.contains("--") || sql.contains("/*")) {
+            return true;
+        }
+
+        // Only PostgreSQL-family products read e'\' as an escape string; elsewhere it is a name followed by an ordinary
+        // string. The difference only matters to the no-backslash-escape pass (see requiresTransaction).
+        if (sql.indexOf('\\') >= 0 && (sql.contains("e'") || sql.contains("E'"))) {
             return true;
         }
 
@@ -3677,7 +3709,7 @@ public final class JdbcUtil {
         }
 
         if (!Strings.containsAnyIgnoreCase(productName, "MySQL", "MariaDB")) {
-            return ScanDialect.STANDARD;
+            return isPostgreSqlFamily(productName) ? ScanDialect.POSTGRESQL : ScanDialect.STANDARD;
         }
 
         final String productVersion;
@@ -3686,14 +3718,25 @@ public final class JdbcUtil {
             productVersion = metadata.getDatabaseProductVersion();
         } catch (final SQLException | RuntimeException e) {
             logger.debug(e, "Failed to read the database product version");
-            return new ScanDialect(true, Strings.containsIgnoreCase(productName, "MariaDB") ? Boolean.TRUE : null, -1, false, false);
+            return new ScanDialect(true, Strings.containsIgnoreCase(productName, "MariaDB") ? Boolean.TRUE : null, -1, false, false, false);
         }
 
         // A MariaDB server may report itself as "MySQL" (through the MySQL driver), but its version says "...-MariaDB".
         final Boolean mariaDb = Strings.containsIgnoreCase(productName, "MariaDB") || Strings.containsIgnoreCase(productVersion, "MariaDB") ? Boolean.TRUE
                 : productVersion == null ? null : Boolean.FALSE;
 
-        return new ScanDialect(true, mariaDb, parseServerVersion(productVersion, Boolean.TRUE.equals(mariaDb)), false, false);
+        return new ScanDialect(true, mariaDb, parseServerVersion(productVersion, Boolean.TRUE.equals(mariaDb)), false, false, false);
+    }
+
+    /**
+     * Returns whether a database product name denotes PostgreSQL or a derivative sharing its SQL lexer (escape strings)
+     * and transaction semantics. CockroachDB, YugabyteDB, Aurora PostgreSQL and Greenplum report "PostgreSQL" through pgjdbc.
+     *
+     * @param productName The product name reported by the driver.
+     * @return {@code true} if the product is PostgreSQL-compatible.
+     */
+    private static boolean isPostgreSqlFamily(final String productName) {
+        return Strings.containsAnyIgnoreCase(productName, "PostgreSQL", "EnterpriseDB", "Redshift", "Greenplum");
     }
 
     /**
@@ -6265,7 +6308,7 @@ public final class JdbcUtil {
         final ScanDialect dialect = tran.scanDialect(JdbcUtil::scanDialectOf);
         final boolean writes = dialect == null
                 ? requiresTransaction(sql, ScanDialect.MYSQL_UNKNOWN_SERVER) || requiresTransaction(sql, ScanDialect.STANDARD)
-                        || requiresTransaction(sql, ScanDialect.BRACKET_IDENTIFIERS)
+                        || requiresTransaction(sql, ScanDialect.POSTGRESQL) || requiresTransaction(sql, ScanDialect.BRACKET_IDENTIFIERS)
                 : requiresTransaction(sql, dialect);
 
         return writes ? tran : null;
@@ -6277,13 +6320,22 @@ public final class JdbcUtil {
      * bracket-identifier interpretation too before allowing a SELECT to run outside the transaction.
      *
      * <p>Only called by {@link #getTransaction(javax.sql.DataSource, String, CreatedBy)} after its non-SELECT fast path: SQL
-     * without {@code '['} has already been classified as a SELECT (a classification no dialect can change), so it is not
-     * classified again here.</p>
+     * without {@code '['} has already been classified as a SELECT under backslash-escape rules. That classification
+     * is reused for the first scan; the alternate escape interpretation rechecks CTE classification too.</p>
      */
     private static boolean requiresTransaction(final String sql, final ScanDialect dialect) {
-        final boolean hasBracket = sql.indexOf('[') >= 0;
+        // Backslash escaping depends on the database and session settings (and on PostgreSQL's
+        // E-string prefix). A write visible under either interpretation must stay in the transaction.
+        return requiresTransaction(sql, dialect, true) || (sql.indexOf('\\') >= 0 && requiresTransaction(sql, dialect, false));
+    }
 
-        if ((hasBracket && getSqlOperation(sql, dialect.bracketIdentifiers()) != SqlOperation.SELECT) || isDataModifyingSelect(sql, dialect)) {
+    private static boolean requiresTransaction(final String sql, final ScanDialect dialect, final boolean backslashEscapes) {
+        final boolean hasBracket = sql.indexOf('[') >= 0;
+        // Only PostgreSQL-family products have E'...' escape strings; elsewhere e'\' is a name followed by an ordinary string.
+        final boolean escapeStrings = dialect.escapeStrings();
+
+        if (((hasBracket || !backslashEscapes) && getSqlOperation(sql, dialect.bracketIdentifiers(), backslashEscapes, escapeStrings) != SqlOperation.SELECT)
+                || isDataModifyingSelect(sql, dialect, backslashEscapes)) {
             return true;
         }
 
@@ -6293,9 +6345,9 @@ public final class JdbcUtil {
 
         // The first pass identified a SELECT. The alternate CTE scan may be indeterminate for nested arrays (whose
         // consecutive ']' characters look like an identifier escape), so only a recognized write overrides that result.
-        final SqlOperation bracketOperation = getSqlOperation(sql, true);
+        final SqlOperation bracketOperation = getSqlOperation(sql, true, backslashEscapes, escapeStrings);
         return bracketOperation == SqlOperation.INSERT || bracketOperation == SqlOperation.UPDATE || bracketOperation == SqlOperation.DELETE
-                || bracketOperation == SqlOperation.MERGE || isDataModifyingSelect(sql, ScanDialect.BRACKET_IDENTIFIERS);
+                || bracketOperation == SqlOperation.MERGE || isDataModifyingSelect(sql, ScanDialect.BRACKET_IDENTIFIERS, backslashEscapes);
     }
 
     /**
@@ -7562,7 +7614,9 @@ public final class JdbcUtil {
 
     /**
      * Executes the given {@link Statement}'s batch, handling SQL performance logging when enabled. The
-     * statement's batch is cleared after execution.
+     * statement's batch clearing is attempted after execution. When execution fails, cleanup failures are
+     * suppressed on that failure. After successful execution, SQL and runtime cleanup exceptions are logged
+     * and ignored; cleanup {@link Error}s still propagate.
      *
      * @param stmt The {@link Statement} whose batch to execute.
      * @return An array of update counts, one per batch entry.
@@ -7570,38 +7624,30 @@ public final class JdbcUtil {
      */
     static int[] executeBatch(final Statement stmt) throws SQLException {
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+        final boolean logSql = JdbcUtil.isToHandleSqlLog(sqlLogConfig);
+        final long startTimeMillis = logSql ? System.currentTimeMillis() : 0;
+        final long startTimeNanos = logSql ? System.nanoTime() : 0;
+        Throwable executionFailure = null;
 
-        if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
-            final long startTimeMillis = System.currentTimeMillis();
-            final long startTimeNanos = System.nanoTime();
-
-            try {
-                return stmt.executeBatch();
-            } finally {
+        try {
+            return stmt.executeBatch();
+        } catch (final SQLException | RuntimeException | Error e) {
+            executionFailure = e;
+            throw e;
+        } finally {
+            if (logSql) {
                 JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTimeMillis, startTimeNanos);
+            }
 
-                try {
-                    stmt.clearBatch();
-                } catch (final SQLException e) {
-                    logger.warn(e, "Failed to clear batch parameters after executeBatch");
-                }
-            }
-        } else {
-            try {
-                return stmt.executeBatch();
-            } finally {
-                try {
-                    stmt.clearBatch();
-                } catch (final SQLException e) {
-                    logger.warn(e, "Failed to clear batch parameters after executeBatch");
-                }
-            }
+            clearBatchAfterExecution(stmt, executionFailure);
         }
     }
 
     /**
      * Executes the given {@link Statement}'s batch as a large batch, handling SQL performance logging
-     * when enabled. The statement's batch is cleared after execution.
+     * when enabled. The statement's batch clearing is attempted after execution. When execution fails,
+     * cleanup failures are suppressed on that failure. After successful execution, SQL and runtime cleanup
+     * exceptions are logged and ignored; cleanup {@link Error}s still propagate.
      *
      * @param stmt The {@link Statement} whose batch to execute.
      * @return An array of update counts as long values, one per batch entry.
@@ -7612,32 +7658,48 @@ public final class JdbcUtil {
      */
     static long[] executeLargeBatch(final Statement stmt) throws SQLException, UnsupportedOperationException {
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
+        final boolean logSql = JdbcUtil.isToHandleSqlLog(sqlLogConfig);
+        final long startTimeMillis = logSql ? System.currentTimeMillis() : 0;
+        final long startTimeNanos = logSql ? System.nanoTime() : 0;
+        Throwable executionFailure = null;
 
-        if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
-            final long startTimeMillis = System.currentTimeMillis();
-            final long startTimeNanos = System.nanoTime();
-
-            try {
-                return stmt.executeLargeBatch();
-            } finally {
+        try {
+            return stmt.executeLargeBatch();
+        } catch (final SQLException | RuntimeException | Error e) {
+            executionFailure = e;
+            throw e;
+        } finally {
+            if (logSql) {
                 JdbcUtil.handleSqlLog(stmt, sqlLogConfig, startTimeMillis, startTimeNanos);
+            }
 
-                try {
-                    stmt.clearBatch();
-                } catch (final SQLException e) {
-                    logger.warn(e, "Failed to clear batch parameters after executeLargeBatch");
-                }
+            clearBatchAfterExecution(stmt, executionFailure);
+        }
+    }
+
+    /**
+     * Keeps a driver's batch failure primary when clearing retained batch parameters also fails.
+     * SQL and runtime cleanup exceptions after successful execution are logged and ignored; {@link Error}s still propagate.
+     *
+     * @param stmt the statement whose batch is cleared
+     * @param executionFailure the primary execution failure, or {@code null} after successful execution
+     */
+    private static void clearBatchAfterExecution(final Statement stmt, final Throwable executionFailure) {
+        try {
+            stmt.clearBatch();
+        } catch (final SQLException | RuntimeException e) {
+            if (executionFailure == null) {
+                // As with parameter cleanup, best-effort clearing must not discard completed batch counts.
+                logger.warn(e, "Failed to clear batch parameters after execution");
+            } else {
+                addSuppressedIfDistinct(executionFailure, e);
             }
-        } else {
-            try {
-                return stmt.executeLargeBatch();
-            } finally {
-                try {
-                    stmt.clearBatch();
-                } catch (final SQLException e) {
-                    logger.warn(e, "Failed to clear batch parameters after executeLargeBatch");
-                }
+        } catch (final Error e) {
+            if (executionFailure == null) {
+                throw e;
             }
+
+            addSuppressedIfDistinct(executionFailure, e);
         }
     }
 
@@ -7745,9 +7807,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Clears the parameters of the given {@link PreparedStatement}, ignoring any failure. Does nothing
-     * for {@code null} statements and {@link CallableStatement}s (clearing parameters would also remove
-     * registered out parameters).
+     * Clears the parameters of the given {@link PreparedStatement}, logging and ignoring SQL and runtime exceptions.
+     * Errors still propagate. Does nothing for {@code null} statements and {@link CallableStatement}s
+     * (clearing parameters would also remove registered out parameters).
      *
      * @param stmt The {@link PreparedStatement} whose parameters to clear. Can be {@code null}.
      */
@@ -7758,7 +7820,8 @@ public final class JdbcUtil {
         } else {
             try {
                 stmt.clearParameters();
-            } catch (final SQLException e) {
+            } catch (final SQLException | RuntimeException e) {
+                // Best-effort cleanup must not hide an execution failure or discard a successful query's ResultSet.
                 logger.warn(e, "Failed to clear parameters after execution");
             }
         }
@@ -10645,8 +10708,7 @@ public final class JdbcUtil {
      */
     private static boolean abortsTransactionOnStatementError(final DatabaseMetaData metadata) {
         try {
-            // CockroachDB, YugabyteDB, Aurora PostgreSQL and Greenplum report "PostgreSQL" through pgjdbc.
-            return Strings.containsAnyIgnoreCase(metadata.getDatabaseProductName(), "PostgreSQL", "EnterpriseDB", "Redshift", "Greenplum");
+            return isPostgreSqlFamily(metadata.getDatabaseProductName());
         } catch (final SQLException | RuntimeException e) {
             logger.debug(e, "Failed to read the database product name for the table-existence probe; assuming PostgreSQL-like behavior");
             return true;
@@ -10815,7 +10877,6 @@ public final class JdbcUtil {
             return null;
         }
 
-        final String quote = identifierQuote == null ? "" : identifierQuote;
         final StringBuilder sb = new StringBuilder(64);
 
         if (Strings.isNotEmpty(catalog)) {
@@ -10823,7 +10884,7 @@ public final class JdbcUtil {
                 return null;
             }
 
-            sb.append(quote).append(catalog).append(quote).append('.');
+            sb.append(identifierQuote == null ? catalog : SqlIdentifierUtil.quoteIdentifier(catalog, identifierQuote)).append('.');
         }
 
         if (Strings.isNotEmpty(schema)) {
@@ -10831,10 +10892,10 @@ public final class JdbcUtil {
                 return null;
             }
 
-            sb.append(quote).append(schema).append(quote).append('.');
+            sb.append(identifierQuote == null ? schema : SqlIdentifierUtil.quoteIdentifier(schema, identifierQuote)).append('.');
         }
 
-        sb.append(quote).append(tableName).append(quote);
+        sb.append(identifierQuote == null ? tableName : SqlIdentifierUtil.quoteIdentifier(tableName, identifierQuote));
 
         return sb.toString();
     }
@@ -11023,7 +11084,9 @@ public final class JdbcUtil {
 
                 sb.append(part);
             } else {
-                sb.append(identifierQuote).append(escapeIdentifierPart(part, identifierQuote)).append(identifierQuote);
+                // The driver's opening quote need not be symmetric: '[' closes with ']' and
+                // embedded closing brackets must be doubled, just as in generated DML identifiers.
+                sb.append(SqlIdentifierUtil.quoteIdentifier(part, identifierQuote));
             }
         }
 
@@ -11075,17 +11138,6 @@ public final class JdbcUtil {
         final String normalized = quoteString == null ? null : quoteString.trim();
 
         return Strings.isEmpty(normalized) ? null : normalized;
-    }
-
-    /**
-     * Escapes an identifier part for embedding between delimiters by doubling every occurrence of the quote string.
-     *
-     * @param identifierPart The identifier part to escape.
-     * @param identifierQuote The quote string to double.
-     * @return The escaped identifier part.
-     */
-    private static String escapeIdentifierPart(final String identifierPart, final String identifierQuote) {
-        return identifierPart.replace(identifierQuote, identifierQuote + identifierQuote);
     }
 
     /**
@@ -13306,9 +13358,9 @@ public final class JdbcUtil {
             } finally {
                 if (!noException) {
                     if (tran != null) {
-                        // Constructor succeeded (so conn was mutated to autoCommit=false / requested isolation) but a
-                        // later step (incrementAndGetRef) failed — restore the connection's original state via
-                        // SqlTransaction's reset path before it goes back to the pool.
+                        // Constructor succeeded (so conn may have been switched to autoCommit=false / the requested
+                        // isolation, unless it already matched) but a later step (incrementAndGetRef) failed — restore
+                        // the connection's original state via SqlTransaction's reset path before it goes back to the pool.
                         tran.resetAndCloseConnection();
                     } else {
                         JdbcUtil.releaseConnection(conn, ds);

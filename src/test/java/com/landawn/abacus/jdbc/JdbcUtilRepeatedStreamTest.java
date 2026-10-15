@@ -45,7 +45,8 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
     void directAndBatchExecutionReplayNamedStreamsAndReaders() throws Exception {
         for (int mode = 0; mode < 3; mode++) {
             for (int kind = 0; kind < 4; kind++) {
-                try (Connection conn = DriverManager.getConnection("jdbc:h2:mem:raw_replay"); Statement stmt = conn.createStatement()) {
+                try (Connection conn = DriverManager.getConnection("jdbc:h2:mem:raw_replay");
+                     Statement stmt = conn.createStatement()) {
                     stmt.execute("create table t(a varbinary, b varbinary, c clob, d clob)");
                     Object parameters = parameters(kind);
                     String sql = "insert into t values (:p, :p, :r, :r)";
@@ -59,8 +60,8 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
                     try (ResultSet rows = stmt.executeQuery("select * from t")) {
                         int count = 0;
                         while (rows.next()) {
-                            assertArrayEquals(new byte[] {1, 2, 3}, rows.getBytes(1));
-                            assertArrayEquals(new byte[] {1, 2, 3}, rows.getBytes(2));
+                            assertArrayEquals(new byte[] { 1, 2, 3 }, rows.getBytes(1));
+                            assertArrayEquals(new byte[] { 1, 2, 3 }, rows.getBytes(2));
                             assertEquals("a\u03b2c", rows.getString(3));
                             assertEquals("a\u03b2c", rows.getString(4));
                             count++;
@@ -73,7 +74,7 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
     }
 
     private static Object parameters(int kind) {
-        InputStream input = new ByteArrayInputStream(new byte[] {1, 2, 3});
+        InputStream input = new ByteArrayInputStream(new byte[] { 1, 2, 3 });
         Reader reader = new StringReader("a\u03b2c");
         return switch (kind) {
             case 0 -> Map.of("p", input, "r", reader);
@@ -87,14 +88,18 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
     void deferredDriverReceivesIndependentCursorsAndSingleNamesRemainLazy() throws Exception {
         PreparedStatement stmt = mock(PreparedStatement.class);
         List<InputStream> bound = new ArrayList<>();
-        doAnswer(call -> { bound.add(call.getArgument(1)); return null; }).when(stmt).setBinaryStream(anyInt(), any(InputStream.class));
-        ByteArrayInputStream input = new ByteArrayInputStream(new byte[] {1, 2, 3});
-        JdbcUtil.setParameters(ParsedSql.parse("select :p, :p"), stmt, new Object[] {Map.of("p", input)});
+        doAnswer(call -> {
+            bound.add(call.getArgument(1));
+            return null;
+        }).when(stmt).setBinaryStream(anyInt(), any(InputStream.class));
+        ByteArrayInputStream input = new ByteArrayInputStream(new byte[] { 1, 2, 3 });
+        JdbcUtil.setParameters(ParsedSql.parse("select :p, :p"), stmt, new Object[] { Map.of("p", input) });
         assertEquals(2, bound.size());
-        for (InputStream stream : bound) assertArrayEquals(new byte[] {1, 2, 3}, stream.readAllBytes());
+        for (InputStream stream : bound)
+            assertArrayEquals(new byte[] { 1, 2, 3 }, stream.readAllBytes());
         bound.clear();
-        ByteArrayInputStream single = new ByteArrayInputStream(new byte[] {4});
-        JdbcUtil.setParameters(ParsedSql.parse("select :p"), stmt, new Object[] {Map.of("p", single)});
+        ByteArrayInputStream single = new ByteArrayInputStream(new byte[] { 4 });
+        JdbcUtil.setParameters(ParsedSql.parse("select :p"), stmt, new Object[] { Map.of("p", single) });
         assertSame(single, bound.get(0));
         assertEquals(1, single.available());
     }
@@ -102,12 +107,12 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
     @Test
     void validationAndClosedStatementDoNotConsumeStreams() throws Exception {
         PreparedStatement stmt = mock(PreparedStatement.class);
-        ByteArrayInputStream input = new ByteArrayInputStream(new byte[] {1, 2, 3});
-        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.setParameters(ParsedSql.parse("select :p, :p, :missing"), stmt,
-                new Object[] {Map.of("p", input)}));
+        ByteArrayInputStream input = new ByteArrayInputStream(new byte[] { 1, 2, 3 });
+        assertThrows(IllegalArgumentException.class,
+                () -> JdbcUtil.setParameters(ParsedSql.parse("select :p, :p, :missing"), stmt, new Object[] { Map.of("p", input) }));
         assertEquals(3, input.available());
         when(stmt.isClosed()).thenReturn(true);
-        assertThrows(SQLException.class, () -> JdbcUtil.setParameters(ParsedSql.parse("select :p, :p"), stmt, new Object[] {Map.of("p", input)}));
+        assertThrows(SQLException.class, () -> JdbcUtil.setParameters(ParsedSql.parse("select :p, :p"), stmt, new Object[] { Map.of("p", input) }));
         assertEquals(3, input.available());
         verify(stmt, never()).setBinaryStream(anyInt(), any(InputStream.class));
     }
@@ -116,7 +121,7 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
     void repeatedBeanGetterIsEvaluatedOnce() throws Exception {
         CountingBean bean = new CountingBean();
         try (Connection conn = DriverManager.getConnection("jdbc:h2:mem:raw_replay_getter")) {
-            JdbcUtil.prepareStmt(conn, "select :p, :p", new Object[] {bean}).close();
+            JdbcUtil.prepareStmt(conn, "select :p, :p", new Object[] { bean }).close();
             assertEquals(1, bean.calls);
         }
     }
@@ -125,14 +130,20 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
     void bufferingFailurePreservesCauseAndClosesOnlyTheStatement() throws Exception {
         IOException cause = new IOException("unreadable payload");
         InputStream input = new InputStream() {
-            @Override public int read() throws IOException { throw cause; }
-            @Override public void close() { fail("caller owns the stream"); }
+            @Override
+            public int read() throws IOException {
+                throw cause;
+            }
+
+            @Override
+            public void close() {
+                fail("caller owns the stream");
+            }
         };
         Connection conn = mock(Connection.class);
         PreparedStatement stmt = mock(PreparedStatement.class);
         when(conn.prepareStatement("select ?, ?")).thenReturn(stmt);
-        SQLException thrown = assertThrows(SQLException.class,
-                () -> JdbcUtil.prepareStmt(conn, "select :p, :p", Map.of("p", input)));
+        SQLException thrown = assertThrows(SQLException.class, () -> JdbcUtil.prepareStmt(conn, "select :p, :p", Map.of("p", input)));
         assertSame(cause, thrown.getCause());
         verify(stmt).close();
         verify(stmt, never()).setBinaryStream(anyInt(), any(InputStream.class));
@@ -146,7 +157,7 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
         CustomInputStream input = new CustomInputStream();
         Type<CustomInputStream> custom = mock(Type.class);
         ParsedSql sql = ParsedSql.parse("select :p, :p");
-        Object[] parameters = {Map.of("p", input)};
+        Object[] parameters = { Map.of("p", input) };
         try (MockedStatic<Type> types = mockStatic(Type.class, CALLS_REAL_METHODS)) {
             types.when(() -> Type.of(CustomInputStream.class)).thenReturn(custom);
             JdbcUtil.setParameters(sql, stmt, parameters);
@@ -157,27 +168,54 @@ public class JdbcUtilRepeatedStreamTest extends TestBase {
     }
 
     private static final class CustomInputStream extends ByteArrayInputStream {
-        CustomInputStream() { super(new byte[] {1, 2, 3}); }
+        CustomInputStream() {
+            super(new byte[] { 1, 2, 3 });
+        }
     }
 
-    public record StreamRecord(InputStream p, Reader r) { }
+    public record StreamRecord(InputStream p, Reader r) {
+    }
 
     public static class StreamBean {
         @com.landawn.abacus.annotation.Type("BinaryStream")
         private InputStream p;
         @com.landawn.abacus.annotation.Type("CharacterStream")
         private Reader r;
-        public StreamBean() { }
-        StreamBean(InputStream p, Reader r) { this.p = p; this.r = r; }
-        public InputStream getP() { return p; }
-        public void setP(InputStream p) { this.p = p; }
-        public Reader getR() { return r; }
-        public void setR(Reader r) { this.r = r; }
+
+        public StreamBean() {
+        }
+
+        StreamBean(InputStream p, Reader r) {
+            this.p = p;
+            this.r = r;
+        }
+
+        public InputStream getP() {
+            return p;
+        }
+
+        public void setP(InputStream p) {
+            this.p = p;
+        }
+
+        public Reader getR() {
+            return r;
+        }
+
+        public void setR(Reader r) {
+            this.r = r;
+        }
     }
 
     public static class CountingBean {
         private int calls;
-        public InputStream getP() { calls++; return new ByteArrayInputStream(new byte[] {1}); }
-        public void setP(InputStream p) { }
+
+        public InputStream getP() {
+            calls++;
+            return new ByteArrayInputStream(new byte[] { 1 });
+        }
+
+        public void setP(InputStream p) {
+        }
     }
 }

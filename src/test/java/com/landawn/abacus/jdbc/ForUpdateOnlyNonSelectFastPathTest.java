@@ -74,8 +74,7 @@ public class ForUpdateOnlyNonSelectFastPathTest extends TestBase {
 
         try {
             clearInvocations(metadata);
-            assertSame(tran, JdbcUtil.getTransaction(dataSource, "WITH c AS (SELECT a [x] FROM t) UPDATE t SET a = 1",
-                    SqlTransaction.CreatedBy.JDBC_UTIL));
+            assertSame(tran, JdbcUtil.getTransaction(dataSource, "WITH c AS (SELECT a [x] FROM t) UPDATE t SET a = 1", SqlTransaction.CreatedBy.JDBC_UTIL));
             verify(metadata, atLeastOnce()).getDatabaseProductName();
         } finally {
             tran.rollbackIfNotCommitted();
@@ -113,8 +112,7 @@ public class ForUpdateOnlyNonSelectFastPathTest extends TestBase {
 
         try {
             assertSame(tran, JdbcUtil.getTransaction(dataSource, "UPDATE t SET a = 1 -- note", SqlTransaction.CreatedBy.JDBC_UTIL));
-            assertSame(tran, JdbcUtil.getTransaction(dataSource, "WITH c AS (SELECT a [x] FROM t) DELETE FROM t",
-                    SqlTransaction.CreatedBy.JDBC_UTIL));
+            assertSame(tran, JdbcUtil.getTransaction(dataSource, "WITH c AS (SELECT a [x] FROM t) DELETE FROM t", SqlTransaction.CreatedBy.JDBC_UTIL));
         } finally {
             tran.rollbackIfNotCommitted();
         }

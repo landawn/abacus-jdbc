@@ -41,7 +41,7 @@ public class NamedQueryObjectStreamTest extends TestBase {
         final InputStream input = new ByteArrayInputStream(expected);
 
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:object_bytes");
-                NamedQuery query = JdbcUtil.prepareNamedQuery(connection, variant == 6 ? "select :payload" : "select :payload, :payload")) {
+             NamedQuery query = JdbcUtil.prepareNamedQuery(connection, variant == 6 ? "select :payload" : "select :payload, :payload")) {
             switch (variant) {
                 case 0 -> query.setObject("payload", input);
                 case 1 -> query.setObject("payload", input, Type.of(InputStream.class));
@@ -70,7 +70,7 @@ public class NamedQueryObjectStreamTest extends TestBase {
         final Reader reader = new StringReader("a\u03b2c");
 
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:object_readers");
-                NamedQuery query = JdbcUtil.prepareNamedQuery(connection, variant == 6 ? "select :payload" : "select :payload, :payload")) {
+             NamedQuery query = JdbcUtil.prepareNamedQuery(connection, variant == 6 ? "select :payload" : "select :payload, :payload")) {
             switch (variant) {
                 case 0 -> query.setObject("payload", reader);
                 case 1 -> query.setObject("payload", reader, Type.of(Reader.class));
@@ -98,7 +98,7 @@ public class NamedQueryObjectStreamTest extends TestBase {
             final Object value = bytes ? new ByteArrayInputStream("abc".getBytes(java.nio.charset.StandardCharsets.US_ASCII)) : new StringReader("abc");
 
             try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:named_stream_types");
-                    NamedQuery query = JdbcUtil.prepareNamedQuery(connection, "select :payload, :payload")) {
+                 NamedQuery query = JdbcUtil.prepareNamedQuery(connection, "select :payload, :payload")) {
                 query.setObject("payload", value, Type.of(typeName));
                 query.query((Jdbc.ResultExtractor<Void>) result -> {
                     result.next();
@@ -116,13 +116,14 @@ public class NamedQueryObjectStreamTest extends TestBase {
     }
 
     private static void assertBatchBinding(final int variant) throws Exception {
-        try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:object_stream_batch"); Statement statement = connection.createStatement()) {
+        try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:object_stream_batch");
+             Statement statement = connection.createStatement()) {
             statement.execute("create table items (a varbinary, b varbinary)");
             final InputStream first = new ByteArrayInputStream(new byte[] { 1 });
             final InputStream second = new ByteArrayInputStream(new byte[] { 2 });
             try (NamedQuery query = JdbcUtil.prepareNamedQuery(connection, "insert into items values (:payload, :payload)")) {
-                query.addBatchParameters(variant == 0 ? List.of(Map.of("payload", first), Map.of("payload", second))
-                        : List.of(new StreamBean(first), new StreamBean(second)));
+                query.addBatchParameters(
+                        variant == 0 ? List.of(Map.of("payload", first), Map.of("payload", second)) : List.of(new StreamBean(first), new StreamBean(second)));
                 query.batchUpdate();
             }
             try (ResultSet result = statement.executeQuery("select a, b from items order by a")) {
@@ -146,7 +147,7 @@ public class NamedQueryObjectStreamTest extends TestBase {
             return null;
         }).when(customType).set(any(PreparedStatement.class), anyInt(), any(InputStream.class));
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:custom_stream");
-                NamedQuery query = JdbcUtil.prepareNamedQuery(connection, "select :payload, :payload")) {
+             NamedQuery query = JdbcUtil.prepareNamedQuery(connection, "select :payload, :payload")) {
             query.setObject("payload", input, customType);
             query.query((Jdbc.ResultExtractor<Void>) result -> {
                 result.next();
@@ -163,7 +164,8 @@ public class NamedQueryObjectStreamTest extends TestBase {
         assertAll(IntStream.range(0, 3).mapToObj(variant -> () -> {
             final CountingStreamBean first = new CountingStreamBean();
             final CountingStreamBean second = new CountingStreamBean();
-            try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:counted_stream"); Statement statement = connection.createStatement()) {
+            try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:counted_stream");
+                 Statement statement = connection.createStatement()) {
                 statement.execute("create table items (a varbinary, b varbinary)");
                 try (NamedQuery query = JdbcUtil.prepareNamedQuery(connection, "insert into items values (:payload, :payload)")) {
                     if (variant == 0) {

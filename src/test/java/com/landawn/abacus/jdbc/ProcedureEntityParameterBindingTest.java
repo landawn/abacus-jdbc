@@ -88,8 +88,8 @@ public class ProcedureEntityParameterBindingTest extends TestBase {
     void positionalProcedureRejectsBoundEntityParameters() {
         for (final Class<?> daoClass : new Class<?>[] { PositionalBoundBeanDao.class, PositionalBoundRecordDao.class, PositionalBoundEntityIdDao.class,
                 PositionalSingleValueBeanDao.class }) {
-            final UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class,
-                    () -> JdbcUtil.createDao((Class) daoClass, dataSource), daoClass.getSimpleName());
+            final UnsupportedOperationException e = assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao((Class) daoClass, dataSource),
+                    daoClass.getSimpleName());
             // The procedure-specific message must not tell the caller to use named SQL or that a Map is unsupported.
             assertTrue(e.getMessage().contains("positional procedure call"), e.getMessage());
             assertTrue(e.getMessage().contains("pass a Map"), e.getMessage());

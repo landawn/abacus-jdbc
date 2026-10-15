@@ -29,8 +29,7 @@ public class QueryNullArgumentValidationTest extends TestBase {
         final PreparedStatement stmt = mock(PreparedStatement.class);
         final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse("select :id"));
 
-        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> query.setParameters((EntityId) null));
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> query.setParameters((EntityId) null));
 
         assertTrue(failure.getMessage().contains("entityId"));
         assertTrue(query.isClosed);
@@ -79,8 +78,7 @@ public class QueryNullArgumentValidationTest extends TestBase {
 
     @Test
     void proxyConstructorRejectsNullWhileTheFactoryStillAcceptsIt() {
-        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> new ResultSetProxy(null));
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> new ResultSetProxy(null));
 
         assertTrue(failure.getMessage().contains("delegate"));
         assertNull(ResultSetProxy.wrap(null));

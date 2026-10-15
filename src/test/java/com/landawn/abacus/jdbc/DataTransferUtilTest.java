@@ -65,10 +65,11 @@ public class DataTransferUtilTest extends TestBase {
         final PreparedStatement unusedStatement = mock(PreparedStatement.class);
 
         assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.importData(dataset, List.of("missing"), null, unusedConnection, "INSERT INTO users VALUES (?)", 0, 0))
-                        .getMessage().contains("missing"));
-        assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.importData(dataset, List.of("missing"), null, unusedStatement, 0, 0)).getMessage().contains("missing"));
+                () -> DataTransferUtil.importData(dataset, List.of("missing"), null, unusedConnection, "INSERT INTO users VALUES (?)", 0, 0)).getMessage()
+                        .contains("missing"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(dataset, List.of("missing"), null, unusedStatement, 0, 0))
+                .getMessage()
+                .contains("missing"));
         verifyNoInteractions(unusedConnection, unusedStatement);
     }
 
@@ -79,11 +80,12 @@ public class DataTransferUtilTest extends TestBase {
         final DataSource sourceDataSource = mock(DataSource.class);
         final DataSource targetDataSource = mock(DataSource.class);
 
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(source, target, "users", "users", List.of("schema.id"), 0))
+                .getMessage()
+                .contains("columnName"));
         assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.copy(source, target, "users", "users", List.of("schema.id"), 0)).getMessage().contains("columnName"));
-        assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.copy(sourceDataSource, targetDataSource, "users", "users", List.of("schema.id"), 0))
-                        .getMessage().contains("columnName"));
+                () -> DataTransferUtil.copy(sourceDataSource, targetDataSource, "users", "users", List.of("schema.id"), 0)).getMessage()
+                        .contains("columnName"));
         verifyNoInteractions(source, target, sourceDataSource, targetDataSource);
     }
 
@@ -2005,8 +2007,7 @@ public class DataTransferUtilTest extends TestBase {
         final Throwables.BiConsumer<PreparedQuery, String[], SQLException> stmtSetter = (stmt, row) -> stmt.setString(1, row[0]);
 
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importCsv(directory, dataSource, "INSERT INTO t VALUES (?)", stmtSetter));
-        assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.importCsv(directory, connection, "INSERT INTO t VALUES (?)", 10, 0, stmtSetter));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importCsv(directory, connection, "INSERT INTO t VALUES (?)", 10, 0, stmtSetter));
 
         verifyNoInteractions(dataSource, connection);
     }
@@ -2047,8 +2048,7 @@ public class DataTransferUtilTest extends TestBase {
 
         final File directory = missing.getParentFile();
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importCsv(directory, mockPreparedStatement, stmtSetter));
-        assertThrows(IllegalArgumentException.class,
-                () -> DataTransferUtil.importCsvFrom(directory).parameterSetter(stmtSetter).to(mockPreparedStatement));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importCsvFrom(directory).parameterSetter(stmtSetter).to(mockPreparedStatement));
 
         verifyNoInteractions(mockPreparedStatement);
     }

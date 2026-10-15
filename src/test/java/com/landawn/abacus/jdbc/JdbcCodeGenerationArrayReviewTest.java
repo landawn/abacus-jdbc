@@ -21,7 +21,8 @@ public class JdbcCodeGenerationArrayReviewTest extends TestBase {
         final JdbcDataSource source = new JdbcDataSource();
         source.setURL("jdbc:h2:mem:codegen_nested_array_review");
 
-        try (Connection conn = source.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = source.getConnection();
+             Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE array_values (id INT PRIMARY KEY, payload INT ARRAY ARRAY)");
             final String insert = "INSERT INTO array_values(id, payload) VALUES (1, ARRAY[ARRAY[1, 2], ARRAY[3, 4]])";
             assertEquals(1, stmt.executeUpdate(insert));
@@ -43,7 +44,8 @@ public class JdbcCodeGenerationArrayReviewTest extends TestBase {
         final JdbcDataSource source = new JdbcDataSource();
         source.setURL("jdbc:h2:mem:codegen_array_literals_review");
 
-        try (Connection conn = source.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = source.getConnection();
+             Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE array_values (payload VARCHAR ARRAY ARRAY)");
             final String expression = "ARRAY /* constructor [)] */ [ARRAY[']', ',('], ARRAY['--', '/*']]";
             final String insert = "INSERT INTO array_values(payload) VALUES (" + expression + ")";
@@ -66,7 +68,8 @@ public class JdbcCodeGenerationArrayReviewTest extends TestBase {
         final JdbcDataSource source = new JdbcDataSource();
         source.setURL("jdbc:h2:mem:codegen_array_subscripts_review");
 
-        try (Connection conn = source.getConnection(); Statement stmt = conn.createStatement()) {
+        try (Connection conn = source.getConnection();
+             Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE array_input (payload INT ARRAY, indexes INT ARRAY)");
             stmt.execute("INSERT INTO array_input VALUES (ARRAY[10, 20], ARRAY[2])");
             stmt.execute("CREATE TABLE array_output (chosen INT)");
@@ -90,8 +93,8 @@ public class JdbcCodeGenerationArrayReviewTest extends TestBase {
         final JdbcDataSource source = new JdbcDataSource();
         source.setURL("jdbc:h2:mem:codegen_array_syntax_review");
 
-        for (final String expression : new String[] { "ARRAY[[1, 2], [3, 4]]", "ARRAY[[$q$],($q$, 'x'], ['y', 'z']]",
-                "(ARRAY[10, 20])[ARRAY[1][1]]", "ARRAY -- constructor [)]\n [[1, 2], [3, 4]]" }) {
+        for (final String expression : new String[] { "ARRAY[[1, 2], [3, 4]]", "ARRAY[[$q$],($q$, 'x'], ['y', 'z']]", "(ARRAY[10, 20])[ARRAY[1][1]]",
+                "ARRAY -- constructor [)]\n [[1, 2], [3, 4]]" }) {
             assertEquals("UPDATE t SET a = " + expression,
                     JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(source, "INSERT INTO t(a) VALUES (" + expression + ")"));
         }
@@ -103,8 +106,7 @@ public class JdbcCodeGenerationArrayReviewTest extends TestBase {
         source.setURL("jdbc:h2:mem:codegen_bracket_identifier_review");
 
         assertEquals("UPDATE \"array_table\" SET \"a[b\" = [a[b], \"a]b\" = [a]]b]",
-                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(source,
-                        "INSERT INTO [array_table]([a[b], [a]]b]) VALUES ([a[b], [a]]b])"));
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(source, "INSERT INTO [array_table]([a[b], [a]]b]) VALUES ([a[b], [a]]b])"));
         assertEquals("UPDATE t SET a = (SELECT [a[b] FROM [c]]d])",
                 JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(source, "INSERT INTO t(a) VALUES ((SELECT [a[b] FROM [c]]d]))"));
     }

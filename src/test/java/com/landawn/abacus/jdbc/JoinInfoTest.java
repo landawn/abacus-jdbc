@@ -446,8 +446,10 @@ public class JoinInfoTest extends TestBase {
         // "?, ?, ?" sub-query splice must still produce valid SQL.
         assertEquals("SELECT roleId, name FROM RoleLookupEntity WHERE roleId IN (SELECT roleId FROM UserRoleLink WHERE userId = ?)",
                 manyToManyJoin.selectSqlPlan(Dsl.PSB)._1.apply(null));
-        assertEquals("SELECT RoleLookupEntity.roleId, RoleLookupEntity.name, UserRoleLink.userId FROM RoleLookupEntity INNER JOIN UserRoleLink"
-                + " ON RoleLookupEntity.roleId = UserRoleLink.roleId WHERE UserRoleLink.userId IN (?, ?)", manyToManyJoin.batchSelectSqlPlan(Dsl.PSB)._1.apply(null, 2));
+        assertEquals(
+                "SELECT RoleLookupEntity.roleId, RoleLookupEntity.name, UserRoleLink.userId FROM RoleLookupEntity INNER JOIN UserRoleLink"
+                        + " ON RoleLookupEntity.roleId = UserRoleLink.roleId WHERE UserRoleLink.userId IN (?, ?)",
+                manyToManyJoin.batchSelectSqlPlan(Dsl.PSB)._1.apply(null, 2));
         assertEquals("DELETE FROM RoleLookupEntity WHERE roleId IN (SELECT roleId FROM UserRoleLink WHERE userId IN (?, ?))",
                 manyToManyJoin.batchDeleteSqlPlan(Dsl.PSB)._1.apply(2));
     }
@@ -2024,7 +2026,7 @@ public class JoinInfoTest extends TestBase {
         final BiFunction<Collection<String>, Integer, String> sqlBuilder = joinInfo.batchSelectSqlPlan(PSC)._1;
 
         try (java.sql.Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:join_info_m2m_shared_id", "sa", "");
-                java.sql.Statement stmt = conn.createStatement()) {
+             java.sql.Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE tag_lookup_entity (id BIGINT PRIMARY KEY, label VARCHAR(32))");
             stmt.execute("CREATE TABLE tag_user_link (id BIGINT PRIMARY KEY, user_id BIGINT, tag_ref BIGINT)");
             stmt.execute("INSERT INTO tag_lookup_entity VALUES (1, 'a'), (2, 'b')");

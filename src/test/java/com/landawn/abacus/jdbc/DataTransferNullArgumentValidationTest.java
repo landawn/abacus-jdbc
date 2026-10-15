@@ -50,16 +50,19 @@ public class DataTransferNullArgumentValidationTest extends TestBase {
     void importsRejectNullConnectionsEvenWhenThereAreNoRows() {
         final Dataset dataset = Dataset.rows(List.of("id"), new Object[0][]);
         final String sql = "INSERT INTO users VALUES (?)";
-        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> setter = (stmt, row) -> { };
+        final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> setter = (stmt, row) -> {
+        };
 
         assertArgument("conn", () -> DataTransferUtil.importData(dataset, (Connection) null, sql));
         assertArgument("conn", () -> DataTransferUtil.importData(dataset, List.of("id"), null, sql));
         assertArgument("conn", () -> DataTransferUtil.importData(dataset, null, sql, setter));
-        assertArgument("conn", () -> DataTransferUtil.importData(Collections.emptyIterator(), null, sql, 1, 0, (stmt, row) -> { }));
-        assertArgument("conn", () -> DataTransferUtil.importCsv(new File("unused.csv"), null, sql, 1, 0, (stmt, row) -> { }));
+        assertArgument("conn", () -> DataTransferUtil.importData(Collections.emptyIterator(), null, sql, 1, 0, (stmt, row) -> {
+        }));
+        assertArgument("conn", () -> DataTransferUtil.importCsv(new File("unused.csv"), null, sql, 1, 0, (stmt, row) -> {
+        }));
         assertArgument("conn", () -> DataTransferUtil.importFrom(dataset).to((Connection) null, sql));
-        assertArgument("conn", () -> DataTransferUtil.importFrom(Collections.emptyIterator()).parameterSetter((stmt, row) -> { })
-                .to((Connection) null, sql));
+        assertArgument("conn", () -> DataTransferUtil.importFrom(Collections.emptyIterator()).parameterSetter((stmt, row) -> {
+        }).to((Connection) null, sql));
     }
 
     @Test
@@ -92,8 +95,8 @@ public class DataTransferNullArgumentValidationTest extends TestBase {
         final ResultSetMetaData metadata = mock(ResultSetMetaData.class);
         when(rs.getMetaData()).thenReturn(metadata);
         when(metadata.getColumnCount()).thenReturn(0);
-        final Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter =
-                DataTransferUtil.newResultSetParameterSetter((resultSet, index) -> resultSet.getObject(index));
+        final Throwables.BiConsumer<PreparedQuery, ResultSet, SQLException> setter = DataTransferUtil
+                .newResultSetParameterSetter((resultSet, index) -> resultSet.getObject(index));
 
         assertArgument("stmt", () -> setter.accept(null, rs));
         verifyNoInteractions(rs);

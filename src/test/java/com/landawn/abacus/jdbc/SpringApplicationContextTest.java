@@ -116,6 +116,49 @@ public class SpringApplicationContextTest extends TestBase {
         }
     }
 
+    @Test
+    public void testClosingRegisteredContextClearsSharedHolder() {
+        try (GenericApplicationContext context = new GenericApplicationContext()) {
+            context.registerBean(SpringApplicationContext.class, () -> target);
+            context.registerBean("value", String.class, () -> "available");
+            context.refresh();
+            target.setApplicationContext(context);
+
+            assertSame("available", new SpringApplicationContext().getBean("value"));
+            context.close();
+
+            assertNull(target.getBean("value"));
+            assertNull(target.getBean(String.class));
+            assertNull(target.getBean("value", String.class));
+        } finally {
+            target.setApplicationContext(null);
+        }
+    }
+
+    @Test
+    public void testClosingOldContextPreservesReplacementContext() {
+        try (GenericApplicationContext oldContext = new GenericApplicationContext();
+             GenericApplicationContext replacementContext = new GenericApplicationContext()) {
+            oldContext.registerBean(SpringApplicationContext.class, () -> target);
+            oldContext.refresh();
+            target.setApplicationContext(oldContext);
+
+            final SpringApplicationContext replacementBridge = new SpringApplicationContext();
+            replacementContext.registerBean(SpringApplicationContext.class, () -> replacementBridge);
+            replacementContext.registerBean("value", String.class, () -> "replacement");
+            replacementContext.refresh();
+            replacementBridge.setApplicationContext(replacementContext);
+
+            oldContext.close();
+            assertSame("replacement", target.getBean("value"));
+
+            replacementContext.close();
+            assertNull(target.getBean("value"));
+        } finally {
+            target.setApplicationContext(null);
+        }
+    }
+
     private void setApplicationContext(final ApplicationContext context) throws Exception {
         final Field field = SpringApplicationContext.class.getDeclaredField("appContext");
         field.setAccessible(true);

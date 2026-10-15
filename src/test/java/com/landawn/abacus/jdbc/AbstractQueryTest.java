@@ -2158,8 +2158,7 @@ public class AbstractQueryTest extends TestBase {
                     final ResultSet rs = Mockito.mock(ResultSet.class);
                     final AtomicInteger mappedRows = new AtomicInteger();
                     final AtomicInteger closeHandlerCalls = new AtomicInteger();
-                    final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution)
-                            .onClose(closeHandlerCalls::incrementAndGet);
+                    final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution).onClose(closeHandlerCalls::incrementAndGet);
                     when(statement.executeQuery()).thenReturn(rs);
                     when(rs.next()).thenReturn(true, true, true, false);
                     when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));

@@ -118,16 +118,15 @@ public class JdbcUtilTest extends TestBase {
         doThrow(failure).when(mockPreparedStatement).addBatch();
         doThrow(closeFailure).when(mockPreparedStatement).close();
 
-        assertSame(failure, assertThrows(AssertionError.class,
-                () -> JdbcUtil.prepareBatchStmt(mockConnection, "SELECT ?", List.of(1))));
+        assertSame(failure, assertThrows(AssertionError.class, () -> JdbcUtil.prepareBatchStmt(mockConnection, "SELECT ?", List.of(1))));
         assertArrayEquals(new Throwable[] { closeFailure }, failure.getSuppressed());
         verify(mockPreparedStatement).close();
     }
 
     @Test
     public void testPreparationPreservesBindingFailureIdentityDuringCleanup() throws SQLException {
-        final List<Supplier<Throwable>> failureFactories = List.of(() -> new SQLException("binding failed"),
-                () -> new IllegalStateException("binding failed"), () -> new AssertionError("binding failed"));
+        final List<Supplier<Throwable>> failureFactories = List.of(() -> new SQLException("binding failed"), () -> new IllegalStateException("binding failed"),
+                () -> new AssertionError("binding failed"));
 
         for (final boolean callable : List.of(false, true)) {
             for (final boolean batch : List.of(false, true)) {
@@ -274,12 +273,12 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testGeneratedIdCallbacksValidateOnlyEntitiesThatTheyUse() {
-        final var withId = JdbcUtil.<Long> getIdGeneratorGetterSetter(CrudDao.class, IdedEntity.class,
-                com.landawn.abacus.util.NamingPolicy.values()[0], Long.class);
+        final var withId = JdbcUtil.<Long> getIdGeneratorGetterSetter(CrudDao.class, IdedEntity.class, com.landawn.abacus.util.NamingPolicy.values()[0],
+                Long.class);
         assertThrows(IllegalArgumentException.class, () -> withId._2.apply(null));
         assertThrows(IllegalArgumentException.class, () -> withId._3.accept(1L, null));
-        final var withoutId = JdbcUtil.<Long> getIdGeneratorGetterSetter(CrudDao.class, SubAddress.class,
-                com.landawn.abacus.util.NamingPolicy.values()[0], Long.class);
+        final var withoutId = JdbcUtil.<Long> getIdGeneratorGetterSetter(CrudDao.class, SubAddress.class, com.landawn.abacus.util.NamingPolicy.values()[0],
+                Long.class);
         assertNull(withoutId._2.apply(null));
         assertDoesNotThrow(() -> withoutId._3.accept(null, null));
     }
@@ -395,8 +394,8 @@ public class JdbcUtilTest extends TestBase {
         final ResultSet rs = mock(ResultSet.class);
         when(rs.getObject(1)).thenReturn(java.math.BigInteger.valueOf(42));
 
-        final var readOnlyIdAccessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class,
-                ReadOnlyIdCompositeEntity.class, com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, com.landawn.abacus.util.EntityId.class);
+        final var readOnlyIdAccessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class, ReadOnlyIdCompositeEntity.class,
+                com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, com.landawn.abacus.util.EntityId.class);
         final com.landawn.abacus.util.EntityId generatedId = readOnlyIdAccessors._1.apply(rs, List.of("GENERATED_KEY"));
 
         final ReadOnlyIdCompositeEntity zeroTenant = new ReadOnlyIdCompositeEntity();
@@ -417,8 +416,8 @@ public class JdbcUtilTest extends TestBase {
         assertEquals(0, jpaEntity.getTenantId());
         assertEquals(42, jpaEntity.getEntityId());
 
-        final var ambiguousAccessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class,
-                TwoGeneratedIdsEntity.class, com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, com.landawn.abacus.util.EntityId.class);
+        final var ambiguousAccessors = JdbcUtil.<com.landawn.abacus.util.EntityId> getIdGeneratorGetterSetter(CrudDao.class, TwoGeneratedIdsEntity.class,
+                com.landawn.abacus.util.NamingPolicy.SNAKE_CASE, com.landawn.abacus.util.EntityId.class);
         final TwoGeneratedIdsEntity ambiguous = new TwoGeneratedIdsEntity();
         ambiguousAccessors._3.accept(ambiguousAccessors._1.apply(rs, List.of("GENERATED_KEY")), ambiguous);
         assertEquals(0, ambiguous.getFirstId());
@@ -427,21 +426,20 @@ public class JdbcUtilTest extends TestBase {
 
     @Test
     public void testHikariPoolSizesAreValidatedBeforePoolCreation() {
-        assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> JdbcUtil.createHikariDataSource("jdbc:unsupported:test", null, null, -1, 0)).getMessage().contains("minIdle"));
-        assertTrue(assertThrows(IllegalArgumentException.class,
-                () -> JdbcUtil.createHikariDataSource("jdbc:unsupported:test", null, null, 0, 0)).getMessage().contains("maxPoolSize"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createHikariDataSource("jdbc:unsupported:test", null, null, -1, 0)).getMessage()
+                .contains("minIdle"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createHikariDataSource("jdbc:unsupported:test", null, null, 0, 0)).getMessage()
+                .contains("maxPoolSize"));
     }
 
     @Test
     public void testC3p0NonPositiveMaxPoolSizeIsRejectedInsteadOfCreatingAPoolThatNeverHandsOutConnections() {
         // C3P0 itself accepts maxPoolSize <= 0; getConnection() on such a pool then blocks forever.
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createC3p0DataSource("jdbc:h2:mem:c3p0_zero_max", "sa", "", 0, 0))
-                .getMessage()
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createC3p0DataSource("jdbc:h2:mem:c3p0_zero_max", "sa", "", 0, 0)).getMessage()
                 .contains("maxPoolSize"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createC3p0DataSource("jdbc:h2:mem:c3p0_negative_max", "sa", "", 1, -1))
-                .getMessage()
-                .contains("maxPoolSize"));
+        assertTrue(
+                assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createC3p0DataSource("jdbc:h2:mem:c3p0_negative_max", "sa", "", 1, -1)).getMessage()
+                        .contains("maxPoolSize"));
     }
 
     @Test
@@ -1483,7 +1481,7 @@ public class JdbcUtilTest extends TestBase {
 
         assertTrue(assertThrows(IllegalArgumentException.class,
                 () -> JdbcUtil.setParameters(onePlaceholder, mockPreparedStatement, new Object[] { new TestEntity() })).getMessage()
-                .contains("No property found with name: email"));
+                        .contains("No property found with name: email"));
     }
 
     // Guard (passes before and after the fix): with one placeholder a record is still bound property-by-property.
@@ -2780,8 +2778,8 @@ public class JdbcUtilTest extends TestBase {
             assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT id -- (update\nFROM account WHERE (update_flag = 1 OR (insert_count > $1))", by));
 
             assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "WITH u AS (UPDATE account SET active = FALSE RETURNING id) SELECT id FROM u", by));
-            assertSame(tran,
-                    JdbcUtil.getTransaction(mockDataSource, "WITH d AS MATERIALIZED ( /* purge */ delete FROM account RETURNING id) SELECT count(*) FROM d", by));
+            assertSame(tran, JdbcUtil.getTransaction(mockDataSource,
+                    "WITH d AS MATERIALIZED ( /* purge */ delete FROM account RETURNING id) SELECT count(*) FROM d", by));
             assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT id FROM FINAL TABLE (INSERT INTO account (name) VALUES ('x'))", by));
             assertSame(tran, JdbcUtil.getTransaction(mockDataSource,
                     "SELECT id FROM FINAL TABLE (MERGE INTO account a USING (VALUES (1)) s (id) ON a.id = s.id WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id))",
@@ -2900,13 +2898,15 @@ public class JdbcUtilTest extends TestBase {
 
             assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT (INSERT(name, 1, 1, 'X')) FROM account", by));
             assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT ( insert /* fn */ (name, 1, 1, 'X')) FROM account", by));
-            assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT concat((INSERT(name, 1, 1, 'X')), (lower(INSERT\n (name, 2, 0, 'y')))) FROM account", by));
+            assertNull(
+                    JdbcUtil.getTransaction(mockDataSource, "SELECT concat((INSERT(name, 1, 1, 'X')), (lower(INSERT\n (name, 2, 0, 'y')))) FROM account", by));
             // Guards (pass before and after the fix): embedded INSERT statements still join, and so does UPDATE followed by
             // '(' (an updatable subquery on Oracle/DB2).
             assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT id FROM FINAL TABLE (INSERT INTO account (name) VALUES ('x'))", by));
             assertSame(tran,
                     JdbcUtil.getTransaction(mockDataSource, "WITH i AS (insert /* c */ INTO account (name) VALUES ('x') RETURNING id) SELECT id FROM i", by));
-            assertSame(tran, JdbcUtil.getTransaction(mockDataSource, "SELECT * FROM FINAL TABLE (UPDATE (SELECT * FROM account WHERE id = 1) SET name = 'x')", by));
+            assertSame(tran,
+                    JdbcUtil.getTransaction(mockDataSource, "SELECT * FROM FINAL TABLE (UPDATE (SELECT * FROM account WHERE id = 1) SET name = 'x')", by));
         } finally {
             tran.rollbackIfNotCommitted();
         }
@@ -4100,7 +4100,8 @@ public class JdbcUtilTest extends TestBase {
                 JdbcUtil.executeUpdate(conn, "INSERT INTO skip_fwd VALUES (?)", i);
             }
 
-            try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery("SELECT id FROM skip_fwd ORDER BY id")) {
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT id FROM skip_fwd ORDER BY id")) {
                 assertEquals(ResultSet.TYPE_FORWARD_ONLY, rs.getType());
                 assertEquals(3, JdbcUtil.skip(rs, 3));
                 assertEquals(7, JdbcUtil.skip(rs, 100L));
@@ -4109,7 +4110,7 @@ public class JdbcUtilTest extends TestBase {
             }
 
             try (Statement stmt = conn.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
-                    ResultSet rs = stmt.executeQuery("SELECT id FROM skip_fwd ORDER BY id")) {
+                 ResultSet rs = stmt.executeQuery("SELECT id FROM skip_fwd ORDER BY id")) {
                 assertEquals(3, JdbcUtil.skip(rs, 3));
                 assertEquals(7, JdbcUtil.skip(rs, 100L));
                 assertTrue(rs.isAfterLast());
@@ -4961,8 +4962,7 @@ public class JdbcUtilTest extends TestBase {
         when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
         when(mockConnection.getAutoCommit()).thenReturn(true);
         // Any other probe text reaches the default mock statement, which succeeds like PostgreSQL's "FROM user".
-        when(mockConnection.prepareStatement("SELECT 1 FROM \"user\" WHERE 1 > 2"))
-                .thenThrow(new SQLException("relation \"user\" does not exist", "42P01"));
+        when(mockConnection.prepareStatement("SELECT 1 FROM \"user\" WHERE 1 > 2")).thenThrow(new SQLException("relation \"user\" does not exist", "42P01"));
         when(mockConnection.prepareStatement("SELECT 1 FROM \"public\".\"user\" WHERE 1 > 2"))
                 .thenThrow(new SQLException("relation \"public.user\" does not exist", "42P01"));
 
@@ -5018,8 +5018,7 @@ public class JdbcUtilTest extends TestBase {
     @Test
     public void testTableExists_FallbackProbeUnquotedWhenQuotingUnsupported() throws SQLException {
         when(mockDatabaseMetaData.storesUpperCaseIdentifiers()).thenReturn(true);
-        when(mockConnection.prepareStatement("SELECT 1 FROM MISSING_TBL WHERE 1 > 2"))
-                .thenThrow(new SQLException("Table \"MISSING_TBL\" not found", "42S02"));
+        when(mockConnection.prepareStatement("SELECT 1 FROM MISSING_TBL WHERE 1 > 2")).thenThrow(new SQLException("Table \"MISSING_TBL\" not found", "42S02"));
 
         assertFalse(JdbcUtil.tableExists(mockConnection, "\"Missing\""));
         verify(mockDatabaseMetaData, never()).getIdentifierQuoteString();

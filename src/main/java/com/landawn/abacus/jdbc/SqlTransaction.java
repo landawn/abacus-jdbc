@@ -277,7 +277,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * <p>The connection's original auto-commit mode and transaction isolation level are captured
      * so they can be restored when the transaction completes. Auto-commit is disabled and, if the
      * given {@code isolationLevel} is not {@link IsolationLevel#DEFAULT}, the connection's
-     * transaction isolation is updated accordingly.</p>
+     * transaction isolation is updated accordingly. Settings that already match the requested state
+     * are left untouched, avoiding redundant driver calls during existing transaction work.</p>
      *
      * @param ds the data source the connection came from; used to release the connection on completion when {@code closeConnection} is {@code true}. May be {@code null} if {@code closeConnection} is {@code false}.
      * @param conn the JDBC connection that backs this transaction, must not be {@code null}
@@ -288,8 +289,8 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         {@code true}, if {@code conn}, {@code isolationLevel}, or {@code creator} is {@code null},
      *         or if {@code isolationLevel} is {@link IsolationLevel#NONE}
      * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails;
-     *         the original auto-commit and isolation level are restored on a best-effort basis first and
-     *         any restore failure is attached as a suppressed exception
+     *         after a modification fails, the settings this constructor attempted to change are restored on a
+     *         best-effort basis first and any restore failure is attached as a suppressed exception
      */
     @SuppressWarnings("deprecation")
     SqlTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
@@ -315,25 +316,40 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
         // Atomically apply both mutations: if the isolation change throws AFTER setAutoCommit(false) succeeded,
         // best-effort restore the original autoCommit before propagating the exception so the partially-mutated
         // connection isn't observed (e.g., released back to the pool by an outer try/finally).
-        try {
-            conn.setAutoCommit(false);
+        // Only settings this constructor attempted to change are restored on failure: re-applying an untouched
+        // setting would be the same redundant driver call the conditional mutations above avoid.
+        boolean autoCommitAttempted = false;
+        boolean isolationAttempted = false;
 
-            if (isolationLevel != IsolationLevel.DEFAULT) {
+        try {
+            if (_originalAutoCommit) {
+                autoCommitAttempted = true;
+                conn.setAutoCommit(false);
+            }
+
+            // Avoid a redundant driver call: a connection may already be doing transaction work,
+            // and some drivers reject even reapplying the same isolation level in that state.
+            if (isolationLevel != IsolationLevel.DEFAULT && isolationLevel.intValue() != _originalIsolationLevel) {
+                isolationAttempted = true;
                 conn.setTransactionIsolation(isolationLevel.intValue());
             }
         } catch (final SQLException | RuntimeException | Error e) {
-            try {
-                conn.setAutoCommit(_originalAutoCommit);
-            } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary failure
-                if (restoreException != e) {
-                    e.addSuppressed(restoreException);
+            if (autoCommitAttempted) {
+                try {
+                    conn.setAutoCommit(_originalAutoCommit);
+                } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary failure
+                    if (restoreException != e) {
+                        e.addSuppressed(restoreException);
+                    }
                 }
             }
-            try {
-                conn.setTransactionIsolation(_originalIsolationLevel);
-            } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary failure
-                if (restoreException != e) {
-                    e.addSuppressed(restoreException);
+            if (isolationAttempted) {
+                try {
+                    conn.setTransactionIsolation(_originalIsolationLevel);
+                } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary failure
+                    if (restoreException != e) {
+                        e.addSuppressed(restoreException);
+                    }
                 }
             }
 
@@ -947,6 +963,7 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
 
         Throwable cleanupFailure = null;
 
+        // Restore both original settings even if the constructor left them unchanged: callers can modify the exposed connection.
         try {
             _conn.setAutoCommit(_originalAutoCommit);
         } catch (final SQLException e) {

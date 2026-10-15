@@ -52,8 +52,8 @@ public class QueryValidationOrderTest extends TestBase {
         clearInvocations(stmt);
 
         assertTrue(assertThrows(IllegalArgumentException.class, () -> query.setObject(1, null, (SQLType) null)).getMessage().contains("sqlType"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> query.setParametersFrom(0, (Object[]) null)).getMessage()
-                .contains("startParameterIndex"));
+        assertTrue(
+                assertThrows(IllegalArgumentException.class, () -> query.setParametersFrom(0, (Object[]) null)).getMessage().contains("startParameterIndex"));
         assertThrows(IllegalStateException.class, () -> query.addBatchParameters(List.of()));
         assertThrows(IllegalStateException.class, () -> query.configureStatement((Jdbc.ParametersSetter<PreparedStatement>) null));
         verifyNoInteractions(stmt);
@@ -167,9 +167,9 @@ public class QueryValidationOrderTest extends TestBase {
     @Test
     void closedJdbcStatementsReportSqlExceptionsFromBinding() throws SQLException {
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:closed-query-input-binding");
-                PreparedQuery prepared = new PreparedQuery(connection.prepareStatement("select ?"));
-                NamedQuery named = new NamedQuery(connection.prepareStatement("select ?"), ParsedSql.parse("select :value"));
-                CallableQuery callable = new CallableQuery(connection.prepareCall("call ABS(?)"))) {
+             PreparedQuery prepared = new PreparedQuery(connection.prepareStatement("select ?"));
+             NamedQuery named = new NamedQuery(connection.prepareStatement("select ?"), ParsedSql.parse("select :value"));
+             CallableQuery callable = new CallableQuery(connection.prepareCall("call ABS(?)"))) {
             prepared.close();
             named.close();
             callable.close();
@@ -227,9 +227,9 @@ public class QueryValidationOrderTest extends TestBase {
         final NamedQuery named = new NamedQuery(mock(PreparedStatement.class), ParsedSql.parse("select :name"));
         final CallableQuery callable = new CallableQuery(mock(CallableStatement.class));
 
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> named.setParameters(new Object(), (Collection<String>) null))
-                .getMessage().contains("Unsupported parameter type"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> callable.setParameters(new Object(), (Collection<String>) null))
-                .getMessage().contains("Unsupported parameter type"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> named.setParameters(new Object(), (Collection<String>) null)).getMessage()
+                .contains("Unsupported parameter type"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> callable.setParameters(new Object(), (Collection<String>) null)).getMessage()
+                .contains("Unsupported parameter type"));
     }
 }

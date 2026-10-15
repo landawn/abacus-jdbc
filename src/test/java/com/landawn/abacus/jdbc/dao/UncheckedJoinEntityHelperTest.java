@@ -520,8 +520,7 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
             command.run();
         };
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                () -> dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", ""), executor));
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", ""), executor));
         assertTrue(e.getMessage().contains("joinEntityPropName"), e.getMessage());
         assertTrue(submitted.isEmpty());
         verify(dao, Mockito.never()).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
@@ -1187,7 +1186,8 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "", null)).getMessage().contains("entities"));
         assertTrue(
                 assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "missing", null)).getMessage().contains("entities"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "orders", null)).getMessage().contains("entities"));
+        assertTrue(
+                assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entities, "orders", null)).getMessage().contains("entities"));
         Mockito.verify(first, Mockito.never()).getOrders();
 
         dao.loadJoinEntitiesIfAbsent((Collection<TestEntity>) null, "orders", null);
@@ -1258,10 +1258,9 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
                     .contains("joinEntityClasses"));
             assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.findOnlyOne(selectPropNames, classes, cond)).getMessage()
                     .contains("joinEntityClasses"));
-            assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.list(selectPropNames, classes, cond)).getMessage()
-                    .contains("joinEntityClasses"));
-            assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.stream(selectPropNames, classes, cond)).getMessage()
-                    .contains("joinEntityClasses"));
+            assertTrue(assertThrows(IllegalArgumentException.class, () -> dao.list(selectPropNames, classes, cond)).getMessage().contains("joinEntityClasses"));
+            assertTrue(
+                    assertThrows(IllegalArgumentException.class, () -> dao.stream(selectPropNames, classes, cond)).getMessage().contains("joinEntityClasses"));
         }
 
         Mockito.verifyNoInteractions(cond);

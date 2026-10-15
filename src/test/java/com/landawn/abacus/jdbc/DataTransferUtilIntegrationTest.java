@@ -402,16 +402,18 @@ public class DataTransferUtilIntegrationTest extends TestBase {
         final Dataset dataset = threeRowDataset();
         dataset.moveToRow(1);
 
-        assertEquals(1, DataTransferUtil.importFrom(dataset)
-                .columns(List.of("id", "name", "amount"))
-                .filter(row -> Long.valueOf(1L).equals(row[0]))
-                .to(ds, CSV_INSERT_SQL));
+        assertEquals(1,
+                DataTransferUtil.importFrom(dataset)
+                        .columns(List.of("id", "name", "amount"))
+                        .filter(row -> Long.valueOf(1L).equals(row[0]))
+                        .to(ds, CSV_INSERT_SQL));
         assertEquals(1, dataset.currentRowIndex());
 
-        assertEquals(1, DataTransferUtil.importFrom(dataset)
-                .columnTypes(Map.<String, Type> of("id", Type.of(Long.class)))
-                .filter(row -> Long.valueOf(2L).equals(row[0]))
-                .to(ds, CSV_INSERT_SQL));
+        assertEquals(1,
+                DataTransferUtil.importFrom(dataset)
+                        .columnTypes(Map.<String, Type> of("id", Type.of(Long.class)))
+                        .filter(row -> Long.valueOf(2L).equals(row[0]))
+                        .to(ds, CSV_INSERT_SQL));
         assertEquals(1, dataset.currentRowIndex());
 
         assertEquals(1, DataTransferUtil.importFrom(dataset).parameterSetter((q, row) -> {

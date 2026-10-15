@@ -41,6 +41,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
@@ -1790,6 +1791,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * The appropriate database type is automatically determined based on the property type. If any
      * binding fails, this query is closed because its parameters may have been only partially set.</p>
      *
+     * <p>A duplicate selection of a property using a built-in stream or reader type is bound once per call,
+     * so already-consumed input is not rebound. The caller retains ownership of the stream or reader.
+     * Scalar values and properties using a custom {@code Type} are still read and bound for each selection.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Employee employee = new Employee();
@@ -1836,10 +1841,27 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
                 }
             }
 
-            for (int i = 0; i < names.size(); i++) {
-                final PropInfo propInfo = propInfos[i];
+            Set<String> boundStreamNames = null;
 
-                propInfo.dbType.set(cstmt, names.get(i), propInfo.getPropValue(entity));
+            for (int i = 0; i < names.size(); i++) {
+                final String parameterName = names.get(i);
+                if (boundStreamNames != null && boundStreamNames.contains(parameterName)) {
+                    // An eager driver has already consumed this stream. Rebinding it would replace
+                    // the value with exhausted input; calling the getter again may open another resource.
+                    continue;
+                }
+
+                final PropInfo propInfo = propInfos[i];
+                final Object propValue = propInfo.getPropValue(entity);
+
+                if (JdbcStreamUtil.usesBuiltInBinding(propValue, propInfo.dbType)) {
+                    if (boundStreamNames == null) {
+                        boundStreamNames = N.newHashSet();
+                    }
+                    boundStreamNames.add(parameterName);
+                }
+
+                propInfo.dbType.set(cstmt, parameterName, propValue);
             }
         } catch (final SQLException | RuntimeException | Error e) {
             closeSuppressingFailure(e);
@@ -3038,7 +3060,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * Returns a defensive copy of the registered OUT parameters for handover to a callback, so later
      * registration calls on this query cannot mutate the list the callback sees.
      *
-     * @return a new list containing copies of the registered {@link Jdbc.OutParam}s (never {@code null};
+     * @return a list snapshot containing the immutable registered {@link Jdbc.OutParam}s (never {@code null};
      *         empty if none were registered)
      */
     private List<Jdbc.OutParam> copyOutParams() {
@@ -3046,14 +3068,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             return N.emptyList();
         }
 
-        final List<Jdbc.OutParam> copy = new ArrayList<>(outParams.size());
-
-        for (final Jdbc.OutParam outParam : outParams) {
-            copy.add(outParam == null ? null
-                    : new Jdbc.OutParam(outParam.parameterIndex(), outParam.parameterName(), outParam.sqlType(), outParam.typeName(), outParam.scale()));
-        }
-
-        return copy;
+        // OutParam records contain only immutable values; isolate the callback's list without
+        // reallocating every descriptor on each execution of a reusable procedure query.
+        return new ArrayList<>(outParams);
     }
 
     /**
@@ -4098,10 +4115,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
+            // This wrapper is reusable: toList(Class) creates a fresh metadata-aware mapper for each result set.
+            final Jdbc.BiResultExtractor<List<T>> extractor = Jdbc.BiResultExtractor.toList(targetType);
             final List<List<T>> resultList = new ArrayList<>();
 
             while (JdbcUtil.hasNextResultSet(iter)) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.BiResultExtractor.toList(targetType)));
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -4173,10 +4192,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
+            final Jdbc.ResultExtractor<List<T>> extractor = Jdbc.ResultExtractor.toList(rowMapper);
             final List<List<T>> resultList = new ArrayList<>();
 
             while (JdbcUtil.hasNextResultSet(iter)) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.ResultExtractor.toList(rowMapper)));
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -4251,10 +4271,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
+            final Jdbc.ResultExtractor<List<T>> extractor = Jdbc.ResultExtractor.toList(rowFilter, rowMapper);
             final List<List<T>> resultList = new ArrayList<>();
 
             while (JdbcUtil.hasNextResultSet(iter)) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.ResultExtractor.toList(rowFilter, rowMapper)));
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -4333,10 +4354,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
+            final Jdbc.BiResultExtractor<List<T>> extractor = Jdbc.BiResultExtractor.toList(rowMapper);
             final List<List<T>> resultList = new ArrayList<>();
 
             while (JdbcUtil.hasNextResultSet(iter)) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.BiResultExtractor.toList(rowMapper)));
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));
@@ -4431,10 +4453,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
+            final Jdbc.BiResultExtractor<List<T>> extractor = Jdbc.BiResultExtractor.toList(rowFilter, rowMapper);
             final List<List<T>> resultList = new ArrayList<>();
 
             while (JdbcUtil.hasNextResultSet(iter)) {
-                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), Jdbc.BiResultExtractor.toList(rowFilter, rowMapper)));
+                resultList.add(JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), extractor));
             }
 
             return Tuple.of(resultList, JdbcUtil.getOutParameters(cstmt, outParams));

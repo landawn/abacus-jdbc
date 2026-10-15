@@ -231,6 +231,80 @@ public class SqlTransactionTest extends TestBase {
     }
 
     @Test
+    public void testConstructorAutoCommitFailureRestoresOnlyAutoCommit() throws SQLException {
+        // Isolation was never touched when setAutoCommit(false) fails, so recovery must not reapply it:
+        // that would be the same redundant driver call the conditional mutations avoid.
+        final SQLException autoCommitFailure = new SQLException("auto-commit rejected");
+        doThrow(autoCommitFailure).when(connection).setAutoCommit(false);
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> new SqlTransaction(dataSource, connection, IsolationLevel.SERIALIZABLE, SqlTransaction.CreatedBy.JDBC_UTIL, false));
+
+        assertSame(autoCommitFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+        verify(connection).setAutoCommit(true);
+        verify(connection, never()).setTransactionIsolation(ArgumentMatchers.anyInt());
+    }
+
+    @Test
+    public void testConstructorIsolationFailureRestoresOnlyIsolationWhenAutoCommitWasUnchanged() throws SQLException {
+        when(connection.getAutoCommit()).thenReturn(false);
+        final SQLException isolationFailure = new SQLException("isolation rejected");
+        doThrow(isolationFailure).when(connection).setTransactionIsolation(IsolationLevel.SERIALIZABLE.intValue());
+
+        final SQLException thrown = assertThrows(SQLException.class,
+                () -> new SqlTransaction(dataSource, connection, IsolationLevel.SERIALIZABLE, SqlTransaction.CreatedBy.JDBC_UTIL, false));
+
+        assertSame(isolationFailure, thrown);
+        assertEquals(0, thrown.getSuppressed().length);
+        verify(connection, never()).setAutoCommit(ArgumentMatchers.anyBoolean());
+        verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+    }
+
+    @Test
+    public void testConstructorKeepsExistingManualCommitMode() throws SQLException {
+        when(connection.getAutoCommit()).thenReturn(false);
+        doThrow(new SQLException("redundant configuration")).when(connection).setAutoCommit(false);
+
+        final SqlTransaction transaction = new SqlTransaction(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, false);
+        transaction.incrementAndGetRef(IsolationLevel.DEFAULT, false);
+
+        try {
+            verify(connection, never()).setAutoCommit(false);
+        } finally {
+            doNothing().when(connection).setAutoCommit(false);
+            transaction.rollbackIfNotCommitted();
+        }
+
+        verify(connection).rollback();
+        verify(connection).setAutoCommit(false);
+        verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        verify(connection, never()).close();
+    }
+
+    @Test
+    public void testConstructorDoesNotReapplyCurrentIsolation() throws SQLException {
+        when(connection.getAutoCommit()).thenReturn(false);
+        doThrow(new SQLException("isolation cannot be changed during active work")).when(connection)
+                .setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        final SqlTransaction transaction = new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED, SqlTransaction.CreatedBy.JDBC_UTIL, false);
+        transaction.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false);
+
+        try {
+            verify(connection, never()).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        } finally {
+            doNothing().when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            transaction.rollbackIfNotCommitted();
+        }
+
+        verify(connection).rollback();
+        verify(connection).setAutoCommit(false);
+        verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        verify(connection, never()).close();
+    }
+
+    @Test
     public void testNestedTransactionNoneIsRejectedWithoutChangingScope() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
@@ -276,7 +350,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertEquals(Transaction.Status.COMMITTED, transaction.status());
         verify(connection).commit();
-        verify(connection, times(2)).setAutoCommit(false);
+        verify(connection).setAutoCommit(false);
     }
 
     @Test
@@ -335,7 +409,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
-        verify(connection, times(2)).setAutoCommit(false);
+        verify(connection).setAutoCommit(false);
     }
 
     @Test
@@ -1209,8 +1283,7 @@ public class SqlTransactionTest extends TestBase {
         final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT);
 
         clearInvocations(connection);
-        doThrow(new SQLException("cannot change isolation in the middle of a transaction")).when(connection)
-                .setTransactionIsolation(ArgumentMatchers.anyInt());
+        doThrow(new SQLException("cannot change isolation in the middle of a transaction")).when(connection).setTransactionIsolation(ArgumentMatchers.anyInt());
 
         try {
             final SqlTransaction nested = assertDoesNotThrow(() -> JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED));

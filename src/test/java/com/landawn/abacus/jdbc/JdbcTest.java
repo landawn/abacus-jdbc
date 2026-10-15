@@ -76,7 +76,8 @@ public class JdbcTest extends TestBase {
         final Jdbc.BiParametersSetter<PreparedStatement, List<Object>> listSetter = Jdbc.BiParametersSetter.forList(List.of("id"), TestEntity.class);
         assertTrue(assertThrows(IllegalArgumentException.class, () -> arraySetter.accept(null, null)).getMessage().contains("stmt"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> listSetter.accept(null, null)).getMessage().contains("stmt"));
-        assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowExtractor.forType(TestEntity.class).accept(null, null)).getMessage().contains("rs"));
+        assertTrue(
+                assertThrows(IllegalArgumentException.class, () -> Jdbc.RowExtractor.forType(TestEntity.class).accept(null, null)).getMessage().contains("rs"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> Jdbc.RowExtractor.builder().build().accept(null, null)).getMessage().contains("rs"));
     }
 
@@ -1938,8 +1939,7 @@ public class JdbcTest extends TestBase {
     public void testRowExtractorValidatesOutputSizeBeforeResolvingColumnMappings() throws SQLException {
         final Jdbc.RowExtractor extractor = Jdbc.RowExtractor.forType(TestEntity.class, Arrays.asList("id", null));
 
-        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
-                () -> extractor.accept(mockResultSet, new Object[1]));
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> extractor.accept(mockResultSet, new Object[1]));
 
         assertTrue(failure.getMessage().contains("output array length"));
         verifyNoInteractions(mockResultSet);

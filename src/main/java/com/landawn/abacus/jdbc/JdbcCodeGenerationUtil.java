@@ -3080,17 +3080,33 @@ public final class JdbcCodeGenerationUtil {
      * token across whitespace/comments. An explicit ARRAY prefix identifies a constructor;
      * an inferred subscript must also have a balanced body because a value can precede a bracketed alias.
      * Only the outermost inferred subscript is checked, so nested brackets do not repeatedly rescan its body.
-     * Shared with JdbcUtil's transaction scanners to keep bracket escaping and array nesting consistent.
+     * Code generation uses this overload, which assumes backslash escapes inside quoted text; JdbcUtil's transaction
+     * scanners use the overload below with their own escape interpretation so bracket escaping and array nesting
+     * stay consistent between the two.
      */
     static boolean startsArrayExpression(final String sql, final int openingBracketIndex, final int tokenStart, final int tokenEnd,
             final SqlCommentStyle commentStyle, final boolean bracketIdentifiers) {
+        return startsArrayExpression(sql, openingBracketIndex, tokenStart, tokenEnd, commentStyle, bracketIdentifiers, true, true);
+    }
+
+    /**
+     * Uses the enclosing scanner's quote rules when distinguishing subscripts from bracketed names.
+     * Otherwise an ordinary string ending in a backslash can hide an entire subscript, including embedded writes.
+     *
+     * @param backslashEscapes whether a backslash escapes the next character inside ordinary quoted text; PostgreSQL
+     *        {@code E'...'} strings use backslash escapes regardless
+     * @param escapeStrings whether an {@code E'...'} prefix marks a PostgreSQL escape string; {@code false} for
+     *        MySQL/MariaDB, where {@code e'...'} is a name followed by an ordinary string
+     */
+    static boolean startsArrayExpression(final String sql, final int openingBracketIndex, final int tokenStart, final int tokenEnd,
+            final SqlCommentStyle commentStyle, final boolean bracketIdentifiers, final boolean backslashEscapes, final boolean escapeStrings) {
         if (bracketIdentifiers || tokenStart < 0) {
             return false;
         }
 
         final char last = sql.charAt(tokenEnd - 1);
         if (last == ')' || last == ']' || last == '"' || last == '`') {
-            return hasBalancedArrayBody(sql, openingBracketIndex, commentStyle);
+            return hasBalancedArrayBody(sql, openingBracketIndex, commentStyle, backslashEscapes, escapeStrings);
         }
 
         if (!Character.isJavaIdentifierStart(sql.charAt(tokenStart))) {
@@ -3102,19 +3118,56 @@ public final class JdbcCodeGenerationUtil {
         return switch (sql.substring(tokenStart, tokenEnd).toUpperCase(Locale.ROOT)) {
             case "ARRAY" -> true;
             case "SELECT", "DISTINCT", "ALL", "FROM", "JOIN", "ON", "WHERE", "HAVING", "GROUP", "ORDER", "BY", "AS", "CASE", "WHEN", "THEN", "ELSE", "AND", "OR", "NOT", "IN", "IS", "LIKE", "ILIKE", "BETWEEN", "ESCAPE", "COLLATE", "AT", "TIME", "ZONE", "OVER", "PARTITION", "ROWS", "RANGE", "GROUPS", "PRECEDING", "FOLLOWING", "UNION", "INTERSECT", "EXCEPT", "EXISTS", "ANY", "SOME", "BOTH", "LEADING", "TRAILING", "LATERAL", "WINDOW", "WITH", "FILTER", "LIMIT", "OFFSET", "FETCH", "TOP", "INTO", "VALUES", "FOR" -> false;
-            default -> hasBalancedArrayBody(sql, openingBracketIndex, commentStyle);
+            default -> hasBalancedArrayBody(sql, openingBracketIndex, commentStyle, backslashEscapes, escapeStrings);
         };
+    }
+
+    /**
+     * Returns whether the single quote at {@code quoteIndex} opens a PostgreSQL escape string: it directly follows a
+     * lone {@code e}/{@code E} that does not end a longer name. PostgreSQL identifiers may contain any non-ASCII
+     * character, including combining marks that {@link Character#isLetterOrDigit(char)} rejects, so every character
+     * at or above U+0080 counts as an identifier character here.
+     *
+     * @param sql the SQL text
+     * @param quoteIndex the index of the opening single quote
+     * @return {@code true} if the quote is preceded by a standalone {@code E} prefix
+     */
+    static boolean startsEscapeString(final String sql, final int quoteIndex) {
+        if (quoteIndex < 1) {
+            return false;
+        }
+
+        final char prefix = sql.charAt(quoteIndex - 1);
+
+        if (prefix != 'e' && prefix != 'E') {
+            return false;
+        }
+
+        if (quoteIndex < 2) {
+            return true;
+        }
+
+        final char before = sql.charAt(quoteIndex - 2);
+
+        return !(Character.isLetterOrDigit(before) || before == '_' || before == '$' || before >= 0x80);
     }
 
     /**
      * Checks an inferred subscript without exposing the contents of a bracketed identifier to the main scanner.
      * Names such as {@code [a[b]}, {@code [a]]b(c]} and {@code [a]]b'c]} remain opaque: an unmatched expression
      * delimiter or a doubled outer closing bracket rules out the inferred subscript and preserves identifier escapes.
+     *
+     * @param backslashEscapes whether a backslash escapes the next character inside ordinary quoted text; PostgreSQL
+     *        {@code E'...'} strings (and their newline-continued segments) use backslash escapes regardless
+     * @param escapeStrings whether an {@code E'...'} prefix marks a PostgreSQL escape string; {@code false} for
+     *        MySQL/MariaDB, which have no such prefix
      */
-    private static boolean hasBalancedArrayBody(final String sql, final int openingBracketIndex, final SqlCommentStyle commentStyle) {
+    private static boolean hasBalancedArrayBody(final String sql, final int openingBracketIndex, final SqlCommentStyle commentStyle,
+            final boolean backslashEscapes, final boolean escapeStrings) {
         int bracketDepth = 1;
         int parenthesisDepth = 0;
         char quote = 0;
+        boolean escapeBackslashes = false;
         String dollarQuoteDelimiter = null;
 
         for (int i = openingBracketIndex + 1, len = sql.length(); i < len; i++) {
@@ -3126,13 +3179,19 @@ public final class JdbcCodeGenerationUtil {
                     dollarQuoteDelimiter = null;
                 }
             } else if (quote != 0) {
-                if (ch == '\\' && i + 1 < len) {
+                if (escapeBackslashes && ch == '\\' && i + 1 < len) {
                     i++;
                 } else if (ch == quote) {
                     if (i + 1 < len && sql.charAt(i + 1) == quote) {
                         i++;
                     } else {
-                        quote = 0;
+                        // A continued PostgreSQL E-string keeps the first segment's escape rules.
+                        final int continuation = escapeBackslashes && !backslashEscapes ? findStringLiteralContinuation(sql, i + 1) : -1;
+                        if (continuation < 0) {
+                            quote = 0;
+                        } else {
+                            i = continuation;
+                        }
                     }
                 }
             } else if (startsSqlComment(sql, i, commentStyle)) {
@@ -3149,6 +3208,8 @@ public final class JdbcCodeGenerationUtil {
                 }
             } else if (ch == '\'' || ch == '"' || ch == '`') {
                 quote = ch;
+                // PostgreSQL E-strings retain escapes even when ordinary strings use standard SQL quoting.
+                escapeBackslashes = backslashEscapes || (escapeStrings && ch == '\'' && startsEscapeString(sql, i));
             } else if (ch == '[') {
                 bracketDepth++;
             } else if (ch == ']') {
@@ -3166,6 +3227,38 @@ public final class JdbcCodeGenerationUtil {
         }
 
         return false;
+    }
+
+    /**
+     * Finds a PostgreSQL string continuation after a closing quote. Only ASCII whitespace and
+     * {@code --} line comments may separate the segments, and at least one newline is required;
+     * a block comment or any other token ends the literal.
+     *
+     * @param sql the SQL text to inspect
+     * @param index the position immediately after the closing quote
+     * @return the next segment's opening quote, or {@code -1} if the string does not continue
+     */
+    static int findStringLiteralContinuation(final String sql, int index) {
+        boolean hasNewline = false;
+
+        while (index < sql.length()) {
+            final char ch = sql.charAt(index);
+            if (ch == '\n' || ch == '\r') {
+                hasNewline = true;
+                index++;
+            } else if (ch == ' ' || ch == '\t' || ch == '\f' || ch == '\u000B') {
+                index++;
+            } else if (ch == '-' && index + 1 < sql.length() && sql.charAt(index + 1) == '-') {
+                index += 2;
+                while (index < sql.length() && sql.charAt(index) != '\n' && sql.charAt(index) != '\r') {
+                    index++;
+                }
+            } else {
+                return hasNewline && ch == '\'' ? index : -1;
+            }
+        }
+
+        return -1;
     }
 
     /**

@@ -41,7 +41,7 @@ public class AbstractQueryRepeatedStreamTest extends TestBase {
         final byte[] expected = { 1, 2, 3 };
         final TrackingInputStream input = new TrackingInputStream(expected);
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:indices_bytes");
-                PreparedQuery query = JdbcUtil.prepareQuery(connection, "select ?, ?")) {
+             PreparedQuery query = JdbcUtil.prepareQuery(connection, "select ?, ?")) {
             query.setObjectForIndices(input, 2, 1, 2);
             query.query((Jdbc.ResultExtractor<Void>) result -> {
                 assertTrue(result.next());
@@ -57,7 +57,7 @@ public class AbstractQueryRepeatedStreamTest extends TestBase {
     void repeatedReaderIndicesBindCompleteValuesWithAnEagerDriver() throws Exception {
         final TrackingReader reader = new TrackingReader("a\u03b2c");
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:indices_characters");
-                PreparedQuery query = JdbcUtil.prepareQuery(connection, "select ?, ?")) {
+             PreparedQuery query = JdbcUtil.prepareQuery(connection, "select ?, ?")) {
             query.setObjectForIndices(reader, 2, 1, 2);
             query.query((Jdbc.ResultExtractor<Void>) result -> {
                 assertTrue(result.next());
@@ -192,7 +192,8 @@ public class AbstractQueryRepeatedStreamTest extends TestBase {
         final Type<CustomInputStream> customType = mock(Type.class);
         final CustomInputStream input = new CustomInputStream();
         final PreparedQuery query = new PreparedQuery(statement);
-        try (MockedStatic<Type> types = mockStatic(Type.class); query) {
+        try (MockedStatic<Type> types = mockStatic(Type.class);
+             query) {
             types.when(() -> Type.of(CustomInputStream.class)).thenReturn(customType);
             query.setObjectForIndices(input, 1, 2);
             verify(customType).set(statement, 1, input);

@@ -90,8 +90,7 @@ public class JdbcBracketAliasRegressionTest extends TestBase {
             SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.READ_COMMITTED, true);
             try {
                 assertSame(tran, JdbcUtil.getTransaction(ds, "SELECT name [x'] INTO copy FROM t WHERE name = 'a]'", CREATED_BY));
-                assertSame(tran, JdbcUtil.getTransaction(ds,
-                        "WITH c AS (SELECT name [x'] FROM t WHERE name = 'a]') SELECT * INTO copy FROM c", CREATED_BY));
+                assertSame(tran, JdbcUtil.getTransaction(ds, "WITH c AS (SELECT name [x'] FROM t WHERE name = 'a]') SELECT * INTO copy FROM c", CREATED_BY));
                 assertSame(tran, JdbcUtil.getTransaction(ds, "SELECT ARRAY[ARRAY[1]] INTO copy FROM t", CREATED_BY));
                 verify(metadata, times(1)).getDatabaseProductName();
             } finally {
@@ -111,8 +110,7 @@ public class JdbcBracketAliasRegressionTest extends TestBase {
         for (String alias : new String[] { "[x']", "[x\"]", "[x/*]", "[x--]", "[x$$]", "[x]]']" }) {
             String expression = "(SELECT name " + alias + " FROM t WHERE name = 'a]')";
             assertEquals("UPDATE dest SET a = " + expression + ", b = 2 WHERE id = 1",
-                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds,
-                            "INSERT INTO dest(a, b) VALUES (" + expression + ", 2)", "id = 1"));
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(ds, "INSERT INTO dest(a, b) VALUES (" + expression + ", 2)", "id = 1"));
         }
     }
 
@@ -121,8 +119,9 @@ public class JdbcBracketAliasRegressionTest extends TestBase {
         JdbcDataSource ds = new JdbcDataSource();
         ds.setURL("jdbc:h2:mem:bracket_in_array_literal");
         String expression = "(ARRAY[10, 20])[CASE WHEN 'a]' = 'a]' THEN 1 ELSE 2 END]";
-        try (Connection conn = ds.getConnection(); Statement stmt = conn.createStatement();
-                ResultSet rows = stmt.executeQuery("SELECT " + expression)) {
+        try (Connection conn = ds.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rows = stmt.executeQuery("SELECT " + expression)) {
             assertTrue(rows.next());
             assertEquals(10, rows.getInt(1));
             SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.READ_COMMITTED, true);
@@ -141,7 +140,9 @@ public class JdbcBracketAliasRegressionTest extends TestBase {
     void aWriteFollowingABracketAliasUsesTheConnectionThatRollsBack() throws Exception {
         JdbcDataSource realDs = new JdbcDataSource();
         realDs.setURL("jdbc:h2:mem:bracket_alias_rollback;MODE=MSSQLServer");
-        try (Connection setup = realDs.getConnection(); Statement stmt = setup.createStatement(); Connection real = realDs.getConnection()) {
+        try (Connection setup = realDs.getConnection();
+             Statement stmt = setup.createStatement();
+             Connection real = realDs.getConnection()) {
             stmt.execute("CREATE TABLE t(id INT)");
             stmt.execute("INSERT INTO t VALUES (1)");
             // Execute bracket syntax with H2's SQL Server mode, using SQL Server metadata for routing.

@@ -57,7 +57,8 @@ public class CodeGenerationQuotingContractTest extends TestBase {
     @Test
     void theDriverReportedQuoteWinsOverTheProductFallback() throws Exception {
         // MySQL in ANSI_QUOTES mode reports a double quote: the product-name fallback (a backtick) must not be used.
-        try (Connection real = DriverManager.getConnection("jdbc:h2:mem:codegen_contract_ansi"); Statement stmt = real.createStatement()) {
+        try (Connection real = DriverManager.getConnection("jdbc:h2:mem:codegen_contract_ansi");
+             Statement stmt = real.createStatement()) {
             stmt.execute("create table t(id int, \"order\" int)");
             final Connection conn = dialect(real, "MySQL", "\"");
             assertEquals("SELECT \"ID\", \"order\" FROM t", JdbcCodeGenerationUtil.generateSelectSql(conn, "t"));
@@ -67,7 +68,8 @@ public class CodeGenerationQuotingContractTest extends TestBase {
 
     @Test
     void namesNeedingDelimitersAreRejectedWithoutQuotingSupport() throws Exception {
-        try (Connection real = DriverManager.getConnection("jdbc:h2:mem:codegen_contract_noquote"); Statement stmt = real.createStatement()) {
+        try (Connection real = DriverManager.getConnection("jdbc:h2:mem:codegen_contract_noquote");
+             Statement stmt = real.createStatement()) {
             stmt.execute("create table \"my table\"(id int)");
             stmt.execute("create table plain(id int, \"a-b\" int)");
             final Connection conn = dialect(real, "Informix", " ");
@@ -90,15 +92,16 @@ public class CodeGenerationQuotingContractTest extends TestBase {
         final String insertSql = "INSERT INTO t(\"a b\", c, \"Mixed\") VALUES (1, 2, 3)";
 
         for (final String product : List.of("Microsoft SQL Server", "Adaptive Server Enterprise")) {
-            assertEquals("UPDATE t SET [a b] = 1, c = 2, [Mixed] = 3", JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(productDataSource(product), insertSql, null),
-                    product);
+            assertEquals("UPDATE t SET [a b] = 1, c = 2, [Mixed] = 3",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(productDataSource(product), insertSql, null), product);
         }
 
         for (final String product : List.of("MySQL", "MariaDB", "Spark SQL", "Databricks", "Apache Hive", "Google BigQuery")) {
-            assertEquals("UPDATE t SET `a b` = 1, c = 2, `Mixed` = 3", JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(productDataSource(product), insertSql, null),
-                    product);
+            assertEquals("UPDATE t SET `a b` = 1, c = 2, `Mixed` = 3",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(productDataSource(product), insertSql, null), product);
         }
 
-        assertEquals("UPDATE t SET \"a b\" = 1, c = 2, \"Mixed\" = 3", JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(productDataSource("PostgreSQL"), insertSql, null));
+        assertEquals("UPDATE t SET \"a b\" = 1, c = 2, \"Mixed\" = 3",
+                JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(productDataSource("PostgreSQL"), insertSql, null));
     }
 }

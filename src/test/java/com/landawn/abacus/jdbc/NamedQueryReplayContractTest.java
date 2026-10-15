@@ -33,20 +33,28 @@ public class NamedQueryReplayContractTest extends TestBase {
     @Test
     void entityIdReplayWorksThroughBothSettersAndBatches() throws Exception {
         for (int mode = 0; mode < 4; mode++) {
-            try (Connection conn = DriverManager.getConnection("jdbc:h2:mem:entity_id_replay"); Statement stmt = conn.createStatement()) {
+            try (Connection conn = DriverManager.getConnection("jdbc:h2:mem:entity_id_replay");
+                 Statement stmt = conn.createStatement()) {
                 stmt.execute("create table t(a varbinary, b varbinary, c clob, d clob)");
-                EntityId id = EntityId.of("p", new ByteArrayInputStream(new byte[] {1, 2}), "r", new StringReader("a\u03b2"));
+                EntityId id = EntityId.of("p", new ByteArrayInputStream(new byte[] { 1, 2 }), "r", new StringReader("a\u03b2"));
                 try (NamedQuery query = JdbcUtil.prepareNamedQuery(conn, "insert into t values(:p, :p, :r, :r)")) {
-                    if (mode == 0) query.setParameters(id);
-                    else if (mode == 1) query.setParameters((Object) id);
-                    else if (mode == 2) query.addBatchParameters(List.of(id));
-                    else query.addBatchParameters(List.of(id).iterator());
-                    if (mode < 2) query.update(); else query.batchUpdate();
+                    if (mode == 0)
+                        query.setParameters(id);
+                    else if (mode == 1)
+                        query.setParameters((Object) id);
+                    else if (mode == 2)
+                        query.addBatchParameters(List.of(id));
+                    else
+                        query.addBatchParameters(List.of(id).iterator());
+                    if (mode < 2)
+                        query.update();
+                    else
+                        query.batchUpdate();
                 }
                 try (ResultSet rows = stmt.executeQuery("select * from t")) {
                     assertTrue(rows.next());
-                    assertArrayEquals(new byte[] {1, 2}, rows.getBytes(1));
-                    assertArrayEquals(new byte[] {1, 2}, rows.getBytes(2));
+                    assertArrayEquals(new byte[] { 1, 2 }, rows.getBytes(1));
+                    assertArrayEquals(new byte[] { 1, 2 }, rows.getBytes(2));
                     assertEquals("a\u03b2", rows.getString(3));
                     assertEquals("a\u03b2", rows.getString(4));
                 }
@@ -57,19 +65,26 @@ public class NamedQueryReplayContractTest extends TestBase {
     @Test
     void annotatedBeanReplaysBinaryAndClobAsciiProperties() throws Exception {
         for (int mode = 0; mode < 3; mode++) {
-            try (Connection conn = DriverManager.getConnection("jdbc:h2:mem:annotated_replay"); Statement stmt = conn.createStatement()) {
+            try (Connection conn = DriverManager.getConnection("jdbc:h2:mem:annotated_replay");
+                 Statement stmt = conn.createStatement()) {
                 stmt.execute("create table t(a varbinary, b varbinary, c clob, d clob)");
-                AnnotatedBean bean = new AnnotatedBean(new ByteArrayInputStream(new byte[] {1, 2}), new ByteArrayInputStream(new byte[] {65, 66}));
+                AnnotatedBean bean = new AnnotatedBean(new ByteArrayInputStream(new byte[] { 1, 2 }), new ByteArrayInputStream(new byte[] { 65, 66 }));
                 try (NamedQuery query = JdbcUtil.prepareNamedQuery(conn, "insert into t values(:p, :p, :text, :text)")) {
-                    if (mode == 0) query.setParameters(bean);
-                    else if (mode == 1) query.setParameters(bean, List.of("p", "text"));
-                    else query.addBatchParameters(List.of(bean));
-                    if (mode < 2) query.update(); else query.batchUpdate();
+                    if (mode == 0)
+                        query.setParameters(bean);
+                    else if (mode == 1)
+                        query.setParameters(bean, List.of("p", "text"));
+                    else
+                        query.addBatchParameters(List.of(bean));
+                    if (mode < 2)
+                        query.update();
+                    else
+                        query.batchUpdate();
                 }
                 try (ResultSet rows = stmt.executeQuery("select * from t")) {
                     assertTrue(rows.next());
-                    assertArrayEquals(new byte[] {1, 2}, rows.getBytes(1));
-                    assertArrayEquals(new byte[] {1, 2}, rows.getBytes(2));
+                    assertArrayEquals(new byte[] { 1, 2 }, rows.getBytes(1));
+                    assertArrayEquals(new byte[] { 1, 2 }, rows.getBytes(2));
                     assertEquals("AB", rows.getString(3));
                     assertEquals("AB", rows.getString(4));
                 }
@@ -83,7 +98,7 @@ public class NamedQueryReplayContractTest extends TestBase {
             PreparedStatement stmt = mock(PreparedStatement.class);
             NamedQuery query = new NamedQuery(stmt, ParsedSql.parse("select :p, :p"));
             query.close();
-            ByteArrayInputStream input = new ByteArrayInputStream(new byte[] {1, 2, 3});
+            ByteArrayInputStream input = new ByteArrayInputStream(new byte[] { 1, 2, 3 });
             final int variant = mode;
             assertThrows(IllegalStateException.class, () -> {
                 switch (variant) {
@@ -111,7 +126,7 @@ public class NamedQueryReplayContractTest extends TestBase {
                 assertThrows(SQLException.class, () -> query.setBinaryStream("p", null));
                 assertThrows(SQLException.class, () -> query.setCharacterStream("p", (Reader) null));
                 if (sql.equals("select :p")) {
-                    ByteArrayInputStream input = new ByteArrayInputStream(new byte[] {1});
+                    ByteArrayInputStream input = new ByteArrayInputStream(new byte[] { 1 });
                     assertThrows(SQLException.class, () -> query.setBinaryStream("p", input));
                     assertEquals(1, input.available());
                 }
@@ -133,11 +148,29 @@ public class NamedQueryReplayContractTest extends TestBase {
         private InputStream p;
         @com.landawn.abacus.annotation.Type("ClobAsciiStream")
         private InputStream text;
-        public AnnotatedBean() { }
-        AnnotatedBean(InputStream p, InputStream text) { this.p = p; this.text = text; }
-        public InputStream getP() { return p; }
-        public void setP(InputStream p) { this.p = p; }
-        public InputStream getText() { return text; }
-        public void setText(InputStream text) { this.text = text; }
+
+        public AnnotatedBean() {
+        }
+
+        AnnotatedBean(InputStream p, InputStream text) {
+            this.p = p;
+            this.text = text;
+        }
+
+        public InputStream getP() {
+            return p;
+        }
+
+        public void setP(InputStream p) {
+            this.p = p;
+        }
+
+        public InputStream getText() {
+            return text;
+        }
+
+        public void setText(InputStream text) {
+            this.text = text;
+        }
     }
 }

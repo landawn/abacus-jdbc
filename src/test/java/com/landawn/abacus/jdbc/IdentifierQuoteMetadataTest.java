@@ -50,7 +50,8 @@ public class IdentifierQuoteMetadataTest extends TestBase {
     @Test
     void codeGenerationUsesDriverQuotesForEveryStatementFamily() throws Exception {
         for (String product : List.of("Spark SQL", "Databricks", "Apache Hive", "Google BigQuery", "OtherDB")) {
-            try (Connection real = DriverManager.getConnection("jdbc:h2:mem:metadata_quotes"); Statement stmt = real.createStatement()) {
+            try (Connection real = DriverManager.getConnection("jdbc:h2:mem:metadata_quotes");
+                 Statement stmt = real.createStatement()) {
                 stmt.execute("create table t(id int, \"USER\" varchar, \"MixedCase\" int)");
                 Connection conn = dialect(real, product, "`", new ArrayList<>());
                 assertEquals("SELECT `ID`, `USER`, `MixedCase` FROM t", JdbcCodeGenerationUtil.generateSelectSql(conn, "t"));
@@ -66,8 +67,9 @@ public class IdentifierQuoteMetadataTest extends TestBase {
     @Test
     void copyHonorsBothConnectionsQuotesAndTargetCaseFolding() throws Exception {
         try (Connection source = DriverManager.getConnection("jdbc:h2:mem:quote_copy_source");
-                Connection target = DriverManager.getConnection("jdbc:h2:mem:quote_copy_target;DATABASE_TO_LOWER=TRUE");
-                Statement src = source.createStatement(); Statement dst = target.createStatement()) {
+             Connection target = DriverManager.getConnection("jdbc:h2:mem:quote_copy_target;DATABASE_TO_LOWER=TRUE");
+             Statement src = source.createStatement();
+             Statement dst = target.createStatement()) {
             src.execute("create table t(id int, \"USER\" varchar, \"MixedCase\" varchar)");
             src.execute("insert into t values(1, 'payload', 'exact')");
             dst.execute("create table t(\"MixedCase\" varchar, id int, \"user\" varchar)");
@@ -89,8 +91,9 @@ public class IdentifierQuoteMetadataTest extends TestBase {
 
     @Test
     void unsupportedQuotingLeavesOrdinaryColumnsUnquoted() throws Exception {
-        for (String quote : new String[] {null, "", " "}) {
-            try (Connection real = DriverManager.getConnection("jdbc:h2:mem:no_quotes"); Statement stmt = real.createStatement()) {
+        for (String quote : new String[] { null, "", " " }) {
+            try (Connection real = DriverManager.getConnection("jdbc:h2:mem:no_quotes");
+                 Statement stmt = real.createStatement()) {
                 stmt.execute("create table t(id int, note varchar)");
                 Connection conn = dialect(real, "Informix", quote, new ArrayList<>());
                 assertEquals("SELECT ID, NOTE FROM t", JdbcCodeGenerationUtil.generateSelectSql(conn, "t"));
@@ -104,7 +107,8 @@ public class IdentifierQuoteMetadataTest extends TestBase {
     @Test
     void sqlServerAndAseUseBracketsRegardlessOfDoubleQuoteSessionMode() throws Exception {
         for (String product : List.of("Microsoft SQL Server", "Adaptive Server Enterprise")) {
-            try (Connection real = DriverManager.getConnection("jdbc:h2:mem:bracket_quotes;MODE=MSSQLServer"); Statement stmt = real.createStatement()) {
+            try (Connection real = DriverManager.getConnection("jdbc:h2:mem:bracket_quotes;MODE=MSSQLServer");
+                 Statement stmt = real.createStatement()) {
                 stmt.execute("create table t(id int, \"ORDER\" int, \"a]b\" int)");
                 Connection conn = dialect(real, product, "\"", new ArrayList<>());
                 String sql = JdbcCodeGenerationUtil.generateSelectSql(conn, "t");
@@ -116,14 +120,14 @@ public class IdentifierQuoteMetadataTest extends TestBase {
     @Test
     void copiesOrdinaryColumnsWhenNeitherDriverSupportsQuoting() throws Exception {
         try (Connection source = DriverManager.getConnection("jdbc:h2:mem:no_quote_copy_source");
-                Connection target = DriverManager.getConnection("jdbc:h2:mem:no_quote_copy_target");
-                Statement src = source.createStatement(); Statement dst = target.createStatement()) {
+             Connection target = DriverManager.getConnection("jdbc:h2:mem:no_quote_copy_target");
+             Statement src = source.createStatement();
+             Statement dst = target.createStatement()) {
             src.execute("create table t(id int, note varchar)");
             src.execute("insert into t values(1, 'actual value')");
             dst.execute("create table t(note varchar, id int)");
             List<String> targetSql = new ArrayList<>();
-            assertEquals(1, DataTransferUtil.copy(dialect(source, "Informix", " ", new ArrayList<>()),
-                    dialect(target, "Informix", " ", targetSql), "t", "t"));
+            assertEquals(1, DataTransferUtil.copy(dialect(source, "Informix", " ", new ArrayList<>()), dialect(target, "Informix", " ", targetSql), "t", "t"));
             assertTrue(targetSql.stream().anyMatch(sql -> sql.startsWith("INSERT INTO t(ID, NOTE)")), targetSql.toString());
             try (ResultSet rs = dst.executeQuery("select id, note from t")) {
                 assertTrue(rs.next());

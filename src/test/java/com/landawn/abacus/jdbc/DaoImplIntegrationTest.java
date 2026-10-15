@@ -1186,8 +1186,7 @@ public class DaoImplIntegrationTest extends TestBase {
     // Many-to-many @JoinedBy fixtures (UserRoleUserEntity/RoleLookupEntity/UserRoleLink) are the
     // package-level classes declared in JoinInfoTest: the intermediate entity must be a top-level class
     // in the entity's package.
-    public interface UserRoleUserDao
-            extends com.landawn.abacus.jdbc.dao.UncheckedDao<UserRoleUserEntity, UserRoleUserDao>,
+    public interface UserRoleUserDao extends com.landawn.abacus.jdbc.dao.UncheckedDao<UserRoleUserEntity, UserRoleUserDao>,
             com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper<UserRoleUserEntity, UserRoleUserDao> {
     }
 
@@ -1214,9 +1213,10 @@ public class DaoImplIntegrationTest extends TestBase {
             final UserRoleUserDao userDao = JdbcUtil.createDao(UserRoleUserDao.class, scratchDs);
             final List<UserRoleUserEntity> users = new ArrayList<>();
 
-            for (final long userId : new long[] { 1, 2, 3 }) {
+            for (final long userId : new long[] { 1, 2, 3, 3 }) {
                 final UserRoleUserEntity user = new UserRoleUserEntity();
                 user.setUserId(userId);
+                user.setRoles(new ArrayList<>(List.of(new RoleLookupEntity())));
                 users.add(user);
             }
 
@@ -1226,6 +1226,9 @@ public class DaoImplIntegrationTest extends TestBase {
             assertEquals(1, users.get(1).getRoles().size());
             assertEquals("dev", users.get(1).getRoles().get(0).getName());
             assertTrue(users.get(2).getRoles().isEmpty());
+            assertTrue(users.get(3).getRoles().isEmpty());
+            users.get(2).getRoles().add(new RoleLookupEntity());
+            assertTrue(users.get(3).getRoles().isEmpty());
 
             // The single-entity path must agree with the batch path.
             final UserRoleUserEntity single = new UserRoleUserEntity();
@@ -1789,8 +1792,7 @@ public class DaoImplIntegrationTest extends TestBase {
         dao.insert(newUser("FragList2", "FragList", 30));
 
         assertEquals(List.of("FragList1", "FragList2"), aqDao.firstColumnByFragmentList(List.of("\"FIRST_NAME\""), "FragList"));
-        assertEquals(List.of("FragList2", "FragList1"),
-                aqDao.firstColumnByFragmentArrays(new String[] { "\"FIRST_NAME\"" }, new int[] { 1 }, "FragList"));
+        assertEquals(List.of("FragList2", "FragList1"), aqDao.firstColumnByFragmentArrays(new String[] { "\"FIRST_NAME\"" }, new int[] { 1 }, "FragList"));
     }
 
     // SQL referenced by id (@SqlScript/SqlMapper) is stored in its parameterized form ("?" markers). When the
@@ -2482,6 +2484,83 @@ public class DaoImplIntegrationTest extends TestBase {
         final Optional<UserAccount> cachedFirst = cachedDao.findJsonCachedFirstByLastName("JsonGrp");
         assertEquals(UserAccount.class, ((Optional<?>) cachedFirst).get().getClass());
         assertEquals("J1", cachedFirst.get().getFirstName());
+    }
+
+    public interface ImmutableCachedUserDao extends NonUpdateCrudDao<UserAccount, Long, ImmutableCachedUserDao> {
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, serialization = com.landawn.abacus.jdbc.annotation.CacheSerialization.JSON)
+        default ImmutableList<UserAccount> listJsonImmutable(final String lastName) throws SQLException {
+            return ImmutableList.wrap(list(Filters.eq("lastName", lastName)));
+        }
+
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, serialization = com.landawn.abacus.jdbc.annotation.CacheSerialization.KRYO)
+        default ImmutableList<UserAccount> listKryoImmutable(final String lastName) throws SQLException {
+            return ImmutableList.wrap(list(Filters.eq("lastName", lastName)));
+        }
+
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, serialization = com.landawn.abacus.jdbc.annotation.CacheSerialization.JSON)
+        default com.landawn.abacus.util.ImmutableMap<Long, UserAccount> getJsonImmutableMap(final Long id) throws SQLException {
+            return com.landawn.abacus.util.ImmutableMap.wrap(Map.of(id, getOrNull(id)));
+        }
+
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, serialization = com.landawn.abacus.jdbc.annotation.CacheSerialization.KRYO)
+        default com.landawn.abacus.util.ImmutableMap<Long, UserAccount> getKryoImmutableMap(final Long id) throws SQLException {
+            return com.landawn.abacus.util.ImmutableMap.wrap(Map.of(id, getOrNull(id)));
+        }
+
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, serialization = com.landawn.abacus.jdbc.annotation.CacheSerialization.KRYO)
+        default com.landawn.abacus.util.ImmutableNavigableMap<Long, UserAccount> getKryoImmutableSortedMap(final String lastName) throws SQLException {
+            final java.util.TreeMap<Long, UserAccount> users = new java.util.TreeMap<>(java.util.Comparator.reverseOrder());
+            for (final UserAccount user : list(Filters.eq("lastName", lastName))) {
+                users.put(user.getId(), user);
+            }
+            return com.landawn.abacus.util.ImmutableNavigableMap.wrap(users);
+        }
+    }
+
+    @Test
+    public void testJsonCachedImmutableCollectionsCopyMutableEntities() throws SQLException {
+        final ImmutableCachedUserDao cachedDao = JdbcUtil.createDao(ImmutableCachedUserDao.class, ds);
+        dao.insert(newUser("original", "ImmutableJsonList", 1));
+        assertCachedEntityCopies(() -> cachedDao.listJsonImmutable("ImmutableJsonList").get(0));
+    }
+
+    @Test
+    public void testKryoCachedImmutableCollectionsCopyMutableEntities() throws SQLException {
+        final ImmutableCachedUserDao cachedDao = JdbcUtil.createDao(ImmutableCachedUserDao.class, ds);
+        dao.insert(newUser("original", "ImmutableKryoList", 1));
+        assertCachedEntityCopies(() -> cachedDao.listKryoImmutable("ImmutableKryoList").get(0));
+    }
+
+    @Test
+    public void testJsonCachedImmutableMapsCopyMutableEntities() throws SQLException {
+        final ImmutableCachedUserDao cachedDao = JdbcUtil.createDao(ImmutableCachedUserDao.class, ds);
+        final long id = dao.insert(newUser("original", "ImmutableJsonMap", 1));
+        assertCachedEntityCopies(() -> cachedDao.getJsonImmutableMap(id).get(id));
+    }
+
+    @Test
+    public void testKryoCachedImmutableMapsCopyMutableEntities() throws SQLException {
+        final ImmutableCachedUserDao cachedDao = JdbcUtil.createDao(ImmutableCachedUserDao.class, ds);
+        final long id = dao.insert(newUser("original", "ImmutableKryoMap", 1));
+        assertCachedEntityCopies(() -> cachedDao.getKryoImmutableMap(id).get(id));
+    }
+
+    @Test
+    public void testKryoCachedImmutableSortedMapsKeepComparatorAndCopyEntities() throws SQLException {
+        final ImmutableCachedUserDao cachedDao = JdbcUtil.createDao(ImmutableCachedUserDao.class, ds);
+        final long firstId = dao.insert(newUser("original", "ImmutableKryoSortedMap", 1));
+        final long secondId = dao.insert(newUser("original", "ImmutableKryoSortedMap", 1));
+        assertCachedEntityCopies(() -> cachedDao.getKryoImmutableSortedMap("ImmutableKryoSortedMap").get(firstId));
+        assertEquals(Math.max(firstId, secondId), cachedDao.getKryoImmutableSortedMap("ImmutableKryoSortedMap").firstKey());
+    }
+
+    private static void assertCachedEntityCopies(final Throwables.Supplier<UserAccount, SQLException> lookup) throws SQLException {
+        final UserAccount original = lookup.get();
+        original.setFirstName("changed after cache write");
+        final UserAccount cached = lookup.get();
+        assertEquals("original", cached.getFirstName());
+        cached.setFirstName("changed after cache read");
+        assertEquals("original", lookup.get().getFirstName());
     }
 
     @com.landawn.abacus.jdbc.annotation.Cache(capacity = 100, evictDelayMillis = 60000)

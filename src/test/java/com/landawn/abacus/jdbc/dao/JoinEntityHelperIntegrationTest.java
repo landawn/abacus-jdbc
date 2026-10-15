@@ -313,9 +313,14 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
     public void testJoinEntitiesOfDaoCreatedWithCustomSqlDialect() throws Exception {
         final JoinUser a = seedUser("DialectA", 1.0, 2.0);
         final JoinUser b = seedUser("DialectB", 3.0);
-        final JoinUserDao dialectDao = JdbcUtil.createDao(JoinUserDao.class, ds, SqlDialect.builder().productInfo(SqlDialect.ProductInfo.of("H2", "2.5")).build());
+        final JoinUserDao dialectDao = JdbcUtil.createDao(JoinUserDao.class, ds,
+                SqlDialect.builder().productInfo(SqlDialect.ProductInfo.of("H2", "2.5")).build());
         final JoinUserDao snakeCaseDialectDao = JdbcUtil.createDao(JoinUserDao.class, ds,
-                SqlDialect.builder().namingPolicy(NamingPolicy.SNAKE_CASE).sqlPolicy(SqlDialect.SqlPolicy.PARAMETERIZED_SQL).productInfo(SqlDialect.ProductInfo.of("H2", "2.5")).build());
+                SqlDialect.builder()
+                        .namingPolicy(NamingPolicy.SNAKE_CASE)
+                        .sqlPolicy(SqlDialect.SqlPolicy.PARAMETERIZED_SQL)
+                        .productInfo(SqlDialect.ProductInfo.of("H2", "2.5"))
+                        .build());
 
         final JoinUser loadedBySnakeCaseDao = snakeCaseDialectDao.getOrNull(a.getId());
         snakeCaseDialectDao.loadJoinEntities(loadedBySnakeCaseDao, "orders");
@@ -378,6 +383,54 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         assertTrue(firstInBatch.getProfileByUserId().isEmpty());
         assertNotNull(secondInBatch.getProfileByUserId());
         assertTrue(secondInBatch.getProfileByUserId().isEmpty());
+    }
+
+    @Test
+    public void testBatchLoadMissingJoinsCreatesIndependentEmptyCollections() {
+        final JoinUser withOrders = seedUser("HasOrders", 1.0);
+        final JoinUser withoutOrders = seedUser("NoOrders");
+        final JoinUser firstMissing = userDao.getOrNull(withoutOrders.getId());
+        final JoinUser secondMissing = userDao.getOrNull(withoutOrders.getId());
+        final JoinOrder staleOrder = new JoinOrder();
+        firstMissing.setOrders(new ArrayList<>(List.of(staleOrder)));
+        secondMissing.setOrders(new ArrayList<>(List.of(staleOrder)));
+
+        userDao.loadJoinEntities(List.of(withOrders, firstMissing, secondMissing), "orders");
+
+        assertEquals(1, withOrders.getOrders().size());
+        assertTrue(firstMissing.getOrders().isEmpty());
+        assertTrue(secondMissing.getOrders().isEmpty());
+        firstMissing.getOrders().add(staleOrder);
+        assertTrue(secondMissing.getOrders().isEmpty());
+    }
+
+    @Test
+    public void testSparseBatchMapJoinReplacesMissingValuesAndEnforcesCardinality() {
+        final JoinUser withoutProfile = seedUser("MissingProfile");
+        final JoinUser firstMissing = userDao.getOrNull(withoutProfile.getId());
+        final JoinUser secondMissing = userDao.getOrNull(withoutProfile.getId());
+        final JoinUser withProfile = seedUser("HasProfile");
+        final JoinProfile profile = new JoinProfile();
+        profile.setUserId(withProfile.getId());
+        profile.setLabel("one");
+        profileDao.insert(profile);
+        firstMissing.setProfileByUserId(Map.of(withoutProfile.getId(), profile));
+        secondMissing.setProfileByUserId(Map.of(withoutProfile.getId(), profile));
+
+        userDao.loadJoinEntities(List.of(firstMissing, withProfile, secondMissing), "profileByUserId");
+
+        assertTrue(firstMissing.getProfileByUserId().isEmpty());
+        assertTrue(secondMissing.getProfileByUserId().isEmpty());
+        assertEquals("one", withProfile.getProfileByUserId().get(withProfile.getId()).getLabel());
+        firstMissing.getProfileByUserId().put(withoutProfile.getId(), profile);
+        assertTrue(secondMissing.getProfileByUserId().isEmpty());
+
+        final JoinProfile duplicate = new JoinProfile();
+        duplicate.setUserId(withProfile.getId());
+        duplicate.setLabel("two");
+        profileDao.insert(duplicate);
+        assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntities(List.of(firstMissing, withProfile), "profileByUserId"));
+        assertTrue(firstMissing.getProfileByUserId().isEmpty());
     }
 
     // loadAllJoinEntities loads every @JoinedBy property; single + collection + executor overloads.
@@ -502,13 +555,11 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
         calls.put("unchecked loadJoinEntities(entity)", (user, executor) -> userDao.loadJoinEntities(user, propNames, executor));
         calls.put("unchecked loadJoinEntities(entities)", (user, executor) -> userDao.loadJoinEntities(List.of(user), propNames, executor));
         calls.put("unchecked loadJoinEntitiesIfAbsent(entity)", (user, executor) -> userDao.loadJoinEntitiesIfAbsent(user, propNames, executor));
-        calls.put("unchecked loadJoinEntitiesIfAbsent(entities)",
-                (user, executor) -> userDao.loadJoinEntitiesIfAbsent(List.of(user), propNames, executor));
+        calls.put("unchecked loadJoinEntitiesIfAbsent(entities)", (user, executor) -> userDao.loadJoinEntitiesIfAbsent(List.of(user), propNames, executor));
         calls.put("checked loadJoinEntities(entity)", (user, executor) -> checkedDao.loadJoinEntities(user, propNames, executor));
         calls.put("checked loadJoinEntities(entities)", (user, executor) -> checkedDao.loadJoinEntities(List.of(user), propNames, executor));
         calls.put("checked loadJoinEntitiesIfAbsent(entity)", (user, executor) -> checkedDao.loadJoinEntitiesIfAbsent(user, propNames, executor));
-        calls.put("checked loadJoinEntitiesIfAbsent(entities)",
-                (user, executor) -> checkedDao.loadJoinEntitiesIfAbsent(List.of(user), propNames, executor));
+        calls.put("checked loadJoinEntitiesIfAbsent(entities)", (user, executor) -> checkedDao.loadJoinEntitiesIfAbsent(List.of(user), propNames, executor));
 
         for (final Map.Entry<String, ParallelJoinCall> call : calls.entrySet()) {
             final JoinUser user = userDao.getOrNull(seeded.getId());

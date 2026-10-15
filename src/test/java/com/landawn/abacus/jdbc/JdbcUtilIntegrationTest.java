@@ -1242,8 +1242,8 @@ public class JdbcUtilIntegrationTest extends TestBase {
 
             iter.advance(2);
             assertEquals(3, iter.next());
-            assertTrue(iter.hasNext());   // row 4 fetched but not consumed
-            iter.advance(1);   // consumes row 4 only
+            assertTrue(iter.hasNext()); // row 4 fetched but not consumed
+            iter.advance(1); // consumes row 4 only
             assertEquals(5, iter.next());
             assertFalse(iter.hasNext());
             assertEquals(0, iter.count());
@@ -1255,7 +1255,7 @@ public class JdbcUtilIntegrationTest extends TestBase {
             final ObjIteratorEx<Integer> iter = JdbcUtil.iterate(rs, (Jdbc.BiRowMapper<Integer>) (r, labels) -> r.getInt(1), null);
 
             assertTrue(iter.hasNext());
-            iter.advance(3);   // the fetched row plus two more
+            iter.advance(3); // the fetched row plus two more
             assertEquals(2, iter.count());
             assertFalse(iter.hasNext());
             assertThrows(java.util.NoSuchElementException.class, iter::next);
@@ -1318,14 +1318,13 @@ public class JdbcUtilIntegrationTest extends TestBase {
             insertWidget("np", i);
         }
 
-        final List<Dataset> pages = JdbcUtil.queryByPage(ds, "SELECT id, qty FROM widget WHERE name = :name AND id > :id ORDER BY id LIMIT 2", 2,
-                (q, prev) -> {
-                    long lastId = 0L;
-                    if (prev != null && !prev.isEmpty()) {
-                        lastId = ((Number) prev.get(prev.size() - 1, 0)).longValue();
-                    }
-                    ((NamedQuery) q).setString("name", "np").setLong("id", lastId);
-                }).toList();
+        final List<Dataset> pages = JdbcUtil.queryByPage(ds, "SELECT id, qty FROM widget WHERE name = :name AND id > :id ORDER BY id LIMIT 2", 2, (q, prev) -> {
+            long lastId = 0L;
+            if (prev != null && !prev.isEmpty()) {
+                lastId = ((Number) prev.get(prev.size() - 1, 0)).longValue();
+            }
+            ((NamedQuery) q).setString("name", "np").setLong("id", lastId);
+        }).toList();
 
         assertEquals(3, pages.size());
         assertEquals(5, pages.stream().mapToInt(Dataset::size).sum());

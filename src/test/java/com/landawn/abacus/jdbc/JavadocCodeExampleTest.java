@@ -51,7 +51,7 @@ public class JavadocCodeExampleTest extends TestBase {
             }
         }
 
-        assertTrue(violations.isEmpty(), () -> violations.size() + " Javadoc code example line(s) contain markup that renders literally:\n"
-                + String.join("\n", violations));
+        assertTrue(violations.isEmpty(),
+                () -> violations.size() + " Javadoc code example line(s) contain markup that renders literally:\n" + String.join("\n", violations));
     }
 }

@@ -239,18 +239,34 @@ public @interface CacheResult {
      * <p>Available options:</p>
      * <ul>
      *   <li>{@link CacheSerialization#NONE} (default) - No serialization, stores direct references</li>
-     *   <li>{@link CacheSerialization#KRYO} - Uses Kryo for fast binary serialization</li>
-     *   <li>{@link CacheSerialization#JSON} - Uses JSON for human-readable serialization</li>
+     *   <li>{@link CacheSerialization#KRYO} - Uses Kryo to deep-copy result graphs</li>
+     *   <li>{@link CacheSerialization#JSON} - Uses JSON round trips to create copies</li>
      * </ul>
      *
-     * <p>Serialization provides isolation between cached objects and application code,
-     * preventing unintended modifications to cached data. Values implementing
-     * {@link com.landawn.abacus.util.Immutable} are stored and returned as-is, except populated
-     * optional/nullable wrappers whose contents may require copying. Other values pass through
-     * the selected serializer even if their Java types are immutable. Selecting
-     * {@link CacheSerialization#KRYO} requires Kryo on the classpath whenever copying is needed; this is
-     * not checked at DAO creation, so without Kryo the first attempt to cache a value that needs copying
-     * fails at invocation time with {@code UnsupportedOperationException}.</p>
+     * <p>With {@link CacheSerialization#KRYO} or {@link CacheSerialization#JSON}, collections, maps and
+     * populated optional/nullable wrappers are copied even when they implement
+     * {@link com.landawn.abacus.util.Immutable}. Other top-level {@code Immutable} values are stored and returned
+     * as-is; their contents must be deeply immutable to avoid sharing mutable state. Values without this
+     * marker pass through the selected serializer even if their Java types are immutable. Selecting
+     * {@link CacheSerialization#KRYO} requires an available Kryo parser whenever copying is needed; this is
+     * not checked at DAO creation, so missing dependencies or parser initialization failures surface at
+     * invocation time with {@code UnsupportedOperationException}, whose message quotes the failure and states
+     * whether Kryo, one of its dependencies, or its initialization is at fault. Copying the supported immutable wrappers
+     * also requires Kryo's Unsafe support and permission for its memory-access operations under the JVM's
+     * runtime policy. See {@link CacheSerialization#KRYO} for the supported copying contracts.</p>
+     *
+     * <p>The default of this annotation is {@link CacheSerialization#NONE}. Unannotated methods used with
+     * the thread-local DAO cache select Kryo when its parser is available and JSON otherwise.</p>
+     *
+     * <p>JSON copying preserves comparator instances for supported standard and library sorted containers
+     * reached through array, collection, map and optional/nullable container paths, while copying their contents.
+     * Custom concrete sorted classes reached by this comparator-preserving copy retain their constructor-created
+     * comparator and state; the copied contents are checked for changes in size, comparison keys and order.
+     * Plain {@code ImmutableSet}, {@code ImmutableMap} and {@code ImmutableBiMap} copies keep the source's
+     * iteration order. Natural-order container trees without a custom comparator or one of those wrappers follow
+     * the ordinary JSON parser path. JSON does not preserve shared object identity
+     * or cycles. Shared comparator state and bean-property copying retain the limitations described in
+     * {@link CacheSerialization#JSON}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -259,7 +275,7 @@ public @interface CacheResult {
      * @Query("SELECT * FROM user_profiles WHERE user_id = :userId")
      * UserProfile getComplexProfile(@Bind("userId") Long userId) throws SQLException;
      *
-     * // Use JSON for debugging/logging friendly format
+     * // Use JSON copying for cache isolation
      * @CacheResult(enabled = true, serialization = CacheSerialization.JSON)
      * @Query("SELECT * FROM audit_logs WHERE id = :id")
      * AuditLog getAuditLog(@Bind("id") Long id) throws SQLException;

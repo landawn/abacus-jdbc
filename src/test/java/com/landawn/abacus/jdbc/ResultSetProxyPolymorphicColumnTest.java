@@ -27,7 +27,8 @@ public class ResultSetProxyPolymorphicColumnTest extends TestBase {
         final Date date = Date.valueOf("2026-01-02");
         final Timestamp timestamp = Timestamp.valueOf("2026-01-03 12:34:56.123456789");
 
-        try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:polymorphic_column"); Statement statement = connection.createStatement()) {
+        try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:polymorphic_column");
+             Statement statement = connection.createStatement()) {
             statement.execute("create table items (id integer, payload java_object)");
             try (PreparedStatement insert = connection.prepareStatement("insert into items values (?, ?)")) {
                 int id = 0;
