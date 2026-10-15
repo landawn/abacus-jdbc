@@ -44,9 +44,22 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 class CallableQueryParameterBindingTest extends CallableQueryTestSupport {
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = { "", "unicode \u03bb" })
+    void setNString_charSequence_bindsTextOrSqlNull(final String value) throws SQLException {
+        final CharSequence characters = value == null ? null : new StringBuilder(value);
+
+        assertSame(callableQuery, callableQuery.setNString("text", characters));
+        verify(callableStatement).setNString("text", value);
+    }
 
     // Tests for setNull by name overloads
     @Test

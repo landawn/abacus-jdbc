@@ -19,14 +19,17 @@ import static org.mockito.Mockito.when;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
@@ -286,6 +289,80 @@ class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
 
         assertSame(failure, thrown);
         assertEquals(0, thrown.getSuppressed().length);
+        verify(preparedStatement).close();
+    }
+
+    @ParameterizedTest(name = "sameFailure={0}")
+    @ValueSource(booleans = { false, true })
+    void close_newerHandlerFails_stillRunsOlderHandlerWithoutSelfSuppression(final boolean sameFailure) throws SQLException {
+        final IllegalStateException failure = new IllegalStateException("close failed");
+        final AtomicInteger olderCalls = new AtomicInteger();
+        query.onClose(() -> {
+            olderCalls.incrementAndGet();
+            if (sameFailure) {
+                throw failure;
+            }
+        }).onClose(() -> {
+            throw failure;
+        });
+
+        assertSame(failure, assertThrows(IllegalStateException.class, query::close));
+        assertEquals(1, olderCalls.get());
+        assertEquals(0, failure.getSuppressed().length);
+        verify(preparedStatement).close();
+    }
+
+    @Test
+    void close_statementCleanupFails_stillRunsSuccessfulHandler() throws SQLException {
+        final IllegalStateException failure = new IllegalStateException("statement reset failed");
+        final AtomicInteger handlerCalls = new AtomicInteger();
+        when(preparedStatement.getFetchSize()).thenReturn(10);
+        query.setFetchSize(20).onClose(handlerCalls::incrementAndGet);
+        doThrow(failure).when(preparedStatement).setFetchSize(10);
+
+        assertSame(failure, assertThrows(IllegalStateException.class, query::close));
+        assertEquals(1, handlerCalls.get());
+        assertEquals(0, failure.getSuppressed().length);
+        verify(preparedStatement).close();
+    }
+
+    @ParameterizedTest(name = "returnsValue={0}")
+    @ValueSource(booleans = { false, true })
+    void async_callbackFails_preservesFailureAndSuppressesCleanup(final boolean returnsValue) throws Exception {
+        final SQLException failure = new SQLException("callback failed");
+        final IllegalStateException cleanup = new IllegalStateException("close failed");
+        query.onClose(() -> {
+            throw cleanup;
+        });
+
+        final var future = returnsValue ? query.callAsync(q -> {
+            throw failure;
+        }, Runnable::run) : query.runAsync(q -> {
+            throw failure;
+        }, Runnable::run);
+        final ExecutionException thrown = assertThrows(ExecutionException.class, () -> future.get(1, TimeUnit.SECONDS));
+
+        assertSame(failure, thrown.getCause());
+        assertArrayEquals(new Throwable[] { cleanup }, failure.getSuppressed());
+        assertTrue(query.isClosed);
+        verify(preparedStatement).close();
+    }
+
+    @Test
+    void cancel_beforeExecution_survivesCleanupFailureAndDoesNotRunCallback() throws Exception {
+        final AtomicReference<Runnable> scheduled = new AtomicReference<>();
+        final AtomicInteger callbackCalls = new AtomicInteger();
+        query.onClose(() -> {
+            throw new IllegalStateException("close failed");
+        });
+        final var future = query.runAsync(q -> callbackCalls.incrementAndGet(), scheduled::set);
+
+        assertTrue(future.cancel(false));
+        scheduled.get().run();
+
+        assertTrue(future.isCancelled());
+        assertTrue(query.isClosed);
+        assertEquals(0, callbackCalls.get());
         verify(preparedStatement).close();
     }
 
