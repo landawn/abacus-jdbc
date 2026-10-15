@@ -7543,7 +7543,7 @@ final class DaoImpl {
                             if (r instanceof Collection || r instanceof Map || r instanceof Object[] || r instanceof u.Optional || r instanceof u.Nullable
                                     || r instanceof java.util.Optional) {
                                 final Map<Object, Boolean> sortedContainers = new java.util.IdentityHashMap<>();
-                                if (hasSortedJsonContainer(r, sortedContainers)) {
+                                if (requiresJsonContainerTreeCopy(r, sortedContainers)) {
                                     return copyJsonContainerTree(r, declaredReturnType, sortedContainers, true);
                                 }
                             }
@@ -7995,10 +7995,10 @@ final class DaoImpl {
      *
      * @param value the container or value to inspect
      * @param classified per-copy identity map of completed results and active paths
-     * @return whether this container tree contains a sorted map or set with a comparator, or a plain immutable
-     *         set, map or bi-map wrapper
+     * @return whether this container tree must be copied by {@code copyJsonContainerTree}: it contains a sorted
+     *         map or set with a comparator, or a plain immutable set, map or bi-map wrapper
      */
-    private static boolean hasSortedJsonContainer(final Object value, final Map<Object, Boolean> classified) {
+    private static boolean requiresJsonContainerTreeCopy(final Object value, final Map<Object, Boolean> classified) {
         if (!(value instanceof Collection || value instanceof Map || value instanceof Object[] || value instanceof u.Optional || value instanceof u.Nullable
                 || value instanceof java.util.Optional)) {
             return false;
@@ -8011,31 +8011,31 @@ final class DaoImpl {
             return result;
         }
         classified.put(value, null);
-        boolean sorted = value instanceof final java.util.SortedMap<?, ?> map && map.comparator() != null
+        boolean requiresTreeCopy = value instanceof final java.util.SortedMap<?, ?> map && map.comparator() != null
                 || value instanceof final java.util.SortedSet<?> set && set.comparator() != null || value.getClass() == ImmutableSet.class
                 || value.getClass() == ImmutableMap.class || value.getClass() == com.landawn.abacus.util.ImmutableBiMap.class;
         if (value instanceof final Map<?, ?> map) {
             for (final Map.Entry<?, ?> entry : map.entrySet()) {
-                sorted |= hasSortedJsonContainer(entry.getKey(), classified);
-                sorted |= hasSortedJsonContainer(entry.getValue(), classified);
+                requiresTreeCopy |= requiresJsonContainerTreeCopy(entry.getKey(), classified);
+                requiresTreeCopy |= requiresJsonContainerTreeCopy(entry.getValue(), classified);
             }
         } else if (value instanceof final Collection<?> collection) {
             for (final Object element : collection) {
-                sorted |= hasSortedJsonContainer(element, classified);
+                requiresTreeCopy |= requiresJsonContainerTreeCopy(element, classified);
             }
         } else if (value instanceof final Object[] array) {
             for (final Object element : array) {
-                sorted |= hasSortedJsonContainer(element, classified);
+                requiresTreeCopy |= requiresJsonContainerTreeCopy(element, classified);
             }
         } else if (value instanceof final u.Optional<?> optional) {
-            sorted = optional.isPresent() && hasSortedJsonContainer(optional.get(), classified);
+            requiresTreeCopy = optional.isPresent() && requiresJsonContainerTreeCopy(optional.get(), classified);
         } else if (value instanceof final u.Nullable<?> nullable) {
-            sorted = nullable.isPresent() && hasSortedJsonContainer(nullable.get(), classified);
+            requiresTreeCopy = nullable.isPresent() && requiresJsonContainerTreeCopy(nullable.get(), classified);
         } else if (value instanceof final java.util.Optional<?> optional) {
-            sorted = optional.isPresent() && hasSortedJsonContainer(optional.get(), classified);
+            requiresTreeCopy = optional.isPresent() && requiresJsonContainerTreeCopy(optional.get(), classified);
         }
-        classified.put(value, sorted);
-        return sorted;
+        classified.put(value, requiresTreeCopy);
+        return requiresTreeCopy;
     }
 
     /**
@@ -8113,6 +8113,8 @@ final class DaoImpl {
         // declared interface's default implementation, rather than trying to instantiate that view class.
         final boolean declaredContainer = declaredType != null && (declaredType.isCollection() || declaredType.isMap());
         final boolean untypedChild = !inferTypes && (declaredType == null || declaredType.isObject());
+        // Untyped non-sorted collections, including plain ImmutableSet values,
+        // use the JSON parser's default List representation.
         final Class<?> declaredContainerClass = !inferTypes && declaredContainer ? declaredType.javaType()
                 : untypedChild && !(value instanceof java.util.SortedSet || value instanceof java.util.SortedMap)
                         ? value instanceof Collection ? List.class : Map.class
