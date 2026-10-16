@@ -44,6 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
 import com.landawn.abacus.annotation.Internal;
@@ -265,7 +266,8 @@ final class DaoImpl {
 
     /**
      * Process-wide cache of created DAO proxies keyed by {@link DaoCacheKey}; repeated creation requests with the
-     * same configuration return the same proxy instance.
+     * same configuration return the same proxy instance. Entries are never evicted, as documented on
+     * {@link JdbcUtil#createDao(Class, javax.sql.DataSource)}.
      */
     @SuppressWarnings("rawtypes")
     private static final Map<DaoCacheKey, DaoBase> daoPool = new ConcurrentHashMap<>();
@@ -2913,9 +2915,10 @@ final class DaoImpl {
      *        derived from the class-level {@code @Cache} annotation (using its {@code impl()}, {@code capacity()}
      *        and {@code evictDelayMillis()}) if present, otherwise a {@link Jdbc.DefaultDaoCache} with
      *        {@link JdbcUtil#DEFAULT_CACHE_CAPACITY default capacity} and
-     *        {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY default evict delay} is used; that default cache is created
-     *        only when the DAO declares a {@code @CacheResult} or {@code @RefreshCache} annotation (on the type, a
-     *        super-interface or a method), since no other method reads it. Note: result caching is
+     *        {@link JdbcUtil#DEFAULT_CACHE_EVICT_DELAY default evict delay} is used. Such a cache is created only when
+     *        the DAO declares {@code @Cache} or an <em>enabled</em> {@code @CacheResult} (on the type, a super-interface
+     *        or a method), since only methods with an enabled {@code @CacheResult} store results, and only after every
+     *        other validation has passed, so a rejected DAO creates none. Note: result caching is
      *        currently only supported for cacheable DAOs — {@code NonUpdateDao}/{@code ReadOnlyDao} and their
      *        {@code Unchecked} variants — supplying a non-{@code null} {@code inputDaoCache} (or declaring
      *        {@code @Cache}) on a DAO that supports update/delete operations will fail with
@@ -2924,9 +2927,10 @@ final class DaoImpl {
      * @return a proxy instance implementing the specified DAO interface
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or is not an interface, if {@code ds}
      *         is {@code null}, if {@code dsl} is {@code null}, if {@code dsl}'s SQL policy is neither {@code null}
-     *         nor {@link SqlPolicy#PARAMETERIZED_SQL}, if duplicate SQL keys are defined, if an XML SQL mapper file
-     *         referenced by {@code @SqlSource} cannot be found or holds an invalid SQL definition, or if the
-     *         DAO interface has invalid annotation configurations or generic type arguments
+     *         nor {@link SqlPolicy#PARAMETERIZED_SQL}, if no {@code inputDaoCache} is supplied and the {@code @Cache}
+     *         implementation does not declare an {@code (int, long)} constructor, if duplicate SQL keys are defined,
+     *         if an XML SQL mapper file referenced by {@code @SqlSource} cannot be found or holds an invalid SQL
+     *         definition, or if the DAO interface has invalid annotation configurations or generic type arguments
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
      *         connection from {@code ds}
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
@@ -3377,17 +3381,35 @@ final class DaoImpl {
                     + ") (both must be >= 0) in annotation 'Cache' on Dao interface: " + daoClassName);
         }
 
-        // The cache is only read by @CacheResult/@RefreshCache methods. A default DefaultDaoCache is backed by a pool that
-        // registers a JVM shutdown hook and a periodic eviction task which are never released, so it is created only
-        // when the DAO declares @Cache or a cache annotation (not for every DAO proxy, e.g. every CrudDao).
-        final boolean isDaoCacheUsed = daoClassCacheAnno != null || daoClassCacheResultAnno != null || daoClassRefreshCacheAnno != null
-                || Stream.of(sqlMethods).anyMatch(m -> m.isAnnotationPresent(CacheResult.class) || m.isAnnotationPresent(RefreshCache.class));
+        // Only methods whose effective @CacheResult is enabled store results (enabled=false opts out), so a cache is
+        // created only when the DAO declares @Cache or an enabled @CacheResult. @RefreshCache alone could only invalidate an
+        // always-empty cache, and that configuration is rejected below anyway. A DefaultDaoCache is backed by a pool that
+        // registers a JVM shutdown hook and a periodic eviction task, so it must not be created for every DAO proxy (e.g.
+        // every CrudDao).
+        final boolean isDaoCacheUsed = daoClassCacheAnno != null || (daoClassCacheResultAnno != null && daoClassCacheResultAnno.enabled())
+                || Stream.of(sqlMethods).anyMatch(m -> {
+                    final CacheResult cacheResult = m.getAnnotation(CacheResult.class);
 
-        final Jdbc.DaoCache daoCache = inputDaoCache != null ? inputDaoCache //
-                : !isDaoCacheUsed ? null //
-                        : (daoClassCacheAnno == null ? Jdbc.DaoCache.create(capacity, evictDelay) // annotation members can't be null: impl() defaults to DefaultDaoCache
-                                : ClassUtil.invokeConstructor(ClassUtil.getDeclaredConstructor(daoClassCacheAnno.impl(), int.class, long.class), capacity,
-                                        evictDelay));
+                    return cacheResult != null && cacheResult.enabled();
+                });
+
+        final boolean isDaoCacheCreatedHere = inputDaoCache == null && isDaoCacheUsed;
+
+        // Resolve a custom implementation's (int, long) constructor up front so a missing one still fails DAO initialization
+        // here; the cache itself is created only after every other validation has passed (see daoCacheRef).
+        final Constructor<? extends Jdbc.DaoCache> daoCacheConstructor = isDaoCacheCreatedHere && daoClassCacheAnno != null
+                ? ClassUtil.getDeclaredConstructor(daoClassCacheAnno.impl(), int.class, long.class)
+                : null;
+
+        if (isDaoCacheCreatedHere && daoClassCacheAnno != null && daoCacheConstructor == null) {
+            throw new IllegalArgumentException("Cache implementation: " + ClassUtil.getCanonicalClassName(daoClassCacheAnno.impl())
+                    + " must declare a constructor (int capacity, long evictDelay) for annotation 'Cache' on Dao interface: " + daoClassName);
+        }
+
+        // Method invokers read the cache from here on use. A cache created by this method is set only once the DAO can no
+        // longer be rejected (right before the proxy is published): creating it up front leaked its pool's shutdown hook and
+        // eviction task whenever a later validation rejected the DAO, since nothing could ever close that cache.
+        final AtomicReference<Jdbc.DaoCache> daoCacheRef = new AtomicReference<>(inputDaoCache);
 
         final Set<Method> nonDBOperationSet = N.newConcurrentHashSet();
 
@@ -6121,14 +6143,17 @@ final class DaoImpl {
                                                 .setParameters(bp, tp._2)
                                                 .list(pairBiRowMapper);
 
-                                        propJoinInfo.setJoinPropEntities(bp, Stream.of(joinPropEntities).groupTo(Pair::left, Pair::right));
+                                        // Insertion-ordered: JoinInfo merges the groups of array-typed keys with equal content
+                                        // (e.g. byte[], one group per row) in this order, which keeps the row order.
+                                        propJoinInfo.setJoinPropEntities(bp,
+                                                Stream.of(joinPropEntities).groupTo(Pair::left, Pair::right, Suppliers.ofLinkedHashMap()));
                                     } else {
                                         final List<?> joinPropEntities = joinEntityDao.prepareQuery(tp._1.apply(selectPropNames, bp.size()))
                                                 .setParameters(bp, tp._2)
                                                 .list(propJoinInfo.referencedEntityClass);
 
-                                        propJoinInfo.setJoinPropEntities(bp,
-                                                Stream.of((Collection<Object>) joinPropEntities).groupTo(propJoinInfo.referencedEntityKeyExtractor));
+                                        // JoinInfo groups them by join key (by content for array-typed keys such as byte[]).
+                                        propJoinInfo.setJoinPropEntities(bp, joinPropEntities);
                                     }
                                 });
                             }
@@ -6298,6 +6323,19 @@ final class DaoImpl {
                             || queryOperation == QueryOperation.largeUpdate || (queryOperation == QueryOperation.DEFAULT && isUpdateReturnType));
 
                     final boolean isQuery = isExecutedAsQuery(queryInfo, returnType);
+
+                    // op = update/largeUpdate is only honored for a statement that is not a SELECT. On a plain SELECT it was
+                    // silently ignored and the method ran as a query, so an int return got the first column of the first row
+                    // instead of an update count. Reject it like the other operation/return-type mismatches, but only for a
+                    // SELECT that is a plain read under every lexical reading: one that may write (a data-modifying CTE, a
+                    // data-change delta table, SELECT ... INTO) keeps running as before. SqlParser does not recognize a delta
+                    // table, so JdbcUtil's write scan is checked as well.
+                    if (queryInfo.isSelect && (queryOperation == QueryOperation.update || queryOperation == QueryOperation.largeUpdate)
+                            && SqlParser.isSyntacticallyReadQuery(query) && !JdbcUtil.mayWriteUnderAnyDialect(query)) {
+                        throw new UnsupportedOperationException(
+                                "The SELECT statement of method: " + fullClassMethodName + " is not supported by the specified queryOperation: "
+                                        + queryOperation + ". Remove 'op' or declare a query operation, e.g. QueryOperation.queryForSingle");
+                    }
 
                     final boolean isNamedQuery = queryInfo.isNamedQuery;
 
@@ -7456,7 +7494,6 @@ final class DaoImpl {
                         && Stream.of(notCacheableTypes).noneMatch(it -> it.isAssignableFrom(returnType));
                 final boolean isAnnotatedCacheResult = cacheResultAnno != null && cacheResultAnno.enabled();
                 final boolean isAnnotatedRefreshResult = refreshResultAnno != null && refreshResultAnno.enabled();
-                final Jdbc.DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isAnnotatedRefreshResult ? daoCache : null;
 
                 if (isAnnotatedCacheResult || isAnnotatedRefreshResult || (isQueryMethod || isUpdateMethod)) {
                     if (daoLogger.isDebugEnabled()) {
@@ -7609,6 +7646,8 @@ final class DaoImpl {
                     final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> temp = call;
 
                     call = (proxy, args) -> {
+                        // Read on use: a cache created by createDao is only set once the DAO has passed every validation.
+                        final Jdbc.DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isAnnotatedRefreshResult ? daoCacheRef.get() : null;
                         final Jdbc.DaoCache localThreadCache = JdbcUtil.localThreadCache_TL.get();
                         final boolean isLocalThreadCacheEnabled = isLocalThreadCacheableQueryMethod && localThreadCache != null;
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
@@ -7689,19 +7728,11 @@ final class DaoImpl {
                             if (isLocalThreadCacheEnabled) {
                                 localThreadCache.put(cacheKey, cloneFunc.apply(result), proxy, args, methodSignature);
                             } else if (isAnnotatedCacheResult) {
-                                if (result instanceof final Dataset dataset) {
-                                    if (dataset.size() >= cacheResultAnno.minSize() && dataset.size() <= cacheResultAnno.maxSize()) {
-                                        daoCacheToUseInMethod.put(cacheKey, cloneFunc.apply(result), cacheLiveTime, cacheMaxIdleTime, proxy, args,
-                                                methodSignature);
-                                    }
-                                } else if (result instanceof Collection) {
-                                    final Collection<Object> c = (Collection<Object>) result;
+                                // Map and object-array results are bounded too: they skipped minSize/maxSize, so maxSize did not
+                                // guard the memory of a large @MappedByKey map.
+                                final int resultSize = cacheResultSize(result);
 
-                                    if (c.size() >= cacheResultAnno.minSize() && c.size() <= cacheResultAnno.maxSize()) {
-                                        daoCacheToUseInMethod.put(cacheKey, cloneFunc.apply(result), cacheLiveTime, cacheMaxIdleTime, proxy, args,
-                                                methodSignature);
-                                    }
-                                } else {
+                                if (resultSize < 0 || (resultSize >= cacheResultAnno.minSize() && resultSize <= cacheResultAnno.maxSize())) {
                                     daoCacheToUseInMethod.put(cacheKey, cloneFunc.apply(result), cacheLiveTime, cacheMaxIdleTime, proxy, args, methodSignature);
                                 }
                             }
@@ -7967,9 +7998,20 @@ final class DaoImpl {
 
         daoInstance = N.newProxyInstance(interfaceClasses, h);
 
+        // The DAO can no longer be rejected and the proxy is not yet published: create the cache now (see daoCacheRef).
+        if (isDaoCacheCreatedHere) {
+            daoCacheRef.set(daoClassCacheAnno == null ? Jdbc.DaoCache.create(capacity, evictDelay) // annotation members can't be null: impl() defaults to DefaultDaoCache
+                    : ClassUtil.invokeConstructor(daoCacheConstructor, capacity, evictDelay));
+        }
+
         final DaoBase existingDaoInstance = daoPool.putIfAbsent(daoCacheKey, daoInstance);
 
         if (existingDaoInstance != null) {
+            if (isDaoCacheCreatedHere) {
+                // This proxy is discarded, so nothing can use the cache just created for it.
+                releaseDiscardedDaoCache(daoCacheRef.get(), daoLogger);
+            }
+
             if (daoLogger.isDebugEnabled()) {
                 daoLogger.debug("Discarding concurrently created Dao proxy(interface={}, targetTableName={}); using cached instance", daoClassName,
                         targetTableName);
@@ -7984,6 +8026,49 @@ final class DaoImpl {
     }
 
     /**
+     * Returns the element count that {@code @CacheResult(minSize, maxSize)} is compared against: the rows of a
+     * {@code Dataset}, the elements of a {@code Collection} or an object array, or the entries of a {@code Map}.
+     *
+     * @param result the non-null method result
+     * @return the element count, or {@code -1} for any other result (including a primitive array such as a
+     *         {@code byte[]} column value), which the size bounds do not apply to
+     */
+    private static int cacheResultSize(final Object result) {
+        if (result instanceof final Dataset dataset) {
+            return dataset.size();
+        } else if (result instanceof final Collection<?> c) {
+            return c.size();
+        } else if (result instanceof final Map<?, ?> m) {
+            return m.size();
+        } else if (result instanceof final Object[] array) {
+            return array.length;
+        }
+
+        return -1;
+    }
+
+    /**
+     * Releases a cache that {@code createDao} created for a proxy it then discarded because another thread published an
+     * equivalent proxy first. A {@link Jdbc.DefaultDaoCache} closes its backing pool, which cancels the eviction task and
+     * removes the JVM shutdown hook; a custom implementation is closed when it is {@link AutoCloseable}. A release failure
+     * is only logged: the proxy published by the other thread is still returned.
+     *
+     * @param daoCache the cache created for the discarded proxy
+     * @param daoLogger the logger of the DAO, used to report a release failure
+     */
+    private static void releaseDiscardedDaoCache(final Jdbc.DaoCache daoCache, final Logger daoLogger) {
+        try {
+            if (daoCache instanceof final Jdbc.DefaultDaoCache defaultDaoCache) {
+                defaultDaoCache.close();
+            } else if (daoCache instanceof final AutoCloseable closeable) {
+                closeable.close();
+            }
+        } catch (final Exception e) {
+            daoLogger.warn(e, "Failed to release the cache created for a discarded Dao proxy");
+        }
+    }
+
+    /**
      * Classifies structural container paths requiring comparator-aware or order-preserving copying. Bean
      * properties remain governed by the JSON parser, including its annotation and property-format rules. Identity
      * memoization avoids rescanning shared/deep container trees; a null entry marks an active path, since JSON
@@ -7991,12 +8076,14 @@ final class DaoImpl {
      *
      * <p>Besides comparator-bearing sorted containers, plain {@code ImmutableSet}, {@code ImmutableMap} and
      * {@code ImmutableBiMap} instances are flagged: their own factories promise insertion order, which the JSON
-     * parser's HashSet/HashMap/BiMap stand-ins for those target classes would replace with hash order.</p>
+     * parser's HashSet/HashMap/BiMap stand-ins for those target classes would replace with hash order. Maps holding a
+     * {@code null} key are flagged too: JSON writes map keys as quoted strings, so the parser would read that key back
+     * as the String {@code "null"}, or fail to parse it as a typed key.</p>
      *
      * @param value the container or value to inspect
      * @param classified per-copy identity map of completed results and active paths
      * @return whether this container tree must be copied by {@code copyJsonContainerTree}: it contains a sorted
-     *         map or set with a comparator, or a plain immutable set, map or bi-map wrapper
+     *         map or set with a comparator, a plain immutable set, map or bi-map wrapper, or a map with a {@code null} key
      */
     private static boolean requiresJsonContainerTreeCopy(final Object value, final Map<Object, Boolean> classified) {
         if (!(value instanceof Collection || value instanceof Map || value instanceof Object[] || value instanceof u.Optional || value instanceof u.Nullable
@@ -8016,6 +8103,9 @@ final class DaoImpl {
                 || value.getClass() == ImmutableMap.class || value.getClass() == com.landawn.abacus.util.ImmutableBiMap.class;
         if (value instanceof final Map<?, ?> map) {
             for (final Map.Entry<?, ?> entry : map.entrySet()) {
+                // JSON writes every map key as a quoted string: a null key came back as the String "null", or failed to
+                // parse as a typed key such as an Integer. The tree copy puts it back as a real null key.
+                requiresTreeCopy |= entry.getKey() == null;
                 requiresTreeCopy |= requiresJsonContainerTreeCopy(entry.getKey(), classified);
                 requiresTreeCopy |= requiresJsonContainerTreeCopy(entry.getValue(), classified);
             }
@@ -8045,12 +8135,12 @@ final class DaoImpl {
      * irreversibly merge comparator-distinct entries. Custom sorted classes retain their constructor-created
      * comparator and validate the copied contents. Plain {@code ImmutableSet}, {@code ImmutableMap} and
      * {@code ImmutableBiMap} copies are built on insertion-ordered backing containers so that they iterate like
-     * their source.
+     * their source. A map with a {@code null} key is copied entry by entry, keeping that key {@code null}.
      *
      * @param value the value to copy
      * @param declaredType the resolved type at this position, or null for the JSON default type
-     * @param sortedContainers the classification for this source container tree (sorted nodes and plain
-     *        immutable set/map wrappers are flagged {@code true})
+     * @param sortedContainers the classification for this source container tree (sorted nodes, plain
+     *        immutable set/map wrappers and maps with a {@code null} key are flagged {@code true})
      * @param inferTypes whether this is the root result, retaining its runtime class and common-runtime-type fallback
      * @return the JSON copy, retaining source comparators for supported standard/library containers and
      *         constructor-created comparators for custom sorted classes
@@ -8228,8 +8318,11 @@ final class DaoImpl {
             copy = (Map) jsonParser.deserialize("{}", config, containerClass);
         }
 
-        final boolean hasNullSortedKey = source instanceof java.util.SortedMap && source.keySet().stream().anyMatch(java.util.Objects::isNull);
-        if (!hasNullSortedKey && source.entrySet()
+        // A HashMap-like map, or a sorted map with a null-friendly comparator, can hold a real null key, which JSON's
+        // quoted map-key syntax would change to the String "null" (or fail to parse as a typed key), so such a map is
+        // copied entry by entry, in iteration order, with the null key put back as is.
+        final boolean hasNullKey = source.keySet().stream().anyMatch(java.util.Objects::isNull);
+        if (!hasNullKey && source.entrySet()
                 .stream()
                 .noneMatch(entry -> Boolean.TRUE.equals(sortedContainers.get(entry.getKey())) || Boolean.TRUE.equals(sortedContainers.get(entry.getValue())))) {
             jsonParser.parseInto(jsonParser.serialize(source), config, copy);
@@ -8239,9 +8332,7 @@ final class DaoImpl {
                 keyConfig.setMapKeyType(keyType);
             }
             for (final Map.Entry<?, ?> entry : source.entrySet()) {
-                // A null-friendly comparator accepts a real null key. With no non-null key to infer a type
-                // from, JSON's default quoted map-key syntax would otherwise change it to the String "null".
-                final Object key = hasNullSortedKey && entry.getKey() == null ? null
+                final Object key = entry.getKey() == null ? null
                         : Boolean.TRUE.equals(sortedContainers.get(entry.getKey())) ? copyJsonContainerTree(entry.getKey(), keyType, sortedContainers, false)
                                 : copyJsonMapKey(entry.getKey(), keyConfig);
                 copy.put(key, copyJsonContainerTree(entry.getValue(), valueType, sortedContainers, false));

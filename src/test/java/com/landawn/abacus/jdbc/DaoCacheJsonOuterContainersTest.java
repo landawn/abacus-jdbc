@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -333,7 +334,10 @@ class DaoCacheJsonOuterContainersTest {
         dao.getUntypedKeys("keyControl");
         final ImmutableMap<Object, Object> control = dao.getUntypedKeys("keyControl");
         assertEquals("number", control.get("1"));
-        assertEquals("null key", control.get("null"));
+        // A null key stays null (it used to come back as the String "null", which could also collide with a real "null"
+        // key); the other Object-typed scalar keys keep JSON's quoted-key defaults.
+        assertEquals("null key", control.get(null));
+        assertFalse(control.containsKey("null"));
         assertEquals("boolean", control.get("true"));
 
         entries.put("child", sortedChild());
@@ -342,7 +346,7 @@ class DaoCacheJsonOuterContainersTest {
         final ImmutableMap<Object, Object> copy = dao.getUntypedKeys("sortedKeys");
         assertEquals(control.keySet(), copy.keySet());
         assertEquals("number", copy.get("1"));
-        assertEquals("null key", copy.get("null"));
+        assertEquals("null key", copy.get(null));
         assertEquals("boolean", copy.get("true"));
     }
 

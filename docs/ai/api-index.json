@@ -2,7 +2,7 @@
   "library": {
     "name": "abacus-jdbc",
     "version": "4.9.3",
-    "generated_at": "2026-10-14",
+    "generated_at": "2026-10-15",
     "java_target": "21",
     "source": {
       "git_sha": "unknown"
@@ -11907,7 +11907,7 @@
               "javadoc_summary": "Closes this query instance and releases any resources associated with it.",
               "contract": [
                 "If the instance is already closed, this method does nothing (idempotent).",
-                "</p> <p> If statement cleanup and a close handler both throw unchecked exceptions or errors, the statement cleanup failure is propagated with the handler failure suppressed.",
+                "If statement cleanup still fails (for example with an {@link Error} ) and a close handler also throws, the statement cleanup failure is propagated with the handler failure suppressed.",
                 "} finally { if (query != null) { query.close(); } } // Or use try-with-resources: try (AbstractQuery<?, ?> autoClosingQuery = JdbcUtil.prepareQuery(conn, sql)) { // Use autoClosingQuery..."
               ],
               "examples": [],
@@ -19547,7 +19547,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
@@ -19607,7 +19607,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
@@ -19673,7 +19673,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
@@ -19744,7 +19744,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
@@ -19823,7 +19823,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
@@ -20179,7 +20179,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -20237,7 +20237,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -20299,7 +20299,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -20366,7 +20366,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -20441,7 +20441,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -21269,7 +21269,7 @@
               "javadoc_summary": "Creates a fluent builder for copying a whole table (or selected columns) from a source {@link javax.sql.DataSource} to a target table, generating the SELECT and INSERT SQL from the table schema.",
               "returns": "a {@link CopyTableFromDataSource} for configuring and running the copy",
               "contract": [
-                "</p> <p> When copying all columns, their source order and any case-sensitive spelling requiring identifier quotes are preserved in the generated target INSERT."
+                "</p> <p> When copying all columns, their source order is preserved in the target INSERT."
               ],
               "examples": [],
               "see_also": [
@@ -21310,7 +21310,7 @@
               "javadoc_summary": "Creates a fluent builder for copying a whole table (or selected columns) from a source {@link Connection} to a target table on another {@link Connection} , generating the SELECT and INSERT SQL from the table schema.",
               "returns": "a {@link CopyTableFromConnection} for configuring and running the copy",
               "contract": [
-                "<p> When copying all columns, their source order and any case-sensitive spelling requiring identifier quotes are preserved in the generated target INSERT."
+                "<p> When copying all columns, their source order is preserved in the target INSERT."
               ],
               "examples": [],
               "see_also": [
@@ -22569,7 +22569,7 @@
                 {
                   "name": "columns",
                   "type": "Collection<String>",
-                  "javadoc": "the column names to copy. The supplied collection is copied.",
+                  "javadoc": "the undelimited column names to copy; validated under the disabled quoting policy when {@code to(...)} runs. The supplied collection is copied.",
                   "nullability": "unspecified"
                 }
               ],
@@ -22632,7 +22632,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code targetDataSource} is {@code null} , {@code batchSize <= 0} , or a table/selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code targetDataSource} is {@code null} , {@code batchSize <= 0} , or a table/selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
@@ -22684,7 +22684,7 @@
                 {
                   "name": "columns",
                   "type": "Collection<String>",
-                  "javadoc": "the column names to copy. The supplied collection is copied.",
+                  "javadoc": "the undelimited column names to copy; validated under the disabled quoting policy when {@code to(...)} runs. The supplied collection is copied.",
                   "nullability": "unspecified"
                 }
               ],
@@ -22747,7 +22747,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code targetConn} is {@code null} , {@code batchSize <= 0} , or a table/selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code targetConn} is {@code null} , {@code batchSize <= 0} , or a table/selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32268,7 +32268,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , {@code tableName} is {@code null} , blank, or malformed, or the derived class or field names are invalid or collide"
+                  "condition": "if {@code ds} is {@code null} , {@code tableName} is {@code null} , blank, or malformed, or the derived class or field names are invalid or collide. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32314,7 +32314,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} , blank, or malformed, or the configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element"
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} , blank, or malformed, or the configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32358,7 +32358,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , {@code tableName} is {@code null} , blank, or malformed, or the derived class or field names are invalid or collide"
+                  "condition": "if {@code conn} is {@code null} , {@code tableName} is {@code null} , blank, or malformed, or the derived class or field names are invalid or collide. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32406,7 +32406,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} , blank, or malformed, or the configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element"
+                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} , blank, or malformed, or the configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32654,7 +32654,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32663,9 +32663,7 @@
               ],
               "javadoc_summary": "Generates a SELECT SQL statement for the specified table.",
               "returns": "a SELECT SQL statement string with all columns from the table",
-              "contract": [
-                "All column names are quoted to preserve their exact metadata spelling and support reserved names with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support)."
-              ],
+              "contract": [],
               "examples": [],
               "see_also": []
             },
@@ -32696,7 +32694,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32705,9 +32703,7 @@
               ],
               "javadoc_summary": "Generates a SELECT SQL statement for the specified table using an existing connection.",
               "returns": "a SELECT SQL statement string with all columns from the table",
-              "contract": [
-                "All column names are quoted to preserve their exact metadata spelling and support reserved names, with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support)."
-              ],
+              "contract": [],
               "examples": [],
               "see_also": []
             },
@@ -32750,7 +32746,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32802,7 +32798,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32842,7 +32838,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32851,9 +32847,7 @@
               ],
               "javadoc_summary": "Generates an INSERT SQL statement for the specified table.",
               "returns": "an INSERT SQL statement string with positional parameters for all columns",
-              "contract": [
-                "All column names are quoted to preserve their exact metadata spelling and support reserved names with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support)."
-              ],
+              "contract": [],
               "examples": [],
               "see_also": []
             },
@@ -32884,7 +32878,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32893,9 +32887,7 @@
               ],
               "javadoc_summary": "Generates an INSERT SQL statement for the specified table using an existing connection.",
               "returns": "an INSERT SQL statement string with positional parameters for all columns",
-              "contract": [
-                "All column names are quoted to preserve their exact metadata spelling and support reserved names with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support)."
-              ],
+              "contract": [],
               "examples": [],
               "see_also": []
             },
@@ -32932,7 +32924,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -32978,7 +32970,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33022,7 +33014,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33062,7 +33054,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33108,7 +33100,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, all columns are excluded, or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, all columns are excluded, or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33154,7 +33146,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, all columns are excluded, or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, all columns are excluded, or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33198,7 +33190,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33241,7 +33233,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33282,14 +33274,14 @@
                 {
                   "name": "keyColumnName",
                   "type": "String",
-                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting",
+                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the metadata spelling without delimiters",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33328,14 +33320,14 @@
                 {
                   "name": "keyColumnName",
                   "type": "String",
-                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting",
+                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the metadata spelling without delimiters",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33393,7 +33385,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33455,7 +33447,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33499,7 +33491,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33542,7 +33534,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33583,14 +33575,14 @@
                 {
                   "name": "keyColumnName",
                   "type": "String",
-                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting",
+                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the metadata spelling without delimiters",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33629,14 +33621,14 @@
                 {
                   "name": "keyColumnName",
                   "type": "String",
-                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting",
+                  "javadoc": "the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the metadata spelling without delimiters",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33694,7 +33686,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33756,7 +33748,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver."
+                  "condition": "if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -33800,7 +33792,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected."
                 },
                 {
                   "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
@@ -33850,7 +33842,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name"
+                  "condition": "if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected."
                 },
                 {
                   "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
@@ -33865,6 +33857,7 @@
               "returns": "an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause",
               "contract": [
                 "</li> <li> Column and value counts must match or conversion fails.",
+                "Identifier quoting is disabled, so each table-name part and column name must be a simple undelimited name.",
                 "</li> <li> For MySQL/MariaDB, {@code #} also starts a line comment, a {@code --} line comment must be followed by whitespace or a control character, and block comments do not nest.",
                 "</li> <li> The WHERE clause is appended only when {@code whereClause} is not {@code null} or blank."
               ],
@@ -37544,7 +37537,7 @@
               "returns": "A {@link List} of column names in the order they are defined in the table.",
               "contract": [
                 "<p> This method first consults {@link DatabaseMetaData#getColumns} (trying the connection's current schema \\u2014 and, for an unqualified name, all schemas \\u2014 with the table name as supplied, and upper- and lower-case variants only when the driver reports no canonical identifier case).",
-                "If the metadata lookup yields no match and all name parts are simple identifiers (letters, digits, {@code _} and {@code $} ), it falls back to running an empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column names from the result set metadata (when the driver reports a canonical identifier case, the case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as a keyword); quoted or otherwise exotic names have no such fallback."
+                "If the metadata lookup yields no match and all name parts satisfy the unquoted identifier policy, it falls back to running an empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column names from the result set metadata."
               ],
               "examples": [],
               "see_also": [
@@ -42394,7 +42387,7 @@
               "returns": "{@code true} if the table exists, {@code false} otherwise.",
               "contract": [
                 "Delimited and case-folded parts are matched case-sensitively; upper- and lower-case table variants are tried only when the driver reports no canonical identifier case).",
-                "If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} (when the driver reports a canonical identifier case, the case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as a keyword) \\u2014 a SQL error from that query that is recognized as a \"table not found\" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.",
+                "If metadata lookup yields no match and all parts satisfy the unquoted identifier policy, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} .",
                 "On PostgreSQL and PostgreSQL-compatible databases (where a failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query runs under a savepoint that is rolled back if the query fails, so an expected \"table not found\" error does not abort the caller's transaction.",
                 "If rolling back to that savepoint fails, the transaction may be unusable, so the \"table not found\" error is propagated (with the rollback failure suppressed) instead of returning {@code false} .",
                 "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.tableExists(ds, \"users\")) { System.out.println(\"Users table exists\"); } else { System.out.println(\"Users table does not exist\"); } } </pre>"
@@ -42442,7 +42435,7 @@
               "returns": "{@code true} if the table exists, {@code false} otherwise.",
               "contract": [
                 "Delimited and case-folded parts are matched case-sensitively; upper- and lower-case table variants are tried only when the driver reports no canonical identifier case).",
-                "If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} (when the driver reports a canonical identifier case, the case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as a keyword) \\u2014 a SQL error from that query that is recognized as a \"table not found\" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.",
+                "If metadata lookup yields no match and all parts satisfy the unquoted identifier policy, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} .",
                 "On PostgreSQL and PostgreSQL-compatible databases (where a failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query runs under a savepoint that is rolled back if the query fails, so an expected \"table not found\" error does not abort the caller's transaction.",
                 "If rolling back to that savepoint fails, the transaction may be unusable, so the \"table not found\" error is propagated (with the rollback failure suppressed) instead of returning {@code false} .",
                 "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.tableExists(connection, \"users\")) { System.out.println(\"Users table exists\"); } else { System.out.println(\"Users table does not exist\"); } } </pre>"
@@ -42527,7 +42520,7 @@
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid."
+                  "condition": "if {@code conn} is {@code null} , {@code tableName} is blank or otherwise invalid, or the table name requires quoting while quoting is disabled."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
@@ -42540,8 +42533,7 @@
                 "Drops the specified table if it exists.",
                 "<p> The method first checks for existence via {@link #tableExists(Connection, String)} and only issues a {@code DROP TABLE} if the table is found.",
                 "If the drop itself fails because the table no longer exists (for example, a concurrent drop), the method returns {@code false} ; any other SQL error is wrapped and rethrown as {@link UncheckedSQLException} .",
-                "The {@code DROP} quotes the name, after folding undelimited parts to the database's canonical identifier case when the driver reports one.",
-                "If that quoted {@code DROP} reports \"table not found\" while the table is still found to exist (for example, when the driver reports no canonical case and only an upper- or lower-case variant matched), an unquoted retry lets the database apply its own case folding."
+                "Generated identifier quoting is disabled: the name is folded to the database's canonical identifier case when reported and emitted without delimiters."
               ],
               "examples": [],
               "see_also": []
@@ -42566,14 +42558,14 @@
                 {
                   "name": "tableName",
                   "type": "String",
-                  "javadoc": "The name of the table that stores lock records; created when absent. Must not be blank.",
+                  "javadoc": "The name of the table that stores lock records; created when absent. Must not be blank. Generated identifier quoting is disabled; use simple undelimited table-name parts.",
                   "nullability": "unspecified"
                 }
               ],
               "throws": [
                 {
                   "type": "java.lang.IllegalArgumentException",
-                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is blank or otherwise invalid."
+                  "condition": "if {@code ds} is {@code null} , or if {@code tableName} is blank, otherwise invalid, or requires quoting."
                 },
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",

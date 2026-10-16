@@ -4477,7 +4477,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>The method performs the following cleanup operations:</p>
      * <ol>
      *   <li>Calls {@code clearParameters()} on the {@code CallableStatement}; a warning is
-     *       logged if it throws {@link SQLException}, and that exception is not propagated</li>
+     *       logged if it throws {@link SQLException} or a {@link RuntimeException}, and that exception is not
+     *       propagated</li>
      *   <li>Delegates to {@code super.closeStatement()}, which restores the statement properties this query
      *       changed (such as the fetch direction) and then closes the statement</li>
      * </ol>
@@ -4490,7 +4491,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
     protected void closeStatement() {
         try {
             cstmt.clearParameters();
-        } catch (final SQLException e) {
+        } catch (final SQLException | RuntimeException e) {
+            // Best-effort cleanup, mirroring JdbcUtil.clearParameters: a RuntimeException from a broken
+            // driver must not escape close() (e.g., out of a try-with-resources block).
             logger.warn(e, "Failed to clear parameters");
         } finally {
             super.closeStatement();

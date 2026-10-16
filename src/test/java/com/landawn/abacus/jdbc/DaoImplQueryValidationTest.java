@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -119,7 +120,73 @@ class DaoImplQueryValidationTest extends TestBase {
                 Arguments.of(NegativeCacheMaxSizeDao.class, UnsupportedOperationException.class, "maxSize"),
                 Arguments.of(ReversedCacheSizeDao.class, UnsupportedOperationException.class, "minSize"),
                 Arguments.of(CachedStreamDao.class, UnsupportedOperationException.class, "not cacheable"),
-                Arguments.of(RefreshWithoutCacheDao.class, UnsupportedOperationException.class, "none of them is annotated with @CacheResult"));
+                Arguments.of(RefreshWithoutCacheDao.class, UnsupportedOperationException.class, "none of them is annotated with @CacheResult"),
+                // op = update/largeUpdate on a plain SELECT used to be ignored: the method ran as a query and returned a column value.
+                Arguments.of(UpdateOperationOnSelectDao.class, UnsupportedOperationException.class,
+                        "The SELECT statement of method: " + UpdateOperationOnSelectDao.class.getName().replace('$', '.')
+                                + ".count is not supported by the specified queryOperation: update"),
+                Arguments.of(LargeUpdateOperationOnSelectDao.class, UnsupportedOperationException.class,
+                        "is not supported by the specified queryOperation: largeUpdate"),
+                Arguments.of(UpdateOperationOnReadOnlyCteDao.class, UnsupportedOperationException.class,
+                        "is not supported by the specified queryOperation: update"),
+                Arguments.of(UpdateOperationOnSelectForUpdateDao.class, UnsupportedOperationException.class,
+                        "is not supported by the specified queryOperation: update"));
+    }
+
+    // A SELECT that may write data keeps running as a query whatever its declared operation, so it is not rejected:
+    // a data-modifying CTE, a DB2/H2 data-change delta table (which SqlParser alone does not recognize) and SELECT ... INTO.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("updateOperationOnSelectsThatMayWrite")
+    void createDao_updateOperationOnSelectThatMayWrite_isNotRejected(final Class<? extends DaoBase> daoType) throws SQLException {
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection connection = mock(Connection.class);
+        final DatabaseMetaData metadata = mock(DatabaseMetaData.class);
+        when(dataSource.getConnection()).thenReturn(connection);
+        when(connection.getMetaData()).thenReturn(metadata);
+        when(metadata.getDatabaseProductName()).thenReturn("H2");
+        when(metadata.getDatabaseProductVersion()).thenReturn("2");
+
+        assertDoesNotThrow(() -> JdbcUtil.createDao(daoType, dataSource));
+    }
+
+    private static Stream<Arguments> updateOperationOnSelectsThatMayWrite() {
+        return Stream.of(Arguments.of(UpdateOperationOnDataModifyingCteDao.class), Arguments.of(UpdateOperationOnDeltaTableDao.class),
+                Arguments.of(UpdateOperationOnSelectIntoDao.class));
+    }
+
+    interface UpdateOperationOnSelectDao extends CrudDao<Record, Long, UpdateOperationOnSelectDao> {
+        @Query(value = "SELECT COUNT(*) FROM validation_record", op = QueryOperation.update)
+        int count() throws SQLException;
+    }
+
+    interface LargeUpdateOperationOnSelectDao extends CrudDao<Record, Long, LargeUpdateOperationOnSelectDao> {
+        @Query(value = "SELECT COUNT(*) FROM validation_record", op = QueryOperation.largeUpdate)
+        long count() throws SQLException;
+    }
+
+    interface UpdateOperationOnReadOnlyCteDao extends CrudDao<Record, Long, UpdateOperationOnReadOnlyCteDao> {
+        @Query(value = "WITH t AS (SELECT id FROM validation_record) SELECT COUNT(*) FROM t", op = QueryOperation.update)
+        int count() throws SQLException;
+    }
+
+    interface UpdateOperationOnSelectForUpdateDao extends CrudDao<Record, Long, UpdateOperationOnSelectForUpdateDao> {
+        @Query(value = "SELECT id FROM validation_record WHERE id = ? FOR UPDATE", op = QueryOperation.update)
+        int lock(long id) throws SQLException;
+    }
+
+    interface UpdateOperationOnDataModifyingCteDao extends CrudDao<Record, Long, UpdateOperationOnDataModifyingCteDao> {
+        @Query(value = "WITH changed AS (UPDATE validation_record SET name = 'x' RETURNING id) SELECT COUNT(*) FROM changed", op = QueryOperation.update)
+        int touch() throws SQLException;
+    }
+
+    interface UpdateOperationOnDeltaTableDao extends CrudDao<Record, Long, UpdateOperationOnDeltaTableDao> {
+        @Query(value = "SELECT COUNT(*) FROM FINAL TABLE (UPDATE validation_record SET name = 'x')", op = QueryOperation.update)
+        int touch() throws SQLException;
+    }
+
+    interface UpdateOperationOnSelectIntoDao extends CrudDao<Record, Long, UpdateOperationOnSelectIntoDao> {
+        @Query(value = "SELECT id INTO validation_archive FROM validation_record", op = QueryOperation.update)
+        int archive() throws SQLException;
     }
 
     interface NegativeCacheLifetimeDao extends NonUpdateCrudDao<Record, Long, NegativeCacheLifetimeDao> {

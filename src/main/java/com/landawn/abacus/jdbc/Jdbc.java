@@ -8013,6 +8013,18 @@ public final class Jdbc {
         public void clear() throws IllegalStateException {
             pool.clear();
         }
+
+        /**
+         * Closes the backing pool: cancels its eviction task, removes its JVM shutdown hook and drops all entries.
+         * Idempotent. Afterwards the cache fails with {@link IllegalStateException} exactly as it does once the pool has
+         * been closed during JVM shutdown (e.g., {@code get} and {@code clear} always throw).
+         *
+         * <p>Package-private: used by the DAO factory to release a cache it created for a DAO proxy that was then
+         * discarded, which nothing else can reference.</p>
+         */
+        void close() {
+            pool.close();
+        }
     }
 
     /**

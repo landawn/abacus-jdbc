@@ -1145,6 +1145,9 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * Refreshes specific properties of multiple entities with a custom batch size.
      * This provides the most control over batch refresh operations.
      *
+     * <p>Loaded rows are matched to the entities by ID; array-typed ID values (e.g. a {@code byte[]} binary
+     * UUID) are matched by content.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<User> cachedUsers = getCachedUsers();   // 8000 cached entities
@@ -1197,26 +1200,32 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         final com.landawn.abacus.util.function.Function<T, ID> idExtractorFunc = DaoUtil.createIdExtractor(idPropNameList, entityInfo);
         // An entity whose single id is null matches no row (as a composite id with a null component doesn't), so it is
         // left unrefreshed; grouping it under a null key used to fail the whole batch with a NullPointerException.
-        final Map<ID, List<T>> idEntityMap = new HashMap<>();
+        // Entities are grouped by DaoUtil.valueKey(id): a single array-typed id (e.g. a byte[] binary UUID) has identity
+        // equals/hashCode, so the loaded rows, which carry their own array instances, never matched and nothing was refreshed.
+        final Map<Object, List<T>> idEntityMap = new HashMap<>();
+        final List<ID> idsToLoad = new ArrayList<>();
 
         for (final T entity : entities) {
             final ID id = idExtractorFunc.apply(entity);
 
             if (id != null) {
-                idEntityMap.computeIfAbsent(id, k -> new ArrayList<>()).add(entity);
+                idEntityMap.computeIfAbsent(DaoUtil.valueKey(id), k -> {
+                    idsToLoad.add(id);
+                    return new ArrayList<>();
+                }).add(entity);
             }
         }
 
         final Collection<String> selectPropNames = DaoUtil.getRefreshSelectPropNames(propNamesToRefresh, idPropNameList);
 
-        final List<T> dbEntities = batchGet(idEntityMap.keySet(), selectPropNames, batchSize);
+        final List<T> dbEntities = batchGet(idsToLoad, selectPropNames, batchSize);
 
         if (N.isEmpty(dbEntities)) {
             return 0;
         } else {
             return dbEntities.stream().mapToInt(dbEntity -> {
                 final ID id = idExtractorFunc.apply(dbEntity);
-                final List<T> matchingEntities = idEntityMap.get(id);
+                final List<T> matchingEntities = idEntityMap.get(DaoUtil.valueKey(id));
 
                 if (N.notEmpty(matchingEntities)) {
                     for (final T entity : matchingEntities) {

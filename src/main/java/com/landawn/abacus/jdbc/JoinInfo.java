@@ -53,6 +53,7 @@ import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.Tuple.Tuple4;
+import com.landawn.abacus.util.Wrapper;
 import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Consumer;
 import com.landawn.abacus.util.function.Function;
@@ -196,6 +197,12 @@ public final class JoinInfo {
      */
     final boolean isManyToManyJoin;
     /**
+     * Whether a join-key property is array-typed (e.g. a {@code byte[]} binary UUID column). Arrays have identity
+     * {@code equals}/{@code hashCode}, so such join keys are matched by content in
+     * {@link #setJoinPropEntities(Collection, Map)}.
+     */
+    private final boolean hasArrayJoinKey;
+    /**
      * Whether join operations are permitted when a source join-key value is {@code null} or its type
      * default; derived from {@code @DaoConfig(allowNullOrDefaultJoinKeys = ...)} on the DAO class.
      */
@@ -269,7 +276,8 @@ public final class JoinInfo {
      *   <li>Validates that the property is not annotated with {@code @Column} (join properties should not be persisted directly)</li>
      *   <li>Checks that the referenced type is a valid entity class</li>
      *   <li>Validates nonempty join column pairs, rejects missing sides or repeated {@code =} separators, and checks type compatibility</li>
-     *   <li>For many-to-many joins, verifies the intermediate entity class exists and is properly configured</li>
+     *   <li>For many-to-many joins, verifies the intermediate entity class exists and is properly configured; it is
+     *       resolved in the entity's package through the entity class's own class loader</li>
      * </ul>
      *
      * <p>This constructor is package-private and intended for internal use. Application code should
@@ -410,20 +418,19 @@ public final class JoinInfo {
 
             final String entityPackageName = ClassUtil.getPackageName(entityClass);
             final String middleEntityClassName = Strings.isEmpty(entityPackageName) ? middleEntity : entityPackageName + "." + middleEntity;
-            Class<?> tmpMiddleEntityClass = null;
+            final Class<?> middleEntityClass;
 
+            // The intermediate class lives in the entity's package, so it is resolved through the entity's class loader.
+            // ClassUtil.forName used abacus-common's loader, which cannot see application classes when the library is
+            // deployed in a parent class loader (e.g. a server's shared library), and caches the class by name in a
+            // static pool. It is not initialized here: only its bean metadata is read. Only a missing class is reported
+            // as not found; any other loading failure (e.g. a LinkageError) propagates as itself.
             try {
-                tmpMiddleEntityClass = ClassUtil.forName(middleEntityClassName);
-            } catch (final Throwable e) {
+                middleEntityClass = Class.forName(middleEntityClassName, false, entityClass.getClassLoader());
+            } catch (final ClassNotFoundException e) {
                 throw new IllegalArgumentException("For many-to-many join, the intermediate entity class is required but not found: " + middleEntityClassName,
                         e);
             }
-
-            if (tmpMiddleEntityClass == null) {
-                throw new IllegalArgumentException("For many-to-many join, the intermediate entity class is required but not found: " + middleEntityClassName);
-            }
-
-            final Class<?> middleEntityClass = tmpMiddleEntityClass;
             final ParserUtil.BeanInfo middleEntityInfo = ParserUtil.getBeanInfo(middleEntityClass);
             final String leftMiddlePropName = left[1].substring(dotIndexInLeft1 + 1);
             final String rightMiddlePropName = right[0].substring(right[0].indexOf('.') + 1);
@@ -882,6 +889,7 @@ public final class JoinInfo {
         }
 
         sourcePropNames = Collections.unmodifiableList(Stream.of(srcPropInfos).map(propInfo -> propInfo.name).toList());
+        hasArrayJoinKey = Stream.of(srcPropInfos).anyMatch(propInfo -> propInfo.clazz.isArray());
     }
 
     /**
@@ -1178,10 +1186,17 @@ public final class JoinInfo {
                     + "or have the framework load join entities via DaoImpl.");
         }
 
+        // Array join keys are grouped by content directly, so each group keeps the encounter order of joinPropEntities. A
+        // null key is passed through unwrapped: groupTo rejects it, as it did before content keys were introduced.
+        final Function<Object, Object> keyExtractor = hasArrayJoinKey ? entity -> {
+            final Object joinKey = referencedEntityKeyExtractor.apply(entity);
+            return joinKey == null ? null : contentJoinKey(joinKey);
+        } : referencedEntityKeyExtractor;
+
         final Map<Object, List<Object>> groupedPropEntities = Stream.of((Collection<Object>) joinPropEntities)
                 .onEach(entity -> N.checkArgNotNull(entity, "An element of 'joinPropEntities' cannot be null"))
-                .groupTo(referencedEntityKeyExtractor);
-        setJoinPropEntities(entities, groupedPropEntities);
+                .groupTo(keyExtractor);
+        assignJoinPropEntities(entities, groupedPropEntities);
     }
 
     /**
@@ -1192,6 +1207,10 @@ public final class JoinInfo {
      * properties, automatically adapting the assignment based on the declared property type. For map
      * properties, only one joined entity is allowed per source key; multiple matches will result in an
      * {@link IllegalArgumentException}.</p>
+     *
+     * <p>Join keys are matched with {@code equals}, except that a join on an array-typed property (e.g. a
+     * {@code byte[]} binary UUID) matches keys by content. The groups of keys with equal content are then merged in the
+     * iteration order of {@code groupedPropEntities}, so an insertion-ordered map keeps the original entity order.</p>
      *
      * <p>A source entity whose extracted join key has no corresponding entry in {@code groupedPropEntities}
      * is treated like an explicitly mapped empty list: the method assigns an empty collection or map,
@@ -1235,12 +1254,26 @@ public final class JoinInfo {
             N.checkArgNotNull(groupedPropEntities, cs.groupedPropEntities);
         }
 
+        // Array join keys (e.g. a byte[] binary UUID column) have identity equals/hashCode: the key of every loaded row is
+        // its own array instance, so no source entity ever matched. Regroup them by content before the lookup.
+        assignJoinPropEntities(entities, hasArrayJoinKey && !entities.isEmpty() ? groupByContentKey(groupedPropEntities) : groupedPropEntities);
+    }
+
+    /**
+     * Assigns the matched join entities to each source entity; see {@link #setJoinPropEntities(Collection, Map)}.
+     *
+     * @param entities the source entities to populate
+     * @param propEntitiesByKey the join entities grouped by join key, or by {@link #contentJoinKey(Object)} when
+     *                          {@link #hasArrayJoinKey} is {@code true}; may be {@code null} only when {@code entities} is empty
+     */
+    private void assignJoinPropEntities(final Collection<?> entities, final Map<Object, List<Object>> propEntitiesByKey)
+            throws IllegalArgumentException, UnsupportedOperationException {
         final boolean isCollectionProp = joinPropInfo.type.isCollection();
         final boolean isMapProp = joinPropInfo.type.isMap();
 
         for (final Object entity : entities) {
             final Object joinKey = srcEntityKeyExtractor.apply(entity);
-            final List<Object> matchedPropEntities = groupedPropEntities.get(joinKey);
+            final List<Object> matchedPropEntities = propEntitiesByKey.get(hasArrayJoinKey ? contentJoinKey(joinKey) : joinKey);
             final List<Object> propEntities = matchedPropEntities == null ? N.emptyList() : matchedPropEntities;
 
             if (isCollectionProp) {
@@ -1271,6 +1304,44 @@ public final class JoinInfo {
                 joinPropInfo.setPropValue(entity, propEntities.isEmpty() ? null : propEntities.get(0));
             }
         }
+    }
+
+    /**
+     * Regroups join entities by {@link #contentJoinKey(Object)}, merging the groups of keys with equal content in the
+     * iteration order of {@code groupedPropEntities}. A {@code null} group is skipped, as
+     * {@link #setJoinPropEntities(Collection, Map)} treats it like a missing key.
+     *
+     * @param groupedPropEntities the join entities grouped by their raw join keys
+     * @return a new map from content keys to new lists of the join entities
+     */
+    private static Map<Object, List<Object>> groupByContentKey(final Map<Object, List<Object>> groupedPropEntities) {
+        final Map<Object, List<Object>> result = N.newHashMap(groupedPropEntities.size());
+
+        for (final Map.Entry<Object, List<Object>> entry : groupedPropEntities.entrySet()) {
+            if (entry.getValue() != null) {
+                result.computeIfAbsent(contentJoinKey(entry.getKey()), k -> new ArrayList<>()).addAll(entry.getValue());
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * Returns a key that compares a join key by content, so that array values (e.g. {@code byte[]} binary UUIDs) are
+     * compared element by element: the single value of a single-column join, or the values of a multi-column
+     * {@code Tuple}/{@code List} key.
+     *
+     * @param joinKey a key produced by {@link #srcEntityKeyExtractor} or {@link #referencedEntityKeyExtractor}; may be {@code null}
+     * @return a key with content-based {@code equals}/{@code hashCode}
+     */
+    private static Object contentJoinKey(final Object joinKey) {
+        if (joinKey instanceof final Tuple<?> tuple) {
+            return Wrapper.of(tuple.toArray());
+        } else if (joinKey instanceof final List<?> keys) {
+            return Wrapper.of(keys.toArray());
+        }
+
+        return Wrapper.of(joinKey);
     }
 
     /**

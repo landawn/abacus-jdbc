@@ -18,5 +18,6 @@ class CallableQueryLifecycleTest extends CallableQueryTestSupport {
         callableQuery.close();
         // No exception should propagate - warning is logged and super.closeStatement() is called
         verify(callableStatement).clearParameters();
+        verify(callableStatement).close();
     }
 }

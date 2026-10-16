@@ -2120,6 +2120,16 @@ public final class DataTransferUtil {
          * Whether the previous record ended with CR, so a directly following LF belongs to that line break.
          */
         private boolean skipLF;
+        /**
+         * The largest buffer capacity, in characters, kept for the next record. A buffer grown beyond it by an unusually long
+         * record is replaced, so that one large record does not pin its memory for the rest of the import.
+         */
+        private static final int MAX_RETAINED_RECORD_CAPACITY = 8192;
+        /**
+         * Buffer reused across records to avoid allocating a new {@code StringBuilder} per CSV row;
+         * the returned record is always a copy made by {@link StringBuilder#toString()}, so no aliasing occurs.
+         */
+        private StringBuilder recordBuilder = new StringBuilder();
 
         /**
          * Creates a record reader over the given reader.
@@ -2160,7 +2170,12 @@ public final class DataTransferUtil {
          * @throws ParsingException if {@code logicalCsv} is {@code true} and the input ends inside a quoted field
          */
         String readRecord(final boolean logicalCsv, final boolean header) throws IOException, ParsingException {
-            final StringBuilder record = new StringBuilder();
+            if (recordBuilder.capacity() > MAX_RETAINED_RECORD_CAPACITY) {
+                recordBuilder = new StringBuilder();
+            }
+
+            final StringBuilder record = recordBuilder;
+            record.setLength(0);
             boolean inQuotes = false;
             boolean afterQuote = false;
             boolean fieldHasContent = false;

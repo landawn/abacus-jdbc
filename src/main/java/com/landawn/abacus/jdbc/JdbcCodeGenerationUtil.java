@@ -660,7 +660,9 @@ public final class JdbcCodeGenerationUtil {
             for (int i = 1; i <= columnCount; i++) {
                 // Prefer the column label: per JDBC it is the SQL alias when one is specified and the column
                 // name otherwise, which is what query-result mapping keys on (see JdbcUtil.getColumnLabels).
-                final String columnName = Strings.isEmpty(rsmd.getColumnLabel(i)) ? rsmd.getColumnName(i) : rsmd.getColumnLabel(i);
+                // Read it once per column: drivers may round-trip to the server per metadata call.
+                final String columnLabel = rsmd.getColumnLabel(i);
+                final String columnName = Strings.isEmpty(columnLabel) ? rsmd.getColumnName(i) : columnLabel;
 
                 final EntityCodeConfig.FieldMapping directFieldMapping = customFieldMappingMap.get(columnName.toLowerCase(Locale.ROOT));
                 final EntityCodeConfig.FieldMapping customFieldMapping = directFieldMapping != null ? directFieldMapping

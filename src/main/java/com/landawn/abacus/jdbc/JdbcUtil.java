@@ -6351,12 +6351,24 @@ public final class JdbcUtil {
         }
 
         final ScanDialect dialect = tran.scanDialect(JdbcUtil::scanDialectOf);
-        final boolean writes = dialect == null
-                ? requiresTransaction(sql, ScanDialect.MYSQL_UNKNOWN_SERVER) || requiresTransaction(sql, ScanDialect.STANDARD)
-                        || requiresTransaction(sql, ScanDialect.POSTGRESQL) || requiresTransaction(sql, ScanDialect.BRACKET_IDENTIFIERS)
-                : requiresTransaction(sql, dialect);
+        final boolean writes = dialect == null ? mayWriteUnderAnyDialect(sql) : requiresTransaction(sql, dialect);
 
         return writes ? tran : null;
+    }
+
+    /**
+     * Returns whether a statement that {@link com.landawn.abacus.query.SqlParser#isSelectQuery(String)} classifies as a
+     * {@code SELECT} may still write data under the rules of any supported dialect: a data-modifying CTE, a data-change delta table
+     * ({@code SELECT ... FROM FINAL TABLE (UPDATE ...)}) or an {@code INTO} clause, read with every interpretation of
+     * quotes, comments and brackets that the dialects differ on. Used when the dialect is unknown and a write must not
+     * be missed.
+     *
+     * @param sql a statement classified as a {@code SELECT}
+     * @return {@code true} if any dialect's reading of {@code sql} writes data
+     */
+    static boolean mayWriteUnderAnyDialect(final String sql) {
+        return requiresTransaction(sql, ScanDialect.MYSQL_UNKNOWN_SERVER) || requiresTransaction(sql, ScanDialect.STANDARD)
+                || requiresTransaction(sql, ScanDialect.POSTGRESQL) || requiresTransaction(sql, ScanDialect.BRACKET_IDENTIFIERS);
     }
 
     /**
@@ -14817,6 +14829,14 @@ public final class JdbcUtil {
      * call for a different source. When sharing a proxy across threads, its configured handlers, custom
      * extractors, cache, and {@code DataSource} must also support concurrent use.</p>
      *
+     * <p>Cached proxies are never evicted. Each distinct combination of interface, target table name and the
+     * identities of the {@code DataSource} and other configuration objects ({@code Dsl}, {@code SqlMapper},
+     * {@code DaoCache}, {@code Executor}) adds an entry that stays cached, together with everything the proxy
+     * references (including its {@code DataSource}, even after that is closed, and its DAO cache), for as long as
+     * these classes are loaded. So do not create DAOs for short-lived {@code DataSource}s (for example one created
+     * per request or per tenant on demand), and pass the same configuration instances to every call instead of
+     * new ones.</p>
+     *
      * <p>Interfaces that inherit fewer operations require fewer invokers to initialize. When startup
      * cost matters, measure DAO creation with the application's actual interfaces and configuration,
      * and defer creation of optional DAOs until they are needed.</p>
@@ -15322,7 +15342,8 @@ public final class JdbcUtil {
     static String createCacheKey(final String tableName, final String fullClassMethodName, final Object[] args, final Logger daoLogger) {
         String paramKey = null;
 
-        final Object[] cacheKeyArgs = args == null ? new Object[0] : args;
+        // Reuse the shared empty array: this runs on every cached DAO call, and no-arg DAO methods are common.
+        final Object[] cacheKeyArgs = args == null ? N.EMPTY_OBJECT_ARRAY : args;
 
         if (kryoParser != null) {
             try {

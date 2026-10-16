@@ -74,6 +74,21 @@ class JdbcDaoCacheTest extends JdbcTestSupport {
         assertThrows(IllegalArgumentException.class, () -> new Jdbc.DaoCacheByMap(-1));
     }
 
+    // DefaultDaoCache.close() (used by createDao to release the cache of a discarded proxy) closes the backing pool:
+    // it is idempotent and the cache rejects further use like a pool closed during JVM shutdown. Removal of the pool's
+    // shutdown hook is asserted by DaoImplReviewFixTest's forked probe.
+    @Test
+    public void testDefaultDaoCacheCloseReleasesBackingPool() {
+        final Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(10, 1000);
+        assertTrue(cache.put("method#users#1", "cached", 60_000, 60_000, null, null, null));
+
+        cache.close();
+        cache.close();
+
+        assertThrows(IllegalStateException.class, () -> cache.get("method#users#1", null, null, null));
+        assertThrows(IllegalStateException.class, cache::clear);
+    }
+
     @Test
     public void testDaoCacheLifetimeValidationPrecedesNullResultShortCircuit() {
         final Jdbc.DaoCache pooled = Jdbc.DaoCache.create(2, 0);

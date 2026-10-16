@@ -1,7 +1,7 @@
 # abacus-jdbc API Index (v4.9.3)
 - Build: unknown
 - Java: 21
-- Generated: 2026-10-14
+- Generated: 2026-10-15
 
 ## Packages
 - com.landawn.abacus.jdbc — Core JDBC execution, mapping, transaction, data-transfer, and code-generation APIs.
@@ -3066,7 +3066,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
 - **Summary:** Closes this query instance and releases any resources associated with it.
 - **Contract:**
   - If the instance is already closed, this method does nothing (idempotent).
-  - </p> <p> If statement cleanup and a close handler both throw unchecked exceptions or errors, the statement cleanup failure is propagated with the handler failure suppressed.
+  - If statement cleanup still fails (for example with an {@link Error} ) and a close handler also throws, the statement cleanup failure is propagated with the handler failure suppressed.
   - } finally { if (query != null) { query.close(); } } // Or use try-with-resources: try (AbstractQuery<?, ?> autoClosingQuery = JdbcUtil.prepareQuery(conn, sql)) { // Use autoClosingQuery...
 - **Parameters:**
   - (none)
@@ -4919,7 +4919,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `tableName` (`String`) — the name of the table to copy
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example because the table does not exist in the source database); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for example because the table does not exist in the target database)
@@ -4932,7 +4932,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `targetTableName` (`String`) — the name of the table in the target data source
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for example because {@code targetTableName} does not exist)
@@ -4946,7 +4946,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `batchSize` (`int`) — the number of rows to copy in each batch (must be greater than 0)
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for example because {@code targetTableName} does not exist)
@@ -4962,7 +4962,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `columnNames` (`Collection<String>`) — the collection of column names to copy; {@code null} or empty copies all columns
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any specified column doesn't exist
@@ -4977,7 +4977,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `batchSize` (`int`) — the number of rows to copy in each batch (must be greater than 0)
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
@@ -5050,7 +5050,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `tableName` (`String`) — the name of the table to copy data from and to
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if database product or table metadata lookup fails.
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
 - **Signature:** `public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName) throws IllegalArgumentException, UncheckedSQLException, SQLException`
@@ -5062,7 +5062,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `targetTableName` (`String`) — the name of the target table to copy data to
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if database product or table metadata lookup fails.
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
 - **Signature:** `@Deprecated public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException`
@@ -5075,7 +5075,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `batchSize` (`int`) — the number of rows to copy in each batch (must be greater than 0)
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if database product or table metadata lookup fails.
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
 - **Signature:** `@Deprecated public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName, final Collection<String> columnNames) throws IllegalArgumentException, UncheckedSQLException, SQLException`
@@ -5090,7 +5090,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `columnNames` (`Collection<String>`) — the collection of column names to be copied; {@code null} or empty copies all columns
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if database product or table metadata lookup fails.
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any specified column doesn't exist
 - **Signature:** `@Deprecated public static long copy(final Connection sourceConn, final Connection targetConn, final String sourceTableName, final String targetTableName, final Collection<String> columnNames, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException`
@@ -5104,7 +5104,7 @@ Utility class for database import/export operations, CSV processing, and data co
   - `batchSize` (`int`) — the number of rows to be copied in each batch (must be greater than 0)
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or a connection is {@code null} , or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if database product or table metadata lookup fails.
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
 - **Signature:** `public static long copy(final Connection sourceConn, final String selectSql, final Connection targetConn, final String insertSql) throws IllegalArgumentException, SQLException, UncheckedSQLException`
@@ -5295,7 +5295,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Signature:** `@Beta public static CopyTableFromDataSource copyTable(final javax.sql.DataSource sourceDataSource, final String sourceTableName) throws IllegalArgumentException`
 - **Summary:** Creates a fluent builder for copying a whole table (or selected columns) from a source {@link javax.sql.DataSource} to a target table, generating the SELECT and INSERT SQL from the table schema.
 - **Contract:**
-  - </p> <p> When copying all columns, their source order and any case-sensitive spelling requiring identifier quotes are preserved in the generated target INSERT.
+  - </p> <p> When copying all columns, their source order is preserved in the target INSERT.
 - **Parameters:**
   - `sourceDataSource` (`javax.sql.DataSource`) — the data source to read from (must not be {@code null} )
   - `sourceTableName` (`String`) — the name of the source table (must not be blank)
@@ -5306,7 +5306,7 @@ Utility class for database import/export operations, CSV processing, and data co
 - **Signature:** `@Beta public static CopyTableFromConnection copyTable(final Connection sourceConn, final String sourceTableName) throws IllegalArgumentException`
 - **Summary:** Creates a fluent builder for copying a whole table (or selected columns) from a source {@link Connection} to a target table on another {@link Connection} , generating the SELECT and INSERT SQL from the table schema.
 - **Contract:**
-  - <p> When copying all columns, their source order and any case-sensitive spelling requiring identifier quotes are preserved in the generated target INSERT.
+  - <p> When copying all columns, their source order is preserved in the target INSERT.
 - **Parameters:**
   - `sourceConn` (`Connection`) — the connection to read from (must not be {@code null} )
   - `sourceTableName` (`String`) — the name of the source table (must not be blank)
@@ -5723,7 +5723,7 @@ A fluent builder that copies a table (or selected columns) between two {@link ja
 - **Contract:**
   - When {@code null} or empty (the default), all columns are copied.
 - **Parameters:**
-  - `columns` (`Collection<String>`) — the column names to copy. The supplied collection is copied.
+  - `columns` (`Collection<String>`) — the undelimited column names to copy; validated under the disabled quoting policy when {@code to(...)} runs. The supplied collection is copied.
 - **Returns:** this builder
 ##### batchSize(...) -> CopyTableFromDataSource
 - **Signature:** `public CopyTableFromDataSource batchSize(final int batchSize)`
@@ -5739,7 +5739,7 @@ A fluent builder that copies a table (or selected columns) between two {@link ja
   - `targetTableName` (`String`) — the name of the target table
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code targetDataSource} is {@code null} , {@code batchSize <= 0} , or a table/selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code targetDataSource} is {@code null} , {@code batchSize <= 0} , or a table/selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the target connection
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
@@ -5763,7 +5763,7 @@ A fluent builder that copies a table (or selected columns) between two {@link Co
 - **Contract:**
   - When {@code null} or empty (the default), all columns are copied.
 - **Parameters:**
-  - `columns` (`Collection<String>`) — the column names to copy. The supplied collection is copied.
+  - `columns` (`Collection<String>`) — the undelimited column names to copy; validated under the disabled quoting policy when {@code to(...)} runs. The supplied collection is copied.
 - **Returns:** this builder
 ##### batchSize(...) -> CopyTableFromConnection
 - **Signature:** `public CopyTableFromConnection batchSize(final int batchSize)`
@@ -5779,7 +5779,7 @@ A fluent builder that copies a table (or selected columns) between two {@link Co
   - `targetTableName` (`String`) — the name of the target table
 - **Returns:** the number of rows copied
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code targetConn} is {@code null} , {@code batchSize <= 0} , or a table/selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code targetConn} is {@code null} , {@code batchSize <= 0} , or a table/selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if database product or table metadata lookup fails.
   - `java.sql.SQLException` — if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
 
@@ -8139,7 +8139,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — the name of the table for which to generate the entity class
 - **Returns:** the generated entity class as a string containing the complete Java source code
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , {@code tableName} is {@code null} , blank, or malformed, or the derived class or field names are invalid or collide
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , {@code tableName} is {@code null} , blank, or malformed, or the derived class or field names are invalid or collide. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, querying rows or metadata, or closing JDBC resources fails
 - **Signature:** `public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config) throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException`
 - **Summary:** Generates an entity class for the specified table with custom configuration.
@@ -8149,7 +8149,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `config` (`EntityCodeConfig`) — the configuration for customizing the generated entity class. If {@code null} , default configuration is used
 - **Returns:** the generated entity class as a string containing the complete Java source code
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} , blank, or malformed, or the configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} , blank, or malformed, or the configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, querying rows or metadata, or closing JDBC resources fails
   - `com.landawn.abacus.exception.UncheckedIOException` — if {@code config.srcDir} is set and writing the generated source file fails
 - **Signature:** `public static String generateEntityClass(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException`
@@ -8161,7 +8161,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — the name of the table for which to generate the entity class
 - **Returns:** the generated entity class as a string containing the complete Java source code
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , {@code tableName} is {@code null} , blank, or malformed, or the derived class or field names are invalid or collide
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , {@code tableName} is {@code null} , blank, or malformed, or the derived class or field names are invalid or collide. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database product metadata, querying rows or metadata, or closing the query's JDBC resources fails
 - **Signature:** `public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config) throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException`
 - **Summary:** Generates an entity class for the specified table using an existing connection and custom configuration.
@@ -8171,7 +8171,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `config` (`EntityCodeConfig`) — the configuration for customizing the generated entity class. If {@code null} , default configuration is used
 - **Returns:** the generated entity class as a string containing the complete Java source code
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} , blank, or malformed, or the configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} , blank, or malformed, or the configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database product metadata, querying rows or metadata, or closing the query's JDBC resources fails
   - `com.landawn.abacus.exception.UncheckedIOException` — if {@code config.srcDir} is set and writing the generated source file fails
 ##### generateEntityClassByQuery(...) -> String
@@ -8222,25 +8222,21 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 ##### generateSelectSql(...) -> String
 - **Signature:** `public static String generateSelectSql(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a SELECT SQL statement for the specified table.
-- **Contract:**
-  - All column names are quoted to preserve their exact metadata spelling and support reserved names with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
 - **Parameters:**
   - `ds` (`DataSource`) — the data source to connect to the database
   - `tableName` (`String`) — the name of the table for which to generate the SELECT statement
 - **Returns:** a SELECT SQL statement string with all columns from the table
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateSelectSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a SELECT SQL statement for the specified table using an existing connection.
-- **Contract:**
-  - All column names are quoted to preserve their exact metadata spelling and support reserved names, with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the SELECT statement
 - **Returns:** a SELECT SQL statement string with all columns from the table
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **Signature:** `public static String generateSelectSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a SELECT SQL statement for the specified table, excluding certain columns and applying a WHERE clause.
@@ -8251,7 +8247,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `whereClause` (`String`) — an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword); ignored when {@code null} or blank
 - **Returns:** a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateSelectSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a SELECT SQL statement for the specified table using an existing connection, excluding certain columns and applying a WHERE clause.
@@ -8262,30 +8258,26 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `whereClause` (`String`) — an optional WHERE clause to append to the SELECT statement (without the "WHERE" keyword); ignored when {@code null} or blank
 - **Returns:** a SELECT SQL statement string with specified columns excluded and an optional WHERE clause
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the SELECT statement. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 ##### generateInsertSql(...) -> String
 - **Signature:** `public static String generateInsertSql(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates an INSERT SQL statement for the specified table.
-- **Contract:**
-  - All column names are quoted to preserve their exact metadata spelling and support reserved names with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
 - **Parameters:**
   - `ds` (`DataSource`) — the data source to connect to the database
   - `tableName` (`String`) — the name of the table for which to generate the INSERT statement
 - **Returns:** an INSERT SQL statement string with positional parameters for all columns
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateInsertSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates an INSERT SQL statement for the specified table using an existing connection.
-- **Contract:**
-  - All column names are quoted to preserve their exact metadata spelling and support reserved names with the connection's identifier quote string (brackets on SQL Server/ASE; unquoted if the driver reports no quoting support).
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the INSERT statement
 - **Returns:** an INSERT SQL statement string with positional parameters for all columns
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , if {@code tableName} is {@code null} or blank, or if the table has no columns. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **Signature:** `public static String generateInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates an INSERT SQL statement for the specified table, excluding certain columns.
@@ -8295,7 +8287,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `excludedColumnNames` (`Collection<String>`) — a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
 - **Returns:** an INSERT SQL statement string with positional parameters for all included columns
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates an INSERT SQL statement for the specified table, excluding certain columns.
@@ -8305,7 +8297,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `excludedColumnNames` (`Collection<String>`) — a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
 - **Returns:** an INSERT SQL statement string with positional parameters for all included columns
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or if all columns are excluded leaving no columns for the INSERT statement. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **See also:** #generateInsertSql(Connection, String), #generateInsertSql(DataSource, String, Collection), #generateNamedInsertSql(Connection, String, Collection)
 ##### generateNamedInsertSql(...) -> String
@@ -8316,7 +8308,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — the name of the table for which to generate the named INSERT statement
 - **Returns:** an INSERT SQL statement string with named parameters based on camelCase column names
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateNamedInsertSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a named INSERT SQL statement for the specified table using an existing connection.
@@ -8325,7 +8317,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — the name of the table for which to generate the named INSERT statement
 - **Returns:** an INSERT SQL statement string with named parameters based on camelCase column names
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **Signature:** `public static String generateNamedInsertSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a named INSERT SQL statement for the specified table, excluding certain columns.
@@ -8335,7 +8327,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `excludedColumnNames` (`Collection<String>`) — a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
 - **Returns:** an INSERT SQL statement string with named parameters for all included columns
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, all columns are excluded, or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, all columns are excluded, or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateNamedInsertSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a named INSERT SQL statement for the specified table using an existing connection, excluding certain columns.
@@ -8345,7 +8337,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `excludedColumnNames` (`Collection<String>`) — a collection of column names to exclude from the INSERT statement. Names are matched after camelCase normalization, so either the raw column name or its camelCase form can be supplied. Can be {@code null} or empty to include all columns
 - **Returns:** an INSERT SQL statement string with named parameters for all included columns
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, all columns are excluded, or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, all columns are excluded, or two included column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **See also:** #generateNamedInsertSql(Connection, String), #generateNamedInsertSql(DataSource, String, Collection), #generateInsertSql(Connection, String, Collection)
 ##### generateUpdateSql(...) -> String
@@ -8359,7 +8351,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — the name of the table for which to generate the UPDATE statement
 - **Returns:** an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateUpdateSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table using an existing connection.
@@ -8370,27 +8362,27 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — the name of the table for which to generate the UPDATE statement
 - **Returns:** an UPDATE SQL statement string with positional parameters for all columns (no WHERE clause)
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, or the table has no columns for the SET clause. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **Signature:** `public static String generateUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
 - **Parameters:**
   - `ds` (`DataSource`) — the data source to connect to the database
   - `tableName` (`String`) — the name of the table for which to generate the UPDATE statement
-  - `keyColumnName` (`String`) — the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting
+  - `keyColumnName` (`String`) — the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the metadata spelling without delimiters
 - **Returns:** an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateUpdateSql(final Connection conn, final String tableName, final String keyColumnName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the UPDATE statement
-  - `keyColumnName` (`String`) — the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting
+  - `keyColumnName` (`String`) — the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the metadata spelling without delimiters
 - **Returns:** an UPDATE SQL statement string with positional parameters for the SET columns (all columns except the key column) and a WHERE clause on the key column
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, or no columns remain for the SET clause. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **Signature:** `public static String generateUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates an UPDATE SQL statement for the specified table through a data source, excluding certain columns and applying WHERE conditions with an optional custom WHERE clause.
@@ -8402,7 +8394,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `whereClause` (`String`) — an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
 - **Returns:** an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **See also:** #generateUpdateSql(Connection, String, String), #generateUpdateSql(Connection, String, Collection, Collection, String), #generateNamedUpdateSql(DataSource, String, Collection, Collection, String)
 - **Signature:** `public static String generateUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException`
@@ -8415,7 +8407,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `whereClause` (`String`) — an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
 - **Returns:** an UPDATE SQL statement string with positional parameters for SET clause and WHERE conditions
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, or no columns remain for the SET clause after exclusions. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **See also:** #generateUpdateSql(Connection, String, String), #generateUpdateSql(DataSource, String, Collection, Collection, String), #generateNamedUpdateSql(Connection, String, Collection, Collection, String)
 ##### generateNamedUpdateSql(...) -> String
@@ -8429,7 +8421,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — the name of the table for which to generate the named UPDATE statement
 - **Returns:** an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table using an existing connection.
@@ -8440,27 +8432,27 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `tableName` (`String`) — the name of the table for which to generate the named UPDATE statement
 - **Returns:** an UPDATE SQL statement string with named parameters based on camelCase column names (no WHERE clause)
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, the table has no columns, or two column names map to the same (or an invalid) named parameter. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **Signature:** `public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final String keyColumnName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column.
 - **Parameters:**
   - `ds` (`DataSource`) — the data source to connect to the database
   - `tableName` (`String`) — the name of the table for which to generate the named UPDATE statement
-  - `keyColumnName` (`String`) — the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting
+  - `keyColumnName` (`String`) — the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the metadata spelling without delimiters
 - **Returns:** an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName, final String keyColumnName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table with a WHERE clause based on a single column using an existing connection.
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `tableName` (`String`) — the name of the table for which to generate the named UPDATE statement
-  - `keyColumnName` (`String`) — the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the actual metadata name and dialect quoting
+  - `keyColumnName` (`String`) — the database column name for the WHERE clause, either in its metadata form (for example, {@code user_id} ) or its unambiguous camel-case form ( {@code userId} ); the generated SQL uses the metadata spelling without delimiters
 - **Returns:** an UPDATE SQL statement string with named parameters and a WHERE clause based on camelCase column names
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if either name is {@code null} or blank, the key column is missing or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **Signature:** `public static String generateNamedUpdateSql(final DataSource ds, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Generates a named UPDATE SQL statement for the specified table through a data source, excluding certain key columns and applying WHERE conditions with an optional custom WHERE clause.
@@ -8472,7 +8464,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `whereClause` (`String`) — an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
 - **Returns:** an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening the connection, reading database or column metadata, querying the table, or closing JDBC resources fails
 - **See also:** #generateNamedUpdateSql(Connection, String, String), #generateNamedUpdateSql(Connection, String, Collection, Collection, String), #generateUpdateSql(DataSource, String, Collection, Collection, String)
 - **Signature:** `public static String generateNamedUpdateSql(final Connection conn, final String tableName, final Collection<String> excludedColumnNames, final Collection<String> keyColumnNames, final String whereClause) throws IllegalArgumentException, UncheckedSQLException`
@@ -8485,7 +8477,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `whereClause` (`String`) — an optional additional WHERE condition (without the "WHERE" keyword), grouped in parentheses when combined with key columns; ignored when {@code null} or blank
 - **Returns:** an UPDATE SQL statement string with named parameters for SET clause and WHERE conditions
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names, blank column labels, or a {@code null} or blank database product name reported by the driver.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , or if {@code tableName} is {@code null} or blank, a key column is blank, missing, or ambiguous, no columns remain for the SET clause, or generated named parameters are invalid or collide. This also applies to malformed qualified table names or blank column labels. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading database or column metadata, querying the table, or closing the query's JDBC resources fails
 - **See also:** #generateNamedUpdateSql(Connection, String, String), #generateNamedUpdateSql(DataSource, String, Collection, Collection, String), #generateUpdateSql(Connection, String, Collection, Collection, String)
 ##### convertInsertSqlToUpdateSql(...) -> String
@@ -8496,13 +8488,14 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `insertSql` (`String`) — the INSERT SQL statement to convert
 - **Returns:** an UPDATE SQL statement derived from the INSERT statement
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection from {@code ds} , or reading its database product metadata, fails while resolving the database product info
 - **Signature:** `@Beta public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException`
 - **Summary:** Converts an INSERT SQL statement to an UPDATE SQL statement with an optional WHERE clause.
 - **Contract:**
   - </li> <li> Column and value counts must match or conversion fails.
+  - Identifier quoting is disabled, so each table-name part and column name must be a simple undelimited name.
   - </li> <li> For MySQL/MariaDB, {@code #} also starts a line comment, a {@code --} line comment must be followed by whitespace or a control character, and block comments do not nest.
   - </li> <li> The WHERE clause is appended only when {@code whereClause} is not {@code null} or blank.
 - **Parameters:**
@@ -8511,7 +8504,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
   - `whereClause` (`String`) — the WHERE clause to append (without the {@code WHERE} keyword). Ignored when {@code null} or blank.
 - **Returns:** an UPDATE SQL statement derived from the INSERT statement with the specified WHERE clause
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection from {@code ds} , or reading its database product metadata, fails while resolving the database product info
 
@@ -9454,7 +9447,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Summary:** Returns an ordered list of column names for a specified table.
 - **Contract:**
   - <p> This method first consults {@link DatabaseMetaData#getColumns} (trying the connection's current schema \\u2014 and, for an unqualified name, all schemas \\u2014 with the table name as supplied, and upper- and lower-case variants only when the driver reports no canonical identifier case).
-  - If the metadata lookup yields no match and all name parts are simple identifiers (letters, digits, {@code _} and {@code $} ), it falls back to running an empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column names from the result set metadata (when the driver reports a canonical identifier case, the case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as a keyword); quoted or otherwise exotic names have no such fallback.
+  - If the metadata lookup yields no match and all name parts satisfy the unquoted identifier policy, it falls back to running an empty-result query of the form {@code SELECT * FROM <table> WHERE 1 > 2} to extract column names from the result set metadata.
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use.
   - `tableName` (`String`) — The name of the table for which to retrieve column names.
@@ -10699,7 +10692,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Summary:** Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource} .
 - **Contract:**
   - Delimited and case-folded parts are matched case-sensitively; upper- and lower-case table variants are tried only when the driver reports no canonical identifier case).
-  - If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} (when the driver reports a canonical identifier case, the case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as a keyword) \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
+  - If metadata lookup yields no match and all parts satisfy the unquoted identifier policy, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} .
   - On PostgreSQL and PostgreSQL-compatible databases (where a failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query runs under a savepoint that is rolled back if the query fails, so an expected "table not found" error does not abort the caller's transaction.
   - If rolling back to that savepoint fails, the transaction may be unusable, so the "table not found" error is propagated (with the rollback failure suppressed) instead of returning {@code false} .
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.tableExists(ds, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
@@ -10716,7 +10709,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Summary:** Checks whether a table exists on the given {@link Connection} .
 - **Contract:**
   - Delimited and case-folded parts are matched case-sensitively; upper- and lower-case table variants are tried only when the driver reports no canonical identifier case).
-  - If metadata lookup yields no match and all parts are unquoted simple identifiers, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} (when the driver reports a canonical identifier case, the case-folded name parts are quoted in it, so a reserved word such as {@code order} or {@code user} is not parsed as a keyword) \\u2014 a SQL error from that query that is recognized as a "table not found" error (by SQLState, vendor error code, or message) returns {@code false} ; any other SQL error is propagated.
+  - If metadata lookup yields no match and all parts satisfy the unquoted identifier policy, the method falls back to executing {@code SELECT 1 FROM <table> WHERE 1 > 2} .
   - On PostgreSQL and PostgreSQL-compatible databases (where a failed statement aborts the enclosing transaction), when the connection has auto-commit disabled, the fallback query runs under a savepoint that is rolled back if the query fails, so an expected "table not found" error does not abort the caller's transaction.
   - If rolling back to that savepoint fails, the transaction may be unusable, so the "table not found" error is propagated (with the rollback failure suppressed) instead of returning {@code false} .
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.tableExists(connection, "users")) { System.out.println("Users table exists"); } else { System.out.println("Users table does not exist"); } } </pre>
@@ -10749,14 +10742,13 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - Drops the specified table if it exists.
   - <p> The method first checks for existence via {@link #tableExists(Connection, String)} and only issues a {@code DROP TABLE} if the table is found.
   - If the drop itself fails because the table no longer exists (for example, a concurrent drop), the method returns {@code false} ; any other SQL error is wrapped and rethrown as {@link UncheckedSQLException} .
-  - The {@code DROP} quotes the name, after folding undelimited parts to the database's canonical identifier case when the driver reports one.
-  - If that quoted {@code DROP} reports "table not found" while the table is still found to exist (for example, when the driver reports no canonical case and only an upper- or lower-case variant matched), an unquoted retry lets the database apply its own case folding.
+  - Generated identifier quoting is disabled: the name is folded to the database's canonical identifier case when reported and emitted without delimiters.
 - **Parameters:**
   - `conn` (`Connection`) — The database {@link Connection} to use for dropping the table.
   - `tableName` (`String`) — The name of the table to drop (optionally qualified); must not be blank.
 - **Returns:** {@code true} if the table was dropped by this call; {@code false} if the table did not exist (either at the time of the existence check or by the time the {@code DROP} executed).
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} or {@code tableName} is blank or otherwise invalid.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , {@code tableName} is blank or otherwise invalid, or the table name requires quoting while quoting is disabled.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if reading the connection's identifier metadata or checking whether the table exists fails, or the {@code DROP} fails with an error other than "table not found".
 ##### createDBLock(...) -> DBLock
 - **Signature:** `public static DBLock createDBLock(final javax.sql.DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, RejectedExecutionException`
@@ -10768,10 +10760,10 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code DBLock dbLock = JdbcUtil.createDBLock(dataSource, "distributed_locks"); try { String lockCode = dbLock.tryLock("job_processor"); if (lockCode != null) { try { // Perform exclusive operation } finally { dbLock.unlock("job_processor", lockCode); } } } finally { dbLock.close(); } } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to use for acquiring connections; must not be {@code null} .
-  - `tableName` (`String`) — The name of the table that stores lock records; created when absent. Must not be blank.
+  - `tableName` (`String`) — The name of the table that stores lock records; created when absent. Must not be blank. Generated identifier quoting is disabled; use simple undelimited table-name parts.
 - **Returns:** A new {@link DBLock} instance bound to {@code ds} and {@code tableName} .
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is blank or otherwise invalid.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is blank, otherwise invalid, or requires quoting.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if opening or configuring the initialization connection, reading metadata, creating or querying the lock table, deleting stale locks, or closing the initialization connection fails.
   - `java.lang.IllegalStateException` — if the lock table still does not exist after the {@code CREATE TABLE} attempt.
   - `java.util.concurrent.RejectedExecutionException` — if the shared scheduler refuses the periodic lock-refresh task.

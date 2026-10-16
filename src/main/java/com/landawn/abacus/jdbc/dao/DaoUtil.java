@@ -382,6 +382,19 @@ public final class DaoUtil {
     }
 
     /**
+     * Returns a hash key that compares a single key value by content. An array value (e.g. a {@code byte[]} binary UUID
+     * id or unique key) has identity {@code equals}/{@code hashCode}, so equal values read from different rows never match
+     * in a {@code HashMap}; it is wrapped in an {@link IdValuesKey}. Any other value, including a composite id's
+     * {@code EntityId} (which already compares its values by content), is returned unchanged.
+     *
+     * @param value the key value; may be {@code null}
+     * @return a key with content-based {@code equals}/{@code hashCode} for {@code value}
+     */
+    static Object valueKey(final Object value) {
+        return value != null && value.getClass().isArray() ? new IdValuesKey(new Object[] { value }) : value;
+    }
+
+    /**
      * Captures the current ID property values of the specified entities and returns an action that puts them back.
      * <p>
      * An insert writes generated IDs onto its entities as soon as its statements run. When it runs inside a

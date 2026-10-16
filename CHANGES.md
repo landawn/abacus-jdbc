@@ -1,5 +1,6 @@
 ## 4.9.3
-* Breaking: `JdbcCodeGenerationUtil.generate*Sql`, and `DataTransferUtil` copies whose column list is read from table metadata, now delimit every column name with the connection's identifier quote string (brackets on SQL Server/ASE), e.g. `SELECT "id", "name" FROM t`; names are left unquoted only when the driver reports no quoting support
+* Breaking: generated SQL no longer quotes identifiers. `JdbcCodeGenerationUtil.generate*Sql`, `DataTransferUtil` copies, `JdbcUtil.dropTableIfExists` and `JdbcUtil.createDBLock` emit only simple, undelimited table and column names; a name that would need quoting (explicitly delimited, containing other characters, a common reserved word such as `order` or `user`, or a metadata name whose letter case the database would fold) is rejected with `IllegalArgumentException`, where 4.9.2 quoted delimited and non-simple names
+* `JdbcUtil.tableExists` and `JdbcUtil.getColumnNames` look such names up through JDBC metadata only, without their fallback query
 * Repeated named stream/reader parameters are buffered and bound with independent copies
 * Improvements and bug fixes
 

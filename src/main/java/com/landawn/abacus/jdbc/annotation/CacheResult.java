@@ -97,7 +97,7 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <ul>
  *   <li>Time-based: Entries expire after {@code maxLiveTimeMillis} milliseconds</li>
  *   <li>Idle-based: Entries expire if not accessed for {@code maxIdleTimeMillis} milliseconds</li>
- *   <li>Size-based: Only cache results within size bounds (for collections)</li>
+ *   <li>Size-based: Only cache results within size bounds (for collections, object arrays, maps and datasets)</li>
  *   <li>Manual: Use {@link RefreshCache} annotation on update methods</li>
  * </ul>
  *
@@ -193,8 +193,10 @@ public @interface CacheResult {
     /**
      * Specifies the minimum size requirement for caching results.
      * Results with fewer elements than this value will not be cached.
-     * The size bound applies only to {@code Collection} and {@code Dataset} results (compared against
-     * their element count); any other (scalar) result is cached regardless of {@code minSize}.
+     * The size bound applies to {@code Collection} and object-array results (their element count),
+     * {@code Map} results (their entry count) and {@code Dataset} results (their row count); any other
+     * single-valued result, including a primitive array such as a {@code byte[]} column value, is cached
+     * regardless of {@code minSize}.
      *
      * <p>This is useful to avoid caching overhead for very small result sets
      * that are cheap to query.</p>
@@ -214,8 +216,10 @@ public @interface CacheResult {
     /**
      * Specifies the maximum size limit for caching results.
      * Results with more elements than this value will not be cached.
-     * The size bound applies only to {@code Collection} and {@code Dataset} results (compared against
-     * their element count); any other (scalar) result is cached regardless of {@code maxSize}.
+     * The size bound applies to {@code Collection} and object-array results (their element count),
+     * {@code Map} results (their entry count) and {@code Dataset} results (their row count); any other
+     * single-valued result, including a primitive array such as a {@code byte[]} column value, is cached
+     * regardless of {@code maxSize}.
      *
      * <p>This prevents memory issues from caching very large result sets
      * and ensures predictable memory usage.</p>
@@ -263,7 +267,8 @@ public @interface CacheResult {
      * Custom concrete sorted classes reached by this comparator-preserving copy retain their constructor-created
      * comparator and state; the copied contents are checked for changes in size, comparison keys and order.
      * Plain {@code ImmutableSet}, {@code ImmutableMap} and {@code ImmutableBiMap} copies keep the source's
-     * iteration order. Natural-order container trees without a custom comparator or one of those wrappers follow
+     * iteration order, and a {@code null} map key in such a container tree stays a {@code null} key. Natural-order
+     * container trees without a custom comparator, one of those wrappers or a {@code null} map key follow
      * the ordinary JSON parser path. JSON does not preserve shared object identity
      * or cycles. Shared comparator state and bean-property copying retain the limitations described in
      * {@link CacheSerialization#JSON}.</p>

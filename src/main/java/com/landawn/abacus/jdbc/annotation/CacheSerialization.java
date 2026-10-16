@@ -99,6 +99,10 @@ public enum CacheSerialization {
      * are not copied beyond the parser's existing behavior. Natural-order container trees without a custom
      * comparator or one of those plain immutable wrappers follow the ordinary JSON parser path.</p>
      *
+     * <p>JSON writes map keys as strings. A {@code null} key of a map reached through the result's array,
+     * collection, map or optional/nullable container tree is copied as a {@code null} key, rather than read back
+     * as the String {@code "null"} (or rejected by a non-String key type such as {@code Integer}).</p>
+     *
      * <p>Bean properties and other values handled directly by the JSON parser retain that parser's existing
      * behavior, including its limitations for custom comparators inside bean properties. JSON does not
      * preserve shared object identity, and cyclic result graphs are not supported. Use {@link #KRYO} when

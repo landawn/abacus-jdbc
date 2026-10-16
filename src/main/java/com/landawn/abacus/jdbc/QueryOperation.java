@@ -299,6 +299,10 @@ public enum QueryOperation {
      * always dispatched to the dedicated insert path, which returns the generated key(s) (or
      * {@code void}), not an affected-row count — this operation does not apply to them.</p>
      *
+     * <p>A {@code @Query} method that declares this operation on a plain {@code SELECT} fails DAO creation with
+     * {@code UnsupportedOperationException}. A {@code SELECT} that may write data (a data-modifying CTE, a data-change
+     * delta table or {@code SELECT ... INTO}) is not rejected; it is executed as a query.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "UPDATE users SET active = false WHERE last_login < ?", op = QueryOperation.update)
@@ -321,7 +325,8 @@ public enum QueryOperation {
      * <p>Use this operation when the number of affected rows might exceed the range of {@code int}.
      * This is particularly relevant for bulk operations on large tables. A DAO method may return
      * {@code long}/{@code Long}, {@code int}/{@code Integer} (with an exact-range check),
-     * {@code boolean}/{@code Boolean} ({@code true} when the count is positive), or {@code void}.</p>
+     * {@code boolean}/{@code Boolean} ({@code true} when the count is positive), or {@code void}.
+     * As with {@link #update}, declaring it on a plain {@code SELECT} fails DAO creation.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

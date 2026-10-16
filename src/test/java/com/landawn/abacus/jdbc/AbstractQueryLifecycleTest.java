@@ -256,9 +256,11 @@ class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
         assertArrayEquals(new Throwable[] { olderFailure }, thrown.getSuppressed());
     }
 
+    // Statement cleanup logs SQL and runtime exceptions from the driver (see AbstractQueryReviewFixTest), so an Error is
+    // used to exercise a cleanup failure that still propagates.
     @Test
     public void testClosePreservesStatementCleanupFailureWhenCloseHandlerAlsoFails() throws SQLException {
-        final RuntimeException statementFailure = new RuntimeException("statement reset failed");
+        final Error statementFailure = new Error("statement reset failed");
         final AssertionError handlerFailure = new AssertionError("close handler failed");
         when(preparedStatement.getFetchSize()).thenReturn(10);
         query.setFetchSize(20);
@@ -267,7 +269,7 @@ class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
             throw handlerFailure;
         });
 
-        final RuntimeException thrown = assertThrows(RuntimeException.class, query::close);
+        final Error thrown = assertThrows(Error.class, query::close);
 
         assertSame(statementFailure, thrown);
         assertArrayEquals(new Throwable[] { handlerFailure }, thrown.getSuppressed());
@@ -312,15 +314,16 @@ class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
         verify(preparedStatement).close();
     }
 
+    // An Error is used because statement cleanup logs SQL and runtime exceptions from the driver.
     @Test
     void close_statementCleanupFails_stillRunsSuccessfulHandler() throws SQLException {
-        final IllegalStateException failure = new IllegalStateException("statement reset failed");
+        final Error failure = new Error("statement reset failed");
         final AtomicInteger handlerCalls = new AtomicInteger();
         when(preparedStatement.getFetchSize()).thenReturn(10);
         query.setFetchSize(20).onClose(handlerCalls::incrementAndGet);
         doThrow(failure).when(preparedStatement).setFetchSize(10);
 
-        assertSame(failure, assertThrows(IllegalStateException.class, query::close));
+        assertSame(failure, assertThrows(Error.class, query::close));
         assertEquals(1, handlerCalls.get());
         assertEquals(0, failure.getSuppressed().length);
         verify(preparedStatement).close();

@@ -310,7 +310,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * (or either set is large), the operation is wrapped in a transaction.</p>
      *
      * <p>For a single match property, a {@code null} key is matched with {@code IS NULL}; it is not
-     * placed in an {@code IN} predicate, whose SQL semantics would never match a {@code null} column.</p>
+     * placed in an {@code IN} predicate, whose SQL semantics would never match a {@code null} column.
+     * Array-typed key values (e.g. a {@code byte[]} binary UUID) are matched by content.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -383,7 +384,11 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             return entityId;
         };
 
-        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = uniquePropNameList.size() == 1 ? singleKeyExtractor : entityIdExtractor;
+        // A single array-typed key (e.g. a byte[] binary UUID) is matched by content: the loaded rows carry their own array
+        // instances, so an identity-keyed map never found an existing row and the entity was inserted again.
+        final com.landawn.abacus.util.function.Function<T, ?> keysExtractor = uniquePropNameList.size() == 1
+                ? it -> DaoUtil.valueKey(singleKeyExtractor.apply(it))
+                : entityIdExtractor;
 
         // De-duplicate lookup keys before splitting them into query batches. Without this, equal
         // keys that landed in different batches returned the same database row more than once,

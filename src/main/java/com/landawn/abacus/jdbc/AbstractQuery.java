@@ -4756,7 +4756,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
                 // Record the original only once the driver has accepted the call: a driver without
                 // setLargeMaxRows support throws UnsupportedOperationException, and closeStatement()
-                // must then not replay setLargeMaxRows (the UOE would escape close()).
+                // must then not replay setLargeMaxRows (the UOE would only be logged as a failed reset).
                 defaultLargeMaxRows = originalLargeMaxRows;
             } else {
                 stmt.setLargeMaxRows(max);
@@ -11418,8 +11418,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * that check the query state throw {@link IllegalStateException}; calling
      * {@code close()} again is a no-op.</p>
      *
-     * <p>If statement cleanup and a close handler both throw unchecked exceptions or errors,
-     * the statement cleanup failure is propagated with the handler failure suppressed.</p>
+     * <p>SQL and runtime exceptions raised by the driver while restoring properties or closing the
+     * statement are logged rather than thrown. If statement cleanup still fails (for example with an
+     * {@link Error}) and a close handler also throws, the statement cleanup failure is propagated with
+     * the handler failure suppressed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11495,9 +11497,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p>The {@link #addBatchAction} is also reset to the default to avoid retaining a
      * reference (helpful when the underlying statement is pooled). Any
-     * {@link SQLException} raised while resetting a property is logged and swallowed so the
-     * statement is still closed. The actual close is performed via
-     * {@link JdbcUtil#closeQuietly(java.sql.Statement)}, which suppresses SQLExceptions.</p>
+     * {@link SQLException} or {@link RuntimeException} raised while resetting a property is logged
+     * and swallowed, so the remaining properties are still reset and the statement is still closed.
+     * The actual close is performed via {@link JdbcUtil#closeQuietly(java.sql.Statement)}, which
+     * suppresses close failures.</p>
      *
      * @see #close()
      */
@@ -11508,10 +11511,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             // Reset batch action to default to prevent memory leaks
             addBatchAction = defaultAddBatchAction;
 
+            // Each reset is best-effort: a SQLException or a RuntimeException from a broken driver is logged, so it
+            // neither escapes close() (e.g., out of a try-with-resources block) nor skips the remaining resets.
             if (defaultFetchDirection >= 0) {
                 try {
                     stmt.setFetchDirection(defaultFetchDirection);
-                } catch (final SQLException e) {
+                } catch (final SQLException | RuntimeException e) {
                     logger.warn(e, "Failed to reset fetch direction");
                 }
             }
@@ -11519,7 +11524,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (isFetchSizeCaptured) {
                 try {
                     stmt.setFetchSize(defaultFetchSize);
-                } catch (final SQLException e) {
+                } catch (final SQLException | RuntimeException e) {
                     logger.warn(e, "Failed to reset fetch size");
                 }
             }
@@ -11527,7 +11532,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (defaultMaxFieldSize >= 0) {
                 try {
                     stmt.setMaxFieldSize(defaultMaxFieldSize);
-                } catch (final SQLException e) {
+                } catch (final SQLException | RuntimeException e) {
                     logger.warn(e, "Failed to reset max field size");
                 }
             }
@@ -11535,7 +11540,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (defaultQueryTimeout >= 0) {
                 try {
                     stmt.setQueryTimeout(defaultQueryTimeout);
-                } catch (final SQLException e) {
+                } catch (final SQLException | RuntimeException e) {
                     logger.warn(e, "Failed to reset query timeout");
                 }
             }
@@ -11543,7 +11548,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (defaultMaxRows >= 0) {
                 try {
                     stmt.setMaxRows(defaultMaxRows);
-                } catch (final SQLException e) {
+                } catch (final SQLException | RuntimeException e) {
                     logger.warn(e, "Failed to reset max rows");
                 }
             }
@@ -11551,7 +11556,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             if (defaultLargeMaxRows >= 0) {
                 try {
                     stmt.setLargeMaxRows(defaultLargeMaxRows);
-                } catch (final SQLException e) {
+                } catch (final SQLException | RuntimeException e) {
                     logger.warn(e, "Failed to reset large max rows");
                 }
             }
