@@ -77,8 +77,10 @@ class DataTransferCopyTest extends DataTransferUtilTestSupport {
 
         // Verify
         assertEquals(1, result);
-        verify(mockDataSource, times(2)).getConnection();
-        verify(targetDataSource, times(2)).getConnection();
+        verify(mockDataSource).getConnection();
+        verify(targetDataSource).getConnection();
+        verify(mockConnection).close();
+        verify(targetConnection).close();
     }
 
     @Test

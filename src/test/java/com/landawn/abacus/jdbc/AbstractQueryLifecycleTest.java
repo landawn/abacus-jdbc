@@ -369,6 +369,71 @@ class AbstractQueryLifecycleTest extends AbstractQueryTestSupport {
         verify(preparedStatement).close();
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void cancel_runningCallbackDefersCloseUntilItExits(final boolean mayInterrupt) throws Exception {
+        final CountDownLatch started = new CountDownLatch(1);
+        final CountDownLatch release = new CountDownLatch(1);
+        final AtomicReference<Thread> worker = new AtomicReference<>();
+        final var future = query.runAsync(q -> {
+            started.countDown();
+            boolean interrupted = false;
+            try {
+                while (true) {
+                    try {
+                        release.await();
+                        break;
+                    } catch (final InterruptedException e) {
+                        // Keep the callback running after cancel(true) to check that cleanup waits for its exit.
+                        interrupted = true;
+                    }
+                }
+            } finally {
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }, task -> {
+            final Thread thread = new Thread(task, "query-cancellation-test");
+            worker.set(thread);
+            thread.start();
+        });
+
+        try {
+            assertTrue(started.await(5, TimeUnit.SECONDS));
+            assertTrue(future.cancel(mayInterrupt));
+            assertTrue(future.isCancelled());
+            assertFalse(query.isClosed);
+            verify(preparedStatement, never()).close();
+        } finally {
+            release.countDown();
+            worker.get().join(5000);
+        }
+
+        assertFalse(worker.get().isAlive());
+        assertTrue(query.isClosed);
+        verify(preparedStatement).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void cancel_beforeExecutionRespectsAutomaticClosePolicy(final boolean closeAutomatically) throws Exception {
+        final AtomicReference<Runnable> scheduled = new AtomicReference<>();
+        final AtomicInteger callbackCalls = new AtomicInteger();
+        query.closeAfterExecution(closeAutomatically);
+        final var future = query.runAsync(q -> callbackCalls.incrementAndGet(), scheduled::set);
+
+        try {
+            assertTrue(future.cancel(true));
+            scheduled.get().run();
+            assertEquals(0, callbackCalls.get());
+            assertEquals(closeAutomatically, query.isClosed);
+            verify(preparedStatement, times(closeAutomatically ? 1 : 0)).close();
+        } finally {
+            query.close();
+        }
+    }
+
     static final class CoordinatedCloseQuery extends AbstractQuery<PreparedStatement, CoordinatedCloseQuery> {
         final CountDownLatch stateChecked = new CountDownLatch(1);
         final CountDownLatch continueRegistration = new CountDownLatch(1);

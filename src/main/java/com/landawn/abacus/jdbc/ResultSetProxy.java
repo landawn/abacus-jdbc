@@ -41,7 +41,6 @@ import java.util.Map;
 import com.landawn.abacus.annotation.Internal;
 import com.landawn.abacus.jdbc.Jdbc.ColumnGetter;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Throwables;
 
 /**
  * A proxy wrapper for {@link ResultSet} that provides optimized column value retrieval
@@ -113,11 +112,23 @@ final class ResultSetProxy implements ResultSet {
     private ColumnGetter<?>[] columnGetters;
 
     /**
-     * Lazily-initialized cache of the getter function selected for each column label, used by
-     * {@link #getObject(String)}. An entry is stored for a label only after the first non-null
-     * value is read for it.
+     * Lazily-initialized cache of resolved indexes and getter strategies for column labels.
+     * Indexes are cached even when a column contains only nulls; getter selection still waits
+     * for the first non-null value.
      */
-    private Map<String, Throwables.Function<ResultSet, Object, SQLException>> columnGettersByLabel;
+    private Map<String, LabelGetter> columnGettersByLabel;
+
+    /**
+     * The resolved column index of one label and, once a non-null value has been read, its getter strategy.
+     */
+    private static final class LabelGetter {
+        final int columnIndex;
+        ColumnGetter<?> getter;
+
+        LabelGetter(final int columnIndex) {
+            this.columnIndex = columnIndex;
+        }
+    }
 
     /**
      * The non-null wrapped {@link ResultSet} to which every operation is delegated.
@@ -877,16 +888,22 @@ final class ResultSetProxy implements ResultSet {
     @Override
     public Object getObject(String columnLabel) throws SQLException {
         ResultSetMetaData metadata = null;
-        Throwables.Function<ResultSet, Object, SQLException> getter = null;
 
         if (columnGettersByLabel == null) {
             columnGettersByLabel = new HashMap<>();
-        } else {
-            getter = columnGettersByLabel.get(columnLabel);
         }
 
+        LabelGetter labelGetter = columnGettersByLabel.get(columnLabel);
+
+        if (labelGetter == null) {
+            labelGetter = new LabelGetter(delegate.findColumn(columnLabel));
+            columnGettersByLabel.put(columnLabel, labelGetter);
+        }
+
+        ColumnGetter<?> getter = labelGetter.getter;
+
         if (getter == null) {
-            final int columnIndex = delegate.findColumn(columnLabel);
+            final int columnIndex = labelGetter.columnIndex;
             Object ret = delegate.getObject(columnIndex);
 
             if (ret == null) {
@@ -897,29 +914,29 @@ final class ResultSetProxy implements ResultSet {
             if (ret instanceof String || ret instanceof Number || ret instanceof java.sql.Timestamp || ret instanceof Boolean) {
                 // Matches the index path's cached GET_OBJECT getter, so a type-shifting column (e.g.
                 // SQLite dynamic typing) reads identically whether accessed by index or by label.
-                getter = rs -> JdbcUtil.getColumnValue(rs, columnIndex);
+                getter = ColumnGetter.GET_OBJECT;
             } else {
                 final String className = ret.getClass().getName();
 
                 if ("oracle.sql.TIMESTAMP".equals(className)) {
                     ret = ((oracle.sql.Datum) ret).timestampValue();
-                    getter = rs -> rs.getTimestamp(columnIndex);
+                    getter = ColumnGetter.GET_TIMESTAMP;
                 } else if ("oracle.sql.TIMESTAMPTZ".equals(className) || "oracle.sql.TIMESTAMPLTZ".equals(className)) {
                     // Datum.timestampValue() (no-arg) throws SQLException on TIMESTAMPLTZ because
                     // LTZ requires the originating Connection's session timezone to materialize.
                     // Delegate to driver getTimestamp for both TZ and LTZ; see index-path variant.
                     ret = delegate.getTimestamp(columnIndex);
-                    getter = rs -> rs.getTimestamp(columnIndex);
+                    getter = ColumnGetter.GET_TIMESTAMP;
                 } else if (className.startsWith("oracle.sql.DATE")) {
                     metadata = delegate.getMetaData();
                     final String metaDataClassName = metadata.getColumnClassName(columnIndex);
 
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                         ret = delegate.getTimestamp(columnIndex);
-                        getter = rs -> rs.getTimestamp(columnIndex);
+                        getter = ColumnGetter.GET_TIMESTAMP;
                     } else {
                         ret = delegate.getDate(columnIndex);
-                        getter = rs -> rs.getDate(columnIndex);
+                        getter = ColumnGetter.GET_DATE;
                     }
                 } else if (ret instanceof java.sql.Date) {
                     metadata = delegate.getMetaData();
@@ -931,12 +948,12 @@ final class ResultSetProxy implements ResultSet {
                     // only "java.sql.Timestamp" was checked here.
                     if ("java.sql.Timestamp".equals(metaDataClassName) || "oracle.sql.TIMESTAMP".equals(metaDataClassName)) {
                         ret = delegate.getTimestamp(columnIndex);
-                        getter = rs -> rs.getTimestamp(columnIndex);
+                        getter = ColumnGetter.GET_TIMESTAMP;
                     } else if ("java.lang.Object".equals(metaDataClassName)) {
                         // Match the index path: a polymorphic column cannot cache a date-only getter.
-                        getter = rs -> JdbcUtil.getColumnValue(rs, columnIndex);
+                        getter = ColumnGetter.GET_OBJECT;
                     } else {
-                        getter = rs -> rs.getDate(columnIndex);
+                        getter = ColumnGetter.GET_DATE;
                     }
                 } else {
                     // Mirror the index-path fall-through: materialize Blob/Clob inline so this
@@ -948,15 +965,15 @@ final class ResultSetProxy implements ResultSet {
                     } else if (ret instanceof Clob clob) {
                         ret = JdbcUtil.materializeClob(clob);
                     }
-                    getter = rs -> JdbcUtil.getColumnValue(rs, columnIndex);
+                    getter = ColumnGetter.GET_OBJECT;
                 }
             }
 
-            columnGettersByLabel.put(columnLabel, getter);
+            labelGetter.getter = getter;
 
             return ret;
         } else {
-            return getter.apply(delegate);
+            return getter.get(delegate, labelGetter.columnIndex);
         }
     }
 

@@ -74,6 +74,11 @@ import com.landawn.abacus.util.Throwables;
  * including Dataset objects, CSV files, Readers/Writers, Iterators, and database tables.
  * Many import methods offer configurable batch sizes and batch intervals.</p>
  *
+ * <p>Fetch sizes are driver hints, not a guarantee of bounded result buffering. PostgreSQL cursor fetching also
+ * requires a source connection with auto-commit disabled and a non-holdable, forward-only result set. Configure
+ * the source transaction for the driver before a large export or copy; these methods do not change transaction
+ * ownership or commit caller work. A DataSource's default connection settings also apply to connections obtained here.</p>
+ *
  * <p><b>Generated SQL:</b> Table-copy operations generate unquoted table and column names under a fixed build policy.
  * Identifier quoting is disabled: explicit delimiters, non-simple names, common SQL reserved names and bare expressions
  * such as {@code ROWNUM} and {@code CURRENT_PATH} are rejected to avoid copying expression results instead of stored values.
@@ -241,6 +246,10 @@ public final class DataTransferUtil {
      */
     static final char[] NULL_CHAR_ARRAY = Strings.NULL.toCharArray();
 
+    // A library-owned marker lets column-only imports omit unselected values without changing
+    // the full-row contract of any user-supplied filter, including an always-true filter.
+    private static final Predicate<Object[]> ACCEPT_ALL_DATASET_ROWS = row -> true;
+
     /**
      * Prevents instantiation; this is a utility class with only static members.
      */
@@ -386,7 +395,7 @@ public final class DataTransferUtil {
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final Connection conn, final String insertSql,
             final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, SQLException {
-        return importData(dataset, columnNames, row -> true, conn, insertSql, batchSize, batchIntervalInMillis);
+        return importData(dataset, columnNames, ACCEPT_ALL_DATASET_ROWS, conn, insertSql, batchSize, batchIntervalInMillis);
     }
 
     /**
@@ -428,14 +437,14 @@ public final class DataTransferUtil {
             final String insertSql, final int batchSize, final long batchIntervalInMillis) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(dataset, cs.dataset);
         N.checkArgNotNull(columnNames, cs.columnNames);
-        resolveImportColumnIndices(dataset, columnNames);
+        final int[] selectedColumnIndices = resolveImportColumnIndices(dataset, columnNames);
         N.checkArgNotNull(filter, cs.filter);
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
         try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-            return importData(dataset, columnNames, filter, stmt, batchSize, batchIntervalInMillis);
+            return importSelectedColumns(dataset, selectedColumnIndices, filter, stmt, batchSize, batchIntervalInMillis);
         }
     }
 
@@ -778,7 +787,7 @@ public final class DataTransferUtil {
     @Deprecated
     public static int importData(final Dataset dataset, final Collection<String> columnNames, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis) throws IllegalArgumentException, SQLException {
-        return importData(dataset, columnNames, row -> true, stmt, batchSize, batchIntervalInMillis);
+        return importData(dataset, columnNames, ACCEPT_ALL_DATASET_ROWS, stmt, batchSize, batchIntervalInMillis);
     }
 
     /**
@@ -827,13 +836,36 @@ public final class DataTransferUtil {
         N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0, "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative",
                 batchSize, batchIntervalInMillis);
 
+        return importSelectedColumns(dataset, selectedColumnIndices, filter, stmt, batchSize, batchIntervalInMillis);
+    }
+
+    /**
+     * Imports the selected columns of every accepted row, binding the k-th selected column to the k-th parameter.
+     * Arguments have already been validated by the caller.
+     *
+     * <p>Only the library's own accept-all filter, recognized by identity, lets the import read just the selected
+     * columns. A caller-supplied filter is documented to receive every column of the row, so it keeps the full-width
+     * row and the selected values are bound from it.</p>
+     *
+     * @param dataset the source dataset
+     * @param selectedColumnIndices the dataset column indices to bind, in parameter order; duplicates allowed
+     * @param filter the row filter; {@link #ACCEPT_ALL_DATASET_ROWS} when the caller configured none
+     * @param stmt the insert statement (not closed by this method)
+     * @param batchSize the number of rows per batch, greater than 0
+     * @param batchIntervalInMillis the pause between batches in milliseconds, {@code >= 0}
+     * @return the number of source rows submitted after filtering
+     * @throws SQLException if binding a row or adding or executing a batch fails
+     */
+    private static int importSelectedColumns(final Dataset dataset, final int[] selectedColumnIndices, final Predicate<? super Object[]> filter,
+            final PreparedStatement stmt, final int batchSize, final long batchIntervalInMillis) throws SQLException {
+        final boolean projectRow = filter == ACCEPT_ALL_DATASET_ROWS;
         final Throwables.BiConsumer<PreparedQuery, Object[], SQLException> parameterSetter = (t, row) -> {
             for (int i = 0; i < selectedColumnIndices.length; i++) {
-                t.setObject(i + 1, row[selectedColumnIndices[i]]);
+                t.setObject(i + 1, row[projectRow ? i : selectedColumnIndices[i]]);
             }
         };
 
-        return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
+        return importDatasetRows(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter, projectRow ? selectedColumnIndices : null);
     }
 
     /**
@@ -874,18 +906,34 @@ public final class DataTransferUtil {
      */
     private static int[] resolveImportColumnIndices(final Dataset dataset, final Collection<String> columnNames) throws IllegalArgumentException {
         final List<String> allColumnNames = dataset.columnNames();
-        final List<String> selectedColumnNameList = new ArrayList<>(columnNames);
-        final int[] selectedColumnIndices = new int[selectedColumnNameList.size()];
+        final int[] selectedColumnIndices = new int[columnNames.size()];
 
-        for (int i = 0; i < selectedColumnNameList.size(); i++) {
-            final String colName = selectedColumnNameList.get(i);
-            final int columnIndex = allColumnNames.indexOf(colName);
-
+        if (selectedColumnIndices.length == 0) {
+            return selectedColumnIndices;
+        } else if (selectedColumnIndices.length == 1) {
+            final String columnName = columnNames.iterator().next();
+            final int columnIndex = allColumnNames.indexOf(columnName);
             if (columnIndex < 0) {
+                throw new IllegalArgumentException("Column '" + columnName + "' is not found in dataset columns: " + allColumnNames);
+            }
+            selectedColumnIndices[0] = columnIndex;
+            return selectedColumnIndices;
+        }
+
+        final Map<String, Integer> columnIndices = N.newHashMap(allColumnNames.size());
+        for (int i = 0; i < allColumnNames.size(); i++) {
+            columnIndices.putIfAbsent(allColumnNames.get(i), i);
+        }
+
+        int i = 0;
+        for (final String colName : columnNames) {
+            final Integer columnIndex = columnIndices.get(colName);
+
+            if (columnIndex == null) {
                 throw new IllegalArgumentException("Column '" + colName + "' is not found in dataset columns: " + allColumnNames);
             }
 
-            selectedColumnIndices[i] = columnIndex;
+            selectedColumnIndices[i++] = columnIndex;
         }
 
         return selectedColumnIndices;
@@ -1154,9 +1202,33 @@ public final class DataTransferUtil {
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
 
+        return importDatasetRows(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter, null);
+    }
+
+    /**
+     * Reads each dataset row into one reusable array, passes it to {@code filter} and then to {@code parameterSetter},
+     * and adds every accepted row to the statement's batch. Arguments have already been validated by the caller.
+     *
+     * @param dataset the source dataset
+     * @param filter the row filter, or {@code null} to accept every row
+     * @param stmt the insert statement (not closed by this method)
+     * @param batchSize the number of rows per batch, greater than 0
+     * @param batchIntervalInMillis the pause between batches in milliseconds, {@code >= 0}
+     * @param parameterSetter binds one row onto the statement
+     * @param selectedColumnIndices {@code null} to read every column in dataset order; otherwise the only columns read,
+     *        so {@code filter} and {@code parameterSetter} receive a row holding just those values in this order. Pass a
+     *        projection only when neither callback is documented to receive the full row.
+     * @return the number of source rows submitted after filtering
+     * @throws SQLException if binding a row or adding or executing a batch fails; a pending batch is then cleared
+     *         best-effort
+     */
+    private static int importDatasetRows(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt,
+            final int batchSize, final long batchIntervalInMillis,
+            final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter, final int[] selectedColumnIndices)
+            throws SQLException {
         final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
 
-        final int columnCount = dataset.columnNames().size();
+        final int columnCount = selectedColumnIndices == null ? dataset.columnNames().size() : selectedColumnIndices.length;
         final Object[] row = new Object[columnCount];
         int result = 0;
         boolean hasExecutedBatch = false;
@@ -1170,7 +1242,7 @@ public final class DataTransferUtil {
                 // Read by (row, column) instead of moveToRow + get(column): moving the cursor would change the caller's
                 // Dataset state and let concurrent imports of one shared (e.g. frozen) Dataset read each other's rows.
                 for (int j = 0; j < columnCount; j++) {
-                    row[j] = dataset.get(i, j);
+                    row[j] = dataset.get(i, selectedColumnIndices == null ? j : selectedColumnIndices[j]);
                 }
 
                 if (filter != null && !filter.test(row)) {
@@ -3001,8 +3073,6 @@ public final class DataTransferUtil {
         checkCopyTableName(targetTableName, cs.targetTableName);
         N.checkArgPositive(batchSize, cs.batchSize);
 
-        String selectSql = null;
-        String insertSql = null;
         Connection sourceConn = null;
         Connection targetConn = null;
 
@@ -3014,8 +3084,10 @@ public final class DataTransferUtil {
             // source's result-set metadata and use it to drive the INSERT against the target.
             // Otherwise, when source and target have the same column set but different metadata
             // orders, positional setObject(i, ...) silently swaps values between columns.
-            selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
-            insertSql = generateInsertSqlFromSelectColumns(sourceConn, selectSql, targetConn, targetTableName);
+            final String selectSql = JdbcCodeGenerationUtil.generateSelectSql(sourceConn, sourceTableName);
+            final String insertSql = generateInsertSqlFromSelectColumns(sourceConn, selectSql, targetConn, targetTableName);
+
+            return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetConn, insertSql, batchSize);
         } finally {
             // Release both connections even if one release throws (avoid leaking the second).
             try {
@@ -3024,8 +3096,6 @@ public final class DataTransferUtil {
                 JdbcUtil.releaseConnection(targetConn, targetDataSource);
             }
         }
-
-        return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetDataSource, insertSql, batchSize);
     }
 
     /**
@@ -3119,8 +3189,6 @@ public final class DataTransferUtil {
             return copy(sourceDataSource, targetDataSource, sourceTableName, targetTableName, batchSize);
         }
 
-        String selectSql = null;
-        String insertSql = null;
         Connection sourceConn = null;
         Connection targetConn = null;
 
@@ -3128,8 +3196,10 @@ public final class DataTransferUtil {
             sourceConn = JdbcUtil.getConnection(sourceDataSource);
             targetConn = JdbcUtil.getConnection(targetDataSource);
 
-            selectSql = generateSelectSql(sourceConn, sourceTableName, copiedColumnNames);
-            insertSql = generateInsertSql(targetConn, targetTableName, copiedColumnNames);
+            final String selectSql = generateSelectSql(sourceConn, sourceTableName, copiedColumnNames);
+            final String insertSql = generateInsertSql(targetConn, targetTableName, copiedColumnNames);
+
+            return copy(sourceConn, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetConn, insertSql, batchSize);
         } finally {
             // Release both connections even if one release throws (avoid leaking the second).
             try {
@@ -3138,8 +3208,6 @@ public final class DataTransferUtil {
                 JdbcUtil.releaseConnection(targetConn, targetDataSource);
             }
         }
-
-        return copy(sourceDataSource, selectSql, N.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, batchSize), targetDataSource, insertSql, batchSize);
     }
 
     /**
@@ -4089,6 +4157,8 @@ public final class DataTransferUtil {
      * Configures {@code stmt} for reading a large result set: sets a forward-only fetch direction and applies
      * {@code fetchSize}, except on MySQL/MariaDB where {@link Integer#MIN_VALUE} is set instead to enable
      * row-by-row streaming as required by those drivers.
+     * PostgreSQL additionally requires auto-commit to be disabled and a non-holdable result set; this helper
+     * preserves the supplied connection's transaction and holdability settings.
      *
      * @param conn the connection used to determine the database product
      * @param stmt the statement to configure
@@ -4245,7 +4315,7 @@ public final class DataTransferUtil {
         /**
          * The row filter applied before binding; accepts every row by default.
          */
-        private Predicate<? super Object[]> filter = row -> true;
+        private Predicate<? super Object[]> filter = ACCEPT_ALL_DATASET_ROWS;
         /**
          * The number of rows inserted per batch; must be greater than 0 when the import runs.
          */
@@ -4380,14 +4450,14 @@ public final class DataTransferUtil {
          */
         public int to(final javax.sql.DataSource targetDataSource, final String insertSql)
                 throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
-            validateConfiguration();
+            final int[] selectedColumnIndices = validateConfiguration();
 
             N.checkArgNotNull(targetDataSource, cs.targetDataSource);
 
             final Connection conn = JdbcUtil.getConnection(targetDataSource);
 
             try {
-                return to(conn, insertSql);
+                return importToConnection(conn, insertSql, selectedColumnIndices);
             } finally {
                 JdbcUtil.releaseConnection(conn, targetDataSource);
             }
@@ -4404,11 +4474,24 @@ public final class DataTransferUtil {
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
          */
         public int to(final Connection conn, final String insertSql) throws IllegalArgumentException, SQLException {
-            validateConfiguration();
+            final int[] selectedColumnIndices = validateConfiguration();
             N.checkArgNotNull(conn, cs.conn);
 
+            return importToConnection(conn, insertSql, selectedColumnIndices);
+        }
+
+        /**
+         * Prepares {@code insertSql} on {@code conn}, runs the import with it and closes the statement.
+         *
+         * @param conn the connection to the database (not closed by this method)
+         * @param insertSql the SQL insert statement with placeholders
+         * @param selectedColumnIndices the column indices returned by {@link #validateConfiguration()}
+         * @return the number of source rows submitted
+         * @throws SQLException if preparing or closing the statement, or the import itself, fails
+         */
+        private int importToConnection(final Connection conn, final String insertSql, final int[] selectedColumnIndices) throws SQLException {
             try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, insertSql)) {
-                return to(stmt);
+                return importToStatement(stmt, selectedColumnIndices);
             }
         }
 
@@ -4425,28 +4508,44 @@ public final class DataTransferUtil {
          * @throws SQLException if executing the configured transfer, or reading or binding rows fails
          */
         public int to(final PreparedStatement stmt) throws IllegalArgumentException, SQLException {
-            validateConfiguration();
+            final int[] selectedColumnIndices = validateConfiguration();
             N.checkArgNotNull(stmt, cs.stmt);
 
+            return importToStatement(stmt, selectedColumnIndices);
+        }
+
+        /**
+         * Runs the import with the configured value-mapping strategy: the parameter setter, the column-type map, or
+         * the selected (default: all) columns.
+         *
+         * @param stmt the insert statement (not closed by this method)
+         * @param selectedColumnIndices the column indices returned by {@link #validateConfiguration()}; used only by
+         *        the column strategy
+         * @return the number of source rows submitted
+         * @throws SQLException if reading or binding rows, or adding or executing a batch, fails
+         */
+        private int importToStatement(final PreparedStatement stmt, final int[] selectedColumnIndices) throws SQLException {
             if (parameterSetter != null) {
                 return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, parameterSetter);
             } else if (N.notEmpty(columnTypeMap)) {
                 return importData(dataset, filter, stmt, batchSize, batchIntervalInMillis, columnTypeMap);
             } else {
-                final Collection<String> selectedColumnNames = N.isEmpty(columnNames) ? dataset.columnNames() : columnNames;
-
-                return importData(dataset, selectedColumnNames, filter, stmt, batchSize, batchIntervalInMillis);
+                return importSelectedColumns(dataset, selectedColumnIndices, filter, stmt, batchSize, batchIntervalInMillis);
             }
         }
 
         /**
-         * Validates the builder configuration before a terminal {@code to(...)} runs.
+         * Validates the builder configuration before a terminal {@code to(...)} runs, and resolves the columns to
+         * import once for that run.
          *
+         * @return the dataset indices of the configured columns (all columns when none are configured), in
+         *         parameter order; {@code null} when a {@code columnTypes} or {@code parameterSetter} strategy is
+         *         configured instead
          * @throws IllegalArgumentException if more than one value-mapping strategy ({@code columns}, {@code columnTypes}, {@code parameterSetter})
          *         is configured, {@code batchSize <= 0}, {@code batchIntervalInMillis < 0}, a selected column or type-map key is absent from the
          *         dataset, or a mapped type is {@code null}
          */
-        private void validateConfiguration() throws IllegalArgumentException {
+        private int[] validateConfiguration() throws IllegalArgumentException {
             int configuredStrategies = 0;
 
             if (N.notEmpty(columnNames)) {
@@ -4468,11 +4567,11 @@ public final class DataTransferUtil {
             N.checkArgument(batchSize > 0 && batchIntervalInMillis >= 0,
                     "'batchSize'=%s must be greater than 0 and 'batchIntervalInMillis'=%s can't be negative", batchSize, batchIntervalInMillis);
 
-            if (N.notEmpty(columnNames)) {
-                resolveImportColumnIndices(dataset, columnNames);
-            }
-
             checkImportColumnTypes(dataset, columnTypeMap);
+
+            return parameterSetter == null && N.isEmpty(columnTypeMap)
+                    ? resolveImportColumnIndices(dataset, N.isEmpty(columnNames) ? dataset.columnNames() : columnNames)
+                    : null;
         }
     }
 

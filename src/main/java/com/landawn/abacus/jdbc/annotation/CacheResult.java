@@ -292,6 +292,29 @@ public @interface CacheResult {
     CacheSerialization serialization() default CacheSerialization.NONE;
 
     /**
+     * Whether calls made by this cached method may also use inherited type-level result caching.
+     * The default preserves caching at every matching method, including forwarding overloads.
+     * Set this to {@code false} to cache the outer result without also retaining copies at each
+     * nested forwarding method, for example:
+     *
+     * <pre>{@code
+     * @CacheResult(enabled = true, serialization = CacheSerialization.JSON, cacheNestedResults = false)
+     * public interface UserDao extends ReadOnlyCrudDao<User, Long, UserDao> {
+     * }
+     * }</pre>
+     *
+     * <p>Suppression lasts only while the method body executes on the current thread and also applies
+     * to calls to other DAO proxies. Explicit method-level {@code @CacheResult} annotations remain
+     * effective for the annotated method itself; they do not lift an outer method's suppression of
+     * inherited caching on further nested calls. {@code @RefreshCache} invalidation, {@code @Handler}
+     * invocation and local thread caches are unaffected. Calls on another thread have their own scope.
+     * A custom cache receives no result lookup or insertion for suppressed inherited methods.</p>
+     *
+     * @return {@code true} to preserve nested type-level result caching; {@code false} to suppress it
+     */
+    boolean cacheNestedResults() default true;
+
+    /**
      * Specifies filter patterns for methods when the annotation is applied at the type level.
      * Only methods whose names match at least one of these patterns will be cached.
      *

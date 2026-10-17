@@ -74,7 +74,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null},
      *                                  or if no join property of the specified type is found in the entity class,
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
@@ -147,7 +147,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
@@ -239,7 +239,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code joinEntityPropName} is {@code null} or empty,
      *                                  or does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
@@ -295,7 +295,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
@@ -322,7 +322,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
@@ -389,7 +389,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
@@ -437,7 +437,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any property name in
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
@@ -484,7 +484,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
@@ -548,7 +548,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
@@ -597,7 +597,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
@@ -642,7 +642,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
@@ -673,7 +673,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
@@ -719,7 +719,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
@@ -759,7 +759,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
@@ -792,7 +792,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @return the total number of deleted records, or 0 if {@code entities} is empty
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
@@ -839,7 +839,7 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws IllegalStateException if required join metadata cannot be converted into SQL query plans, or an existing transaction on the current thread
+     * @throws IllegalStateException if an existing transaction on the current thread
      *         is no longer active and cannot accept the internally required transaction scope
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish

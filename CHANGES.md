@@ -2,6 +2,10 @@
 * Breaking: generated SQL no longer quotes identifiers. `JdbcCodeGenerationUtil.generate*Sql`, `DataTransferUtil` copies, `JdbcUtil.dropTableIfExists` and `JdbcUtil.createDBLock` emit only simple, undelimited table and column names; a name that would need quoting (explicitly delimited, containing other characters, a common reserved word such as `order` or `user`, or a metadata name whose letter case the database would fold) is rejected with `IllegalArgumentException`, where 4.9.2 quoted delimited and non-simple names
 * `JdbcUtil.tableExists` and `JdbcUtil.getColumnNames` look such names up through JDBC metadata only, without their fallback query
 * Repeated named stream/reader parameters are buffered and bound with independent copies
+* `Jdbc.DefaultDaoCache` implements `AutoCloseable` and its `close()` is public: it releases the pool's eviction task and JVM shutdown hook. `Jdbc.DaoCache` itself declares no `close()`. Closing a cache does not unregister the DAOs created with it; their cached methods then fail
+* `@CacheResult(cacheNestedResults = false)` caches only the outer result of a method, without the inherited type-level caching of the DAO calls it makes
+* `JoinInfo` builds join SQL plans per dialect on first use and keeps metadata looked up outside registered DAOs in a bounded cache; `getEntityJoinInfo`, `getPropJoinInfo` and `getJoinEntityPropNamesByType` no longer declare `IllegalStateException`, and DAO creation still fails for a join whose plans cannot be built
+* `JdbcCodeGenerationUtil.generateEntityClassByQuery` uses prepared-statement metadata without executing the query when the driver reports the type of every column before execution
 * Improvements and bug fixes
 
 ## 4.9.2

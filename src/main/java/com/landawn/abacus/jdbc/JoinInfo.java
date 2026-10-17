@@ -21,6 +21,7 @@ import static com.landawn.abacus.query.Dsl.PSC;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -52,7 +53,6 @@ import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
-import com.landawn.abacus.util.Tuple.Tuple4;
 import com.landawn.abacus.util.Wrapper;
 import com.landawn.abacus.util.function.BiFunction;
 import com.landawn.abacus.util.function.Consumer;
@@ -122,22 +122,22 @@ import com.landawn.abacus.util.stream.Stream;
 @SuppressWarnings({ "java:S1192", "resource" })
 public final class JoinInfo {
 
-    // Per-SqlBuilder factory functions, keyed by builder DSL (PSC/PAC/PLC). The Tuple4 slots are:
-    //   _1 = select(columns), _2 = selectFrom(entityClass), _3 = update(entityClass), _4 = deleteFrom(entityClass).
-    // Referenced as funcs._1.._4 in the constructor's plan builders (see sqlBuilderFuncs(Dsl) for other DSLs).
+    // Per-SqlBuilder factory functions, keyed by builder DSL (PSC/PAC/PLC). The Tuple3 slots are:
+    //   _1 = select(columns), _2 = selectFrom(entityClass), _3 = deleteFrom(entityClass).
+    // Referenced as funcs._1.._3 in the constructor's plan builders (see sqlBuilderFuncs(Dsl) for other DSLs).
     /**
      * Maps each predefined {@link Dsl} ({@code PSC}, {@code PAC}, {@code PLC}) to the SQL builder
-     * factory functions used to generate this join's select, update, and delete statements. Plans for
-     * these DSLs are built eagerly; plans for any other parameterized-SQL DSL are built on first use.
+     * factory functions used to generate this join's select and delete statements. Plans for
+     * all parameterized-SQL dialects are built on first use.
      */
-    static final Map<Dsl, Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> sqlBuilderFuncMap = new HashMap<>();
+    static final Map<Dsl, Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>>> sqlBuilderFuncMap = new HashMap<>();
 
     static {
-        sqlBuilderFuncMap.put(PSC, Tuple.of(PSC::select, PSC::selectFrom, PSC::update, PSC::deleteFrom));
+        sqlBuilderFuncMap.put(PSC, Tuple.of(PSC::select, PSC::selectFrom, PSC::deleteFrom));
 
-        sqlBuilderFuncMap.put(PAC, Tuple.of(PAC::select, PAC::selectFrom, PAC::update, PAC::deleteFrom));
+        sqlBuilderFuncMap.put(PAC, Tuple.of(PAC::select, PAC::selectFrom, PAC::deleteFrom));
 
-        sqlBuilderFuncMap.put(PLC, Tuple.of(PLC::select, PLC::selectFrom, PLC::update, PLC::deleteFrom));
+        sqlBuilderFuncMap.put(PLC, Tuple.of(PLC::select, PLC::selectFrom, PLC::deleteFrom));
     }
 
     /**
@@ -222,13 +222,6 @@ public final class JoinInfo {
     private final Map<Dsl, Tuple2<BiFunction<Collection<String>, Integer, String>, Jdbc.BiParametersSetter<PreparedStatement, Collection<?>>>> batchSelectSqlBuilderAndParamSetterPool = new ConcurrentHashMap<>();
 
     /**
-     * Per-{@link Dsl} cache of the UPDATE statement that resets the referenced join-key column(s) to
-     * their type default (unlinking the joined entities), paired with the parameter setter that binds
-     * one source entity's join key(s).
-     */
-    private final Map<Dsl, Tuple2<String, Jdbc.BiParametersSetter<PreparedStatement, Object>>> setNullSqlAndParamSetterPool = new ConcurrentHashMap<>();
-
-    /**
      * Per-{@link Dsl} cache backing {@link #deleteSqlPlan(Dsl)}: {@code _1} is the single-entity delete SQL,
      * {@code _2} the middle (join) table delete SQL ({@code null} in the current implementation), {@code _3}
      * the parameter setter that binds one source entity's join key(s).
@@ -250,7 +243,7 @@ public final class JoinInfo {
     private final Map<SqlDialect, Dsl> planDslPool = new ConcurrentHashMap<>();
 
     /**
-     * Builds the select, batch-select, set-null, delete, and batch-delete plans of this join for one {@link Dsl}
+     * Builds the select, batch-select, delete, and batch-delete plans of this join for one {@link Dsl}
      * and stores them in the plan pools under that {@code Dsl}.
      */
     private final Consumer<Dsl> planBuilder;
@@ -261,9 +254,10 @@ public final class JoinInfo {
      * including parsing the {@code @JoinedBy} annotation, determining join type (one-to-many or many-to-many),
      * and building optimized SQL statements for join operations.
      *
-     * <p>The constructor processes the join configuration and prepares SQL builders and parameter setters
-     * for the predefined SQL builder DSLs (PSC, PAC, PLC); those of any other parameterized-SQL DSL are
-     * prepared on first use. It supports two main join patterns:</p>
+     * <p>The constructor validates the join configuration. SQL builders and parameter setters for each
+     * parameterized-SQL dialect, including PSC, PAC and PLC, are prepared on first use; DAO creation
+     * prepares the dialect of the DAO, so a join whose SQL cannot be planned fails when the DAO is created.
+     * It supports two main join patterns:</p>
      * <ul>
      *   <li><b>One-to-Many Join:</b> Direct foreign key relationship (e.g., "employeeId" or "employeeId = id")</li>
      *   <li><b>Many-to-Many Join:</b> Relationship through intermediate table (e.g., "employeeId = EmployeeProject.employeeId, EmployeeProject.projectId = projectId")</li>
@@ -296,14 +290,13 @@ public final class JoinInfo {
      *                                   if the referenced entity type is not a valid bean/entity class;
      *                                   if join column types are incompatible between source and referenced entities;
      *                                   or if the many-to-many intermediate entity class is not found or improperly configured.
-     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      *
      * @see JoinedBy
      * @see com.landawn.abacus.jdbc.annotation.DaoConfig
      * @see #isManyToManyJoin()
      */
     JoinInfo(final Class<?> entityClass, final String tableName, final String joinEntityPropName, final boolean allowNullOrDefaultJoinKeys)
-            throws IllegalArgumentException, IllegalStateException {
+            throws IllegalArgumentException {
         N.checkArgNotNull(entityClass, cs.entityClass);
         N.checkArgNotNull(tableName, cs.tableName);
         N.checkArgNotNull(joinEntityPropName, cs.joinEntityPropName);
@@ -423,8 +416,9 @@ public final class JoinInfo {
             // The intermediate class lives in the entity's package, so it is resolved through the entity's class loader.
             // ClassUtil.forName used abacus-common's loader, which cannot see application classes when the library is
             // deployed in a parent class loader (e.g. a server's shared library), and caches the class by name in a
-            // static pool. It is not initialized here: only its bean metadata is read. Only a missing class is reported
-            // as not found; any other loading failure (e.g. a LinkageError) propagates as itself.
+            // static pool. Loading does not initialize it, but parsing its bean metadata below instantiates it, which runs
+            // its initializers. Only a missing class is reported as not found; any other loading failure (e.g. a
+            // LinkageError) propagates as itself.
             try {
                 middleEntityClass = Class.forName(middleEntityClassName, false, entityClass.getClassLoader());
             } catch (final ClassNotFoundException e) {
@@ -479,14 +473,8 @@ public final class JoinInfo {
                 }
             };
 
-            final Jdbc.BiParametersSetter<PreparedStatement, Object> setNullParamSetterForUpdate = (stmt, entity) -> {
-                referencedPropInfos[0].dbType.set(stmt, 1, referencedPropInfos[0].dbType.defaultValue());
-                srcPropInfos[0].dbType.set(stmt, 2, getJoinPropValue(srcPropInfos[0], entity));
-            };
-
             planBuilder = dsl -> {
-                final Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(
-                        dsl);
+                final Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(dsl);
 
                 final String middleSelectSql = funcs._1.apply(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).build().query();
                 final String leftSelectSql = funcs._2.apply(referencedEntityClass).where(cond).build().query();
@@ -594,22 +582,19 @@ public final class JoinInfo {
 
                 batchSelectSqlBuilderAndParamSetterPool.put(dsl, Tuple.of(batchSqlBuilder, batchParaSetter));
 
-                final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
                 // middleSelectSqlWhereIn inherits the SELECT's table alias (e.g. "ar.role_id") when the referenced
-                // entity declares @Table(alias = ...); that alias is unbound in an UPDATE/DELETE statement, so those
-                // statements use an unqualified WHERE fragment built from DELETE ... WHERE (like batchDeleteSqlHeader).
-                final String deleteAllSql = funcs._4.apply(referencedEntityClass).where(cond).build().query();
+                // entity declares @Table(alias = ...); that alias is unbound in a DELETE statement, so the delete
+                // uses an unqualified WHERE fragment built from DELETE ... WHERE (like batchDeleteSqlHeader).
+                final String deleteAllSql = funcs._3.apply(referencedEntityClass).where(cond).build().query();
                 final int whereIndexInDelete = deleteAllSql.lastIndexOf(" WHERE ");
                 N.checkState(whereIndexInDelete >= 0, "SQL query does not contain ' WHERE ' clause: %s", deleteAllSql);
-                final String whereInForUpdateDelete = deleteAllSql.substring(whereIndexInDelete).replace(inCondToReplace, middleSelectSql);
-                final String setNullSql = funcs._3.apply(referencedEntityClass).set(referencedPropNames).build().query() + whereInForUpdateDelete;
-                final String deleteSql = funcs._4.apply(referencedEntityClass).build().query() + whereInForUpdateDelete;
-                final String middleDeleteSql = funcs._4.apply(middleEntityClass).where(middleEntityCond).build().query();
+                final String whereInForDelete = deleteAllSql.substring(whereIndexInDelete).replace(inCondToReplace, middleSelectSql);
+                final String deleteSql = funcs._3.apply(referencedEntityClass).build().query() + whereInForDelete;
+                final String middleDeleteSql = funcs._3.apply(middleEntityClass).where(middleEntityCond).build().query();
 
-                setNullSqlAndParamSetterPool.put(dsl, Tuple.of(setNullSql, setNullParamSetterForUpdate));
                 deleteSqlAndParamSetterPool.put(dsl, Tuple.of(deleteSql, cascadeDeleteDefinedInDB ? null : middleDeleteSql, paramSetter));
 
-                final String batchDeleteSqlHeader = funcs._4.apply(referencedEntityClass)
+                final String batchDeleteSqlHeader = funcs._3.apply(referencedEntityClass)
                         .where(cond)
                         .build()
                         .query()
@@ -626,7 +611,7 @@ public final class JoinInfo {
                     }
                 };
 
-                final String batchMiddleDeleteSql = funcs._4.apply(middleEntityClass).where(middleEntityCond).build().query().replace(" = ?", " IN (");
+                final String batchMiddleDeleteSql = funcs._3.apply(middleEntityClass).where(middleEntityCond).build().query().replace(" = ?", " IN (");
 
                 final IntFunction<String> batchMiddleDeleteSqlBuilder = batchSize -> {
                     N.checkArgPositive(batchSize, cs.batchSize);
@@ -722,27 +707,8 @@ public final class JoinInfo {
                 }
             });
 
-            final Jdbc.BiParametersSetter<PreparedStatement, Object> setNullParamSetterForUpdate = srcPropInfos.length == 1 ? (stmt, entity) -> {
-                referencedPropInfos[0].dbType.set(stmt, 1, referencedPropInfos[0].dbType.defaultValue());
-                srcPropInfos[0].dbType.set(stmt, 2, getJoinPropValue(srcPropInfos[0], entity));
-            } : (srcPropInfos.length == 2 ? (stmt, entity) -> {
-                referencedPropInfos[0].dbType.set(stmt, 1, referencedPropInfos[0].dbType.defaultValue());
-                referencedPropInfos[1].dbType.set(stmt, 2, referencedPropInfos[1].dbType.defaultValue());
-                srcPropInfos[0].dbType.set(stmt, 3, getJoinPropValue(srcPropInfos[0], entity));
-                srcPropInfos[1].dbType.set(stmt, 4, getJoinPropValue(srcPropInfos[1], entity));
-            } : (stmt, entity) -> {
-                for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                    referencedPropInfos[i].dbType.set(stmt, i + 1, referencedPropInfos[i].dbType.defaultValue());
-                }
-
-                for (int i = 0, len = srcPropInfos.length; i < len; i++) {
-                    srcPropInfos[i].dbType.set(stmt, len + i + 1, getJoinPropValue(srcPropInfos[i], entity));
-                }
-            });
-
             planBuilder = dsl -> {
-                final Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(
-                        dsl);
+                final Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(dsl);
 
                 final String selectSql = funcs._2.apply(referencedEntityClass).where(cond).build().query();
 
@@ -805,11 +771,8 @@ public final class JoinInfo {
 
                 batchSelectSqlBuilderAndParamSetterPool.put(dsl, Tuple.of(batchSelectSqlBuilder, batchParaSetter));
 
-                final List<String> referencedPropNames = Stream.of(referencedPropInfos).map(p -> p.name).toList();
-                final String setNullSql = funcs._3.apply(referencedEntityClass).set(referencedPropNames).where(cond).build().query();
-                final String deleteSql = funcs._4.apply(referencedEntityClass).where(cond).build().query();
+                final String deleteSql = funcs._3.apply(referencedEntityClass).where(cond).build().query();
 
-                setNullSqlAndParamSetterPool.put(dsl, Tuple.of(setNullSql, setNullParamSetterForUpdate));
                 deleteSqlAndParamSetterPool.put(dsl, Tuple.of(deleteSql, null, paramSetter));
 
                 final IntFunction<String> batchDeleteSqlBuilder = batchSize -> {
@@ -818,7 +781,7 @@ public final class JoinInfo {
                     if (batchSize == 1) {
                         return deleteSql;
                     } else {
-                        return appendWhereFunc.apply(funcs._4.apply(referencedEntityClass), batchSize).build().query();
+                        return appendWhereFunc.apply(funcs._3.apply(referencedEntityClass), batchSize).build().query();
                     }
                 };
 
@@ -881,13 +844,7 @@ public final class JoinInfo {
             referencedEntityKeyExtractor = referencedEntityKeyExtractorTmp;
         }
 
-        // The predefined DSLs are built eagerly so a misconfigured join fails here; any other parameterized-SQL DSL
-        // (e.g. that of a DAO created with a custom SqlDialect) is built on first use by planDsl(Dsl).
-        for (final Dsl dsl : sqlBuilderFuncMap.keySet()) {
-            planBuilder.accept(dsl);
-            planDslPool.put(dsl.sqlDialect(), dsl);
-        }
-
+        // Every dialect's complete plan set is published on first use by planDsl(Dsl).
         sourcePropNames = Collections.unmodifiableList(Stream.of(srcPropInfos).map(propInfo -> propInfo.name).toList());
         hasArrayJoinKey = Stream.of(srcPropInfos).anyMatch(propInfo -> propInfo.clazz.isArray());
     }
@@ -1101,7 +1058,17 @@ public final class JoinInfo {
                 if (planDsl == null) {
                     // Publish the key only after all plans are stored: the lock-free lookup above treats a present key
                     // as complete plans (and leaves no key behind if building throws).
-                    planBuilder.accept(dsl);
+                    try {
+                        planBuilder.accept(dsl);
+                    } catch (final RuntimeException | Error e) {
+                        // A failed build may already have populated some maps. Do not retain
+                        // unpublished plans, especially if a retry uses a different Dsl instance.
+                        selectSqlBuilderAndParamSetterPool.remove(dsl);
+                        batchSelectSqlBuilderAndParamSetterPool.remove(dsl);
+                        deleteSqlAndParamSetterPool.remove(dsl);
+                        batchDeleteSqlBuilderAndParamSetterPool.remove(dsl);
+                        throw e;
+                    }
                     planDslPool.put(sqlDialect, dsl);
                     planDsl = dsl;
                 }
@@ -1112,21 +1079,19 @@ public final class JoinInfo {
     }
 
     /**
-     * Returns the select/selectFrom/update/deleteFrom factory functions of {@code dsl}.
+     * Returns the select/selectFrom/deleteFrom factory functions of {@code dsl}.
      *
      * @param dsl a parameterized-SQL DSL.
      * @return the predefined functions for PSC, PAC, or PLC, otherwise functions bound to {@code dsl}.
      */
-    private static Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> sqlBuilderFuncs(
-            final Dsl dsl) {
-        final Tuple4<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncMap
-                .get(dsl);
+    private static Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> sqlBuilderFuncs(final Dsl dsl) {
+        final Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncMap.get(dsl);
 
         if (funcs != null) {
             return funcs;
         }
 
-        return Tuple.of(dsl::select, dsl::selectFrom, dsl::update, dsl::deleteFrom);
+        return Tuple.of(dsl::select, dsl::selectFrom, dsl::deleteFrom);
     }
 
     /**
@@ -1391,20 +1356,238 @@ public final class JoinInfo {
         return value;
     }
 
+    // DAO proxies are cached for the life of the JVM and keep the join map captured at creation, so that metadata
+    // is retained anyway. Registering it here lets the per-call lookups of those DAOs reuse it instead of
+    // rebuilding duplicates (and their SQL plans) after the bounded cache below has evicted it.
+    private static final Map<Tuple3<Class<?>, Class<?>, String>, JoinMetadata> daoJoinMetadataPool = new ConcurrentHashMap<>();
+
+    // Other lookups (e.g. through this public API with rotating tenant or partition table names) share a bounded
+    // cache. Hits are lock-free and mark the entry as recently used; a full cache gives each recently used entry
+    // one second chance before evicting in insertion order. Both public lookup views are owned by the same
+    // entry, so an independently retained type index cannot defeat eviction.
+    private static final int JOIN_METADATA_CACHE_CAPACITY = 1024;
+    private static final Map<Tuple3<Class<?>, Class<?>, String>, JoinMetadata> joinMetadataPool = new ConcurrentHashMap<>();
+    // Insertion order of joinMetadataPool's keys. Its monitor guards this queue and every change to joinMetadataPool,
+    // so both always hold the same keys; reading joinMetadataPool needs no lock.
+    private static final ArrayDeque<Tuple3<Class<?>, Class<?>, String>> joinMetadataKeys = new ArrayDeque<>();
+    private static final JoinMetadata EMPTY_JOIN_METADATA = new JoinMetadata(Collections.emptyMap(), Collections.emptyMap());
+
+    // Values contain only names/booleans, not other classes or their loaders.
+    private static final ClassValue<List<String>> joinPropertyNames = new ClassValue<>() {
+        @Override
+        protected List<String> computeValue(final Class<?> entityClass) {
+            final List<String> names = new ArrayList<>();
+
+            for (final PropInfo propInfo : ParserUtil.getBeanInfo(entityClass).propInfoList) {
+                if (propInfo.isAnnotationPresent(JoinedBy.class)) {
+                    names.add(propInfo.name);
+                }
+            }
+
+            return Collections.unmodifiableList(names);
+        }
+    };
+
+    private static final ClassValue<Boolean> allowDefaultJoinKeys = new ClassValue<>() {
+        @Override
+        protected Boolean computeValue(final Class<?> daoClass) {
+            final DaoConfig anno = Stream.of(ClassUtil.getAllInterfaces(daoClass))
+                    .prepend(daoClass)
+                    .map(it -> it.getAnnotation(DaoConfig.class))
+                    .filter(Objects::nonNull)
+                    .first()
+                    .orElseNull();
+            return anno != null && anno.allowNullOrDefaultJoinKeys();
+        }
+    };
+
     /**
-     * Global cache backing {@link #getEntityJoinInfo(Class, Class, String)}: DAO class to
-     * (entity class, table name) to (join property name to {@code JoinInfo}). Cached maps are
-     * unmodifiable once built.
+     * The join metadata of one DAO class, entity class and table name: the {@code JoinInfo} of every join property
+     * and, derived from it, the join property names grouped by referenced entity class. Both views are immutable, so
+     * callers that keep them stay valid after the entry is evicted.
      */
-    private static final Map<Class<?>, Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>>> daoEntityJoinInfoPool = new ConcurrentHashMap<>();
+    private static final class JoinMetadata {
+        final Map<String, JoinInfo> byProperty;
+        final Map<Class<?>, List<String>> propertiesByType;
+        // Set by cache hits and cleared by eviction scans; a lost update only changes which entry is evicted.
+        volatile boolean recentlyUsed;
+
+        JoinMetadata(final Map<String, JoinInfo> byProperty, final Map<Class<?>, List<String>> propertiesByType) {
+            this.byProperty = byProperty;
+            this.propertiesByType = propertiesByType;
+        }
+
+        /**
+         * Creates the metadata of {@code byProperty}, indexing its property names by referenced entity class.
+         *
+         * @param byProperty the unmodifiable join information keyed by join property name, in bean property order
+         * @return the metadata owning {@code byProperty} and its type index
+         */
+        static JoinMetadata of(final Map<String, JoinInfo> byProperty) {
+            final Map<Class<?>, List<String>> propertiesByType = new HashMap<>();
+
+            for (final Map.Entry<String, JoinInfo> entry : byProperty.entrySet()) {
+                propertiesByType.computeIfAbsent(entry.getValue().referencedEntityClass, k -> new ArrayList<>(1)).add(entry.getKey());
+            }
+
+            propertiesByType.replaceAll((k, v) -> Collections.unmodifiableList(v));
+
+            return new JoinMetadata(byProperty, Collections.unmodifiableMap(propertiesByType));
+        }
+    }
+
+    /**
+     * Returns the join metadata for the given key: the metadata retained for a registered DAO if there is one,
+     * otherwise the entry of the bounded cache, building and caching it on a miss. An entity class without join
+     * properties always yields shared empty metadata and adds no cache entry.
+     *
+     * @param daoClass the DAO class, whose {@code @DaoConfig} decides whether null/default join keys are allowed
+     * @param entityClass the source entity class
+     * @param tableName the table name of the source entity
+     * @return the join metadata, never {@code null}
+     */
+    private static JoinMetadata joinMetadata(final Class<?> daoClass, final Class<?> entityClass, final String tableName) {
+        final List<String> propNames = joinPropertyNames.get(entityClass);
+
+        if (propNames.isEmpty()) {
+            return EMPTY_JOIN_METADATA;
+        }
+
+        final Tuple3<Class<?>, Class<?>, String> key = Tuple.of(daoClass, entityClass, tableName);
+        final JoinMetadata daoMetadata = daoJoinMetadataPool.get(key);
+
+        if (daoMetadata != null) {
+            return daoMetadata;
+        }
+
+        final JoinMetadata cached = joinMetadataPool.get(key);
+
+        if (cached != null) {
+            markRecentlyUsed(cached);
+            return cached;
+        }
+
+        // Built without holding a lock or a map bin. Parsing the bean metadata of a referenced or link entity
+        // instantiates it, which runs its initializers, and those may look up join metadata themselves (e.g. an entity
+        // that creates its own DAO in a static field). Concurrent misses of one key may each build it; the first one
+        // published is shared and the others are discarded.
+        final boolean allowNullOrDefaultJoinKeys = allowDefaultJoinKeys.get(daoClass);
+        final Map<String, JoinInfo> byProperty = new LinkedHashMap<>();
+
+        for (final String propName : propNames) {
+            byProperty.put(propName, new JoinInfo(entityClass, tableName, propName, allowNullOrDefaultJoinKeys));
+        }
+
+        final JoinMetadata built = JoinMetadata.of(Collections.unmodifiableMap(byProperty));
+
+        synchronized (joinMetadataKeys) {
+            // retainDaoJoinInfo removes a key from the bounded cache under this monitor after registering it, so
+            // checking again here keeps a lookup that missed before the registration from caching the key again.
+            final JoinMetadata registered = daoJoinMetadataPool.get(key);
+
+            if (registered != null) {
+                return registered;
+            }
+
+            final JoinMetadata existing = joinMetadataPool.putIfAbsent(key, built);
+
+            if (existing != null) {
+                markRecentlyUsed(existing);
+                return existing;
+            }
+
+            // Evict before queueing the new key so the entry this caller is about to use is not the one evicted.
+            evictJoinMetadataOverCapacity();
+            joinMetadataKeys.addLast(key);
+        }
+
+        return built;
+    }
+
+    /**
+     * Marks a bounded-cache entry as used since the previous eviction scan, giving it a second chance.
+     *
+     * @param metadata the entry that was just looked up
+     */
+    private static void markRecentlyUsed(final JoinMetadata metadata) {
+        // Read first so a hot entry's cache line is not rewritten by every hit.
+        if (!metadata.recentlyUsed) {
+            metadata.recentlyUsed = true;
+        }
+    }
+
+    /**
+     * Evicts queued entries until the bounded cache is within capacity. Must be called while holding the
+     * {@code joinMetadataKeys} monitor. A recently used entry is requeued once instead of evicted; the number of
+     * second chances is limited to one pass over the queue so that concurrent hits cannot prolong the scan.
+     */
+    private static void evictJoinMetadataOverCapacity() {
+        int secondChances = joinMetadataKeys.size();
+
+        while (joinMetadataPool.size() > JOIN_METADATA_CACHE_CAPACITY && !joinMetadataKeys.isEmpty()) {
+            final Tuple3<Class<?>, Class<?>, String> eldest = joinMetadataKeys.removeFirst();
+            final JoinMetadata metadata = joinMetadataPool.get(eldest);
+
+            if (metadata == null) {
+                continue;
+            }
+
+            if (metadata.recentlyUsed && secondChances-- > 0) {
+                metadata.recentlyUsed = false;
+                joinMetadataKeys.addLast(eldest);
+            } else {
+                joinMetadataPool.remove(eldest, metadata);
+            }
+        }
+    }
+
+    /**
+     * Retains the join map captured by a DAO proxy that has been registered for the life of the JVM, so later lookups
+     * for the same DAO class, entity class and table name return it regardless of the bounded cache. The bounded-cache
+     * entry of that combination and its queued key are removed, since those lookups no longer reach them.
+     *
+     * @param daoClass the DAO interface of the registered proxy
+     * @param entityClass the target entity class of the proxy
+     * @param tableName the target table name of the proxy
+     * @param entityJoinInfo the unmodifiable map the proxy obtained from {@link #getEntityJoinInfo(Class, Class, String)}
+     */
+    static void retainDaoJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final Map<String, JoinInfo> entityJoinInfo) {
+        if (entityJoinInfo.isEmpty()) {
+            return;
+        }
+
+        final Tuple3<Class<?>, Class<?>, String> key = Tuple.of(daoClass, entityClass, tableName);
+
+        daoJoinMetadataPool.computeIfAbsent(key, k -> {
+            final JoinMetadata cached = joinMetadataPool.get(k);
+
+            return cached != null && cached.byProperty == entityJoinInfo ? cached : JoinMetadata.of(entityJoinInfo);
+        });
+
+        // Lookups of this key no longer reach the bounded cache, so an entry there would only take a slot from other keys.
+        // Removing it under the monitor that guards publishing keeps the queue in step, and a lookup that missed before the
+        // registration finds the registered metadata when it publishes, instead of caching the key again.
+        synchronized (joinMetadataKeys) {
+            if (joinMetadataPool.remove(key) != null) {
+                joinMetadataKeys.remove(key);
+            }
+        }
+    }
 
     /**
      * Retrieves all join information for the specified entity class.
      * This method returns a map of property names to their corresponding JoinInfo objects
      * for all properties annotated with {@code @JoinedBy} in the entity class.
      *
-     * <p>The result is cached for performance, so subsequent calls with the same parameters
-     * will return the cached map without re-parsing the entity class.</p>
+     * <p>The map of a combination served by a registered DAO proxy is retained with that proxy and reused by
+     * every call with the same parameters. Other combinations share a cache of at most 1,024 entries: when it
+     * fills, entries are evicted in insertion order, except that an entry used since the previous scan is kept
+     * once more. Entities without joins share an empty result without retaining table names. Eviction does not affect
+     * previously returned maps.</p>
+     *
+     * <p>Building the map validates the {@code @JoinedBy} configuration, but not the SQL generated for it: the SQL plans
+     * of each dialect are built on first use, so an error in generating them is raised by {@link #selectSqlPlan(Dsl)} and
+     * the other plan methods, not by this method. Creating a DAO builds the plans of its own dialect.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1440,45 +1623,18 @@ public final class JoinInfo {
      * @param tableName the database table name for the entity, must not be {@code null}.
      * @return an unmodifiable map of property names to JoinInfo objects, never {@code null}, empty if no join properties exist.
      * @throws IllegalArgumentException if any argument is {@code null}, or a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
-     *                                  (this is raised the first time the map is built and cached for the given key).
-     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
+     *                                  (raised whenever the map is built; a failed build is not cached).
      *
      * @see JoinedBy
      * @see DaoConfig
      */
     public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName)
-            throws IllegalArgumentException, IllegalStateException {
+            throws IllegalArgumentException {
         N.checkArgNotNull(daoClass, cs.daoClass);
         N.checkArgNotNull(entityClass, cs.entityClass);
         N.checkArgNotNull(tableName, cs.tableName);
 
-        Map<Tuple2<Class<?>, String>, Map<String, JoinInfo>> entityJoinInfoMap = daoEntityJoinInfoPool.computeIfAbsent(daoClass,
-                k -> new ConcurrentHashMap<>());
-
-        final Tuple2<Class<?>, String> key = Tuple.of(entityClass, tableName);
-
-        return entityJoinInfoMap.computeIfAbsent(key, k -> {
-            final DaoConfig anno = Stream.of(ClassUtil.getAllInterfaces(daoClass))
-                    .prepend(daoClass)
-                    .map(it -> it.getAnnotation(DaoConfig.class))
-                    .filter(Objects::nonNull)
-                    .first()
-                    .orElseNull();
-            final boolean allowNullOrDefaultJoinKeys = anno != null && anno.allowNullOrDefaultJoinKeys();
-            final BeanInfo entityInfo = ParserUtil.getBeanInfo(entityClass);
-
-            final Map<String, JoinInfo> map = new LinkedHashMap<>();
-
-            for (final PropInfo propInfo : entityInfo.propInfoList) {
-                if (!propInfo.isAnnotationPresent(JoinedBy.class)) {
-                    continue;
-                }
-
-                map.put(propInfo.name, new JoinInfo(entityClass, tableName, propInfo.name, allowNullOrDefaultJoinKeys));
-            }
-
-            return Collections.unmodifiableMap(map);
-        });
+        return joinMetadata(daoClass, entityClass, tableName).byProperty;
     }
 
     /**
@@ -1521,13 +1677,12 @@ public final class JoinInfo {
      * @throws IllegalArgumentException if any argument is {@code null}, no {@code @JoinedBy} join property is found with the given name on the entity,
      *                                  or if a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
      *                                  (surfaced while building the underlying join-info map).
-     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)
      */
     public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName)
-            throws IllegalArgumentException, IllegalStateException {
+            throws IllegalArgumentException {
         N.checkArgNotNull(daoClass, cs.daoClass);
         N.checkArgNotNull(entityClass, cs.entityClass);
         N.checkArgNotNull(tableName, cs.tableName);
@@ -1544,13 +1699,6 @@ public final class JoinInfo {
     }
 
     /**
-     * Global cache backing {@link #getJoinEntityPropNamesByType(Class, Class, String, Class)}:
-     * (DAO class, entity class, table name) to (referenced entity class to join property names).
-     * Cached maps and lists are unmodifiable once built.
-     */
-    private static final Map<Tuple3<Class<?>, Class<?>, String>, Map<Class<?>, List<String>>> joinEntityPropNamesByTypePool = new ConcurrentHashMap<>();
-
-    /**
      * Retrieves all property names in an entity that join to a specific entity type.
      * This method finds all properties annotated with {@code @JoinedBy} that reference
      * the specified entity class.
@@ -1558,8 +1706,8 @@ public final class JoinInfo {
      * <p>This is useful when you need to discover all relationships between two entity types,
      * especially when there might be multiple join properties pointing to the same entity class.</p>
      *
-     * <p>The result is cached for performance, so subsequent calls with the same parameters
-     * will return the cached list.</p>
+     * <p>The result shares the metadata retention described by {@link #getEntityJoinInfo(Class, Class, String)}.
+     * Both views are retained or evicted together, and previously returned lists remain valid.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1595,33 +1743,18 @@ public final class JoinInfo {
      * @return an unmodifiable list of property names that join to the specified entity class, never {@code null}, empty if none found.
      * @throws IllegalArgumentException if any argument is {@code null}, or a {@code @JoinedBy}-annotated property on {@code entityClass} is misconfigured
      *                                  (surfaced while building the underlying join-info map).
-     * @throws IllegalStateException if generated join SQL lacks a clause required to build the join query plans
      *
      * @see JoinedBy
      * @see #getEntityJoinInfo(Class, Class, String)
      */
     public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName,
-            final Class<?> joinPropEntityClass) throws IllegalArgumentException, IllegalStateException {
+            final Class<?> joinPropEntityClass) throws IllegalArgumentException {
         N.checkArgNotNull(daoClass, cs.daoClass);
         N.checkArgNotNull(entityClass, cs.entityClass);
         N.checkArgNotNull(tableName, cs.tableName);
         N.checkArgNotNull(joinPropEntityClass, cs.joinPropEntityClass);
 
-        final Tuple3<Class<?>, Class<?>, String> key = Tuple.of(daoClass, entityClass, tableName);
-
-        final Map<Class<?>, List<String>> joinEntityPropNamesByTypeMap = joinEntityPropNamesByTypePool.computeIfAbsent(key, k -> {
-            final Map<Class<?>, List<String>> map = new HashMap<>();
-
-            for (final JoinInfo joinInfo : getEntityJoinInfo(daoClass, entityClass, tableName).values()) {
-                map.computeIfAbsent(joinInfo.referencedEntityClass, kk -> new ArrayList<>(1)).add(joinInfo.joinPropInfo.name);
-            }
-
-            map.replaceAll((k2, v) -> Collections.unmodifiableList(v));
-
-            return Collections.unmodifiableMap(map);
-        });
-
-        return joinEntityPropNamesByTypeMap.getOrDefault(joinPropEntityClass, N.emptyList());
+        return joinMetadata(daoClass, entityClass, tableName).propertiesByType.getOrDefault(joinPropEntityClass, N.emptyList());
     }
 
     /**

@@ -48,7 +48,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -11286,55 +11285,92 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     private <R> ContinuableFuture<R> submitAsyncTask(final Callable<? extends R> action, final Executor executor)
             throws IllegalArgumentException, RejectedExecutionException {
-        final Object startLock = new Object();
-        final AtomicBoolean actionStarted = new AtomicBoolean();
-        final AtomicBoolean cancelledBeforeStart = new AtomicBoolean();
-        final FutureTask<R> futureTask = new FutureTask<>(() -> {
-            synchronized (startLock) {
-                if (cancelledBeforeStart.get()) {
-                    // Cancellation won the race after FutureTask decided to invoke its Callable
-                    // but before this body began. FutureTask will ignore this return value.
+        final AsyncQueryAction<R> taskAction = new AsyncQueryAction<>(this, action);
+        final FutureTask<R> futureTask = new AsyncQueryFutureTask<>(taskAction);
+
+        try {
+            return new FutureTaskAsyncExecutor(executor).executeTask(futureTask);
+        } catch (final RuntimeException | Error e) {
+            // A rejecting executor may retain the submitted Runnable. The caller performs
+            // failure-preserving cleanup; detach the unstarted action so it cannot retain or use the query.
+            taskAction.detach();
+            throw e;
+        }
+    }
+
+    /**
+     * Owns the query only until execution or cancellation claims it. Once execution starts, the
+     * running stack owns cleanup, so cancellation cannot close a statement still in use. Clearing
+     * both fields also lets a retained completed future release the query and the caller's action.
+     */
+    private static final class AsyncQueryAction<R> implements Callable<R> {
+        private AbstractQuery<?, ?> query;
+        private Callable<? extends R> action;
+
+        AsyncQueryAction(final AbstractQuery<?, ?> query, final Callable<? extends R> action) {
+            this.query = query;
+            this.action = action;
+        }
+
+        @Override
+        public R call() throws Exception {
+            final AbstractQuery<?, ?> activeQuery;
+            final Callable<? extends R> activeAction;
+
+            synchronized (this) {
+                activeQuery = query;
+
+                if (activeQuery == null) {
+                    // Cancellation can win after FutureTask selects its Callable but before this body starts.
                     return null;
                 }
 
-                actionStarted.set(true);
+                activeAction = action;
+                query = null;
+                action = null;
             }
 
             try {
-                return action.call();
+                return activeAction.call();
             } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
-                closeAfterExecutionIfAllowed(primaryFailure);
+                activeQuery.closeAfterExecutionIfAllowed(primaryFailure);
                 throw primaryFailure;
             } finally {
-                closeAfterExecutionIfAllowed();
+                activeQuery.closeAfterExecutionIfAllowed();
             }
-        }) {
-            @Override
-            protected void done() {
-                // FutureTask does not invoke its Callable when it is cancelled before run().
-                // In that case the task-body finally block above cannot release the statement.
-                boolean requiresCleanup = false;
+        }
 
-                synchronized (startLock) {
-                    if (!actionStarted.get()) {
-                        cancelledBeforeStart.set(true);
-                        requiresCleanup = true;
-                    }
-                }
+        synchronized AbstractQuery<?, ?> detach() {
+            final AbstractQuery<?, ?> detached = query;
+            query = null;
+            action = null;
+            return detached;
+        }
+    }
 
-                if (requiresCleanup) {
-                    try {
-                        closeAfterExecutionIfAllowed();
-                    } catch (final RuntimeException | Error e) {
-                        // cancel() has no failure channel for cleanup. Do not let a user close
-                        // handler make Future.cancel unexpectedly throw after cancellation won.
-                        logger.error(e, "Failed to close Query after asynchronous task cancellation");
-                    }
+    /** A static task avoids retaining the enclosing query after FutureTask clears its Callable. */
+    private static final class AsyncQueryFutureTask<R> extends FutureTask<R> {
+        private final AsyncQueryAction<R> action;
+
+        AsyncQueryFutureTask(final AsyncQueryAction<R> action) {
+            super(action);
+            this.action = action;
+        }
+
+        @Override
+        protected void done() {
+            // A cancelled, unstarted FutureTask never invokes its Callable's finally block.
+            final AbstractQuery<?, ?> query = action.detach();
+
+            if (query != null) {
+                try {
+                    query.closeAfterExecutionIfAllowed();
+                } catch (final RuntimeException | Error e) {
+                    // cancel() has no failure channel for cleanup. Preserve its normal return contract.
+                    logger.error(e, "Failed to close Query after asynchronous task cancellation");
                 }
             }
-        };
-
-        return new FutureTaskAsyncExecutor(executor).executeTask(futureTask);
+        }
     }
 
     /**

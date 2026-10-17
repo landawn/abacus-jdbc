@@ -7657,6 +7657,24 @@ public final class Jdbc {
          * Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@link DefaultDaoCache}
          * which uses a {@link KeyedObjectPool} for in-memory caching with TTL and idle time-based eviction.
          *
+         * <p>The caller owns the returned cache. Its pool registers a JVM shutdown hook and, when {@code evictDelay} is
+         * positive, runs a periodic eviction task; the hook closes the pool when the JVM exits, and {@link DefaultDaoCache#close()}
+         * releases both earlier, once nothing uses the cache any more. A DAO proxy created with a cache stays registered for the life of the JVM and keeps that
+         * cache: closing the cache does not unregister the proxy, and its methods that read or invalidate the cache then
+         * fail with {@link IllegalStateException}. Create such a cache and its DAOs once, for as long as the application
+         * uses them, not per request or unit of work (each new cache instance registers another proxy):</p>
+         * <pre>{@code
+         * // At application startup:
+         * Jdbc.DefaultDaoCache userCache = new Jdbc.DefaultDaoCache(1000, 3000);
+         * UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().cache(userCache).build());
+         *
+         * // At application shutdown (or when the application is undeployed), after the last use of userDao:
+         * userCache.close();
+         * }</pre>
+         *
+         * <p>{@code DaoCache} itself declares no {@code close()}: to close a cache before the JVM exits, hold it as a
+         * {@link DefaultDaoCache}, which is {@link AutoCloseable}, as above.</p>
+         *
          * @param capacity the maximum number of entries in the cache.
          * @param evictDelay the interval in milliseconds for the eviction scheduler to run.
          * @return a new {@code DaoCache} instance.
@@ -7832,7 +7850,7 @@ public final class Jdbc {
      *
      * @see DaoCache#create(int, long)
      */
-    public static final class DefaultDaoCache implements DaoCache {
+    public static final class DefaultDaoCache implements DaoCache, AutoCloseable {
         /**
          * The backing pool storing cached results by cache key, enforcing the capacity limit and
          * TTL/idle-time eviction configured when each entry is stored.
@@ -7871,7 +7889,7 @@ public final class Jdbc {
          * @param methodSignature a tuple containing method metadata (unused).
          * @return the cached result, or {@code null} if no live entry exists for the key (a miss, or the entry expired/was evicted).
          * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
-         * @throws IllegalStateException if the backing pool has been closed during JVM shutdown.
+         * @throws IllegalStateException if the backing pool has been closed.
          */
         @Override
         @SuppressWarnings("unused")
@@ -7900,7 +7918,7 @@ public final class Jdbc {
          * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null}
          *         or the backing pool rejected the entry.
          * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}.
-         * @throws IllegalStateException if {@code result} is non-null and the backing pool has been closed during JVM shutdown.
+         * @throws IllegalStateException if {@code result} is non-null and the backing pool has been closed.
          */
         @Override
         @SuppressWarnings("unused")
@@ -7934,7 +7952,7 @@ public final class Jdbc {
          * @return {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null}
          *         or the backing pool rejected the entry.
          * @throws IllegalArgumentException if {@code defaultCacheKey} is {@code null}, or {@code liveTime} or {@code maxIdleTime} is not positive.
-         * @throws IllegalStateException if {@code result} is non-null and the backing pool has been closed during JVM shutdown.
+         * @throws IllegalStateException if {@code result} is non-null and the backing pool has been closed.
          */
         @Override
         public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args,
@@ -7975,7 +7993,7 @@ public final class Jdbc {
          * @throws IllegalArgumentException if {@code defaultCacheKey} or {@code methodSignature} is {@code null}, or the return type
          *         in {@code methodSignature} is {@code null} for a built-in update method.
          * @throws ClassCastException if a built-in numeric update method supplies a non-null result that is not a {@code Number}.
-         * @throws IllegalStateException if invalidation is required and the backing pool has been closed during JVM shutdown.
+         * @throws IllegalStateException if invalidation is required and the backing pool has been closed.
          */
         @Override
         @SuppressWarnings("unused")
@@ -8000,14 +8018,19 @@ public final class Jdbc {
             if (Strings.isEmpty(updatedTableName)) {
                 pool.clear();
             } else {
-                pool.keySet().stream().filter(k -> cacheKeyMatchesTable(k, updatedTableName)).toList().forEach(pool::remove);
+                // keySet() is a snapshot, so removal does not require a second collection of matching keys.
+                for (final String key : pool.keySet()) {
+                    if (cacheKeyMatchesTable(key, updatedTableName)) {
+                        pool.remove(key);
+                    }
+                }
             }
         }
 
         /**
          * Removes every entry from the backing pool.
          *
-         * @throws IllegalStateException if the backing pool has been closed during JVM shutdown.
+         * @throws IllegalStateException if the backing pool has been closed.
          */
         @Override
         public void clear() throws IllegalStateException {
@@ -8019,10 +8042,13 @@ public final class Jdbc {
          * Idempotent. Afterwards the cache fails with {@link IllegalStateException} exactly as it does once the pool has
          * been closed during JVM shutdown (e.g., {@code get} and {@code clear} always throw).
          *
-         * <p>Package-private: used by the DAO factory to release a cache it created for a DAO proxy that was then
-         * discarded, which nothing else can reference.</p>
+         * <p>The JVM shutdown hook closes the pool when the JVM exits; call this method to release the pool's
+         * background resources earlier, once the cache is no longer in use. Clearing entries alone does not release
+         * them. A DAO proxy created with this cache remains registered after it is closed, and its methods that read
+         * or invalidate the cache then fail with {@link IllegalStateException}; see {@link DaoCache#create(int, long)}.</p>
          */
-        void close() {
+        @Override
+        public void close() {
             pool.close();
         }
     }

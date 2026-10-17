@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -398,6 +399,58 @@ class ResultSetProxyObjectMappingTest extends ResultSetProxyTestSupport {
         when(delegate.findColumn("col")).thenReturn(1);
         when(delegate.getObject(1)).thenReturn(null);
         assertNull(proxy.getObject("col"));
+    }
+
+    @Test
+    void testGetObjectByLabel_NullsReuseIndexWithoutChoosingGetter() throws SQLException {
+        final ResultSetMetaData metadata = mock(ResultSetMetaData.class);
+        final Timestamp timestamp = Timestamp.valueOf("2026-01-02 03:04:05");
+        when(delegate.findColumn("nullable_date")).thenReturn(2);
+        when(delegate.getObject(2)).thenReturn(null, null, new java.sql.Date(timestamp.getTime()));
+        when(delegate.getMetaData()).thenReturn(metadata);
+        when(metadata.getColumnClassName(2)).thenReturn("java.sql.Timestamp");
+        when(delegate.getTimestamp(2)).thenReturn(timestamp);
+
+        assertNull(proxy.getObject("nullable_date"));
+        assertNull(proxy.getObject("nullable_date"));
+        verify(delegate, never()).getMetaData();
+        assertEquals(timestamp, proxy.getObject("nullable_date"));
+        assertEquals(timestamp, proxy.getObject("nullable_date"));
+
+        verify(delegate).findColumn("nullable_date");
+        verify(delegate, times(3)).getObject(2);
+        verify(delegate, times(2)).getTimestamp(2);
+        verify(metadata).getColumnClassName(2);
+    }
+
+    @Test
+    void testGetObjectByLabel_AllNullColumnsHaveIndependentCachedIndexes() throws SQLException {
+        when(delegate.findColumn("first")).thenReturn(1);
+        when(delegate.findColumn("second")).thenReturn(2);
+
+        for (int row = 0; row < 100; row++) {
+            assertNull(proxy.getObject("first"));
+            assertNull(proxy.getObject("second"));
+        }
+
+        verify(delegate).findColumn("first");
+        verify(delegate).findColumn("second");
+        verify(delegate, times(100)).getObject(1);
+        verify(delegate, times(100)).getObject(2);
+        verify(delegate, never()).getMetaData();
+    }
+
+    @Test
+    void testGetObjectByLabel_FailedResolutionIsRetried() throws SQLException {
+        final SQLException failure = new SQLException("invalid column label");
+        when(delegate.findColumn("label")).thenThrow(failure).thenReturn(1);
+        when(delegate.getObject(1)).thenReturn(null, "value");
+
+        assertSame(failure, assertThrows(SQLException.class, () -> proxy.getObject("label")));
+        assertNull(proxy.getObject("label"));
+        assertEquals("value", proxy.getObject("label"));
+
+        verify(delegate, times(2)).findColumn("label");
     }
 
     @Test

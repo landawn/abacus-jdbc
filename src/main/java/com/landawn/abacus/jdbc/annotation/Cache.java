@@ -157,16 +157,18 @@ public @interface Cache {
      *
      * <p>By default, {@link Jdbc.DefaultDaoCache} is used, which is backed by a
      * keyed object pool with TTL and idle-time-based eviction. You can provide
-     * a custom implementation for specialized caching requirements.</p>
+     * a custom implementation for specialized caching requirements. If the implementation also
+     * implements {@link AutoCloseable}, an instance created for a DAO proxy that is then discarded,
+     * because another thread registered an equivalent proxy first, is closed.</p>
      *
      * <p>Example custom cache implementation:</p>
      * <pre>{@code
-     * public class MyCustomDaoCache implements Jdbc.DaoCache {
-     *     // Jdbc.DefaultDaoCache is final, so compose one via the Jdbc.DaoCache.create(...) factory.
-     *     private final Jdbc.DaoCache delegate;
+     * public class MyCustomDaoCache implements Jdbc.DaoCache, AutoCloseable {
+     *     // Jdbc.DefaultDaoCache is final, so compose one instead of extending it.
+     *     private final Jdbc.DefaultDaoCache delegate;
      *
      *     public MyCustomDaoCache(int capacity, long evictDelay) {
-     *         this.delegate = Jdbc.DaoCache.create(capacity, evictDelay);
+     *         this.delegate = new Jdbc.DefaultDaoCache(capacity, evictDelay);
      *     }
      *
      *     @Override
@@ -193,6 +195,17 @@ public @interface Cache {
      *             Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
      *         // Invalidation hook: called after write operations (see @RefreshCache).
      *         delegate.update(defaultCacheKey, result, daoProxy, args, methodSignature);
+     *     }
+     *
+     *     @Override
+     *     public void clear() {
+     *         delegate.clear();
+     *     }
+     *
+     *     @Override
+     *     public void close() {
+     *         // Releases the delegate's eviction task and JVM shutdown hook.
+     *         delegate.close();
      *     }
      * }
      *

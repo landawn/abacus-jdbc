@@ -11,15 +11,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ScheduledFuture;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.logging.Logger;
+import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.Tuple;
 import com.landawn.abacus.util.Tuple.Tuple3;
@@ -87,6 +91,95 @@ class JdbcDaoCacheTest extends JdbcTestSupport {
 
         assertThrows(IllegalStateException.class, () -> cache.get("method#users#1", null, null, null));
         assertThrows(IllegalStateException.class, cache::clear);
+    }
+
+    @Test
+    public void testDefaultDaoCacheClosesBackgroundResourcesInTryWithResources() throws Exception {
+        final Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(10, 60_000);
+        final Field poolField = Jdbc.DefaultDaoCache.class.getDeclaredField("pool");
+        poolField.setAccessible(true);
+        final Object pool = poolField.get(cache);
+        final Field taskField = pool.getClass().getDeclaredField("scheduleFuture");
+        taskField.setAccessible(true);
+        final ScheduledFuture<?> evictionTask = (ScheduledFuture<?>) taskField.get(pool);
+        final Field hookField = pool.getClass().getSuperclass().getDeclaredField("shutdownHook");
+        hookField.setAccessible(true);
+
+        try (cache) {
+            assertNotNull(hookField.get(pool));
+            assertFalse(evictionTask.isCancelled());
+            assertTrue(cache.put("key", "value", null, null, null));
+        }
+
+        assertTrue(evictionTask.isCancelled());
+        assertNull(hookField.get(pool));
+        assertThrows(IllegalStateException.class, () -> cache.get("key", null, null, null));
+    }
+
+    // createDao closes a cache it created for a proxy that it then discards only if the cache is AutoCloseable: the
+    // default cache and the documented forwarding example are released, any other cache is left untouched, and a
+    // release failure is logged instead of thrown.
+    @Test
+    public void testDiscardedProxyCacheIsClosedOnlyWhenAutoCloseable() throws Exception {
+        final Method release = DaoImpl.class.getDeclaredMethod("releaseDiscardedDaoCache", Jdbc.DaoCache.class, Logger.class);
+        release.setAccessible(true);
+        final Logger logger = LoggerFactory.getLogger(JdbcDaoCacheTest.class);
+
+        final Jdbc.DaoCache created = Jdbc.DaoCache.create(10, 60_000);
+        release.invoke(null, created, logger);
+        assertThrows(IllegalStateException.class, () -> created.get("key", null, null, null));
+
+        final ForwardingCache forwarding = new ForwardingCache(10, 60_000);
+        release.invoke(null, forwarding, logger);
+        assertThrows(IllegalStateException.class, () -> forwarding.delegate.get("key", null, null, null));
+
+        final Map<String, Object> values = new HashMap<>(Map.of("key", "value"));
+        final Jdbc.DaoCache byMap = Jdbc.DaoCache.createByMap(values);
+        release.invoke(null, byMap, logger);
+        assertEquals("value", byMap.get("key", null, null, null));
+
+        final LegacyCache legacy = new LegacyCache();
+        release.invoke(null, legacy, logger);
+        assertFalse(legacy.closed);
+
+        final ForwardingCache failing = new ForwardingCache(1, 0) {
+            @Override
+            public void close() {
+                throw new IllegalStateException("injected close failure");
+            }
+        };
+
+        try {
+            release.invoke(null, failing, logger);
+        } finally {
+            failing.delegate.close();
+        }
+    }
+
+    // The @Cache(impl = ...) example composes a DefaultDaoCache and forwards close() to release the delegate's
+    // eviction task and JVM shutdown hook.
+    @Test
+    public void testDocumentedForwardingCustomCacheReleasesItsDelegate() throws Exception {
+        final ForwardingCache cache = new ForwardingCache(10, 60_000);
+        final Field poolField = Jdbc.DefaultDaoCache.class.getDeclaredField("pool");
+        poolField.setAccessible(true);
+        final Object pool = poolField.get(cache.delegate);
+        final Field taskField = pool.getClass().getDeclaredField("scheduleFuture");
+        taskField.setAccessible(true);
+        final ScheduledFuture<?> evictionTask = (ScheduledFuture<?>) taskField.get(pool);
+        final Field hookField = pool.getClass().getSuperclass().getDeclaredField("shutdownHook");
+        hookField.setAccessible(true);
+
+        assertTrue(cache.put("key", "value", null, null, null));
+        cache.clear();
+        assertNull(cache.delegate.get("key", null, null, null));
+        assertFalse(evictionTask.isCancelled());
+
+        cache.close();
+
+        assertTrue(evictionTask.isCancelled());
+        assertNull(hookField.get(pool));
+        assertThrows(IllegalStateException.class, () -> cache.delegate.get("key", null, null, null));
     }
 
     @Test
@@ -493,6 +586,82 @@ class JdbcDaoCacheTest extends JdbcTestSupport {
 
             // Cache should be cleared
             assertNull(cache.get("method#users#params", null, null, methodSignature));
+        }
+    }
+    // Declares its own close(), with a signature AutoCloseable does not allow: this compiles because DaoCache declares
+    // no close(), and createDao never calls it.
+    private static class LegacyCache implements Jdbc.DaoCache {
+        boolean closed;
+
+        @Override
+        public Object get(final String key, final Object dao, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> signature) {
+            return null;
+        }
+
+        @Override
+        public boolean put(final String key, final Object result, final Object dao, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> signature) {
+            return false;
+        }
+
+        @Override
+        public boolean put(final String key, final Object result, final long liveTime, final long maxIdleTime, final Object dao, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> signature) {
+            return false;
+        }
+
+        @Override
+        public void update(final String key, final Object result, final Object dao, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> signature) {
+            // No updates needed for this compatibility fixture.
+        }
+
+        boolean close() {
+            closed = true;
+            return true;
+        }
+    }
+
+    // Mirrors the MyCustomDaoCache example in the Javadoc of Cache#impl().
+    public static class ForwardingCache implements Jdbc.DaoCache, AutoCloseable {
+        private final Jdbc.DefaultDaoCache delegate;
+
+        public ForwardingCache(final int capacity, final long evictDelay) {
+            this.delegate = new Jdbc.DefaultDaoCache(capacity, evictDelay);
+        }
+
+        @Override
+        public Object get(final String defaultCacheKey, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return delegate.get(defaultCacheKey, daoProxy, args, methodSignature);
+        }
+
+        @Override
+        public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return delegate.put(defaultCacheKey, result, daoProxy, args, methodSignature);
+        }
+
+        @Override
+        public boolean put(final String defaultCacheKey, final Object result, final long liveTime, final long maxIdleTime, final Object daoProxy,
+                final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            return delegate.put(defaultCacheKey, result, liveTime, maxIdleTime, daoProxy, args, methodSignature);
+        }
+
+        @Override
+        public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args,
+                final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            delegate.update(defaultCacheKey, result, daoProxy, args, methodSignature);
+        }
+
+        @Override
+        public void clear() {
+            delegate.clear();
+        }
+
+        @Override
+        public void close() {
+            delegate.close();
         }
     }
 }

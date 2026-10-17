@@ -1211,7 +1211,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
             if (id != null) {
                 idEntityMap.computeIfAbsent(DaoUtil.valueKey(id), k -> {
                     idsToLoad.add(id);
-                    return new ArrayList<>();
+                    return new ArrayList<>(1);
                 }).add(entity);
             }
         }

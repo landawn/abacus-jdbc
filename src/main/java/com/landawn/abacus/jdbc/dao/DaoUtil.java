@@ -753,10 +753,9 @@ public final class DaoUtil {
      * @param targetTableName the database table name for the entity
      * @return a map of property names to their corresponding {@link JoinInfo} objects
      * @throws IllegalArgumentException if an argument is {@code null} or a join annotation is invalid
-     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName)
-            throws IllegalArgumentException, IllegalStateException {
+            throws IllegalArgumentException {
         return JoinInfo.getEntityJoinInfo(targetDaoInterface, targetEntityClass, targetTableName);
     }
 
@@ -772,11 +771,10 @@ public final class DaoUtil {
      *         names added; {@code null} or empty selections are returned unchanged because they select all default properties.
      * @throws NullPointerException if {@code dao} is {@code null} and {@code sourceSelectPropNames} is not empty
      * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid, or a requested join entity class is {@code null}
-     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     @SuppressWarnings("deprecation")
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
-            final Class<?> joinEntityClass) throws NullPointerException, IllegalArgumentException, IllegalStateException {
+            final Class<?> joinEntityClass) throws NullPointerException, IllegalArgumentException {
         if (N.isEmpty(sourceSelectPropNames)) {
             return sourceSelectPropNames;
         }
@@ -812,10 +810,9 @@ public final class DaoUtil {
      * @throws NullPointerException if {@code dao} is {@code null}, {@code sourceSelectPropNames} is not empty and {@code joinEntityClasses}
      *                              is not empty
      * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid, or a requested join entity class is {@code null}
-     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
-            final Collection<Class<?>> joinEntityClasses) throws NullPointerException, IllegalArgumentException, IllegalStateException {
+            final Collection<Class<?>> joinEntityClasses) throws NullPointerException, IllegalArgumentException {
         if (N.isEmpty(sourceSelectPropNames) || N.isEmpty(joinEntityClasses)) {
             return sourceSelectPropNames;
         }
@@ -840,11 +837,10 @@ public final class DaoUtil {
      *         names added; {@code null} or empty selections are returned unchanged because they select all default properties.
      * @throws NullPointerException if {@code dao} is {@code null} and {@code sourceSelectPropNames} is not empty
      * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid
-     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     @SuppressWarnings("deprecation")
     static Collection<String> includeAllSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames)
-            throws NullPointerException, IllegalArgumentException, IllegalStateException {
+            throws NullPointerException, IllegalArgumentException {
         if (N.isEmpty(sourceSelectPropNames)) {
             return sourceSelectPropNames;
         }
@@ -919,10 +915,9 @@ public final class DaoUtil {
      * @param joinEntityClass the class of the join entity to find properties for
      * @return a list of property names that represent joins to the specified entity type
      * @throws IllegalArgumentException if an argument is {@code null} or a join annotation is invalid
-     * @throws IllegalStateException if generated join SQL lacks a clause required by its query plans
      */
     static List<String> getJoinEntityPropNamesByType(final Class<?> targetDaoInterface, final Class<?> targetEntityClass, final String targetTableName,
-            final Class<?> joinEntityClass) throws IllegalArgumentException, IllegalStateException {
+            final Class<?> joinEntityClass) throws IllegalArgumentException {
         return JoinInfo.getJoinEntityPropNamesByType(targetDaoInterface, targetEntityClass, targetTableName, joinEntityClass);
     }
 

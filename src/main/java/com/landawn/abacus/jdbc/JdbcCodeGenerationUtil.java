@@ -402,7 +402,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param entityName the name of the entity class to generate
-     * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+     * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
+     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
+     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
      *         empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
@@ -429,7 +431,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param ds the data source to connect to the database
      * @param entityName the name of the entity class to generate
-     * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+     * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
+     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
+     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
@@ -465,7 +469,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param entityName the name of the entity class to generate
-     * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+     * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
+     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
+     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
      *         empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
@@ -493,7 +499,9 @@ public final class JdbcCodeGenerationUtil {
      *
      * @param conn the database connection to use
      * @param entityName the name of the entity class to generate
-     * @param query the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+     * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
+     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
+     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
@@ -510,14 +518,73 @@ public final class JdbcCodeGenerationUtil {
         N.checkArgNotEmpty(query, cs.query);
         checkEntityCodeConfig(config);
 
-        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             ResultSet rs = stmt.executeQuery()) {
+        try (PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query)) {
+            ResultSetMetaData metadata = null;
+            Throwable describeFailure = null;
 
-            return generateEntityClass(entityName, rs, config);
+            try {
+                metadata = stmt.getMetaData();
+
+                if (metadata != null && !isUsableDescription(metadata)) {
+                    metadata = null;
+                }
+            } catch (final SQLException | UnsupportedOperationException | AbstractMethodError e) {
+                // Drivers may be unable to describe a query before executing it, reporting a feature exception, an
+                // unimplemented method or an ordinary SQLException (e.g. SQL Server for a query using a temp table).
+                // Executing the query still provides its result metadata.
+                metadata = null;
+                describeFailure = e;
+            }
+
+            if (metadata != null) {
+                return generateEntityClass(entityName, null, metadata, conn, config);
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                return generateEntityClass(entityName, rs, config);
+            } catch (final SQLException | UncheckedSQLException e) {
+                // The failure of the executed path stays primary, also when the query ran and a later step (column or
+                // primary-key metadata, closing the result set) failed: a describe failure is often only a driver
+                // limitation (as in the SQL Server temp-table case above), so it is attached for diagnosis only.
+                if (describeFailure != null && describeFailure != e) {
+                    e.addSuppressed(describeFailure);
+                }
+
+                throw e;
+            }
         } catch (final SQLException e) {
             logger.warn(e, "Failed to generate entity class(entityName={}, queryLength={})", entityName, query == null ? 0 : query.length());
             throw new UncheckedSQLException(e);
         }
+    }
+
+    /**
+     * Returns whether the column metadata of a prepared statement that has not been executed can stand in for the
+     * metadata of its executed result. A query yields at least one column, so an empty description means the driver
+     * needs to execute the query first. Some drivers (e.g. SQLite) report a column's class from the value in the
+     * current row, which a statement that has not been executed does not have: they describe every column as
+     * {@code java.lang.Object}, while the executed result reports the types of its first row.
+     *
+     * @param rsmd the column metadata of a described prepared statement
+     * @return {@code true} if there is at least one column and every column reports a class other than {@code Object}
+     * @throws SQLException if the metadata cannot be read
+     */
+    private static boolean isUsableDescription(final ResultSetMetaData rsmd) throws SQLException {
+        final int columnCount = rsmd.getColumnCount();
+
+        if (columnCount == 0) {
+            return false;
+        }
+
+        for (int i = 1; i <= columnCount; i++) {
+            final String columnClassName = rsmd.getColumnClassName(i);
+
+            if (Strings.isEmpty(columnClassName) || Object.class.getName().equals(columnClassName)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -559,6 +626,28 @@ public final class JdbcCodeGenerationUtil {
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     static String generateEntityClass(final String entityName, final ResultSet rs, final EntityCodeConfig config)
+            throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
+        return generateEntityClass(entityName, rs, null, null, config);
+    }
+
+    /**
+     * Generates an entity class from column metadata obtained either from an executed result set or from a prepared
+     * statement that was described without being executed.
+     *
+     * @param entityName the name of the entity class to generate; also used to look up primary key metadata when no id fields are configured
+     * @param rs the executed result set, or {@code null} when {@code preparedMetadata} is supplied
+     * @param preparedMetadata the column metadata of a described prepared statement, or {@code null} to read it from {@code rs}
+     * @param sourceConnection the connection used for the primary-key lookup, or {@code null} to use the connection of
+     *        {@code rs}'s statement; required when {@code rs} is {@code null} for primary keys to be detected
+     * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
+     * @return the generated entity class as a string containing the complete Java source code
+     * @throws IllegalArgumentException if {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null}
+     *         element, or the configuration cannot produce valid Java source
+     * @throws UncheckedSQLException if reading the column metadata or looking up the primary-key metadata fails
+     * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
+     */
+    private static String generateEntityClass(final String entityName, final ResultSet rs, final ResultSetMetaData preparedMetadata,
+            final Connection sourceConnection, final EntityCodeConfig config)
             throws IllegalArgumentException, UncheckedSQLException, UncheckedIOException {
         checkEntityCodeConfig(config);
 
@@ -654,7 +743,7 @@ public final class JdbcCodeGenerationUtil {
         final Map<String, String> fieldNameToColumnName = new HashMap<>();
 
         try {
-            final ResultSetMetaData rsmd = rs.getMetaData();
+            final ResultSetMetaData rsmd = preparedMetadata == null ? rs.getMetaData() : preparedMetadata;
             final int columnCount = rsmd.getColumnCount();
 
             for (int i = 1; i <= columnCount; i++) {
@@ -702,8 +791,8 @@ public final class JdbcCodeGenerationUtil {
             // column name (both forms are honored by the @Id emission below); checking only field
             // names made column-name-form configs trigger auto-detection and merge unintended @Ids.
             if (N.isEmpty(idFields) || (N.intersection(idFields, fieldNameList).isEmpty() && N.intersection(idFields, columnNameList).isEmpty())) {
-                final Statement stmt = rs.getStatement();
-                final Connection conn = stmt == null ? null : stmt.getConnection();
+                final Statement stmt = rs == null ? null : rs.getStatement();
+                final Connection conn = sourceConnection != null ? sourceConnection : stmt == null ? null : stmt.getConnection();
 
                 if (conn != null) {
                     final DatabaseMetaData metadata = conn.getMetaData();

@@ -3844,6 +3844,8 @@ public final class JdbcUtil {
     /**
      * Statement configurer for queries expected to return a large result set: sets the forward fetch-direction hint
      * and raises the fetch size to at least {@link #DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET}.
+     * These are driver hints, not a heap bound: PostgreSQL cursor fetching also needs auto-commit disabled
+     * and a forward-only, non-holdable result set. This configurer preserves the caller's transaction settings.
      */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForBigQueryResult = stmt -> {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
@@ -3856,6 +3858,8 @@ public final class JdbcUtil {
     /**
      * Statement configurer for stream-based result processing: sets the forward fetch-direction hint
      * and raises the fetch size to at least {@link #DEFAULT_FETCH_SIZE_FOR_STREAM}.
+     * The driver may still buffer results unless its cursor prerequisites are satisfied; transaction
+     * ownership and commit behavior remain the caller's responsibility.
      */
     static final Throwables.Consumer<PreparedStatement, SQLException> stmtSetterForStream = stmt -> {
         stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
@@ -14521,16 +14525,16 @@ public final class JdbcUtil {
                                                 // branches above do: matching the label only against the ID class's property names misses an
                                                 // ID column whose name differs from its property (e.g. @Column("SEQ_NO") long entityId), whose
                                                 // generated value was then silently dropped (left at the ID class's default).
-                                                final List<Tuple2<String, PropInfo>> tpList = Stream.of(columnLabels).map(it -> {
-                                                    final String propName = columnPropNameMap.get(it);
-                                                    final PropInfo idBeanPropInfo = propName == null ? null : idBeanInfo.getPropInfo(propName);
-
-                                                    return Tuple.of(it, idBeanPropInfo == null ? idBeanInfo.getPropInfo(it) : idBeanPropInfo);
-                                                }).filter(tp -> tp._2 != null).toList();
                                                 final Object id = idBeanInfo.createBeanResult();
 
-                                                for (final Tuple2<String, PropInfo> tp : tpList) {
-                                                    tp._2.setPropValue(id, tp._2.dbType.get(rs, tp._1));
+                                                for (final String columnLabel : columnLabels) {
+                                                    final String propName = columnPropNameMap.get(columnLabel);
+                                                    final PropInfo mappedPropInfo = propName == null ? null : idBeanInfo.getPropInfo(propName);
+                                                    final PropInfo propInfo = mappedPropInfo == null ? idBeanInfo.getPropInfo(columnLabel) : mappedPropInfo;
+
+                                                    if (propInfo != null) {
+                                                        propInfo.setPropValue(id, propInfo.dbType.get(rs, columnLabel));
+                                                    }
                                                 }
 
                                                 return idBeanInfo.finishBeanResult(id);
@@ -14850,7 +14854,8 @@ public final class JdbcUtil {
      *         Cache and reuse this instance; do not call {@code createDao} per request.
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or not an interface, {@code ds} is {@code null}, the DAO
      *         type or entity/ID mapping is invalid, or the SQL dialect, query metadata, or other DAO configuration is invalid.
-     * @throws IllegalStateException if the shared asynchronous executor has already been shut down.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down, or the generated join SQL
+     *         of a {@code @JoinedBy} property lacks a clause required to build its query plans.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if obtaining database product metadata fails while initializing the DAO.
      * @throws UncheckedIOException if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read.
@@ -14904,7 +14909,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or not an interface, {@code ds} or {@code sqlDialect} is
      *         {@code null}, the DAO type or entity/ID mapping is invalid, or the SQL dialect, query metadata, or other DAO configuration
      *         is invalid.
-     * @throws IllegalStateException if the shared asynchronous executor has already been shut down.
+     * @throws IllegalStateException if the shared asynchronous executor has already been shut down, or the generated join SQL
+     *         of a {@code @JoinedBy} property lacks a clause required to build its query plans.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if obtaining database product metadata fails while initializing the DAO.
      * @throws UncheckedIOException if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read.
@@ -14976,7 +14982,8 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or not an interface, {@code ds} is {@code null}, the DAO
      *         type or entity/ID mapping is invalid, or the SQL dialect, query metadata, or other DAO configuration is invalid.
      * @throws IllegalStateException if no executor is configured and the shared asynchronous executor has already
-     *         been shut down.
+     *         been shut down, or the generated join SQL of a {@code @JoinedBy} property lacks a clause required to build
+     *         its query plans.
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}.
      * @throws UncheckedSQLException if obtaining database product metadata fails while initializing the DAO.
      * @throws UncheckedIOException if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read.
@@ -15050,6 +15057,10 @@ public final class JdbcUtil {
          * May be {@code null}. Supplying a non-{@code null} cache is only permitted for cacheable read-only /
          * non-update DAO interfaces (such as {@code ReadOnlyDao}, {@code NonUpdateCrudDao}, and the unchecked
          * variants); otherwise DAO creation fails with {@link UnsupportedOperationException}.
+         * The cache stays owned by the caller and is never closed by the DAO. The cache instance is part of the
+         * identity of the created DAO proxy, which is registered for the life of the JVM: reuse one cache rather than
+         * creating one per {@code createDao} call, and close it only after the DAO's last use (see
+         * {@link Jdbc.DaoCache#create(int, long)}).
          */
         private Jdbc.DaoCache cache;
 

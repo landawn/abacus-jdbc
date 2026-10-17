@@ -16,6 +16,7 @@ package com.landawn.abacus.jdbc;
 
 import java.lang.management.ManagementFactory;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Map;
@@ -32,6 +33,7 @@ import com.landawn.abacus.exception.UncheckedInterruptedException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
+import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.util.Dates;
 import com.landawn.abacus.util.IOUtil;
 import com.landawn.abacus.util.MoreExecutors;
@@ -313,7 +315,7 @@ public final class DBLock implements AutoCloseable {
             return;
         }
 
-        try (Connection refreshConn = openLockConnection()) {
+        try (LockStatement refreshStatement = new LockStatement(refreshSQL)) {
             int refreshed = 0;
             int staleRemoved = 0;
             int failed = 0;
@@ -331,7 +333,7 @@ public final class DBLock implements AutoCloseable {
                     final Timestamp now = Dates.currentTimestamp();
                     final Timestamp expiry = expiryTimestamp(now, info.liveTime());
 
-                    final int updated = JdbcUtil.executeUpdate(refreshConn, refreshSQL, now, expiry, entry.getKey(), info.code());
+                    final int updated = refreshStatement.execute(now, expiry, entry.getKey(), info.code());
 
                     if (updated == 0) {
                         // Remove from pool only if the cached lock instance is still present
@@ -350,6 +352,12 @@ public final class DBLock implements AutoCloseable {
 
                     if (logger.isWarnEnabled()) {
                         logger.warn(e, "Failed to refresh DB lock(target={})", entry.getKey());
+                    }
+
+                    // An unavailable pool must cost at most one acquisition timeout per cycle,
+                    // rather than repeating the timeout for every held lock.
+                    if (refreshStatement.connectionAcquisitionFailed) {
+                        break;
                     }
                 }
             }
@@ -790,7 +798,9 @@ public final class DBLock implements AutoCloseable {
      * <p>As part of closing, this method attempts to release every lock currently held by this
      * instance by deleting the corresponding rows from the lock table. Any database error
      * encountered while releasing an individual lock is logged and suppressed, so {@code close()}
-     * never propagates such failures to the caller.</p>
+     * never propagates such failures to the caller. If no connection can be obtained, the remaining
+     * locks are not attempted, so an unavailable data source delays {@code close()} by at most one
+     * connection acquisition; locks that are not released stay held until their leases expire.</p>
      *
      * <p>Once closed, any subsequent attempts to call {@code tryLock()} or {@code unlock()}
      * methods on this instance will result in an {@link IllegalStateException}.</p>
@@ -849,13 +859,31 @@ public final class DBLock implements AutoCloseable {
         }
 
         // Release all held locks from the database
-        for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
-            try {
-                executeLockUpdate(unlockSQL, entry.getKey(), entry.getValue().code());
-                logger.debug("Released DB lock(target={}) during close", entry.getKey());
-            } catch (final Exception e) {
-                if (logger.isWarnEnabled()) {
-                    logger.warn(e, "Failed to release DB lock(target={}) during close", entry.getKey());
+        try (LockStatement unlockStatement = new LockStatement(unlockSQL)) {
+            final int heldLocks = targetCodePool.size();
+            int attempted = 0;
+
+            for (final Map.Entry<String, LockInfo> entry : targetCodePool.entrySet()) {
+                attempted++;
+
+                try {
+                    unlockStatement.execute(entry.getKey(), entry.getValue().code());
+                    logger.debug("Released DB lock(target={}) during close", entry.getKey());
+                } catch (final Exception e) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn(e, "Failed to release DB lock(target={}) during close", entry.getKey());
+                    }
+
+                    // As in refreshLocks(): an unavailable pool must cost at most one acquisition timeout, rather than
+                    // one per held lock while this synchronized method blocks.
+                    if (unlockStatement.connectionAcquisitionFailed) {
+                        if (attempted < heldLocks && logger.isWarnEnabled()) {
+                            logger.warn("Stopped releasing DB locks during close: no connection could be obtained(skipped={}); they stay held until their leases expire",
+                                    heldLocks - attempted);
+                        }
+
+                        break;
+                    }
                 }
             }
         }
@@ -922,6 +950,91 @@ public final class DBLock implements AutoCloseable {
             // The update is already committed. A close failure must not turn successful
             // acquisition into a retry and leave a lock that was never registered locally.
             JdbcUtil.closeQuietly(conn);
+        }
+    }
+
+    /** Reuses an owned auto-commit connection and statement within one maintenance cycle. */
+    private final class LockStatement implements AutoCloseable {
+        private final ParsedSql parsedSql;
+        private Connection connection;
+        private PreparedStatement statement;
+        private boolean connectionAcquisitionFailed;
+
+        private LockStatement(final String sql) {
+            parsedSql = ParsedSql.parse(sql);
+        }
+
+        /**
+         * Executes the statement with {@code parameters}, opening the connection and preparing the statement on
+         * first use. On any failure both are closed, so the next call starts with fresh resources; whether the
+         * failure was the connection acquisition itself is recorded in {@code connectionAcquisitionFailed}.
+         *
+         * @param parameters the positional parameter values
+         * @return the affected row count
+         * @throws SQLException if obtaining the connection, or preparing, binding or executing the statement, fails
+         */
+        private int execute(final Object... parameters) throws SQLException {
+            connectionAcquisitionFailed = false;
+
+            try {
+                if (statement == null) {
+                    try {
+                        connection = openLockConnection();
+                    } catch (final SQLException | RuntimeException e) {
+                        connectionAcquisitionFailed = true;
+                        throw e;
+                    }
+                    statement = JdbcUtil.prepareStatement(connection, parsedSql);
+                }
+
+                JdbcUtil.setParameters(parsedSql, statement, parameters);
+                return JdbcUtil.executeUpdate(statement);
+            } catch (final SQLException | RuntimeException | Error e) {
+                // A failed driver statement/connection may be unusable. A later lock can make
+                // an independent attempt with fresh resources.
+                try {
+                    close();
+                } catch (final Error closeFailure) {
+                    if (closeFailure != e) {
+                        e.addSuppressed(closeFailure);
+                    }
+                }
+                throw e;
+            }
+        }
+
+        /**
+         * Closes the statement and connection opened by {@link #execute(Object...)}, if any. Close failures other than
+         * an {@link Error} are ignored, because every executed update has already been committed. Idempotent.
+         */
+        @SuppressWarnings("deprecation")
+        @Override
+        public void close() {
+            final PreparedStatement statementToClose = statement;
+            final Connection connectionToClose = connection;
+            statement = null;
+            connection = null;
+            Error failure = null;
+
+            try {
+                JdbcUtil.closeQuietly(statementToClose);
+            } catch (final Error e) {
+                failure = e;
+            }
+
+            try {
+                JdbcUtil.closeQuietly(connectionToClose);
+            } catch (final Error e) {
+                if (failure == null) {
+                    failure = e;
+                } else if (failure != e) {
+                    failure.addSuppressed(e);
+                }
+            }
+
+            if (failure != null) {
+                throw failure;
+            }
         }
     }
 

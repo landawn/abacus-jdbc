@@ -31,11 +31,13 @@ import java.lang.reflect.TypeVariable;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -263,6 +265,9 @@ final class DaoImpl {
      * can be distinguished from outermost ones (e.g. for {@code @Handler} invocation semantics).
      */
     static final ThreadLocal<Boolean> isInDaoMethod_TL = ThreadLocal.withInitial(() -> false);
+
+    // Active only while an opted-in cached invocation executes; explicit method policies still apply.
+    private static final ThreadLocal<Boolean> suppressInheritedResultCaching_TL = new ThreadLocal<>();
 
     /**
      * Process-wide cache of created DAO proxies keyed by {@link DaoCacheKey}; repeated creation requests with the
@@ -2878,6 +2883,18 @@ final class DaoImpl {
     @SuppressWarnings("rawtypes")
     private static final Map<JoinEntityDaoCacheKey, DaoBase> joinEntityDaoPool = new ConcurrentHashMap<>();
 
+    private static final int MAX_JOIN_DAO_MISSES = 256;
+
+    // Guarded by this map's monitor. A registration invalidates misses, never a caller-specific fallback.
+    private static final Map<JoinEntityDaoCacheKey, Boolean> joinEntityDaoMisses = new LinkedHashMap<>(64, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(final Map.Entry<JoinEntityDaoCacheKey, Boolean> eldest) {
+            return size() > MAX_JOIN_DAO_MISSES;
+        }
+    };
+
+    private static long daoRegistrationVersion;
+
     /**
      * Creates a dynamic proxy implementation of the specified DAO interface backed by the given {@link javax.sql.DataSource}.
      *
@@ -3534,7 +3551,9 @@ final class DaoImpl {
                     : (methodName.equals("prepareNamedQuery") || methodName.equals("prepareNamedQueryForLargeResult") ? cs.namedSql : cs.sql);
 
             if (!Modifier.isAbstract(method.getModifiers())) {
-                final MethodHandle methodHandle = createMethodHandle(method);
+                final MethodHandle methodHandle = createMethodHandle(method).asFixedArity()
+                        .asSpreader(Object[].class, paramLen)
+                        .asType(MethodType.methodType(Object.class, Object.class, Object[].class));
 
                 call = (proxy, args) -> {
                     if (prepareSqlGate != 0) {
@@ -3570,7 +3589,8 @@ final class DaoImpl {
                         args[paramLen - 1] = sqls.clone();
                     }
 
-                    return methodHandle.bindTo(proxy).invokeWithArguments(args == null ? N.EMPTY_OBJECT_ARRAY : args);
+                    final Object[] invocationArgs = args == null ? N.EMPTY_OBJECT_ARRAY : args;
+                    return methodHandle.invokeExact((Object) proxy, invocationArgs);
                 };
             } else if (methodName.equals("executor") && Executor.class.isAssignableFrom(returnType) && paramLen == 0) {
                 call = (proxy, args) -> asyncExecutor.getExecutor();
@@ -3680,22 +3700,33 @@ final class DaoImpl {
                                     Throwable failure = null;
 
                                     try {
-                                        final List<Object> run = new ArrayList<>();
-                                        boolean runUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
+                                        try (NamedQuery withoutIdQuery = proxy.prepareNamedQuery(namedInsertWithoutIdSQL).closeAfterExecution(false);
+                                                NamedQuery withIdQuery = proxy.prepareNamedQuery(namedInsertWithIdSQL).closeAfterExecution(false)) {
+                                            final List<Object> run = new ArrayList<>(Math.min(batchSize, entities.size()));
+                                            boolean runUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
 
-                                        for (final Object entity : entities) {
-                                            final boolean entityUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(entity));
+                                            for (final Object entity : entities) {
+                                                final boolean entityUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(entity));
 
-                                            if (entityUsesDefaultIdSql != runUsesDefaultIdSql) {
-                                                executeBatchSave(proxy, runUsesDefaultIdSql ? namedInsertWithoutIdSQL : namedInsertWithIdSQL, run, batchSize);
-                                                run.clear();
+                                                if (entityUsesDefaultIdSql != runUsesDefaultIdSql && !run.isEmpty()) {
+                                                    (runUsesDefaultIdSql ? withoutIdQuery : withIdQuery).addBatchParameters(run).batchUpdate();
+                                                    run.clear();
+                                                }
+
                                                 runUsesDefaultIdSql = entityUsesDefaultIdSql;
+                                                run.add(entity);
+
+                                                if (run.size() == batchSize) {
+                                                    (runUsesDefaultIdSql ? withoutIdQuery : withIdQuery).addBatchParameters(run).batchUpdate();
+                                                    run.clear();
+                                                }
                                             }
 
-                                            run.add(entity);
+                                            if (!run.isEmpty()) {
+                                                (runUsesDefaultIdSql ? withoutIdQuery : withIdQuery).addBatchParameters(run).batchUpdate();
+                                            }
                                         }
 
-                                        executeBatchSave(proxy, runUsesDefaultIdSql ? namedInsertWithoutIdSQL : namedInsertWithIdSQL, run, batchSize);
                                         tran.commit();
                                     } catch (final Throwable e) { //NOSONAR
                                         failure = e;
@@ -5283,28 +5314,42 @@ final class DaoImpl {
                                     // below): assigning them run by run left entities of an earlier run holding the IDs of rows
                                     // that a later run's failure rolled back.
                                     final List<Pair<Object, Object>> returnedIdEntityPairs = new ArrayList<>();
-                                    final BiConsumer<Object, Object> deferredIdSetter = (id, entity) -> returnedIdEntityPairs.add(Pair.of(id, entity));
                                     Throwable failure = null;
 
                                     try {
-                                        final List<Object> run = new ArrayList<>();
-                                        boolean runUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
+                                        try (NamedQuery withoutIdQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertWithoutIdSQL, generatedKeyColumnNames)
+                                                .closeAfterExecution(false);
+                                                NamedQuery withIdQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertWithIdSQL, generatedKeyColumnNames)
+                                                        .closeAfterExecution(false)) {
+                                            final List<Object> chunk = new ArrayList<>(Math.min(batchSize, entities.size()));
+                                            boolean runUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
+                                            // Created before the loop below starts iterating the input; see DeferredIdAssignments.
+                                            final DeferredIdAssignments deferredIds = new DeferredIdAssignments(entities, returnedIdEntityPairs);
 
-                                        for (final Object entity : entities) {
-                                            final boolean entityUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(entity));
+                                            for (final Object entity : entities) {
+                                                final boolean entityUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(entity));
 
-                                            if (entityUsesDefaultIdSql != runUsesDefaultIdSql) {
-                                                executeBatchInsertRun(proxy, runUsesDefaultIdSql ? namedInsertWithoutIdSQL : namedInsertWithIdSQL, run,
-                                                        batchSize, generatedKeyColumnNames, keyExtractor, isDefaultIdTester, deferredIdSetter, daoLogger);
-                                                run.clear();
-                                                runUsesDefaultIdSql = entityUsesDefaultIdSql;
+                                                if (entityUsesDefaultIdSql != runUsesDefaultIdSql) {
+                                                    deferredIds.insertChunk(runUsesDefaultIdSql ? withoutIdQuery : withIdQuery, chunk, keyExtractor,
+                                                            isDefaultIdTester);
+                                                    chunk.clear();
+                                                    deferredIds.finishRun(daoLogger);
+                                                    runUsesDefaultIdSql = entityUsesDefaultIdSql;
+                                                }
+
+                                                chunk.add(entity);
+
+                                                if (chunk.size() == batchSize) {
+                                                    deferredIds.insertChunk(runUsesDefaultIdSql ? withoutIdQuery : withIdQuery, chunk, keyExtractor,
+                                                            isDefaultIdTester);
+                                                    chunk.clear();
+                                                }
                                             }
 
-                                            run.add(entity);
+                                            deferredIds.insertChunk(runUsesDefaultIdSql ? withoutIdQuery : withIdQuery, chunk, keyExtractor, isDefaultIdTester);
+                                            deferredIds.finishRun(daoLogger);
                                         }
 
-                                        executeBatchInsertRun(proxy, runUsesDefaultIdSql ? namedInsertWithoutIdSQL : namedInsertWithIdSQL, run, batchSize,
-                                                generatedKeyColumnNames, keyExtractor, isDefaultIdTester, deferredIdSetter, daoLogger);
                                         tran.commit();
                                     } catch (final Throwable e) { //NOSONAR
                                         failure = e;
@@ -7643,16 +7688,34 @@ final class DaoImpl {
                         };
                     };
 
-                    final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> temp = call;
+                    final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> uncachedCall = call;
+                    // Only an opted-in method pays for the suppression scope; every other method invokes its body directly.
+                    final Throwables.BiFunction<DaoBase, Object[], ?, Throwable> temp = isAnnotatedCacheResult && !cacheResultAnno.cacheNestedResults()
+                            ? (proxy, args) -> {
+                                if (Boolean.TRUE.equals(suppressInheritedResultCaching_TL.get())) {
+                                    return uncachedCall.apply(proxy, args);
+                                }
+
+                                suppressInheritedResultCaching_TL.set(true);
+
+                                try {
+                                    return uncachedCall.apply(proxy, args);
+                                } finally {
+                                    suppressInheritedResultCaching_TL.remove();
+                                }
+                            }
+                            : uncachedCall;
 
                     call = (proxy, args) -> {
+                        final boolean cacheResultEnabled = isAnnotatedCacheResult
+                                && (methodCacheResultAnno != null || !Boolean.TRUE.equals(suppressInheritedResultCaching_TL.get()));
                         // Read on use: a cache created by createDao is only set once the DAO has passed every validation.
-                        final Jdbc.DaoCache daoCacheToUseInMethod = isAnnotatedCacheResult || isAnnotatedRefreshResult ? daoCacheRef.get() : null;
+                        final Jdbc.DaoCache daoCacheToUseInMethod = cacheResultEnabled || isAnnotatedRefreshResult ? daoCacheRef.get() : null;
                         final Jdbc.DaoCache localThreadCache = JdbcUtil.localThreadCache_TL.get();
                         final boolean isLocalThreadCacheEnabled = isLocalThreadCacheableQueryMethod && localThreadCache != null;
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
-                        final String cacheKey = isAnnotatedCacheResult || isAnnotatedRefreshResult || isLocalThreadCacheEnabled
+                        final String cacheKey = cacheResultEnabled || isAnnotatedRefreshResult || isLocalThreadCacheEnabled
                                 || isRefreshLocalThreadCacheRequired ? JdbcUtil.createCacheKey(tableName, fullClassMethodName, args, daoLogger) : null;
 
                         Object result = null;
@@ -7660,7 +7723,7 @@ final class DaoImpl {
                         if (Strings.isNotEmpty(cacheKey)) {
                             if (isLocalThreadCacheEnabled) {
                                 result = localThreadCache.get(cacheKey, proxy, args, methodSignature);
-                            } else if (isAnnotatedCacheResult) {
+                            } else if (cacheResultEnabled) {
                                 result = daoCacheToUseInMethod.get(cacheKey, proxy, args, methodSignature);
                             }
                         }
@@ -7727,7 +7790,7 @@ final class DaoImpl {
                         if (Strings.isNotEmpty(cacheKey) && result != null) {
                             if (isLocalThreadCacheEnabled) {
                                 localThreadCache.put(cacheKey, cloneFunc.apply(result), proxy, args, methodSignature);
-                            } else if (isAnnotatedCacheResult) {
+                            } else if (cacheResultEnabled) {
                                 // Map and object-array results are bounded too: they skipped minSize/maxSize, so maxSize did not
                                 // guard the memory of a large @MappedByKey map.
                                 final int resultSize = cacheResultSize(result);
@@ -7998,6 +8061,15 @@ final class DaoImpl {
 
         daoInstance = N.newProxyInstance(interfaceClasses, h);
 
+        if (joinBeanInfo != null) {
+            // Join plans are built per dialect on first use. Build this DAO's dialect now, as the last check after every
+            // validation above and before a cache is created, so a join whose generated SQL cannot be planned fails DAO
+            // creation, as documented, instead of the first join operation.
+            for (final JoinInfo joinInfo : joinBeanInfo.values()) {
+                joinInfo.selectSqlPlan(parameterizedDsl);
+            }
+        }
+
         // The DAO can no longer be rejected and the proxy is not yet published: create the cache now (see daoCacheRef).
         if (isDaoCacheCreatedHere) {
             daoCacheRef.set(daoClassCacheAnno == null ? Jdbc.DaoCache.create(capacity, evictDelay) // annotation members can't be null: impl() defaults to DefaultDaoCache
@@ -8018,6 +8090,16 @@ final class DaoImpl {
             }
 
             return (TD) existingDaoInstance;
+        }
+
+        synchronized (joinEntityDaoMisses) {
+            daoRegistrationVersion++;
+            joinEntityDaoMisses.clear();
+        }
+
+        if (joinBeanInfo != null) {
+            // The registered proxy keeps joinBeanInfo for its lifetime; let its per-call metadata lookups reuse that map.
+            JoinInfo.retainDaoJoinInfo(daoInterface, entityClass, tableName, joinBeanInfo);
         }
 
         daoLogger.info("Created Dao proxy(interface={}, targetTableName={}, methods={})", daoClassName, targetTableName, methodInvokerMap.size());
@@ -8049,18 +8131,16 @@ final class DaoImpl {
 
     /**
      * Releases a cache that {@code createDao} created for a proxy it then discarded because another thread published an
-     * equivalent proxy first. A {@link Jdbc.DefaultDaoCache} closes its backing pool, which cancels the eviction task and
-     * removes the JVM shutdown hook; a custom implementation is closed when it is {@link AutoCloseable}. A release failure
-     * is only logged: the proxy published by the other thread is still returned.
+     * equivalent proxy first. A cache that implements {@link AutoCloseable} is closed: for a {@link Jdbc.DefaultDaoCache}
+     * this closes its backing pool, which cancels the eviction task and removes the JVM shutdown hook. Any other cache is
+     * left as it is. A release failure is only logged: the proxy published by the other thread is still returned.
      *
      * @param daoCache the cache created for the discarded proxy
      * @param daoLogger the logger of the DAO, used to report a release failure
      */
     private static void releaseDiscardedDaoCache(final Jdbc.DaoCache daoCache, final Logger daoLogger) {
         try {
-            if (daoCache instanceof final Jdbc.DefaultDaoCache defaultDaoCache) {
-                defaultDaoCache.close();
-            } else if (daoCache instanceof final AutoCloseable closeable) {
+            if (daoCache instanceof final AutoCloseable closeable) {
                 closeable.close();
             }
         } catch (final Exception e) {
@@ -8708,70 +8788,111 @@ final class DaoImpl {
     }
 
     /**
-     * Executes a batch save using the supplied named SQL, reusing a statement across chunks. This helper opens no
-     * transaction of its own: every caller already runs it inside one, which is what makes a chunked save atomic.
+     * Pairs the generated IDs of consecutive same-shape insert runs with their entities and stages the assignments
+     * until commit. Within a run the k-th returned key belongs to the k-th entity, as if the run's keys had been
+     * collected into one list; a run whose key count differs from its entity count, or whose keys are all default
+     * values, assigns nothing.
      *
-     * @param proxy the DAO proxy supplying the data source
-     * @param namedInsertSql the named INSERT statement to execute
-     * @param entities the entities to insert, in the order they should be written
-     * @param batchSize the number of statements per batch execution; must be positive
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or contains positional parameters,
-     *         if the data source is {@code null}, if a batch row is {@code null} or has no property matching a named
-     *         parameter, or if {@code batchSize} is not positive when the entities are split into chunks
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
-     *         connection from the data source
-     * @throws UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if preparing, binding, or executing a batch fails
+     * <p>Entities are reached through a second iterator over the input collection instead of being buffered, so a
+     * driver that returns fewer keys than rows (or none) adds no retained references. Only keys returned ahead of
+     * their entities are queued. The iterator must be created before the caller starts iterating the input; it then
+     * trails that iteration and only advances over entities whose chunks have been executed.</p>
      */
-    @SuppressWarnings("rawtypes")
-    private static void executeBatchSave(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
-        if (entities.size() <= batchSize) {
-            proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
-        } else {
-            try (NamedQuery namedQuery = proxy.prepareNamedQuery(namedInsertSql).closeAfterExecution(false)) {
-                Stream.of(entities).split(batchSize).forEach(batch -> namedQuery.addBatchParameters(batch).batchUpdate());
+    private static final class DeferredIdAssignments {
+        private static final Object NULL_ID = new Object();
+
+        private final Iterator<?> entityCursor;
+        private final List<Pair<Object, Object>> assignments;
+        private final ArrayDeque<Object> pendingIds = new ArrayDeque<>();
+        private int runStart;
+        private int runEntityCount;
+        private int runIdCount;
+        private int runPairedCount;
+        private boolean runHasOnlyDefaultIds = true;
+
+        DeferredIdAssignments(final Collection<?> entities, final List<Pair<Object, Object>> assignments) {
+            entityCursor = entities.iterator();
+            this.assignments = assignments;
+            runStart = assignments.size();
+        }
+
+        /**
+         * Executes {@code chunk} as one batch of the current run and pairs the returned keys with the run's entities
+         * in order. Keys beyond the run's entity count so far are queued for the entities of a later chunk.
+         *
+         * @param query the prepared insert statement of the current run's SQL shape
+         * @param chunk the entities of this batch, in input order; an empty chunk is ignored
+         * @param keyExtractor the mapper reading one generated key
+         * @param isDefaultIdTester tests whether a key is the id type's default (unset) value
+         * @throws SQLException if executing the batch or reading its generated keys fails
+         */
+        void insertChunk(final NamedQuery query, final List<Object> chunk, final Jdbc.BiRowMapper<Object> keyExtractor,
+                final Predicate<Object> isDefaultIdTester) throws SQLException {
+            if (chunk.isEmpty()) {
+                return;
+            }
+
+            final List<Object> ids = query.addBatchParameters(chunk).batchInsert(keyExtractor, isDefaultIdTester);
+            runEntityCount += chunk.size();
+            runIdCount += ids.size();
+
+            // Keys returned by an earlier chunk precede this chunk's own keys.
+            while (!pendingIds.isEmpty() && runPairedCount < runEntityCount) {
+                final Object id = pendingIds.removeFirst();
+                pairNextEntity(id == NULL_ID ? null : id);
+            }
+
+            for (final Object id : ids) {
+                if (runHasOnlyDefaultIds) {
+                    runHasOnlyDefaultIds = isDefaultIdTester.test(id);
+                }
+
+                if (runPairedCount < runEntityCount) {
+                    pairNextEntity(id);
+                } else {
+                    // ArrayDeque rejects null elements.
+                    pendingIds.addLast(id == null ? NULL_ID : id);
+                }
             }
         }
-    }
 
-    /**
-     * Executes a batch insert and extracts the returned identifiers in input order. This helper opens no transaction
-     * of its own: every caller already runs it inside one, which is what makes a chunked insert atomic.
-     *
-     * @param proxy the DAO proxy supplying the data source
-     * @param namedInsertSql the named INSERT statement to execute
-     * @param entities the entities to insert, in the order they should be written
-     * @param batchSize the number of statements per batch execution; must be positive
-     * @param generatedKeyColumnNames the generated key column names to retrieve
-     * @param keyExtractor the mapper reading one generated id from the generated-keys result set
-     * @param isDefaultIdTester tests whether an extracted id is the type's default (unset) value
-     * @return the generated ids, in the order the entities were batched
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or contains positional parameters,
-     *         if the data source is {@code null}, if {@code generatedKeyColumnNames} is {@code null} or empty,
-     *         if {@code keyExtractor} or {@code isDefaultIdTester} is {@code null}, if a batch row is {@code null}
-     *         or has no property matching a named parameter, or if {@code batchSize} is not positive when the
-     *         entities are split into chunks
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
-     *         connection from the data source
-     * @throws UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
-     */
-    @SuppressWarnings("rawtypes")
-    private static List<Object> executeBatchInsert(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
-            final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
-        if (entities.size() <= batchSize) {
-            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
-                    .addBatchParameters(entities)
-                    .batchInsert(keyExtractor, isDefaultIdTester);
-        } else {
-            try (NamedQuery namedQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames).closeAfterExecution(false)) {
-                return Seq.of(entities, SQLException.class)
-                        .split(batchSize)
-                        .flatmap(batch -> namedQuery.addBatchParameters(batch).batchInsert(keyExtractor, isDefaultIdTester))
-                        .toList();
+        /**
+         * Stages {@code id} for the next entity of the current run that has no key yet.
+         *
+         * @param id the generated key, possibly {@code null}
+         */
+        private void pairNextEntity(final Object id) {
+            assignments.add(Pair.of(id, entityCursor.next()));
+            runPairedCount++;
+        }
+
+        /**
+         * Ends the current run: keeps its staged assignments only when it returned exactly one key per entity and not
+         * every key is a default value, otherwise discards them (logging a warning unless every key was a default
+         * value), then moves the entity cursor to the first entity of the next run.
+         *
+         * @param daoLogger the logger used to warn about a key/entity count mismatch
+         */
+        void finishRun(final Logger daoLogger) {
+            if (runHasOnlyDefaultIds || runIdCount != runEntityCount) {
+                assignments.subList(runStart, assignments.size()).clear();
+
+                if (!runHasOnlyDefaultIds && daoLogger.isWarnEnabled()) {
+                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", runIdCount, runEntityCount);
+                }
             }
+
+            // Skip the entities that received no key so the next run starts at its own first entity.
+            for (; runPairedCount < runEntityCount; runPairedCount++) {
+                entityCursor.next();
+            }
+
+            pendingIds.clear();
+            runStart = assignments.size();
+            runEntityCount = 0;
+            runIdCount = 0;
+            runPairedCount = 0;
+            runHasOnlyDefaultIds = true;
         }
     }
 
@@ -8804,70 +8925,6 @@ final class DaoImpl {
     }
 
     /**
-     * Inserts one run of entities using the same ID-generation policy and passes each returned ID with its entity to
-     * {@code idSetter}. This helper opens no transaction of its own: every caller already runs it inside one, so
-     * consecutive runs commit together (and a caller may buffer the IDs until that commit).
-     *
-     * @param proxy the DAO proxy supplying the data source
-     * @param namedInsertSql the named INSERT statement matching this run's ID-generation policy
-     * @param entities the entities of this run, in the order they should be written
-     * @param batchSize the number of statements per batch execution; must be positive
-     * @param generatedKeyColumnNames the generated key column names to retrieve
-     * @param keyExtractor the mapper reading one generated id from the generated-keys result set
-     * @param isDefaultIdTester tests whether an extracted id is the type's default (unset) value
-     * @param idSetter the consumer receiving one generated id and its entity
-     * @param daoLogger the logger used to warn about an id/entity count mismatch
-     * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or contains positional parameters,
-     *         if the data source is {@code null}, if {@code generatedKeyColumnNames} is {@code null} or empty,
-     *         if {@code keyExtractor} or {@code isDefaultIdTester} is {@code null}, if a batch row is {@code null}
-     *         or has no property matching a named parameter, or if {@code batchSize} is not positive when the
-     *         entities are split into chunks
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
-     *         connection from the data source
-     * @throws UncheckedSQLException if acquiring a required database connection fails
-     * @throws SQLException if preparing, binding, executing, or extracting generated keys fails
-     * @throws UnsupportedOperationException if {@code idSetter} stores the id directly and an entity id property is
-     *         read-only, so a generated id cannot be stored
-     */
-    @SuppressWarnings("rawtypes")
-    private static void executeBatchInsertRun(final DaoBase proxy, final ParsedSql namedInsertSql, final Collection<?> entities, final int batchSize,
-            final String[] generatedKeyColumnNames, final Jdbc.BiRowMapper<Object> keyExtractor, final Predicate<Object> isDefaultIdTester,
-            final BiConsumer<Object, Object> idSetter, final Logger daoLogger)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, UnsupportedOperationException {
-        List<Object> ids = executeBatchInsert(proxy, namedInsertSql, entities, batchSize, generatedKeyColumnNames, keyExtractor, isDefaultIdTester);
-
-        if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
-            ids = new ArrayList<>();
-        }
-
-        setReturnedIds(entities, ids, idSetter, daoLogger);
-    }
-
-    /**
-     * Assigns the generated ids back onto the inserted entities, in input order. Nothing is assigned (a warning is
-     * logged instead) when the driver returned a different number of ids than the number of entities, because the
-     * ids cannot then be paired with their entities reliably.
-     *
-     * @param entities the entities that were inserted, in the order they were batched
-     * @param ids the generated ids returned by the batch insert
-     * @param idSetter the setter assigning one id to one entity
-     * @param daoLogger the logger used to warn about an id/entity count mismatch
-     * @throws UnsupportedOperationException if an entity id property is read-only, so a generated id cannot be stored
-     */
-    private static void setReturnedIds(final Collection<?> entities, final List<Object> ids, final BiConsumer<Object, Object> idSetter, final Logger daoLogger)
-            throws UnsupportedOperationException {
-        if (N.notEmpty(ids) && ids.size() == entities.size()) {
-            int idx = 0;
-
-            for (final Object entity : entities) {
-                idSetter.accept(ids.get(idx++), entity);
-            }
-        } else if (N.notEmpty(ids) && daoLogger.isWarnEnabled()) {
-            daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(), entities.size());
-        }
-    }
-
-    /**
      * Resolves the most appropriate DAO instance for loading a join entity referenced by a {@code @JoinedBy} relationship.
      *
      * <p>This method searches the internal DAO pool for a registered DAO whose target entity class matches the
@@ -8875,8 +8932,8 @@ final class DaoImpl {
      * DAO is found, it is cached in the join entity DAO pool for subsequent lookups and returned. If no matching
      * DAO is found, a warning is logged and the {@code defaultDao} is returned as a fallback.</p>
      *
-     * <p><b>Note:</b> The fallback {@code defaultDao} is intentionally not cached to allow the correct DAO to be
-     * found on later invocations if it is registered after this call (e.g., during application initialization).</p>
+     * <p>The fallback {@code defaultDao} is never cached. A bounded miss cache avoids repeated registry scans and
+     * warnings; every successful DAO registration invalidates it so a later registration can take over.</p>
      *
      * @param referencedEntityClass the entity class of the join target (the entity being referenced)
      * @param ds the {@link javax.sql.DataSource} that the returned DAO should be associated with
@@ -8908,12 +8965,28 @@ final class DaoImpl {
 
         if (joinEntityDao != null) {
             return joinEntityDao;
-        } else {
-            for (final DaoBase dao : daoPool.values()) {
-                if (dao.targetEntityClass() == referencedEntityClass && dao.dataSource() == ds && (!forDelete || dao instanceof Dao)) {
-                    final DaoBase existingDao = joinEntityDaoPool.putIfAbsent(key, dao);
-                    return existingDao == null ? dao : existingDao;
-                }
+        }
+
+        final long registrationVersion;
+
+        synchronized (joinEntityDaoMisses) {
+            registrationVersion = daoRegistrationVersion;
+
+            if (joinEntityDaoMisses.get(key) != null) {
+                return defaultDao;
+            }
+        }
+
+        for (final DaoBase dao : daoPool.values()) {
+            if (dao.targetEntityClass() == referencedEntityClass && dao.dataSource() == ds && (!forDelete || dao instanceof Dao)) {
+                final DaoBase existingDao = joinEntityDaoPool.putIfAbsent(key, dao);
+                return existingDao == null ? dao : existingDao;
+            }
+        }
+
+        synchronized (joinEntityDaoMisses) {
+            if (registrationVersion == daoRegistrationVersion) {
+                joinEntityDaoMisses.put(key, Boolean.TRUE);
             }
         }
 

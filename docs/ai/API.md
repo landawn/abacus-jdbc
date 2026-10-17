@@ -1,7 +1,7 @@
 # abacus-jdbc API Index (v4.9.3)
 - Build: unknown
 - Java: 21
-- Generated: 2026-10-15
+- Generated: 2026-10-16
 
 ## Packages
 - com.landawn.abacus.jdbc — Core JDBC execution, mapping, transaction, data-transfer, and code-generation APIs.
@@ -4319,6 +4319,7 @@ Provides a robust distributed locking mechanism leveraging a dedicated database 
 - **Signature:** `@Override public synchronized void close()`
 - **Summary:** Closes this {@code DBLock} instance, releasing all associated resources.
 - **Contract:**
+  - If no connection can be obtained, the remaining locks are not attempted, so an unavailable data source delays {@code close()} by at most one connection acquisition; locks that are not released stay held until their leases expire.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code try (DBLock dbLock = JdbcUtil.createDBLock(dataSource, "my_locks_table")) { // Perform operations using the DBLock instance String lockCode = dbLock.tryLock("some_resource"); if (lockCode != null) { try { // ...
 - **Parameters:**
   - (none)
@@ -7955,6 +7956,9 @@ An interface for caching the results of DAO method calls.
 ##### create(...) -> DaoCache
 - **Signature:** `static DaoCache create(final int capacity, final long evictDelay) throws IllegalArgumentException, IllegalStateException`
 - **Summary:** Creates a {@code DaoCache} with a specified capacity and eviction delay, backed by a {@link DefaultDaoCache} which uses a {@link KeyedObjectPool} for in-memory caching with TTL and idle time-based eviction.
+- **Contract:**
+  - Its pool registers a JVM shutdown hook and, when {@code evictDelay} is positive, runs a periodic eviction task; the hook closes the pool when the JVM exits, and {@link DefaultDaoCache#close()} releases both earlier, once nothing uses the cache any more.
+  - Create such a cache and its DAOs once, for as long as the application uses them, not per request or unit of work (each new cache instance registers another proxy): </p> <pre> {@code // At application startup: Jdbc.DefaultDaoCache userCache = new Jdbc.DefaultDaoCache(1000, 3000); UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().cache(userCache).build()); // At application shutdown (or when the application is undeployed), after the last use of userDao: userCache.close(); } </pre> <p> {@code DaoCache} itself declares no {@code close()} : to close a cache before the JVM exits, hold it as a {@link DefaultDaoCache} , which is {@link AutoCloseable} , as above.
 - **Parameters:**
   - `capacity` (`int`) — the maximum number of entries in the cache.
   - `evictDelay` (`long`) — the interval in milliseconds for the eviction scheduler to run.
@@ -8070,7 +8074,7 @@ The default implementation of {@link DaoCache} , using a {@link KeyedObjectPool}
 - **Returns:** the cached result, or {@code null} if no live entry exists for the key (a miss, or the entry expired/was evicted).
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code defaultCacheKey} is {@code null} .
-  - `java.lang.IllegalStateException` — if the backing pool has been closed during JVM shutdown.
+  - `java.lang.IllegalStateException` — if the backing pool has been closed.
 ##### put(...) -> boolean
 - **Signature:** `@Override @SuppressWarnings("unused") public boolean put(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException, IllegalStateException`
 - **Summary:** Caches a result using the framework default TTL ( {@code JdbcUtil.DEFAULT_CACHE_LIVE_TIME} ) and default max idle time ( {@code JdbcUtil.DEFAULT_CACHE_MAX_IDLE_TIME} ).
@@ -8083,7 +8087,7 @@ The default implementation of {@link DaoCache} , using a {@link KeyedObjectPool}
 - **Returns:** {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null} or the backing pool rejected the entry.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code defaultCacheKey} is {@code null} .
-  - `java.lang.IllegalStateException` — if {@code result} is non-null and the backing pool has been closed during JVM shutdown.
+  - `java.lang.IllegalStateException` — if {@code result} is non-null and the backing pool has been closed.
 - **Signature:** `@Override public boolean put(String defaultCacheKey, Object result, long liveTime, long maxIdleTime, Object daoProxy, Object[] args, Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException, IllegalStateException`
 - **Summary:** Caches a result with the given time-to-live and max idle time, honored by the backing {@link KeyedObjectPool} .
 - **Parameters:**
@@ -8097,7 +8101,7 @@ The default implementation of {@link DaoCache} , using a {@link KeyedObjectPool}
 - **Returns:** {@code true} if the (non-null) result was stored; {@code false} if {@code result} was {@code null} or the backing pool rejected the entry.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code defaultCacheKey} is {@code null} , or {@code liveTime} or {@code maxIdleTime} is not positive.
-  - `java.lang.IllegalStateException` — if {@code result} is non-null and the backing pool has been closed during JVM shutdown.
+  - `java.lang.IllegalStateException` — if {@code result} is non-null and the backing pool has been closed.
 ##### update(...) -> void
 - **Signature:** `@Override @SuppressWarnings("unused") public void update(final String defaultCacheKey, final Object result, final Object daoProxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) throws IllegalArgumentException, ClassCastException, IllegalStateException`
 - **Summary:** Updates the cache after a data modification.
@@ -8112,14 +8116,21 @@ The default implementation of {@link DaoCache} , using a {@link KeyedObjectPool}
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code defaultCacheKey} or {@code methodSignature} is {@code null} , or the return type in {@code methodSignature} is {@code null} for a built-in update method.
   - `java.lang.ClassCastException` — if a built-in numeric update method supplies a non-null result that is not a {@code Number} .
-  - `java.lang.IllegalStateException` — if invalidation is required and the backing pool has been closed during JVM shutdown.
+  - `java.lang.IllegalStateException` — if invalidation is required and the backing pool has been closed.
 ##### clear(...) -> void
 - **Signature:** `@Override public void clear() throws IllegalStateException`
 - **Summary:** Removes every entry from the backing pool.
 - **Parameters:**
   - (none)
 - **Throws:**
-  - `java.lang.IllegalStateException` — if the backing pool has been closed during JVM shutdown.
+  - `java.lang.IllegalStateException` — if the backing pool has been closed.
+##### close(...) -> void
+- **Signature:** `@Override public void close()`
+- **Summary:** Closes the backing pool: cancels its eviction task, removes its JVM shutdown hook and drops all entries.
+- **Contract:**
+  - <p> The JVM shutdown hook closes the pool when the JVM exits; call this method to release the pool's background resources earlier, once the cache is no longer in use.
+- **Parameters:**
+  - (none)
 
 ### Class JdbcCodeGenerationUtil (com.landawn.abacus.jdbc.JdbcCodeGenerationUtil)
 Utility class for generating JDBC-related code including entity classes and SQL statements.
@@ -8180,7 +8191,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Parameters:**
   - `ds` (`DataSource`) — the data source to connect to the database
   - `entityName` (`String`) — the name of the entity class to generate
-  - `query` (`String`) — the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+  - `query` (`String`) — the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
 - **Returns:** the generated entity class as a string containing the complete Java source code
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , {@code entityName} is {@code null} or blank, {@code query} is {@code null} or empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
@@ -8190,7 +8201,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Parameters:**
   - `ds` (`DataSource`) — the data source to connect to the database
   - `entityName` (`String`) — the name of the entity class to generate
-  - `query` (`String`) — the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+  - `query` (`String`) — the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
   - `config` (`EntityCodeConfig`) — the configuration for customizing the generated entity class. If {@code null} , default configuration is used
 - **Returns:** the generated entity class as a string containing the complete Java source code
 - **Throws:**
@@ -8202,7 +8213,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `entityName` (`String`) — the name of the entity class to generate
-  - `query` (`String`) — the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+  - `query` (`String`) — the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
 - **Returns:** the generated entity class as a string containing the complete Java source code
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} , {@code entityName} is {@code null} or blank, {@code query} is {@code null} or empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
@@ -8212,7 +8223,7 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Parameters:**
   - `conn` (`Connection`) — the database connection to use
   - `entityName` (`String`) — the name of the entity class to generate
-  - `query` (`String`) — the SQL query to execute for retrieving the table metadata. The query is executed only to obtain column metadata; appending a predicate such as {@code WHERE 1 = 0} to avoid fetching rows is recommended
+  - `query` (`String`) — the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
   - `config` (`EntityCodeConfig`) — the configuration for customizing the generated entity class. If {@code null} , default configuration is used
 - **Returns:** the generated entity class as a string containing the complete Java source code
 - **Throws:**
@@ -11399,7 +11410,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** a dynamically generated DAO instance implementing the specified interface. Cache and reuse this instance; do not call {@code createDao} per request.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code daoInterface} is {@code null} or not an interface, {@code ds} is {@code null} , the DAO type or entity/ID mapping is invalid, or the SQL dialect, query metadata, or other DAO configuration is invalid.
-  - `java.lang.IllegalStateException` — if the shared asynchronous executor has already been shut down.
+  - `java.lang.IllegalStateException` — if the shared asynchronous executor has already been shut down, or the generated join SQL of a {@code @JoinedBy} property lacks a clause required to build its query plans.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if obtaining database product metadata fails while initializing the DAO.
   - `com.landawn.abacus.exception.UncheckedIOException` — if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read.
@@ -11418,7 +11429,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** a dynamically generated DAO instance implementing the specified interface. Cache and reuse this instance; do not call {@code createDao} per request.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code daoInterface} is {@code null} or not an interface, {@code ds} or {@code sqlDialect} is {@code null} , the DAO type or entity/ID mapping is invalid, or the SQL dialect, query metadata, or other DAO configuration is invalid.
-  - `java.lang.IllegalStateException` — if the shared asynchronous executor has already been shut down.
+  - `java.lang.IllegalStateException` — if the shared asynchronous executor has already been shut down, or the generated join SQL of a {@code @JoinedBy} property lacks a clause required to build its query plans.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if obtaining database product metadata fails while initializing the DAO.
   - `com.landawn.abacus.exception.UncheckedIOException` — if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read.
@@ -11437,7 +11448,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** a dynamically generated DAO instance implementing the specified interface. Cache and reuse this instance; do not call {@code createDao} per request.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code daoInterface} is {@code null} or not an interface, {@code ds} is {@code null} , the DAO type or entity/ID mapping is invalid, or the SQL dialect, query metadata, or other DAO configuration is invalid.
-  - `java.lang.IllegalStateException` — if no executor is configured and the shared asynchronous executor has already been shut down.
+  - `java.lang.IllegalStateException` — if no executor is configured and the shared asynchronous executor has already been shut down, or the generated join SQL of a {@code @JoinedBy} property lacks a clause required to build its query plans.
   - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if obtaining database product metadata fails while initializing the DAO.
   - `com.landawn.abacus.exception.UncheckedIOException` — if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read.
@@ -11643,9 +11654,10 @@ Manages join relationships between entities in JDBC operations.
 
 #### Public Static Methods
 ##### getEntityJoinInfo(...) -> Map<String, JoinInfo>
-- **Signature:** `public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) throws IllegalArgumentException, IllegalStateException`
+- **Signature:** `public static Map<String, JoinInfo> getEntityJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName) throws IllegalArgumentException`
 - **Summary:** Retrieves all join information for the specified entity class.
 - **Contract:**
+  - Other combinations share a cache of at most 1,024 entries: when it fills, entries are evicted in insertion order, except that an entry used since the previous scan is kept once more.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Get all join info for Employee entity Map<String, JoinInfo> joinInfoMap = JoinInfo.getEntityJoinInfo( EmployeeDao.class, Employee.class, "employees" ); // Iterate through all join properties for (Map.Entry<String, JoinInfo> entry : joinInfoMap.entrySet()) { String propName = entry.getKey(); JoinInfo joinInfo = entry.getValue(); System.out.println("Join property: " + propName); if (joinInfo.isManyToManyJoin()) { System.out.println(" - Many-to-many relationship"); } else { System.out.println(" - One-to-many relationship"); } } } </pre> <p> Whether join operations are permitted when a join key value is {@code null} or its type default is derived from the {@code @DaoConfig(allowNullOrDefaultJoinKeys = ...)} setting on {@code daoClass} , or the first annotated parent interface when the DAO itself has no configuration.
   - The setting defaults to {@code false} when no applicable annotation is present.
 - **Parameters:**
@@ -11654,11 +11666,10 @@ Manages join relationships between entities in JDBC operations.
   - `tableName` (`String`) — the database table name for the entity, must not be {@code null} .
 - **Returns:** an unmodifiable map of property names to JoinInfo objects, never {@code null} , empty if no join properties exist.
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if any argument is {@code null} , or a {@code @JoinedBy} -annotated property on {@code entityClass} is misconfigured (this is raised the first time the map is built and cached for the given key).
-  - `java.lang.IllegalStateException` — if generated join SQL lacks a clause required to build the join query plans
+  - `java.lang.IllegalArgumentException` — if any argument is {@code null} , or a {@code @JoinedBy} -annotated property on {@code entityClass} is misconfigured (raised whenever the map is built; a failed build is not cached).
 - **See also:** JoinedBy, DaoConfig
 ##### getPropJoinInfo(...) -> JoinInfo
-- **Signature:** `public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) throws IllegalArgumentException, IllegalStateException`
+- **Signature:** `public static JoinInfo getPropJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final String joinEntityPropName) throws IllegalArgumentException`
 - **Summary:** Retrieves join information for a specific property in an entity.
 - **Parameters:**
   - `daoClass` (`Class<?>`) — the DAO class associated with the entity, must not be {@code null} .
@@ -11668,10 +11679,9 @@ Manages join relationships between entities in JDBC operations.
 - **Returns:** the JoinInfo for the specified property, never {@code null} .
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any argument is {@code null} , no {@code @JoinedBy} join property is found with the given name on the entity, or if a {@code @JoinedBy} -annotated property on {@code entityClass} is misconfigured (surfaced while building the underlying join-info map).
-  - `java.lang.IllegalStateException` — if generated join SQL lacks a clause required to build the join query plans
 - **See also:** JoinedBy, #getEntityJoinInfo(Class, Class, String)
 ##### getJoinEntityPropNamesByType(...) -> List<String>
-- **Signature:** `public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final Class<?> joinPropEntityClass) throws IllegalArgumentException, IllegalStateException`
+- **Signature:** `public static List<String> getJoinEntityPropNamesByType(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final Class<?> joinPropEntityClass) throws IllegalArgumentException`
 - **Summary:** Retrieves all property names in an entity that join to a specific entity type.
 - **Contract:**
   - <p> This is useful when you need to discover all relationships between two entity types, especially when there might be multiple join properties pointing to the same entity class.
@@ -11684,7 +11694,6 @@ Manages join relationships between entities in JDBC operations.
 - **Returns:** an unmodifiable list of property names that join to the specified entity class, never {@code null} , empty if none found.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if any argument is {@code null} , or a {@code @JoinedBy} -annotated property on {@code entityClass} is misconfigured (surfaced while building the underlying join-info map).
-  - `java.lang.IllegalStateException` — if generated join SQL lacks a clause required to build the join query plans
 - **See also:** JoinedBy, #getEntityJoinInfo(Class, Class, String)
 
 #### Public Instance Methods
@@ -13169,6 +13178,7 @@ Configures the shared DAO cache used by methods with {@link CacheResult} enabled
 - **Contract:**
   - The implementation must implement {@link DaoCache} and declare a constructor that accepts two parameters: {@code (int capacity, long evictDelay)} .
   - The DAO proxy resolves that exact constructor signature when it creates the cache; a class that does not declare it fails DAO initialization with {@code IllegalArgumentException} (unlike the {@link #capacity()} / {@link #evictDelayMillis()} range violations, which fail with {@code UnsupportedOperationException} ).
+  - If the implementation also implements {@link AutoCloseable} , an instance created for a DAO proxy that is then discarded, because another thread registered an equivalent proxy first, is closed.
 - **Parameters:**
   - (none)
 - **Returns:** the cache implementation class; defaults to {@link Jdbc.DefaultDaoCache}
@@ -13244,6 +13254,12 @@ Enables method-level result caching for DAO query methods.
   - (none)
 - **Returns:** the serialization strategy
 - **See also:** <a href="https://github.com/EsotericSoftware/kryo">,Kryo Serialization,</a>
+##### cacheNestedResults(...) -> boolean
+- **Signature:** `boolean cacheNestedResults() default true`
+- **Summary:** Whether calls made by this cached method may also use inherited type-level result caching.
+- **Parameters:**
+  - (none)
+- **Returns:** {@code true} to preserve nested type-level result caching; {@code false} to suppress it
 ##### filter(...) -> String\[\]
 - **Signature:** `String[] filter() default { "query", "queryFor", "list", "get", "batchGet", "find", "findFirst", "findOnlyOne", "exists", "notExists", "count" }`
 - **Summary:** Specifies filter patterns for methods when the annotation is applied at the type level.

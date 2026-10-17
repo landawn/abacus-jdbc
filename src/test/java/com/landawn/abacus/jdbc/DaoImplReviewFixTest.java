@@ -15,6 +15,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -31,7 +32,11 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.jdbc.annotation.Cache;
 import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
+import com.landawn.abacus.jdbc.dao.ReadOnlyJoinEntityHelperIntegrationTest;
 import com.landawn.abacus.jdbc.dao.UncheckedNonUpdateDao;
+import com.landawn.abacus.jdbc.dao.UncheckedReadOnlyCrudDao;
+import com.landawn.abacus.jdbc.dao.UncheckedReadOnlyCrudJoinEntityHelper;
+import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.util.ImmutableList;
 import com.landawn.abacus.util.Tuple.Tuple3;
 
@@ -47,6 +52,8 @@ import com.landawn.abacus.util.Tuple.Tuple3;
  *   <li>Previously the cache was created before the DAO methods were validated, so a DAO rejected by a later check
  *       (e.g., a {@code @RefreshCache}-only DAO or an invalid {@code @CacheResult} setting) leaked its pool.</li>
  *   <li>Previously a proxy discarded because an equivalent one was published concurrently leaked its pool.</li>
+ *   <li>A join DAO rejected because its join SQL plans cannot be built, the last check of DAO creation, must not
+ *       have created its cache yet.</li>
  * </ul>
  *
  * <p>Each pool registers exactly one shutdown hook and its {@code close()} removes it, so the probe counts registered
@@ -242,6 +249,53 @@ class DaoImplReviewFixTest extends TestBase {
             }
         }
 
+        // A cacheable join DAO, used only by checkJoinPlanFailureCreatesNoCache.
+        public interface PlanFailureCacheDao extends UncheckedReadOnlyCrudDao<ReadOnlyJoinEntityHelperIntegrationTest.RoUser, Long, PlanFailureCacheDao>,
+                UncheckedReadOnlyCrudJoinEntityHelper<ReadOnlyJoinEntityHelperIntegrationTest.RoUser, Long, PlanFailureCacheDao> {
+            @CacheResult(enabled = true)
+            default String findValue() {
+                return "value-" + counter.incrementAndGet();
+            }
+        }
+
+        /**
+         * A join whose plans cannot be built rejects the DAO after every other validation; the cache that a cacheable join
+         * DAO would otherwise get must not be created for it, since nothing could close it.
+         */
+        @SuppressWarnings("unchecked")
+        private static void checkJoinPlanFailureCreatesNoCache() throws Exception {
+            final Class<ReadOnlyJoinEntityHelperIntegrationTest.RoUser> entityClass = ReadOnlyJoinEntityHelperIntegrationTest.RoUser.class;
+            final String tableName = "ro_join_user";
+            // Pin the metadata createDao looks up, so the bounded cache cannot replace the instrumented JoinInfo objects.
+            final Map<String, JoinInfo> joinInfo = JoinInfo.getEntityJoinInfo(PlanFailureCacheDao.class, entityClass, tableName);
+            JoinInfo.retainDaoJoinInfo(PlanFailureCacheDao.class, entityClass, tableName, joinInfo);
+            final Field builderField = JoinInfo.class.getDeclaredField("planBuilder");
+            builderField.setAccessible(true);
+            final Map<JoinInfo, Object> builders = new IdentityHashMap<>();
+
+            for (final JoinInfo info : joinInfo.values()) {
+                builders.put(info, builderField.get(info));
+                builderField.set(info, (com.landawn.abacus.util.function.Consumer<Dsl>) dsl -> {
+                    throw new IllegalStateException("injected join plan failure");
+                });
+            }
+
+            try {
+                assertNoCacheCreated("a cacheable DAO whose join plans cannot be built", () -> assertRejected(IllegalStateException.class,
+                        "injected join plan failure", () -> DaoImpl.createDao(PlanFailureCacheDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)));
+            } finally {
+                for (final Map.Entry<JoinInfo, Object> entry : builders.entrySet()) {
+                    builderField.set(entry.getKey(), entry.getValue());
+                }
+            }
+
+            // Control: once its plans can be built the same DAO creates exactly one cache, so the check above is meaningful.
+            final int before = shutdownHookCount();
+            final PlanFailureCacheDao dao = DaoImpl.createDao(PlanFailureCacheDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
+            assertCreatedCaches(1, before, "a cacheable join DAO whose plans can be built");
+            assertCachedResult(dao.findValue(), dao.findValue());
+        }
+
         public static void main(final String[] args) throws Exception {
             // The first DAO creation in a JVM runs one-time library initialization; create a plain DAO first so the
             // "before" counts below are taken after it.
@@ -265,6 +319,7 @@ class DaoImplReviewFixTest extends TestBase {
             assertNoCacheCreated("a @Cache implementation without an (int, long) constructor",
                     () -> assertRejected(IllegalArgumentException.class, "must declare a constructor (int capacity, long evictDelay)",
                             () -> DaoImpl.createDao(MissingCacheConstructorDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)));
+            checkJoinPlanFailureCreatesNoCache();
 
             // Control cases: an effectively enabled @CacheResult must still create (and use) exactly one cache, so the gate
             // cannot be over-corrected into never creating one.
