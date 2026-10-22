@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.cs;
@@ -109,7 +107,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or an existing row is updated and {@code entity}
      *                                  has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
@@ -147,7 +144,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         or the loaded database entity (with non-{@code null} non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
      *                                  and {@code entity} has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
@@ -198,7 +194,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or an existing row is updated
      *                                  and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -236,7 +231,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive,
      *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -292,7 +286,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                                  if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty
      *                                  and a name in {@code matchPropNames} is not a property of the entity class,
      *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -352,7 +345,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
      *                                  or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class,
      *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction

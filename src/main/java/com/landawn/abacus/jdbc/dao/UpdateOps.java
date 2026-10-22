@@ -20,8 +20,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.cs;
@@ -53,7 +51,6 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
@@ -88,7 +85,6 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
@@ -117,7 +113,6 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or if the entity class has no updatable property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
@@ -156,7 +151,6 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
      *                                  if an element of {@code propNamesToUpdate} is {@code null} or blank, or, other than a raw
      *                                  {@code col = expr} SET expression, names no property of the entity, or if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */

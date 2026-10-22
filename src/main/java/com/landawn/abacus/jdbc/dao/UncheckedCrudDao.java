@@ -20,8 +20,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -53,7 +51,7 @@ import com.landawn.abacus.util.N;
  * one of them, or holds {@code null} for one, matches no row (keys it carries beyond the id properties are ignored).</p>
  *
  * <p><b>Connection acquisition failures:</b> as described for {@link UncheckedDao}, a Spring
- * {@code CannotGetJdbcConnectionException} caused by an {@link SQLException} is translated into {@link UncheckedSQLException}
+ * connection-acquisition failure caused by an {@link SQLException} is translated into {@link UncheckedSQLException}
  * unless the operation opens a transaction first. The {@code insert} and {@code batchInsert} operations, and the
  * {@code upsert} and {@code batchUpsert} operations when they insert, don't translate it either.</p>
  *
@@ -106,9 +104,6 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or an existing row is updated and {@code entity}
      *                                  has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if no row matches and {@code entity} is inserted
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      * @throws UnsupportedOperationException if no existing row is found,
@@ -150,9 +145,6 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
      *                                  or an existing row is updated and {@code entity} has a property the loaded
      *                                  entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if no row matches and {@code entity} is inserted
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
      * @throws UnsupportedOperationException if no existing row is found,
@@ -201,9 +193,6 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         or the loaded database entity (with non-{@code null} non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
      *                                  and {@code entity} has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if no row matches and {@code entity} is inserted
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @throws UnsupportedOperationException if no existing row is found,
@@ -242,9 +231,6 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or an existing row is updated
      *                                  and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -282,9 +268,6 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive,
      *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -341,9 +324,6 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *                                  if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty
      *                                  and a name in {@code matchPropNames} is not a property of the entity class,
      *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
@@ -408,9 +388,6 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
      *                                  or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class,
      *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction

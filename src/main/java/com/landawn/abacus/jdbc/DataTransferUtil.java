@@ -43,8 +43,6 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.SequentialOnly;
 import com.landawn.abacus.annotation.Stateful;
@@ -379,7 +377,6 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if {@code dataset} is {@code null}, or {@code targetDataSource} is {@code null},
      *         or {@code insertSql} is {@code null} or blank
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
      * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
@@ -1435,7 +1432,6 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code iter}, {@code targetDataSource}, or {@code parameterSetter} is {@code null},
      *         or {@code insertSql} is {@code null} or blank
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
      * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
@@ -1700,7 +1696,6 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code file}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or {@code file}
      *         is a directory, or a CSV row contains more fields than the header, or {@code insertSql} is {@code null} or blank
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
      * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
@@ -1992,7 +1987,6 @@ public final class DataTransferUtil {
      * @return the number of source rows submitted; not the sum of JDBC update counts
      * @throws IllegalArgumentException if any of {@code reader}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or a CSV row
      *         contains more fields than the header, or {@code insertSql} is {@code null} or blank
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
      * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing the insert, binding a row, invoking {@code parameterSetter}, adding or executing a batch, or closing the
@@ -2462,7 +2456,6 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code sourceDataSource} is {@code null}, or if {@code selectSql} is {@code null} or empty, or is blank or
      *         cannot be parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a null
      *         or blank product name
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
@@ -2783,7 +2776,6 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code sourceDataSource} is {@code null}, or if {@code selectSql} is {@code null} or empty, or is blank or
      *         cannot be parsed (for example it mixes parameter styles), or if {@code output} is {@code null}, or if database metadata reports a null
      *         or blank product name
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned
@@ -3112,7 +3104,6 @@ public final class DataTransferUtil {
      *         blank, or malformed, or if database metadata reports a {@code null} or blank product name.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
      *         metadata labels whose exact case would be folded are rejected.
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
      *         because the table does not exist in the source database); connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
@@ -3155,7 +3146,6 @@ public final class DataTransferUtil {
      *         blank, or malformed, or if database metadata reports a {@code null} or blank product name.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
      *         metadata labels whose exact case would be folded are rejected.
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
      *         because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for
@@ -3190,7 +3180,6 @@ public final class DataTransferUtil {
      *         name is {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
      *         metadata labels whose exact case would be folded are rejected.
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example
      *         because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for
@@ -3257,7 +3246,6 @@ public final class DataTransferUtil {
      *         product name.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
      *         metadata labels whose exact case would be folded are rejected.
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any
@@ -3298,7 +3286,6 @@ public final class DataTransferUtil {
      *         reports a {@code null} or blank product name.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
      *         metadata labels whose exact case would be folded are rejected.
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
@@ -3371,7 +3358,6 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code selectSql} or {@code insertSql} is {@code null} or blank, or
      *         {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or if database metadata reports a
      *         {@code null} or blank product name
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails, or SQL
@@ -3412,7 +3398,6 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code selectSql} or {@code insertSql} is {@code null} or blank, or
      *         {@code sourceDataSource} or {@code targetDataSource} is {@code null}, or {@code batchSize <= 0}, or
      *         {@code fetchSize < 0}, or if database metadata reports a {@code null} or blank product name
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
@@ -3454,7 +3439,6 @@ public final class DataTransferUtil {
      * @throws IllegalArgumentException if {@code selectSql} or {@code insertSql} is {@code null} or blank, or
      *         any of {@code sourceDataSource}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or
      *         if database metadata reports a {@code null} or blank product name
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
@@ -3513,7 +3497,6 @@ public final class DataTransferUtil {
      *         any of {@code sourceDataSource}, {@code targetDataSource}, or {@code parameterSetter} is {@code null}, or
      *         {@code batchSize <= 0}, or {@code batchIntervalInMillis < 0}, or {@code fetchSize < 0}, or if database metadata reports a {@code null} or blank
      *         product name
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
      * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
      *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
@@ -4627,7 +4610,6 @@ public final class DataTransferUtil {
          * @throws IllegalArgumentException if more than one value-mapping strategy is configured, {@code batchSize <= 0}, a configured column or
          *         column-type key is not a column of the dataset, or a mapped type is {@code null}, or if {@code targetDataSource} is {@code null},
          *         or {@code insertSql} is {@code null} or blank
-         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
          * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
          *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
@@ -4965,7 +4947,6 @@ public final class DataTransferUtil {
          * @throws IllegalArgumentException if {@code parameterSetter} is not configured or {@code batchSize <= 0}, or if {@code targetDataSource} is
          *         {@code null}, or the CSV file source is a directory, or a CSV row contains more fields than the header,
          *         or {@code insertSql} is {@code null} or blank
-         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the target connection
          * @throws UncheckedSQLException if connection acquisition fails; connection acquisition follows
          *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
@@ -5290,7 +5271,6 @@ public final class DataTransferUtil {
          * @throws IllegalArgumentException if {@code output} is {@code null}, the configured SQL is empty, blank, or cannot be parsed (for example it
          *         mixes parameter styles), or a configured column name is not present in the query result, or if database metadata reports a {@code null} or
          *         blank product name
-         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
          * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using a DataSource or Connection;
          *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
@@ -5314,7 +5294,6 @@ public final class DataTransferUtil {
          * @throws IllegalArgumentException if {@code output} is {@code null}, the configured SQL is empty, blank, or cannot be parsed (for example it
          *         mixes parameter styles), or a configured column name is not present in the query result, or if database metadata reports a {@code null} or
          *         blank product name
-         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
          * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using a DataSource or Connection;
          *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
@@ -5336,7 +5315,6 @@ public final class DataTransferUtil {
          * @throws IllegalStateException if not exactly one query source ({@code dataSource}, {@code conn}, {@code stmt} or {@code rs}) is configured
          * @throws IllegalArgumentException if the configured SQL is empty, blank, or cannot be parsed, or the exporter requests a missing column, or
          *         if database metadata reports a {@code null} or blank product name
-         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source connection
          * @throws UncheckedSQLException if acquiring the source connection or reading database metadata fails when using a DataSource or Connection;
          *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
@@ -5716,7 +5694,6 @@ public final class DataTransferUtil {
          * @return the number of rows copied
          * @throws IllegalArgumentException if {@code targetDataSource} is {@code null}, {@code insertSql} is {@code null} or blank, {@code fetchSize < 0},
          *         or {@code batchSize <= 0}, or if database metadata reports a {@code null} or blank product name
-         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
          * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
          *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
          * @throws SQLException if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
@@ -6029,7 +6006,6 @@ public final class DataTransferUtil {
          *         {@code null}, blank, or malformed, or if database metadata reports a {@code null} or blank product name.
          *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
          *         metadata labels whose exact case would be folded are rejected.
-         * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain the source or target connection
          * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails, or, when no columns are configured,
          *         if reading the source table's columns fails (for example because the source table does not exist); connection acquisition follows
          *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.

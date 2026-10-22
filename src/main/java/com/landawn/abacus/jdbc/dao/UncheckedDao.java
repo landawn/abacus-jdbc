@@ -22,8 +22,6 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -52,9 +50,9 @@ import com.landawn.abacus.util.Throwables;
  * Inherited methods that are not redeclared keep the checked-exception contract from {@link Dao}.</p>
  *
  * <p><b>Connection acquisition failures:</b> with Spring connection acquisition enabled, Spring reports every failure to
- * obtain a connection as a {@code CannotGetJdbcConnectionException}. The built-in operations of this DAO obtain their
+ * obtain a connection as an unchecked runtime exception. The built-in operations of this DAO obtain their
  * connection through its unchecked {@code prepareQuery}/{@code prepareNamedQuery} methods, which translate such an exception
- * caused by an {@link SQLException} into {@link UncheckedSQLException}, so a {@code CannotGetJdbcConnectionException} remains
+ * caused by an {@link SQLException} into {@link UncheckedSQLException}, so an untranslated acquisition failure remains
  * only if the data source returns {@code null} or throws an {@code IllegalStateException}. A built-in operation that opens a
  * transaction first, such as a batch operation with more than one element, obtains the transaction's connection without
  * this translation; the {@code @throws} documentation of each operation names such cases. SQL-annotated methods declared by
@@ -86,8 +84,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -101,8 +97,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -116,8 +110,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -131,8 +123,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
      *         throws {@link SQLException}
      */
@@ -149,8 +139,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -165,8 +153,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -181,8 +167,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -197,8 +181,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null},
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -213,8 +195,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnIndexes} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -230,8 +210,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnNames} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -247,8 +225,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or {@code stmtCreator} is {@code null},
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
      *         throws {@link SQLException}
      */
@@ -265,8 +241,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or {@code stmtCreator} is {@code null},
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
      *         throws {@link SQLException}
      */
@@ -282,8 +256,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -297,8 +269,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback
      *         throws {@link SQLException}
      */
@@ -331,8 +301,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
      *                                  or an existing row is updated and {@code entity} has a property the loaded
      *                                  entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
      * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
@@ -377,8 +345,6 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
      *                                  and {@code entity} has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean

@@ -2336,8 +2336,6 @@ final class DaoImpl {
      * @throws IllegalArgumentException if the SQL left after fragment substitution cannot be parsed, if a bound name
      *         has no matching named parameter in the expanded SQL, or if an argument value has a type that cannot be
      *         bound to a named parameter
-     * @throws org.springframework.jdbc.CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
-     *         connection from the DAO data source
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the query, or binding its parameters, fails
      */
@@ -3594,8 +3592,6 @@ final class DaoImpl {
      *         generic type arguments (e.g. a {@code Map} 'ID' type, or a composite 'ID' bean/record class lacking one of the
      *         entity's id properties), or if it extends a read-only (or non-update) DAO interface together with a
      *         write-capable one ({@code Dao}/{@code NonUpdateDao} or a CRUD/{@code Unchecked} variant) whose operations it forbids
-     * @throws org.springframework.jdbc.CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
-     *         connection from {@code ds}
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      * @throws UncheckedIOException if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read
      * @throws ParsingException if an XML SQL mapper file referenced by {@code @SqlSource} is not well-formed XML or

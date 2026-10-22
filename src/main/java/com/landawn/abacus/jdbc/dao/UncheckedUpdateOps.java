@@ -19,8 +19,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -55,8 +53,6 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
@@ -89,8 +85,6 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
@@ -119,8 +113,6 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records to update
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or if the entity class has no updatable property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
@@ -161,8 +153,6 @@ sealed interface UncheckedUpdateOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
      *                                  if an element of {@code propNamesToUpdate} is {@code null} or blank, or, other than a raw
      *                                  {@code col = expr} SET expression, names no property of the entity, or if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override

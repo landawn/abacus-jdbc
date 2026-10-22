@@ -17,8 +17,6 @@ package com.landawn.abacus.jdbc.dao;
 
 import java.sql.SQLException;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.query.condition.Condition;
 
@@ -44,7 +42,6 @@ sealed interface DeleteOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records for deletion
      * @return the number of records deleted, or {@code 0} if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      */

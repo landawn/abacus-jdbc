@@ -18,8 +18,6 @@ package com.landawn.abacus.jdbc.dao;
 import java.sql.SQLException;
 import java.util.Collection;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -54,7 +52,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param entity the entity to insert
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -74,7 +71,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entity the entity to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -96,7 +92,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if {@code entity} has no property for a named parameter in {@code namedInsertSql}
      *                                  other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -121,7 +116,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      * @see #batchSave(Collection, int)
@@ -157,7 +151,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -180,7 +173,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -208,7 +200,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -234,7 +225,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
@@ -266,7 +256,6 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */

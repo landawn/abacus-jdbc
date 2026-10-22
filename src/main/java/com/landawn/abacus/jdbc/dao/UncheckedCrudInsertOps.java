@@ -18,8 +18,6 @@ package com.landawn.abacus.jdbc.dao;
 import java.util.Collection;
 import java.util.List;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -90,8 +88,6 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
-     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
      * @throws UncheckedSQLException if acquiring a connection fails, if the auto-commit mode of the connection a Spring-managed transaction bound to
      *         the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
@@ -120,8 +116,6 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         {@code propNamesToInsert} includes an ID property and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
-     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
      * @throws UncheckedSQLException if acquiring a connection fails, if the auto-commit mode of the connection a Spring-managed transaction bound to
      *         the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
@@ -152,8 +146,6 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         enabled and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
-     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
      * @throws UncheckedSQLException if acquiring a connection fails, if the auto-commit mode of the connection a Spring-managed transaction bound to
      *         the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
@@ -195,8 +187,6 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
-     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
      *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
      *         INSERT statement, or reading its generated keys fails
@@ -239,8 +229,6 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
-     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
      *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
      *         INSERT statement, or reading its generated keys fails
@@ -279,8 +267,6 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
-     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
      *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
      *         INSERT statement, or reading its generated keys fails
@@ -317,8 +303,6 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
-     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
      *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
      *         INSERT statement, or reading its generated keys fails
@@ -361,8 +345,6 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
-     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
      *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
      *         INSERT statement, or reading its generated keys fails
@@ -403,8 +385,6 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
-     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
      *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
      *         INSERT statement, or reading its generated keys fails

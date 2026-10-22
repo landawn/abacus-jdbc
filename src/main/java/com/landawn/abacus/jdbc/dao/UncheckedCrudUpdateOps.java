@@ -19,8 +19,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
@@ -57,8 +55,6 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @return the number of rows updated (typically 1 if successful, 0 if not found); also 0, without executing any
      *         statement, if the entity class has no updatable non-ID property
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
@@ -87,8 +83,6 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty, or if
      *         an element of it is {@code null} or names no property of the entity class (and is not a raw SET expression)
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
@@ -112,8 +106,6 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
@@ -151,8 +143,6 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an UPDATE statement fails
      */
     @Override
@@ -182,9 +172,6 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if {@code entities} has more than one element (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
@@ -223,9 +210,6 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if {@code entities} has more than one element (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
@@ -262,9 +246,6 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if {@code entities} has more than one element (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
@@ -304,9 +285,6 @@ sealed interface UncheckedCrudUpdateOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException},
-     *         or for any acquisition failure if {@code entities} has more than one element (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
      *         binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}

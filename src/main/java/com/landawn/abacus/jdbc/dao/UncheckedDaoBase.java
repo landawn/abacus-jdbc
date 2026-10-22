@@ -17,8 +17,6 @@ package com.landawn.abacus.jdbc.dao;
 
 import java.util.Collection;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.NamedQuery;
@@ -49,8 +47,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -64,8 +60,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -79,8 +73,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -94,8 +86,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -109,8 +99,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -124,8 +112,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -143,8 +129,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -161,8 +145,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -176,8 +158,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -191,8 +171,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -207,8 +185,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -226,8 +202,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -242,8 +216,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override
@@ -257,8 +229,6 @@ sealed interface UncheckedDaoBase<T, TD extends UncheckedDaoBase<T, TD>> extends
      * {@inheritDoc}
      *
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
-     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or configuring the SQL statement fails
      */
     @Override

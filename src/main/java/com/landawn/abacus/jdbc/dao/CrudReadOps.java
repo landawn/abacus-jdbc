@@ -22,8 +22,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.exception.DuplicateResultException;
 import com.landawn.abacus.exception.UncheckedSQLException;
@@ -82,7 +80,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalBoolean} holding the selected value when a record matches the id (present, holding the primitive default {@code false} when the value is SQL {@code null}), or an empty {@code OptionalBoolean} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBoolean()
@@ -105,7 +102,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalChar} holding the selected value when a record matches the id (present, holding the primitive default {@code (char) 0} when the value is SQL {@code null}), or an empty {@code OptionalChar} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForChar()
@@ -128,7 +124,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalByte} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalByte} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForByte()
@@ -151,7 +146,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalShort} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalShort} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForShort()
@@ -174,7 +168,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalInt} holding the selected value when a record matches the id (present, holding the primitive default {@code 0} when the value is SQL {@code null}), or an empty {@code OptionalInt} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForInt()
@@ -197,7 +190,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalLong} holding the selected value when a record matches the id (present, holding the primitive default {@code 0L} when the value is SQL {@code null}), or an empty {@code OptionalLong} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForLong()
@@ -220,7 +212,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalFloat} holding the selected value when a record matches the id (present, holding the primitive default {@code 0f} when the value is SQL {@code null}), or an empty {@code OptionalFloat} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForFloat()
@@ -243,7 +234,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return an {@code OptionalDouble} holding the selected value when a record matches the id (present, holding the primitive default {@code 0d} when the value is SQL {@code null}), or an empty {@code OptionalDouble} when no record matches the id
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDouble()
@@ -264,7 +254,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the String value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForString()
@@ -285,7 +274,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the Date value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForDate()
@@ -306,7 +294,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the Time value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTime()
@@ -327,7 +314,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the Timestamp value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForTimestamp()
@@ -350,7 +336,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID
      * @return a {@code Nullable} containing the byte array value if found, or {@code Nullable.empty()} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForBytes()
@@ -376,7 +361,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a {@code Nullable} holding the value (possibly {@code null} for a SQL {@code NULL}) when a record
      *         matches, or an empty {@code Nullable} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#queryForSingleValue(Class)
@@ -402,7 +386,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return an {@code Optional} containing the converted non-null value when a record matches the {@code id}, or an
      *         empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws NullPointerException if a record is found but the value converted to {@code targetValueType}
@@ -428,7 +411,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
      * @return an {@link Optional} containing the mapped value if a record matches the {@code id}, otherwise empty
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -461,7 +443,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a {@code Nullable} holding the unique value (possibly {@code null} for a SQL {@code NULL}) when a
      *         record matches, or an empty {@code Nullable} if no record exists
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
@@ -490,7 +471,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return an {@code Optional} containing the converted non-null value when exactly one record matches the {@code id},
      *         or an empty {@code Optional} if no record matches
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code targetValueType} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
@@ -518,7 +498,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param rowMapper the custom mapper that transforms a single-column {@link java.sql.ResultSet} row
      * @return an {@link Optional} containing the mapped unique value if a record matches the {@code id}, otherwise empty
      * @throws IllegalArgumentException if {@code singleSelectPropName} is {@code null} or empty, or if {@code id} or {@code rowMapper} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails, or a supplied JDBC
      *         callback throws {@link SQLException}
@@ -545,7 +524,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return an {@link Optional} containing the entity if found, otherwise empty
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
@@ -572,7 +550,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return an {@link Optional} containing the entity if found, otherwise empty
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
@@ -598,7 +575,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the entity if found, otherwise {@code null}
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
@@ -624,7 +600,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the entity if found, otherwise {@code null}
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
@@ -650,7 +625,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
@@ -681,7 +655,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
@@ -710,7 +683,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
@@ -749,7 +721,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
@@ -827,7 +798,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID to check for existence
      * @return {@code true} if an entity with the given ID exists, {@code false} otherwise
      * @throws IllegalArgumentException if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#exists()
@@ -848,7 +818,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @param id the entity ID to check for non-existence
      * @return {@code true} if no entity with the given ID exists, {@code false} otherwise
      * @throws IllegalArgumentException if {@code id} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @see AbstractQuery#notExists()
@@ -880,7 +849,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws ArithmeticException if the total count across all ID batches exceeds the range of an {@code int}
@@ -1000,7 +968,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or the entity's single ID value is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if more than one record matches the entity's id
@@ -1040,7 +1007,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         {@code false} if no matching row exists
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code propNamesToRefresh} is {@code null} or empty,
      *                                  or the entity's single ID value is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if more than one record matches the entity's id
@@ -1103,7 +1069,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
@@ -1135,7 +1100,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of entities (input elements) that were updated from a matching database row.
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or {@code batchSize} is not positive
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
@@ -1185,7 +1149,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  or {@code propNamesToRefresh} is {@code null} or empty
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
@@ -1224,7 +1187,6 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      *         Note: if multiple input entities share the same ID, all of them are refreshed and counted.
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  or {@code propNamesToRefresh} is {@code null} or empty, or {@code batchSize} is not positive
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if selecting the current database values or reading the result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs

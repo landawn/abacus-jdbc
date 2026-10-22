@@ -75,8 +75,6 @@ import com.landawn.abacus.util.function.TriFunction;
 import com.landawn.abacus.util.stream.Collectors;
 import com.landawn.abacus.util.stream.Stream;
 
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -3050,7 +3048,6 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if the INSERT SQL is null/empty, invalid, or cannot be converted, or if
      *         the database metadata reports a {@code null} or blank product name.
      *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
      * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
      *         database product info
      */
@@ -3108,7 +3105,6 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if the INSERT SQL is null/empty, invalid, or cannot be converted, or if
      *         the database metadata reports a {@code null} or blank product name.
      *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
      * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
      *         database product info
      */
