@@ -1,0 +1,285 @@
+================================================================================
+COMPARISON: 80c045e0a33bd1e120d9a178a2e84bb7b9b89c90 -> 2ea89622428243cd0d2b8b63ab2c3f708aeeb46d
+Scope: ./src/main/java/ ("abacus-jdbc")
+Generated: 2026-10-21
+================================================================================
+
+I analyzed the full diff (73 files, +8,725/-3,405 in src/main/java), cross-checking
+against the added tests (+12,964 lines) and the project's own release notes, which
+were extended by 35 bullets in this exact range.
+
+--------------------------------------------------------------------------------
+CONTEXT
+--------------------------------------------------------------------------------
+- 80c045e0 is tagged "pass11-baseline"; 2ea89622 is current HEAD (origin/master),
+  reached by two commits both titled "aaa". So there is no useful commit message
+  history -- the intent shows up in CHANGES.md (4.9.3 section), in new tests
+  (SpringTransactionParticipationTest, SpringJpaTransactionParticipationTest,
+  RollbackActionLogTest, DaoPoolBoundTest, DaoCacheKeyIdentityTest, ...), and in
+  the code.
+
+COMPATIBILITY VERDICT: no source/binary break.
+- No public method was added, removed, renamed or re-typed in src/main/java.
+- Annotations are untouched (all 21 annotation files are Javadoc-only; no element
+  or default changed).
+- The only signature-text changes are exception declarations: Spring's UNCHECKED
+  CannotGetJdbcConnectionException was dropped from ~966 "throws" clauses
+  (32 -> 0 occurrences package-wide), plus unchecked IllegalStateException added
+  to three insert methods. That is source- and binary-compatible, and it fixes a
+  real defect: these classes used to fail to load/reflect without spring-jdbc on
+  the classpath (per CHANGES.md).
+
+THE CHANGES ARE OVERWHELMINGLY SEMANTIC, and several of them will change runtime
+behavior of existing application code.
+
+================================================================================
+1. BREAKING BEHAVIOR CHANGES (REVIEW THESE FIRST)
+================================================================================
+
+1.1 JdbcUtil transactions now PARTICIPATE in Spring-managed transactions
+    (the single biggest change)
+
+In SqlTransaction.java a "springParticipating" mode was added, entered from
+JdbcUtil.beginTransaction (src/main/java/com/landawn/abacus/jdbc/JdbcUtil.java:14499).
+When a Spring transaction (or a JPA/Hibernate transaction manager exposing its
+JDBC connection) owns the DataSource's connection:
+
+- auto-commit and isolation are left alone -- a requested IsolationLevel is
+  SILENTLY IGNORED (isolationLevel() reports DEFAULT);
+- commit() issues NO Connection.commit() (Spring commits later); rollback()
+  issues no rollback but MARKS THE SPRING TRANSACTION ROLLBACK-ONLY, so Spring's
+  commit then fails with UnexpectedRollbackException;
+- where Spring cannot be marked (transaction manager exposes its own handle, no
+  identifiable JPA transaction), beginTransaction throws IllegalStateException
+  BEFORE ANY WORK RUNS;
+- afterCommit/afterRollback callbacks fire BEFORE Spring's real outcome -- do not
+  treat them as proof of a durable commit;
+- runOutsideTransaction/callOutsideTransaction now additionally disable this
+  library's Spring integration while the callback runs.
+
+Previously the same call disabled auto-commit, applied isolation, and DIRECTLY
+COMMITTED/ROLLED BACK SPRING'S CONNECTION (including the enclosing transaction's
+earlier work). If you mix JdbcUtil.beginTransaction with @Transactional, error-path
+and nested-scope behavior changes.
+
+Related: JdbcUtil.isInTransaction (src/main/java/com/landawn/abacus/jdbc/JdbcUtil.java:14363)
+now uses a strict ownership rule (transaction-owned ConnectionHolder with
+auto-commit off), NO LONGER ACQUIRES A CONNECTION, rejects null, and no longer
+treats a Spring binding made only for synchronization as a transaction.
+Spring-bound connections are now released only on the thread that acquired them.
+
+Nested-scope cleanup also changed: rollbackIfNotCommitted()/close() force-exit the
+scope when restoring the enclosing isolation level fails (PostgreSQL), marking the
+transaction rollback-only instead of leaking the connection.
+
+1.2 All multi-element batch operations are now transactional
+
+batchSave, batchInsert, batchUpdate, batchDelete, batchDeleteByIds,
+@Query(batch = true), and JdbcUtil.executeBatchUpdate / executeLargeBatchUpdate
+(DataSource, ...) (src/main/java/com/landawn/abacus/jdbc/JdbcUtil.java:7602) now run
+in a transaction whenever they have MORE THAN ONE ELEMENT, even if everything fits
+in one batch.
+
+Consequences:
+- no more partial commits (a failure at element N rolls back elements 1..N-1);
+- a "batch" is now all-or-nothing;
+- batchInsert rejects null elements with IllegalArgumentException instead of
+  inserting an all-null row or throwing NullPointerException mid-transaction.
+
+1.3 Generated IDs written back onto entities are now undone on rollback
+
+The new package-private RollbackActionLog.java records ID snapshots; every DAO
+insert path registers one (e.g. DaoImpl.java:5954). After a rollback (including
+nested rollback, and failures before execution) entity.getId() reverts to its
+pre-insert value instead of keeping a key for a row that never committed.
+
+Caveats:
+- with Spring synchronization disabled, or when the rollback-only mark fails
+  (status FAILED_ROLLBACK), IDs are kept and Spring may still commit;
+- CrudDao.batchUpsert's default body no longer restores IDs itself (it relies on
+  batchInsert/DaoImpl).
+
+1.4 Result-cache key format changed
+
+New format: method#table#daoId#params
+(src/main/java/com/landawn/abacus/jdbc/JdbcUtil.java:17197); daoId identifies the
+proxy (interface + DataSource).
+
+Two fixes come with it:
+- a cache shared across DAOs/data sources no longer leaks results;
+- type-level @CacheResult/@RefreshCache are resolved PER METHOD as the first
+  annotation whose filter() matches (enabled=false now opts a method out of a
+  super-interface annotation).
+
+CUSTOM Jdbc.DaoCache IMPLEMENTATIONS THAT PARSE KEY SEGMENTS MUST BE UPDATED;
+cache entries are no longer interchangeable between equivalent DAOs.
+
+1.5 The DAO proxy pool is bounded
+
+DEFAULT_DAO_POOL_CAPACITY = 4096 (src/main/java/com/landawn/abacus/jdbc/DaoImpl.java:276),
+insertion-order eviction with one second chance.
+
+createDao still returns a cached proxy while pooled, but IDENTITY IS NO LONGER
+PERMANENT: after eviction a new proxy is returned. An evicted proxy keeps working;
+its join metadata is unregistered and a createDao-created @Cache is closed once the
+proxy becomes unreachable (a user-supplied cache is never closed).
+
+1.6 DAO creation is much stricter (fail-fast)
+
+These now fail at createDao with UnsupportedOperationException /
+IllegalArgumentException, where they previously failed per call or silently
+misbehaved:
+- Iterator / Seq / java.util.stream / non-abacus stream return types;
+- @Query(batch = true) on a non-INSERT/UPDATE/DELETE statement;
+- @Bind names missing from the SQL (and SQL named parameters with no binding,
+  unless fragments may add them);
+- @Transactional with propagation other than SUPPORTS/MANDATORY on Seq/Iterator/
+  stream returns;
+- a Map ID type;
+- a composite ID class lacking an entity ID property;
+- interfaces combining ReadOnlyDao/NonUpdateDao with Dao;
+- a custom INSERT return type narrower than the entity's ID type;
+- join SQL that cannot be planned.
+
+1.7 Composite-ID lookups changed semantics
+
+DaoUtil.idsToCondition (src/main/java/com/landawn/abacus/jdbc/dao/DaoUtil.java:421):
+batchGet, count(ids), refresh and update(Map, id) now match on EVERY DECLARED ID
+PROPERTY.
+
+- An EntityId/Map/bean/record missing a component, or holding null for one,
+  MATCHES NO ROW (previously null rendered as IS NULL and could match/duplicate
+  rows; refresh no longer throws DuplicateResultException there).
+- Mixed element kinds now throw IllegalArgumentException instead of
+  ClassCastException.
+- Validation happens before de-duplication.
+- De-duplication is keyed on declared ID values (records supported).
+
+1.8 tableExists / getColumnNames schema resolution changed
+
+An unqualified table name is resolved only in the connection's current schema/
+catalog -- the old "retry every schema" fallback is gone (quoted names
+additionally use the PG current_schemas / H2 session search path).
+
+Code that used tableExists to probe tables in OTHER SCHEMAS will now get false.
+On PostgreSQL with auto-commit off, a "table not found" probe without a usable
+savepoint can now propagate SQLException instead of answering false on an
+aborted transaction.
+
+1.9 Dataset extraction no longer throws on duplicate/empty labels
+
+makeColumnNamesUnique (src/main/java/com/landawn/abacus/jdbc/JdbcUtil.java:9283)
+renames duplicates (X, X_2, ...) and unlabeled columns (column1, ...) instead of
+throwing IllegalArgumentException. If you relied on either the exception or the
+exact labels, adjust.
+
+1.10 DataTransferUtil behavior shifts
+
+- An empty columnNames in the deprecated importData(dataset, columnNames, ...)
+  overloads now means ALL COLUMNS (it previously bound zero parameters).
+- Blank insert/select SQL raises IllegalArgumentException.
+- Failures while closing internally created statements/result sets now surface
+  instead of being swallowed.
+- MySQL/MariaDB streaming is disabled when source and target are the same
+  connection (fixes "streaming result set is still active").
+
+================================================================================
+2. OTHER CHANGES WORTH KNOWING
+================================================================================
+
+- BATCH/FOR-UPDATE TRANSACTIONS: locking reads (FOR UPDATE/SHARE/..., LOCK IN
+  SHARE MODE, DB2 KEEP ... LOCKS, SQL Server WITH (UPDLOCK|XLOCK|HOLDLOCK...)) and
+  multi-statement SQL now join a for-update-only transaction, so locks last until
+  it ends (previously they could run on a separate connection).
+
+- @Stateful MAPPERS/CONSUMERS/EXTRACTORS now cache column metadata per ResultSet
+  identity and re-initialize when the layout differs (Jdbc.java), so they can be
+  cached/reused. Documented caveat: drivers reusing one ResultSet object
+  (sqlite-jdbc) hide layout changes -- create one callback per query there.
+
+- NAMED PARAMETER BINDING: nested bean paths (":address.street", null intermediate
+  -> SQL NULL) are supported (NamedQuery.java); a repeated name's getter is read
+  once per row rather than once per placeholder.
+
+- UPDATE PATHS: update(Map, id) / update(Map, cond) bind values with the
+  properties' declared @Type; unknown property names are rejected up front; raw
+  SET expressions like "version = version + 1" are accepted; count(Condition)
+  strips a trailing ORDER BY/LIMIT/OFFSET/FETCH.
+
+- RETURN VALUES: insert now returns the full composite ID object (not a raw key);
+  composite generated keys are wrapped in EntityId; a bean/record with no @Id
+  property is no longer treated as a "default" ID.
+
+- CUSTOM @Query SELECT MAY RETURN void (executes and drains rows, so
+  "SELECT ... FOR UPDATE" locks all rows); Iterable/SequencedCollection -> List,
+  ImmutableCollection -> ImmutableList; Tuple2/stream-ish returns fail at creation
+  with a clear error.
+
+- CACHE SERIALIZATION: JSON copies preserve Date milliseconds and
+  Timestamp/Calendar/java.time values exactly (previously a JSON round-trip
+  dropped precision).
+
+- SPRING INTEGRATION ROBUSTNESS: SpringApplicationContext.java now keeps every
+  registered context (last registered wins; closing a child falls back to the
+  parent instead of clearing the holder); no Spring type appears in any hot-path
+  signature/field, so the library loads without spring-jdbc.
+
+- DBLOCK survives Errors in its refresh task (previously one Error cancelled all
+  future refreshes and let locks expire); connection-acquisition failure now costs
+  one timeout per cycle.
+
+- SQL CODEGEN (JdbcCodeGenerationUtil.java): table name/config validated before a
+  connection is acquired; SQLite "Table not found" on PK detection fixed; column
+  type falls back to SQL-type mapping when the driver reports Object; MySQL
+  "#{name}" no longer treated as a comment.
+
+- MISC FIXES: empty Blob/Clob read as empty instead of driver error;
+  getOutParameters rejects an OutParam with neither index nor name;
+  createTableIfNotExists rejects blank DDL; nested-scope cleanup now always exits
+  and marks rollback-only when isolation restore fails; parallel complete/
+  completeSum wait for all futures on interrupt and restore the flag; cs.ids and
+  cs.savepoint constants added.
+
+================================================================================
+3. PRACTICAL MIGRATION CHECKLIST
+================================================================================
+
+Grep your code for:
+
+ 1. JdbcUtil.beginTransaction / callInTransaction inside @Transactional methods or
+    JpaTransactionManager setups -- re-validate commit/rollback and exception
+    paths (UnexpectedRollbackException, new IllegalStateException).
+
+ 2. executeBatchUpdate(, executeLargeBatchUpdate(, batchInsert/batchUpdate and
+    assumptions about partial commits or per-batch success counts.
+
+ 3. getId()/ID-field reads after a rollback (IDs are now reset).
+
+ 4. Custom Jdbc.DaoCache implementations, or code sharing one cache across DAOs
+    (key format + identity semantics changed).
+
+ 5. createDao(...) identity assumptions (==, identity maps) and reliance on DAOs
+    never being evicted.
+
+ 6. batchGet/count(ids)/refresh/update(Map, id) with nullable or partial
+    composite IDs.
+
+ 7. tableExists/getColumnNames for tables outside the current schema.
+
+ 8. catch (CannotGetJdbcConnectionException) blocks -- still compile (unchecked),
+    but connection failures from non-Spring paths are UncheckedSQLException, and
+    reflection over getExceptionTypes() changes.
+
+ 9. Dataset consumers relying on duplicate-label exceptions or original
+    duplicate labels.
+
+10. @Bind names not present in the SQL, @Query(batch = true) on SELECTs, and
+    @Transactional on methods returning Seq/Iterator/streams (creation now fails).
+
+The authoritative per-item list is the 4.9.3 section of CHANGES.md, which this
+range extended with 35 bullets covering exactly these changes -- useful as the
+review checklist against your own code.
+
+================================================================================
+END
+================================================================================
