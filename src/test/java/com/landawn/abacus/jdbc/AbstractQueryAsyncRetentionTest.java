@@ -35,11 +35,10 @@ class AbstractQueryAsyncRetentionTest {
         final Path output = directory.resolve("async-retention.log");
         final String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
         // A small isolated heap with explicit GC enabled makes the reachability check independent of the suite's GC flags.
-        final Process process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", executable).toString(), "-Xmx64m",
-                "-XX:+UseSerialGC", "-XX:-DisableExplicitGC", "-cp", System.getProperty("java.class.path"), RetentionProbe.class.getName())
-                .redirectErrorStream(true)
-                .redirectOutput(output.toFile())
-                .start();
+        final Process process = new ProcessBuilder(Path.of(System.getProperty("java.home"), "bin", executable).toString(), "-Xmx64m", "-XX:+UseSerialGC",
+                "-XX:-DisableExplicitGC", "-cp", System.getProperty("java.class.path"), RetentionProbe.class.getName()).redirectErrorStream(true)
+                        .redirectOutput(output.toFile())
+                        .start();
 
         try {
             assertTrue(process.waitFor(60, TimeUnit.SECONDS), "Async retention probe did not finish");

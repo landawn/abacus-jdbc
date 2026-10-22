@@ -51,14 +51,28 @@ import com.landawn.abacus.util.RegExUtil;
  * Method-name prefixes such as {@code findOnlyOne}, {@code selectOnlyOne}, and {@code queryForUnique}
  * instead require at most one result and reject duplicates.</p>
  *
- * <p>INSERT statements use the generated-key path regardless of {@link #op()}. A non-batch INSERT
- * method may return {@code void}, the DAO ID type (or a supertype capable of holding that ID), or
- * {@link com.landawn.abacus.util.u.Optional Optional&lt;ID&gt;}. A return type narrower than the DAO ID
- * type is rejected during DAO creation because a generated ID could not be returned safely. A batch
- * INSERT may return {@code void} or {@code List<ID>}; raw lists and incompatible element types are rejected.
- * On a DAO whose entity class has no id property, an INSERT method must return {@code void}. Each of
- * those three return-type rules is enforced at DAO creation and a violation fails with
+ * <p>An INSERT method whose sole statement argument (each element of the batch for {@link #batch()}) may be the
+ * DAO entity, judged from the parameter's declared type, uses the generated-key path regardless of {@link #op()}
+ * and returns the entity's id. Such a non-batch INSERT method may return {@code void}, the DAO ID type (or a
+ * supertype capable of holding that ID), or {@link com.landawn.abacus.util.u.Optional Optional&lt;ID&gt;}; a
+ * return type narrower than the DAO ID type is rejected during DAO creation because a generated ID could not be
+ * returned safely. Such a batch INSERT may return {@code void} or {@code List<ID>}; raw lists and incompatible
+ * element types are rejected. The ID type is the one declared by a {@code CrudDao}; for a DAO that declares none
+ * it is the entity's id property type ({@link com.landawn.abacus.util.EntityId EntityId} for a composite id).
+ * An INSERT whose statement argument cannot be the DAO entity (an INSERT into another table, e.g. an audit row
+ * from a {@code String}) keeps any return type and returns that table's generated key converted to it (a batch
+ * INSERT returns the keys as a {@code List}); when it returns {@code void}, no generated keys are requested.
+ * On a DAO whose entity class has no id property, every INSERT method must return {@code void}. Each of
+ * those return-type rules is enforced at DAO creation and a violation fails with
  * {@code UnsupportedOperationException}.</p>
+ *
+ * <p>A query method may return {@code void} (or {@code Void}) when it runs only for its side effect, for example
+ * {@code SELECT ... FOR UPDATE}: the statement is executed, its rows are read to the end and discarded (with
+ * {@code findOnlyOne}/{@code queryForUnique} semantics, more than one row still fails with
+ * {@code DuplicateResultException}). Lazy results are supported only through the Abacus
+ * {@link com.landawn.abacus.util.stream.Stream}; a {@code java.util.stream} stream, an {@code Iterator}, a
+ * {@code Seq} or another Abacus stream type (e.g. {@code IntStream}) as the return type fails DAO initialization
+ * with {@code UnsupportedOperationException}.</p>
  *
  * <p>Method parameters are bound to named parameters in the SQL through {@link Bind}.
  * Variable-length lists use the separate {@link BindList} curly-brace template expansion and cannot
@@ -74,10 +88,11 @@ import com.landawn.abacus.util.RegExUtil;
  * untrusted input in a fragment; validate against an application-controlled allowlist. Fetch size and
  * query timeout are JDBC driver hints and may be ignored or interpreted differently by a driver.</p>
  *
- * <p><b>Batch transactions:</b> an INSERT or UPDATE/DELETE batch that exceeds {@link #batchSize()}
- * is split into chunks inside a transaction started or joined by the proxy. A batch that fits in
- * one chunk does not start a transaction automatically; use {@link Transactional} when that case
- * also needs rollback of partially executed statements.</p>
+ * <p><b>Batch transactions:</b> an INSERT or UPDATE/DELETE batch of more than one element runs in a
+ * transaction started or joined by the proxy (participating in a Spring-managed transaction that owns
+ * the data source), split into chunks of {@link #batchSize()}; this also covers a batch that fits in
+ * one chunk, so that a partially executed batch is rolled back. A batch of one element runs without
+ * a transaction of its own.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -137,7 +152,10 @@ public @interface Query {
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@code value} and {@link #id()} are collected, dereferenced through the SQL mapper if
      * applicable, and passed to that {@code String[]} parameter at runtime. The caller must leave that
-     * parameter empty; passing any SQL in it fails the call with {@code IllegalArgumentException}.</p>
+     * parameter empty; passing any SQL in it fails the call with {@code IllegalArgumentException}. Inline
+     * SQL is passed as written (only trimmed, without a trailing {@code ;}), but SQL resolved from an id is
+     * passed in its parameterized form, with named parameters already replaced by {@code ?} markers, so the
+     * body must bind it positionally (for example through {@code prepareQuery}, not {@code prepareNamedQuery}).</p>
      *
      * <p>The SQL can include:</p>
      * <ul>
@@ -157,8 +175,9 @@ public @interface Query {
      * @Query("SELECT * FROM users WHERE age BETWEEN :minAge AND :maxAge")
      * List<User> findByAgeRange(@Bind("minAge") int min, @Bind("maxAge") int max) throws SQLException;
      *
-     * // Nested property paths require a single unannotated bean parameter
-     * // (filter.getUser().getId() and filter.getStatus() supply the values)
+     * // A single unannotated bean parameter supplies its properties by name, including nested
+     * // property paths (filter.getUser().getId() and filter.getStatus() supply the values; a null
+     * // filter.getUser() binds :user.id as SQL NULL)
      * @Query("SELECT * FROM orders WHERE user_id = :user.id AND status = :status")
      * List<Order> findOrders(OrderFilter filter) throws SQLException;
      *
@@ -225,7 +244,9 @@ public @interface Query {
      * When the annotated method is a {@code default} method whose last parameter is a {@code String[]}, all
      * entries from {@link #value()} and {@code id} are collected, dereferenced through the SQL mapper if
      * applicable, and passed to that {@code String[]} parameter at runtime. The caller must leave that
-     * parameter empty; passing any SQL in it fails the call with {@code IllegalArgumentException}.</p>
+     * parameter empty; passing any SQL in it fails the call with {@code IllegalArgumentException}. SQL
+     * resolved from an id is passed in its parameterized form ({@code ?} markers in place of named
+     * parameters), so the body must bind it positionally.</p>
      *
      * <p>The SQL mapper can be specified at the DAO interface level using the {@link SqlSource} annotation,
      * which points to XML files or other configuration sources containing SQL definitions.</p>
@@ -303,7 +324,9 @@ public @interface Query {
      *   <li>{@link QueryOperation#queryForSingle} - Returns a single scalar value</li>
      *   <li>{@link QueryOperation#queryForUnique} - Returns at most one scalar value using the declared optional/nullable wrapper,
      *       or the bare value and its type's default value when no row exists; throws {@code DuplicateResultException} if more than one row is found</li>
-     *   <li>{@link QueryOperation#update} - Executes a non-INSERT data-modification statement and returns its row count</li>
+     *   <li>{@link QueryOperation#update} - Executes a non-INSERT data-modification statement and returns its row count;
+     *       declaring it (or {@code largeUpdate}) on a plain read-only SELECT fails DAO initialization with
+     *       {@code UnsupportedOperationException}</li>
      *   <li>{@link QueryOperation#largeUpdate} - For updates affecting potentially more than {@code Integer.MAX_VALUE} rows</li>
      * </ul>
      *
@@ -361,6 +384,9 @@ public @interface Query {
      * parameters and causes DAO initialization to throw {@link UnsupportedOperationException}, including when it is
      * annotated with {@code @Bind} in positional ({@code ?}) SQL. Only in named-parameter SQL can such an object be
      * bound as one value, through {@code @Bind} or {@link #collectionAsSingleParameter()}.
+     * Otherwise (no {@code @Bind}, no {@code Map}) the IN values are bound to positions {@code 1..n} in
+     * method-parameter order, regardless of the positions declared by {@link OutParameter#position()}, so
+     * OUT-only positions must follow every IN position.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -485,7 +511,9 @@ public @interface Query {
      * <p>A batch method whose statement parameters do not have that exact shape, or that carries a
      * {@link BindList @BindList} parameter (the {@code Collection} already supplies the batch rows and
      * cannot also be expanded into {@code IN}-clause placeholders), fails DAO initialization with
-     * {@code UnsupportedOperationException}.</p>
+     * {@code UnsupportedOperationException}. So does a batch method whose statement is executed as a query
+     * (a SELECT, or a procedure call that is not executed as an update): batching applies only to INSERT,
+     * UPDATE/DELETE and procedures executed as updates.</p>
      *
      * <p>Performance considerations:</p>
      * <ul>
@@ -500,8 +528,8 @@ public @interface Query {
      * <p>Error handling:</p>
      * <ul>
      *   <li>If a batch item fails, the driver may report partial execution. The proxy starts or joins
-     *       a transaction for multi-chunk INSERT and UPDATE/DELETE batches, but not for a single chunk.</li>
-     *   <li>Use {@link Transactional} when rollback is also required for single-chunk batches</li>
+     *       a transaction for INSERT and UPDATE/DELETE batches of more than one element, so the batch is rolled back.</li>
+     *   <li>Use {@link Transactional} to include the batch in a larger unit of work</li>
      *   <li>Validate data before batching to minimize mid-batch failures</li>
      * </ul>
      *
@@ -535,46 +563,38 @@ public @interface Query {
      *
      * <p>When {@code collectionAsSingleParameter = true}:</p>
      * <ul>
-     *   <li>The collection/array is passed once through {@code PreparedStatement.setObject}</li>
-     *   <li>The JDBC driver must accept that Java value as one database value, commonly for a
-     *       database-native array or another driver-specific type</li>
+     *   <li>The argument is bound once, to parameter 1 (or to its {@code @Bind} name), the same way as
+     *       {@code AbstractQuery.setObject(int, Object)}: through the Abacus {@code Type} of its runtime class</li>
+     *   <li>For a Java array or collection that type binds the value's text form with
+     *       {@code PreparedStatement.setString}, for example {@code ["a", "b"]} for
+     *       {@code new String[] { "a", "b" }}; it is not converted to a database-native {@code ARRAY}.
+     *       A {@code byte[]} or {@code Byte[]} is the exception: it is bound as binary data with
+     *       {@code PreparedStatement.setBytes}</li>
      * </ul>
      *
      * <p>Common use cases:</p>
      * <pre>{@code
-     * // PostgreSQL array containment operator using one positional JDBC value
-     * @Query(value = "SELECT * FROM products WHERE tags @> ?",
-     *        collectionAsSingleParameter = true)
-     * List<Product> findByTags(String[] tags) throws SQLException;
-     *
-     * // PostgreSQL array equality
-     * @Query(value = "SELECT * FROM events WHERE participants = ?",
-     *        collectionAsSingleParameter = true)
-     * List<Event> findByExactParticipants(Long[] participants) throws SQLException;
-     *
-     * // A driver-supported native array/custom type (exact conversion is driver-specific)
+     * // Store the array's text form in one column instead of spreading it over several placeholders
      * @Query(value = "UPDATE configs SET options = ? WHERE name = 'default'",
      *        collectionAsSingleParameter = true)
      * int updateDefaultConfigOptions(String[] options) throws SQLException;
+     * // updateDefaultConfigOptions(new String[] { "a", "b" }) binds the single string ["a", "b"]
      *
-     * // Array intersection
-     * @Query(value = "SELECT * FROM items WHERE categories && ?",
-     *        collectionAsSingleParameter = true)
-     * List<Item> findByCategoryOverlap(String[] categories) throws SQLException;
+     * // Batch: each List element is bound as one value instead of supplying one row's values
+     * @Query(value = "INSERT INTO tag_sets (tags) VALUES (?)", batch = true, collectionAsSingleParameter = true)
+     * void insertTagSets(List<List<String>> tagSets) throws SQLException;
      * }</pre>
      *
      * <p>Contrast with default behavior:</p>
      * <pre>{@code
+     * // Default: a sole array (or Collection) supplies one value per positional placeholder
+     * @Query(value = "SELECT * FROM users WHERE id = ? OR manager_id = ?")
+     * List<User> findByIdOrManager(Long[] ids) throws SQLException;   // ids[0] -> 1st ?, ids[1] -> 2nd ?
+     *
      * // Variable-length IN expansion is a separate @BindList feature
      * @Query(value = "SELECT * FROM users WHERE id IN ({ids})")
      * List<User> findByIds(@BindList("ids") List<Long> ids) throws SQLException;
      * // Becomes: SELECT * FROM users WHERE id IN (?, ?, ?, ...)
-     *
-     * // With collectionAsSingleParameter: the array is passed once to one positional placeholder
-     * @Query(value = "SELECT * FROM users WHERE id = ANY(?)",
-     *        collectionAsSingleParameter = true)
-     * List<User> findByIdsArray(Long[] ids) throws SQLException;
-     * // PostgreSQL: id = ANY($1) where $1 is an array parameter
      * }</pre>
      *
      * <p>Important notes:</p>
@@ -584,10 +604,10 @@ public @interface Query {
      *       framework-recognized auxiliary parameters are not statement parameters. Setting this
      *       element on a method with any other number of statement parameters fails DAO initialization
      *       with {@code UnsupportedOperationException}</li>
-     *   <li>For batch methods, each element of the batch collection is bound as one value</li>
-     *   <li>The JDBC driver and database must support binding the supplied Java collection/array
-     *       as one value; this option does not call {@code Connection.createArrayOf}</li>
-     *   <li>Not commonly needed for standard SQL; primarily for database-specific features</li>
+     *   <li>For batch methods, each element of the batch collection is bound as one value at parameter 1,
+     *       even when the element is itself a collection or array</li>
+     *   <li>This option does not call {@code Connection.createArrayOf}; to bind a database-native array,
+     *       create the {@link java.sql.Array} yourself and bind it with {@code prepareQuery(...).setArray(...)}</li>
      * </ul>
      *
      * @return {@code true} if the sole statement argument should be bound once as a single value;
@@ -930,8 +950,8 @@ public @interface Query {
      * <ul>
      *   <li><strong>Network efficiency:</strong> Larger batches mean fewer round trips</li>
      *   <li><strong>Memory usage:</strong> Larger batches consume more memory</li>
-     *   <li><strong>Transaction scope:</strong> All chunks of a split batch share one transaction;
-     *       reducing this size does not commit each chunk independently</li>
+     *   <li><strong>Transaction scope:</strong> All chunks of a batch of more than one element share one
+     *       transaction; reducing this size does not commit each chunk independently</li>
      *   <li><strong>Error recovery:</strong> Smaller batches may be easier to retry on failure</li>
      * </ul>
      *

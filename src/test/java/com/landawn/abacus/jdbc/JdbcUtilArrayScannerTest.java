@@ -87,6 +87,26 @@ public class JdbcUtilArrayScannerTest extends TestBase {
         }
     }
 
+    // A ';' inside a string in an array does not separate statements; a ';' after an array does, and a later write joins.
+    @Test
+    void semicolonsAfterArraysSeparateStatementsButNotInsideTheirStrings() throws Exception {
+        JdbcDataSource ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:array_scanner_semicolons");
+        SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.READ_COMMITTED, true);
+        try {
+            for (String sql : new String[] { "SELECT ARRAY[';', '; UPDATE t SET id = 2'] AS a;", "SELECT ARRAY[ARRAY[1]] AS a; SELECT a[1] FROM t",
+                    "SELECT payload[1] FROM t; SELECT [a;b] FROM t" }) {
+                assertNull(JdbcUtil.getTransaction(ds, sql, SqlTransaction.CreatedBy.JDBC_UTIL), sql);
+            }
+            for (String sql : new String[] { "SELECT ARRAY[ARRAY[1]] AS a; UPDATE t SET id = 2", "SELECT a[1] FROM t; SELECT [a;b] FROM t FOR UPDATE",
+                    "SELECT ARRAY[1, (SELECT id FROM t FOR UPDATE)]" }) {
+                assertSame(tran, JdbcUtil.getTransaction(ds, sql, SqlTransaction.CreatedBy.JDBC_UTIL), sql);
+            }
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
     @Test
     void aWriteInsideAnArraySubqueryStillParticipatesInRollback() throws Exception {
         JdbcDataSource ds = new JdbcDataSource();

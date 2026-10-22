@@ -32,7 +32,8 @@
  * {@link com.landawn.abacus.jdbc.dao.DaoBase}, so each variant exposes exactly the operations
  * its mutation policy allows — disallowed operations are absent from the type rather than
  * failing with {@link UnsupportedOperationException} at runtime. The raw-SQL
- * {@code prepareQuery}/{@code prepareNamedQuery} overloads are the one exception: they remain
+ * {@code prepareQuery}/{@code prepareNamedQuery} overloads (and their {@code *ForLargeResult}
+ * forms) are the one exception: they remain
  * present on the restricted variants, so their SQL kind is checked at runtime and a disallowed
  * statement does fail with {@link UnsupportedOperationException} — after the SQL argument itself
  * has been validated, so a {@code null} or empty statement still yields
@@ -40,7 +41,10 @@
  *
  * <p>{@link com.landawn.abacus.jdbc.dao.JoinEntityHelper} and
  * {@link com.landawn.abacus.jdbc.dao.CrudJoinEntityHelper} provide operations for entity
- * associations described by join metadata. Applications normally define a self-typed
+ * associations described by join metadata; read-only DAOs use
+ * {@link com.landawn.abacus.jdbc.dao.ReadOnlyJoinEntityHelper} and
+ * {@link com.landawn.abacus.jdbc.dao.ReadOnlyCrudJoinEntityHelper}, which omit the join-entity
+ * delete operations. Applications normally define a self-typed
  * interface extending one of these DAO contracts and create its implementation with
  * {@link com.landawn.abacus.jdbc.JdbcUtil#createDao(Class, javax.sql.DataSource)}. Custom
  * SQL methods can be declared with {@link com.landawn.abacus.jdbc.annotation.Query}.</p>

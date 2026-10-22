@@ -2,6 +2,7 @@ package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -196,7 +197,7 @@ class JdbcUtilDaoCacheTest extends JdbcUtilTestSupport {
     @Test
     public void testCreateCacheKey() {
         final Logger logger = LoggerFactory.getLogger(JdbcUtilTest.class);
-        final String key = JdbcUtil.createCacheKey("user_account", "UserDao.list", new Object[] { "Alice", 1, List.of(1, 2) }, logger);
+        final String key = JdbcUtil.createCacheKey("user_account", "UserDao.list", "TestDao@1", new Object[] { "Alice", 1, List.of(1, 2) }, logger);
         assertNotNull(key);
         assertTrue(key.startsWith("UserDao.list#user_account#"));
     }
@@ -205,9 +206,36 @@ class JdbcUtilDaoCacheTest extends JdbcUtilTestSupport {
     @Test
     public void testCreateCacheKey_NullArgs() {
         final Logger logger = LoggerFactory.getLogger(JdbcUtilTest.class);
-        final String key = JdbcUtil.createCacheKey("t", "Dao.m", null, logger);
+        final String key = JdbcUtil.createCacheKey("t", "Dao.m", "TestDao@1", null, logger);
         assertNotNull(key);
         assertTrue(key.startsWith("Dao.m#t#"));
+    }
+
+    // The key names the DAO proxy after the table, so DAOs sharing a cache never share entries, while the table stays
+    // between the first and second '#', where the built-in caches read it to invalidate an updated table.
+    @Test
+    public void testCreateCacheKey_IncludesDaoIdentityAfterTable() {
+        final Logger logger = LoggerFactory.getLogger(JdbcUtilTest.class);
+        final Object[] args = { 1L };
+        final String key = JdbcUtil.createCacheKey("user_account", "UserDao.get", "UserDao@1", args, logger);
+        final String otherDaoKey = JdbcUtil.createCacheKey("user_account", "UserDao.get", "UserDao@2", args, logger);
+
+        assertTrue(key.startsWith("UserDao.get#user_account#UserDao@1#"), key);
+        assertNotEquals(key, otherDaoKey);
+        assertEquals("user_account", com.landawn.abacus.util.Strings.substringBetween(otherDaoKey, JdbcUtil.CACHE_KEY_SEPARATOR));
+
+        final Jdbc.DaoCache cache = Jdbc.DaoCache.createByMap();
+        assertTrue(cache.put(key, "a", null, args, null));
+        assertTrue(cache.put(otherDaoKey, "b", null, args, null));
+        assertEquals("a", cache.get(key, null, args, null));
+        assertEquals("b", cache.get(otherDaoKey, null, args, null));
+
+        // A write through either DAO invalidates the table's entries of every DAO sharing the cache.
+        final com.landawn.abacus.util.Tuple.Tuple3<java.lang.reflect.Method, com.landawn.abacus.util.ImmutableList<Class<?>>, Class<?>> sig = com.landawn.abacus.util.Tuple
+                .of(Object.class.getMethods()[0], com.landawn.abacus.util.ImmutableList.empty(), int.class);
+        cache.update(JdbcUtil.createCacheKey("user_account", "UserDao.update", "UserDao@2", args, logger), 1, null, args, sig);
+        assertNull(cache.get(key, null, args, null));
+        assertNull(cache.get(otherDaoKey, null, args, null));
     }
 
     @Test

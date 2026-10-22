@@ -144,8 +144,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql, final boolean generateKeys)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+    default PreparedQuery prepareQuery(final String sql, final boolean generateKeys) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQuery(dataSource(), sql, generateKeys);
     }
 
@@ -164,7 +163,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQuery(final String sql, final int[] generatedKeyColumnIndexes)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQuery(dataSource(), sql, generatedKeyColumnIndexes);
     }
 
@@ -192,7 +191,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQuery(final String sql, final String[] generatedKeyColumnNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQuery(dataSource(), sql, generatedKeyColumnNames);
     }
 
@@ -211,7 +210,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -234,7 +233,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final boolean generateKeys)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generateKeys);
     }
 
@@ -254,7 +253,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final int[] generatedKeyColumnIndexes)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnIndexes);
     }
 
@@ -274,7 +273,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final String[] generatedKeyColumnNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnNames);
     }
 
@@ -293,7 +292,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generateKeys);
     }
 
@@ -312,7 +311,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnIndexes);
     }
 
@@ -331,7 +330,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql, generatedKeyColumnNames);
     }
 
@@ -351,7 +350,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -373,7 +372,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(namedSql, cs.namedSql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -403,8 +402,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      */
     @Beta
     @NonDBOperation
-    default CallableQuery prepareCallableQuery(final String sql)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+    default CallableQuery prepareCallableQuery(final String sql) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareCallableQuery(dataSource(), sql);
     }
 
@@ -423,7 +421,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
     @Beta
     @NonDBOperation
     default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
@@ -456,8 +454,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
      * @see #upsert(Object, Condition)
      */
-    default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, CannotGetJdbcConnectionException,
-            UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity, final Collection<String> matchPropNames)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
@@ -502,8 +500,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
      */
-    default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 

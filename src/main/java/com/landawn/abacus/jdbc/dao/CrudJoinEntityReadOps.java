@@ -122,8 +122,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default Optional<T> get(final ID id, final Class<?> joinEntityClass) throws IllegalArgumentException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default Optional<T> get(final ID id, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, joinEntityClass));
     }
 
@@ -160,8 +160,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default Optional<T> get(final ID id, final boolean includeAllJoinEntities) throws IllegalArgumentException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default Optional<T> get(final ID id, final boolean includeAllJoinEntities)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, includeAllJoinEntities));
     }
 
@@ -194,8 +194,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClass));
     }
 
@@ -231,8 +230,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, joinEntityClasses));
     }
 
@@ -266,8 +264,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default Optional<T> get(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return Optional.ofNullable(getOrNull(id, sourceSelectPropNames, includeAllJoinEntities));
     }
 
@@ -298,8 +295,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default T getOrNull(final ID id, final Class<?> joinEntityClass) throws IllegalArgumentException, CannotGetJdbcConnectionException,
-            UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T getOrNull(final ID id, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
@@ -340,8 +337,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default T getOrNull(final ID id, final boolean includeAllJoinEntities) throws IllegalArgumentException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T getOrNull(final ID id, final boolean includeAllJoinEntities)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this).getOrNull(id);
@@ -383,8 +380,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
@@ -431,8 +427,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
         N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
 
@@ -480,8 +475,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default T getOrNull(final ID id, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(id, cs.id);
 
         final T result = DaoUtil.getCrudReadOps(this)
@@ -526,8 +520,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntityClass) throws IllegalArgumentException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final Class<?> joinEntityClass)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, null, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -559,8 +553,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Beta
-    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities) throws IllegalArgumentException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default List<T> batchGet(final Collection<? extends ID> ids, final boolean includeAllJoinEntities)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, null, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -597,8 +591,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, sourceSelectPropNames, joinEntityClass, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -635,8 +628,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, sourceSelectPropNames, joinEntityClasses, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -672,8 +664,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         return batchGet(ids, sourceSelectPropNames, includeAllJoinEntities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -713,8 +704,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass,
-            final int batchSize) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
         N.checkArgPositive(batchSize, cs.batchSize);
 
@@ -770,8 +760,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses,
-            final int batchSize) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
         N.checkArgPositive(batchSize, cs.batchSize);
 
@@ -831,8 +820,7 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      */
     @Beta
     default List<T> batchGet(final Collection<? extends ID> ids, final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities,
-            final int batchSize) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+            final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgPositive(batchSize, cs.batchSize);
 
         final List<T> result = DaoUtil.getCrudReadOps(this)

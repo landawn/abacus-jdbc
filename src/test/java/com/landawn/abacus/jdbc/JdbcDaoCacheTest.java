@@ -588,6 +588,7 @@ class JdbcDaoCacheTest extends JdbcTestSupport {
             assertNull(cache.get("method#users#params", null, null, methodSignature));
         }
     }
+
     // Declares its own close(), with a signature AutoCloseable does not allow: this compiles because DaoCache declares
     // no close(), and createDao never calls it.
     private static class LegacyCache implements Jdbc.DaoCache {

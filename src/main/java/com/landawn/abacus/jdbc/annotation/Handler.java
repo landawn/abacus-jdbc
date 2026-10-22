@@ -45,6 +45,12 @@ import com.landawn.abacus.jdbc.dao.DaoBase;
  * declarations may be placed on the same method or type, in which case they are collected into a
  * {@link Handlers} container and each handler is applied in declaration order.</p>
  *
+ * <p>Handlers wrap the whole proxied invocation: the result-cache lookup, any
+ * {@link Transactional @Transactional} transaction and the SQL/performance-logging scopes run inside
+ * them. Handlers therefore also run when a result is served from a cache, and {@code afterInvoke()}
+ * runs after a transaction owned by the invocation has been committed or rolled back. Methods
+ * annotated with {@link NonDBOperation @NonDBOperation} are never intercepted.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Custom handler implementation, typed for DaoBase<?, ?> so that it can be applied to any DAO
@@ -94,10 +100,12 @@ public @interface Handler {
 
     /**
      * Specifies a qualifier used to look up a pre-registered handler instance: the name of a
-     * {@code static final} {@link Jdbc.Handler} field declared in the DAO interface (or its nested
-     * classes), or the qualifier of a handler registered with {@code Jdbc.HandlerFactory}. When
-     * non-empty, the qualifier takes precedence over {@link #impl()}; the framework resolves the
-     * handler by this name instead of instantiating one from the {@code impl} attribute.
+     * {@code static final} {@link Jdbc.Handler} field declared in the DAO interface, one of its
+     * super-interfaces, or their nested classes, or the qualifier of a handler registered with
+     * {@code Jdbc.HandlerFactory} (which, when Spring is available, also finds a {@code Jdbc.Handler}
+     * Spring bean of that name). When non-empty, the qualifier takes precedence over {@link #impl()};
+     * the framework resolves the handler by this name instead of instantiating one from the
+     * {@code impl} attribute.
      *
      * <p>This is useful when you want to register a handler instance once (with custom
      * configuration or dependencies) and then reference it from multiple DAO interfaces or
@@ -113,14 +121,15 @@ public @interface Handler {
      * }</pre>
      *
      * <p>The qualifier must resolve to a handler instance at DAO initialization time: a
-     * {@code static final} field of that name on the DAO (or a nested class of it) is looked up first,
-     * then {@code Jdbc.HandlerFactory}. If neither yields a handler, DAO initialization fails with
-     * {@code IllegalArgumentException}.</p>
+     * {@code static final} field of that name on the DAO, its super-interfaces or their nested classes
+     * is looked up first, then {@code Jdbc.HandlerFactory}. If neither yields a handler, DAO
+     * initialization fails with {@code IllegalArgumentException}.</p>
      *
-     * <p>The DAO's own {@link Jdbc.Handler}-typed fields are collected whether or not any qualifier
-     * references them, and each must be {@code static final} (automatic for an interface field, but not
-     * for one declared in a nested class) with a name unique across the DAO and its nested classes;
-     * violating either rule also fails DAO initialization with {@code IllegalArgumentException}.</p>
+     * <p>Those {@link Jdbc.Handler}-typed fields are collected whether or not any qualifier references
+     * them, and each must be {@code static final} (automatic for an interface field, but not for one
+     * declared in a nested class) with a name unique across the DAO, its super-interfaces and their
+     * nested classes; violating either rule also fails DAO initialization with
+     * {@code IllegalArgumentException}.</p>
      *
      * @return the handler qualifier name; empty (default) means resolve a handler by {@link #impl()} instead
      */

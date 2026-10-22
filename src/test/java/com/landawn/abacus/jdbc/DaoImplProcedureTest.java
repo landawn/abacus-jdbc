@@ -52,6 +52,29 @@ class DaoImplProcedureTest extends JdbcUtilTestSupport {
         verify(mockConnection).close();
     }
 
+    // Regression: a zero-argument procedure whose named markers are all OUT parameters (registered by name through
+    // @OutParameter) failed DAO creation with "Missing bindings", although the same markers were accepted as soon as
+    // the procedure had one or more IN parameters.
+    @Test
+    void zeroArgNamedProcedureWithOnlyOutParametersIsAccepted() throws SQLException {
+        final NamedOutputsProcedureDao namedOutputsDao = JdbcUtil.createDao(NamedOutputsProcedureDao.class, mockDataSource);
+        clearInvocations(mockConnection, mockCallableStatement);
+
+        final Jdbc.OutParamResult outputs = namedOutputsDao.outputs();
+
+        assertEquals("done", outputs.getOutParamValue("message"));
+        verify(mockConnection).prepareCall("{call sample(:message)}");
+        verify(mockCallableStatement).registerOutParameter("message", Types.VARCHAR);
+        verify(mockCallableStatement).execute();
+        verify(mockCallableStatement).close();
+    }
+
+    interface NamedOutputsProcedureDao extends Dao<DaoImplQueryContractIntegrationTest.ReviewRow, NamedOutputsProcedureDao> {
+        @Query(value = "{call sample(:message)}", procedure = true, op = QueryOperation.executeAndGetOutParameters)
+        @OutParameter(name = "message", sqlType = Types.VARCHAR)
+        Jdbc.OutParamResult outputs() throws SQLException;
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = { false, true })
     void queryAllMapsDatasetsAndOptionallyReturnsOutputs(final boolean withOutputs) throws SQLException {

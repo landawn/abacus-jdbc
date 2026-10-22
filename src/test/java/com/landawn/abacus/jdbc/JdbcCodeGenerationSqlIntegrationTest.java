@@ -87,6 +87,25 @@ class JdbcCodeGenerationSqlIntegrationTest extends JdbcCodeGenerationUtilTestSup
         }
     }
 
+    // Pins the multi-key generateUpdateSql/generateNamedUpdateSql Javadoc examples: only the key columns (and the excluded
+    // columns) are dropped from SET; a column referenced only by the additional where clause, such as version, is still set.
+    @Test
+    public void testMultiKeyUpdateJavadocExamples() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:update_javadoc_examples;DATABASE_TO_LOWER=TRUE", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE orders (id INT, status VARCHAR(20), customer_id INT, total_amount DECIMAL(10, 2), version INT,"
+                    + " created_at TIMESTAMP, updated_at TIMESTAMP, PRIMARY KEY (id, status))");
+            final List<String> excludedColumns = List.of("created_at", "updated_at");
+            final List<String> keyColumnNames = List.of("id", "status");
+
+            assertEquals("UPDATE orders SET customer_id = ?, total_amount = ?, version = ? WHERE id = ? AND status = ? AND (version > 1)",
+                    JdbcCodeGenerationUtil.generateUpdateSql(conn, "orders", excludedColumns, keyColumnNames, "version > 1"));
+            assertEquals(
+                    "UPDATE orders SET customer_id = :customerId, total_amount = :totalAmount, version = :version WHERE id = :id AND status = :status AND (version > 1)",
+                    JdbcCodeGenerationUtil.generateNamedUpdateSql(conn, "orders", excludedColumns, keyColumnNames, "version > 1"));
+        }
+    }
+
     @Test
     public void testGeneratedUpdateGroupsAdditionalOrPredicate() throws SQLException {
         final String condition = "status = 'OPEN' OR status = 'PENDING'";

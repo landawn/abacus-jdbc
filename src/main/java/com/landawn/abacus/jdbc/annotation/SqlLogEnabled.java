@@ -30,8 +30,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * logger's DEBUG level are enabled.
  *
  * <p>The DAO proxy reads this annotation at proxy-build time ({@code DaoImpl}). A method-level
- * {@code @SqlLogEnabled} wins over a type-level one. When neither is present, logging follows
- * the current thread's setting configured on {@link JdbcUtil}.</p>
+ * {@code @SqlLogEnabled} wins over a type-level one entirely: elements it omits take their defaults,
+ * not the type-level values, so a method-level {@code @SqlLogEnabled(maxSqlLogLength = 500)} also
+ * enables logging under a type-level {@code @SqlLogEnabled(false)}. When neither is present, logging
+ * follows the current thread's setting configured on {@link JdbcUtil}.</p>
  *
  * <p>This annotation controls statement-preparation logging only. SQL performance logs and a
  * custom {@link JdbcUtil#setSqlLogHandler SQL log handler} are configured separately, so

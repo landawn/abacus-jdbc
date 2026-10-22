@@ -36,6 +36,9 @@ import com.landawn.abacus.jdbc.dao.CrudDao;
  *   <li>Column fetching strategies for Dataset queries</li>
  * </ul>
  *
+ * <p>Only one {@code @DaoConfig} applies to a DAO: the one on the DAO interface itself or, when it has
+ * none, the first one found on its super-interfaces. Annotations on several interfaces are not merged.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * @DaoConfig(
@@ -212,7 +215,7 @@ public @interface DaoConfig {
     /**
      * Controls the default column-value typing of built-in {@code Dataset}-returning
      * methods (e.g., {@code query(Condition)}, {@code query(Collection<String>, Condition)})
-     * provided by {@code Dao}/{@code CrudDao}, when individual call sites do not override it
+     * provided by {@code Dao}/{@code CrudDao}, when the method itself does not override it
      * with {@link FetchColumnByEntityClass @FetchColumnByEntityClass}.
      *
      * <p>When {@code true} (default), columns whose labels match properties of the DAO's target entity class

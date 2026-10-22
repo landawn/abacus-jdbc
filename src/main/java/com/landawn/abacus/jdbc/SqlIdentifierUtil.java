@@ -28,7 +28,8 @@ import com.landawn.abacus.util.Strings;
 /**
  * Shared rendering rules for SQL table/column identifiers used by the SQL-generating utilities in
  * this package ({@link DataTransferUtil} and {@link JdbcCodeGenerationUtil}); {@link JdbcUtil} also
- * relies on the delimiter-decoding helper when splitting qualified identifiers.
+ * uses its delimiter-decoding, validation and quoting helpers when it splits, looks up and renders qualified
+ * identifiers (for example in {@code tableExists}, {@code dropTableIfExists} and {@link DBLock} table names).
  *
  * <p>Identifier quoting in generated SQL is disabled by the fixed {@link #IDENTIFIER_QUOTING_ENABLED} policy.
  * Only simple undelimited names are rendered. Explicit delimiters, punctuation, common reserved names and bare

@@ -370,6 +370,12 @@ public class DBLockTest extends TestBase {
         return (Map<String, Object>) field.get(dbLock);
     }
 
+    private static boolean isClosed(final DBLock dbLock) throws Exception {
+        final Field field = DBLock.class.getDeclaredField("isClosed");
+        field.setAccessible(true);
+        return field.getBoolean(dbLock);
+    }
+
     private static void setField(final Object target, final String name, final Object value) throws Exception {
         final Field field = DBLock.class.getDeclaredField(name);
         field.setAccessible(true);
@@ -501,6 +507,53 @@ public class DBLockTest extends TestBase {
         verify(fixture.scheduledFuture).cancel(true);
     }
 
+    // TX-6: close() releases the held locks one by one on one shared connection. When no connection can be obtained, the
+    // remaining locks are not attempted (an unavailable pool must cost one acquisition timeout, not one per held lock: the
+    // "Stopped releasing DB locks during close" path), the instance is closed anyway and the rows stay until their leases expire.
+    @Test
+    public void testClose_StopsReleasingLocksWhenNoConnectionCanBeObtained() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 0, 1);
+        assertNotNull(fixture.lock.tryLock("close-a", 60_000L, 50L));
+        assertNotNull(fixture.lock.tryLock("close-b", 60_000L, 50L));
+        assertEquals(2, targetCodePool(fixture.lock).size());
+
+        clearInvocations(fixture.dataSource, fixture.connection, fixture.preparedStatement);
+        when(fixture.dataSource.getConnection()).thenThrow(new java.sql.SQLException("pool exhausted"));
+
+        assertDoesNotThrow(fixture.lock::close);
+
+        // One acquisition attempt, for the first lock; the second lock was skipped rather than retried.
+        verify(fixture.dataSource, times(1)).getConnection();
+        verify(fixture.connection, never()).prepareStatement(anyString());
+        verify(fixture.preparedStatement, never()).executeUpdate();
+        assertTrue(isClosed(fixture.lock));
+        assertTrue(targetCodePool(fixture.lock).isEmpty());
+        assertThrows(IllegalStateException.class, () -> fixture.lock.tryLock("after-close", 60_000L, 50L));
+
+        // A second close() is a no-op: no further acquisition attempt.
+        assertDoesNotThrow(fixture.lock::close);
+        verify(fixture.dataSource, times(1)).getConnection();
+    }
+
+    // The contrast: a failed statement only costs that lock. The statement's resources are dropped, and the next lock
+    // makes an independent attempt with a fresh connection, so every held lock is still attempted.
+    @Test
+    public void testClose_KeepsReleasingTheRemainingLocksWhenAStatementFails() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 0, 1);
+        assertNotNull(fixture.lock.tryLock("close-c", 60_000L, 50L));
+        assertNotNull(fixture.lock.tryLock("close-d", 60_000L, 50L));
+
+        clearInvocations(fixture.dataSource, fixture.connection, fixture.preparedStatement);
+        when(fixture.preparedStatement.executeUpdate()).thenThrow(new java.sql.SQLException("unlock failed during close"));
+
+        assertDoesNotThrow(fixture.lock::close);
+
+        verify(fixture.dataSource, times(2)).getConnection();
+        verify(fixture.preparedStatement, times(2)).executeUpdate();
+        assertTrue(isClosed(fixture.lock));
+        assertTrue(targetCodePool(fixture.lock).isEmpty());
+    }
+
     // Close: unlockSQL throws during close loop, covering L654-L656
     @Test
     public void testClose_UnlockThrowsExceptionDuringClose() throws Exception {
@@ -605,6 +658,50 @@ public class DBLockTest extends TestBase {
 
         fixture.lock.refreshLocks();
 
+        verify(fixture.preparedStatement, times(2)).executeUpdate();
+        assertEquals(2, targetCodePool(fixture.lock).size());
+    }
+
+    // An Error escaping refreshLocks() would end the scheduleWithFixedDelay task for good, after which every
+    // lock of the instance silently expires while its holder still believes it owns it.
+    @Test
+    public void testRefreshLocks_ErrorForOneTargetIsContainedAndDoesNotSkipLaterTargets() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 0, 1);
+        assertNotNull(fixture.lock.tryLock("refresh-errors", 60_000L, 50L));
+        assertNotNull(fixture.lock.tryLock("refresh-succeeds", 60_000L, 50L));
+
+        final Map<String, Object> acquired = targetCodePool(fixture.lock);
+        final Map<String, Object> ordered = new LinkedHashMap<>();
+        ordered.put("refresh-errors", acquired.get("refresh-errors"));
+        ordered.put("refresh-succeeds", acquired.get("refresh-succeeds"));
+        setField(fixture.lock, "targetCodePool", ordered);
+
+        clearInvocations(fixture.preparedStatement);
+        when(fixture.preparedStatement.executeUpdate()).thenThrow(new NoClassDefFoundError("driver class unavailable")).thenReturn(1);
+
+        assertDoesNotThrow(fixture.lock::refreshLocks);
+
+        verify(fixture.preparedStatement, times(2)).executeUpdate();
+        assertEquals(2, targetCodePool(fixture.lock).size());
+    }
+
+    @Test
+    public void testRefreshLocks_ErrorFromConnectionAcquisitionEndsOnlyTheCurrentCycle() throws Exception {
+        final LockFixture fixture = newLockFixture(0, 1, 0, 1);
+        assertNotNull(fixture.lock.tryLock("refresh-a", 60_000L, 50L));
+        assertNotNull(fixture.lock.tryLock("refresh-b", 60_000L, 50L));
+
+        clearInvocations(fixture.dataSource, fixture.preparedStatement);
+        when(fixture.dataSource.getConnection()).thenThrow(new LinkageError("driver unavailable")).thenReturn(fixture.connection);
+        when(fixture.preparedStatement.executeUpdate()).thenReturn(1);
+
+        // Like an unavailable pool, a DataSource Error costs one attempt per cycle instead of one per held lock.
+        assertDoesNotThrow(fixture.lock::refreshLocks);
+        verify(fixture.dataSource, times(1)).getConnection();
+        verify(fixture.preparedStatement, never()).executeUpdate();
+
+        // The next cycle refreshes every lock that is still held.
+        fixture.lock.refreshLocks();
         verify(fixture.preparedStatement, times(2)).executeUpdate();
         assertEquals(2, targetCodePool(fixture.lock).size());
     }

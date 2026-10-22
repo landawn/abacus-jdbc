@@ -28,6 +28,7 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
+import java.lang.reflect.WildcardType;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -112,6 +113,7 @@ import com.landawn.abacus.query.condition.Criteria;
 import com.landawn.abacus.query.condition.Limit;
 import com.landawn.abacus.query.condition.OrderBy;
 import com.landawn.abacus.query.condition.SqlExpression;
+import com.landawn.abacus.query.condition.Where;
 import com.landawn.abacus.util.Array;
 import com.landawn.abacus.util.AsyncExecutor;
 import com.landawn.abacus.util.Beans;
@@ -132,6 +134,7 @@ import com.landawn.abacus.util.Numbers;
 import com.landawn.abacus.util.Pair;
 import com.landawn.abacus.util.RegExUtil;
 import com.landawn.abacus.util.SK;
+import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Seq;
 import com.landawn.abacus.util.Splitter;
 import com.landawn.abacus.util.Splitter.MapSplitter;
@@ -156,8 +159,6 @@ import com.landawn.abacus.util.stream.BaseStream;
 import com.landawn.abacus.util.stream.EntryStream;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.Stream;
-
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 /**
  * Internal implementation class providing the core runtime logic for dynamic proxy-based DAO (Data Access Object) interfaces.
@@ -270,12 +271,83 @@ final class DaoImpl {
     private static final ThreadLocal<Boolean> suppressInheritedResultCaching_TL = new ThreadLocal<>();
 
     /**
+     * Default maximum number of DAO proxies kept in {@link #daoPool}.
+     */
+    static final int DEFAULT_DAO_POOL_CAPACITY = 4096;
+
+    /**
+     * Maximum number of DAO proxies kept in {@link #daoPool}; only tests change it. Read under the
+     * {@link #daoPoolQueue} monitor.
+     */
+    private static int daoPoolCapacity = DEFAULT_DAO_POOL_CAPACITY;
+
+    /**
      * Process-wide cache of created DAO proxies keyed by {@link DaoCacheKey}; repeated creation requests with the
-     * same configuration return the same proxy instance. Entries are never evicted, as documented on
-     * {@link JdbcUtil#createDao(Class, javax.sql.DataSource)}.
+     * same configuration return the same proxy instance while it stays cached. The cache holds at most
+     * {@link #daoPoolCapacity} proxies, so that DAOs created for short-lived data sources (or other per-call
+     * configuration objects) cannot accumulate: hits are lock-free and mark the entry as recently used, and a full
+     * cache gives each recently used entry one second chance before evicting in insertion order (the policy of
+     * JoinInfo's bounded metadata cache). An evicted proxy keeps working for whoever holds it; see
+     * {@link #releaseEvictedDao(PooledDao)} for what its eviction releases. Every change is made under the
+     * {@link #daoPoolQueue} monitor.
+     */
+    private static final Map<DaoCacheKey, PooledDao> daoPool = new ConcurrentHashMap<>();
+
+    /**
+     * Insertion order of the entries of {@link #daoPool}. Its monitor guards this queue and every change to
+     * {@code daoPool}, so both always hold the same entries.
+     */
+    private static final ArrayDeque<PooledDao> daoPoolQueue = new ArrayDeque<>();
+
+    /**
+     * Whether the capacity warning has been logged; guarded by the {@link #daoPoolQueue} monitor.
+     */
+    private static boolean daoPoolCapacityWarned;
+
+    /**
+     * Source of the per-proxy identity tokens embedded in DAO result-cache keys.
+     */
+    private static final java.util.concurrent.atomic.AtomicLong daoIdSequence = new java.util.concurrent.atomic.AtomicLong();
+
+    /**
+     * An entry of {@link #daoPool}: a registered DAO proxy and what its creation allocated or registered for it, so
+     * that its eviction can release them without calling the proxy.
      */
     @SuppressWarnings("rawtypes")
-    private static final Map<DaoCacheKey, DaoBase> daoPool = new ConcurrentHashMap<>();
+    private static final class PooledDao {
+        final DaoCacheKey key;
+        final DaoBase dao;
+        final Class<?> daoInterface;
+        final Class<?> entityClass;
+        final String tableName;
+        /** The join metadata retained for the proxy by {@link JoinInfo#retainDaoJoinInfo}, or {@code null}. */
+        final Map<String, JoinInfo> joinBeanInfo;
+        /** The cache {@code createDao} created for the proxy (it is released with the proxy), or {@code null}. */
+        final Jdbc.DaoCache createdCache;
+        final Logger daoLogger;
+        // Set by pool hits and cleared by eviction scans; a lost update only changes which entry is evicted.
+        volatile boolean recentlyUsed;
+
+        PooledDao(final DaoCacheKey key, final DaoBase dao, final Class<?> daoInterface, final Class<?> entityClass, final String tableName,
+                final Map<String, JoinInfo> joinBeanInfo, final Jdbc.DaoCache createdCache, final Logger daoLogger) {
+            this.key = key;
+            this.dao = dao;
+            this.daoInterface = daoInterface;
+            this.entityClass = entityClass;
+            this.tableName = tableName;
+            this.joinBeanInfo = joinBeanInfo;
+            this.createdCache = createdCache;
+            this.daoLogger = daoLogger;
+        }
+    }
+
+    /**
+     * Closes the caches that {@code createDao} created for evicted proxies once those proxies are unreachable. Created
+     * on the first such eviction only.
+     */
+    private static final class EvictedDaoCacheCleaner {
+        static final java.lang.ref.Cleaner CLEANER = java.lang.ref.Cleaner.create();
+    }
 
     /**
      * Collision-safe key for the process-wide DAO proxy pool. Dependencies deliberately use
@@ -479,6 +551,52 @@ final class DaoImpl {
     /** Binds a collection of arguments to a parameterized query via {@link AbstractQuery#setParameters(Collection)}. */
     @SuppressWarnings("rawtypes")
     private static final Jdbc.BiParametersSetter<AbstractQuery, Collection> collParamsSetter = AbstractQuery::setParameters;
+
+    /**
+     * Binds the parameters of a built statement like {@link #collParamsSetter}, except that a {@link TypedParameter} is
+     * bound with its declared type.
+     */
+    @SuppressWarnings("rawtypes")
+    private static final Jdbc.BiParametersSetter<AbstractQuery, Collection> typedCollParamsSetter = (pq, params) -> {
+        int parameterIndex = 1;
+
+        for (final Object param : params) {
+            if (param instanceof final TypedParameter typedParameter) {
+                typedParameter.type.set(pq.stmt, parameterIndex++, typedParameter.value);
+            } else {
+                pq.setObject(parameterIndex++, param);
+            }
+        }
+    };
+
+    /**
+     * A value to be bound with a given type (that of the entity property it is written to or compared with), passed to the
+     * query builder as an ordinary value so that it keeps its position among the built statement's parameters; bound by
+     * {@link #typedCollParamsSetter}. Deliberately not a bean or record: the builder must not read it as one.
+     */
+    private static final class TypedParameter {
+        private final Object value;
+        private final com.landawn.abacus.type.Type<Object> type;
+
+        private TypedParameter(final Object value, final com.landawn.abacus.type.Type<Object> type) {
+            this.value = value;
+            this.type = type;
+        }
+
+        /**
+         * Returns the value wrapped to be bound with the property's type, or the value itself (bound by its runtime class,
+         * as before) when it is not an instance of the property's class: the property type would reject it, e.g. a
+         * {@code Long} given for an {@code int} property.
+         */
+        static Object of(final Object value, final PropInfo propInfo) {
+            return value == null || ClassUtil.wrap(propInfo.clazz).isInstance(value) ? new TypedParameter(value, propInfo.dbType) : value;
+        }
+
+        @Override
+        public String toString() {
+            return String.valueOf(value);
+        }
+    }
 
     /** Binds a bean or map argument to a named query via {@link NamedQuery#setParameters(Object)}. */
     private static final Jdbc.BiParametersSetter<NamedQuery, Object> objParamsSetter = NamedQuery::setParameters; // NOSONAR
@@ -978,7 +1096,7 @@ final class DaoImpl {
             final boolean fetchColumnByEntityClass, final boolean hasRowMapperOrExtractor, final boolean hasRowFilter, final QueryOperation queryOperation,
             final boolean isProcedure, final String fullClassMethodName) throws UnsupportedOperationException, IllegalArgumentException {
         final Class<?>[] paramTypes = method.getParameterTypes();
-        final Class<?> returnType = method.getReturnType();
+        final Class<?> returnType = resolveQueryReturnType(method.getReturnType());
         final Class<?> firstReturnEleType = getFirstReturnEleType(method);
         final Class<?> secondReturnEleType = getSecondReturnEleType(method);
         final Class<?> firstReturnEleEleType = getFirstReturnEleEleType(method);
@@ -1252,6 +1370,14 @@ final class DaoImpl {
 
                     return (preparedQuery, args) -> (R) ((CallableQuery) preparedQuery).listAndGetOutParameters(firstReturnEleEleType);
                 }
+            }
+
+            // Only the branches above produce a Tuple2 (results + OUT parameters). With findFirst/findOnlyOne/queryForSingle/
+            // queryForUnique the method fell through to the single-value dispatch, which converts the first column of the
+            // first row to a Tuple2 and fails obscurely at execution instead of here at proxy creation.
+            if (Tuple2.class.isAssignableFrom(returnType)) {
+                throw new UnsupportedOperationException("The return type: " + returnType + " of method: " + fullClassMethodName
+                        + " is not supported by the specified queryOperation: " + queryOperation);
             }
         }
 
@@ -1545,10 +1671,52 @@ final class DaoImpl {
                 } else {
                     return (preparedQuery, args) -> (R) preparedQuery.findFirst(Jdbc.BiRowMapper.to(returnType, prefixFieldMap)).orElseNull();
                 }
+            } else if (void.class.equals(returnType) || Void.class.equals(returnType)) {
+                // A void SELECT runs only for its side effect (e.g. SELECT ... FOR UPDATE, SELECT pg_advisory_xact_lock(?)).
+                // Reading it as a single value converted the first column to void and failed every call. Its rows are read to
+                // the end rather than only executed: a driver fetching through a cursor (e.g. PostgreSQL with a fetch size in a
+                // transaction) runs the query, and locks its rows, only as far as they are fetched. The uniqueness contract of
+                // findOnlyOne/queryForUnique is honored as by every other single-result dispatch.
+                final boolean unique = isFindOnlyOne(method, queryOperation) || isQueryForUnique(method, queryOperation);
+
+                return (preparedQuery, args) -> {
+                    final long rowCount = executeAndReadAllRows(preparedQuery);
+
+                    if (unique && rowCount > 1) {
+                        throw new DuplicateResultException("More than one record found by the query defined or generated in method: " + method.getName());
+                    }
+
+                    return null;
+                };
             } else {
                 return createSingleQueryFunction(returnType, method, queryOperation);
             }
         }
+    }
+
+    /**
+     * Executes the prepared query and, if its first result is a result set, reads that result set to the end,
+     * discarding the rows. A statement that returns no result set (e.g. {@code SELECT ... INTO} a table) is only
+     * executed. The query is closed afterwards unless {@code closeAfterExecution(false)} was set.
+     *
+     * @param preparedQuery the prepared query to execute
+     * @return the number of rows read, or {@code 0} if the first result is not a result set
+     * @throws SQLException if executing the statement or reading its result set fails
+     */
+    private static long executeAndReadAllRows(final AbstractQuery<?, ?> preparedQuery) throws SQLException {
+        return preparedQuery.executeThenApply((stmt, isResultSet) -> {
+            long rowCount = 0;
+
+            if (isResultSet) {
+                try (ResultSet rs = stmt.getResultSet()) {
+                    while (rs.next()) {
+                        rowCount++;
+                    }
+                }
+            }
+
+            return rowCount;
+        });
     }
 
     // Fails DAO creation instead of every invocation when a raw or wildcard generic return type (e.g.
@@ -1609,6 +1777,28 @@ final class DaoImpl {
         } else {
             return c;
         }
+    }
+
+    /**
+     * Maps the declared return type of a custom query method to the type whose instance is returned for it: a
+     * {@code List} for {@code Iterable} or another interface that an {@code ArrayList} implements but no collection
+     * factory instantiates (e.g. {@code SequencedCollection}), and an {@code ImmutableList} for the abstract
+     * {@code ImmutableCollection}. Without it such a method fell through to the single-value dispatch, or failed every
+     * call creating the result collection. Any other type is returned unchanged.
+     *
+     * @param declaredReturnType the declared return type of the method
+     * @return the type of the returned instance
+     */
+    private static Class<?> resolveQueryReturnType(final Class<?> declaredReturnType) {
+        if (com.landawn.abacus.util.ImmutableCollection.class.equals(declaredReturnType)) {
+            return ImmutableList.class;
+        } else if (declaredReturnType.isInterface() && Iterable.class.isAssignableFrom(declaredReturnType)
+                && declaredReturnType.isAssignableFrom(ArrayList.class)
+                && !(Collection.class.equals(declaredReturnType) || List.class.equals(declaredReturnType))) {
+            return List.class;
+        }
+
+        return declaredReturnType;
     }
 
     /**
@@ -1725,10 +1915,12 @@ final class DaoImpl {
     /**
      * Builds the setter that binds a DAO method's argument array to its prepared query, based on the query's
      * parameter positions, named-parameter bindings, and batch/fragment configuration. When the SQL contains the
-     * reserved system-time named parameters and auto-binding is enabled, the returned setter also binds the current
-     * time (one clock reading shared by all of them) to those parameters. Named-parameter bindings are validated
-     * eagerly here, at proxy-creation time; names introduced by SQL fragments are resolved when the
-     * expanded query is prepared.
+     * reserved system-time named parameters and their auto-binding is enabled, the current time (one clock reading
+     * shared by all of them) is bound to them: by the returned setter when fragments cannot add named parameters,
+     * otherwise by {@code prepareQuery} after fragment expansion, and for batch rows through the add-batch action. With
+     * auto-binding disabled nothing binds them automatically; they are bound like any other named parameter. The
+     * {@code @Bind} names of a non-procedure named query are validated eagerly here, at
+     * proxy-creation time; names introduced by SQL fragments are resolved when the expanded query is prepared.
      *
      * @param queryInfo the parsed metadata of the method's SQL query
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
@@ -1737,7 +1929,8 @@ final class DaoImpl {
      * @param paramLen the number of method parameters
      * @param fragmentParamLen the number of SQL-fragment parameters
      * @param stmtParamIndexes indexes of the method parameters that bind to statement parameters
-     * @param bindListParamFlags flags marking method parameters annotated with {@code @BindList}
+     * @param bindListParamFlags flags, parallel to {@code stmtParamIndexes} (indexed by statement-parameter position,
+     *        not by method-parameter index), marking the statement parameters annotated with {@code @BindList}
      * @param stmtParamLen the number of statement-bound parameters
      * @return the parameters setter, or {@link Jdbc.BiParametersSetter#DO_NOTHING} when there is nothing to bind
      * @throws UnsupportedOperationException if a {@code ParametersSetter}/{@code BiParametersSetter}/
@@ -1765,7 +1958,10 @@ final class DaoImpl {
         }
 
         if (stmtParamLen == 0) {
-            if (queryInfo.isNamedQuery) {
+            // A procedure's named markers may all be OUT parameters registered by name through @OutParameter rather
+            // than bound from method arguments, so, as with one or more statement parameters below, procedures are not
+            // checked against @Bind names: a zero-argument "{call p(:out)}" used to fail DAO creation as "Missing bindings".
+            if (queryInfo.isNamedQuery && !queryInfo.isProcedure) {
                 validateNamedParameterBindings(queryInfo, java.util.Collections.emptyList(), fullClassMethodName);
             }
         } else if (queryInfo.isBatch) { //NOSONAR
@@ -2024,8 +2220,9 @@ final class DaoImpl {
      * @param queryInfo the parsed metadata of the method's SQL query
      * @param boundParamNames the {@code @Bind} names declared on the method's parameters
      * @param fullClassMethodName the fully qualified class and method name, used for error messages
-     * @throws UnsupportedOperationException if a binding name is empty, duplicated, missing from the SQL, or has no
-     *         matching named parameter in the SQL
+     * @throws UnsupportedOperationException if a binding name is empty or duplicated, if a named parameter of the SQL
+     *         (other than an auto-set system-time parameter) has no binding, or, unless fragments may add named
+     *         parameters, if a binding name has no matching named parameter in the SQL
      */
     private static void validateNamedParameterBindings(final QueryInfo queryInfo, final Collection<String> boundParamNames, final String fullClassMethodName)
             throws UnsupportedOperationException {
@@ -2132,13 +2329,14 @@ final class DaoImpl {
      * @param isSingleReturnTypeMethod {@code true} if the method returns a single value
      * @param isListQueryMethod {@code true} if the method is a list query
      * @return the prepared and configured query; the caller is responsible for closing it
-     * @throws ParsingException if a {@code @SqlFragmentList} argument cannot be serialized to JSON
-     * @throws UncheckedIOException if serializing a {@code @SqlFragmentList} argument to JSON fails while reading
-     *         a value
+     * @throws ParsingException if a fragment argument value, or an element of a {@code @SqlFragmentList} argument, whose
+     *         type renders as JSON (e.g. a bean or map) cannot be converted to SQL text; elements are otherwise joined
+     *         verbatim, not serialized as JSON
+     * @throws UncheckedIOException if rendering such a fragment value as JSON fails while reading a value
      * @throws IllegalArgumentException if the SQL left after fragment substitution cannot be parsed, if a bound name
      *         has no matching named parameter in the expanded SQL, or if an argument value has a type that cannot be
      *         bound to a named parameter
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
+     * @throws org.springframework.jdbc.CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
      *         connection from the DAO data source
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing or configuring the query, or binding its parameters, fails
@@ -2149,7 +2347,7 @@ final class DaoImpl {
             final BiFunction<Annotation, Object, String>[] fragmentMappers, final boolean returnGeneratedKeys, final String[] generatedKeyColumnNames,
             final List<OutParameter> outParameterList, final Jdbc.BiParametersSetter<AbstractQuery, Object[]> parametersSetter,
             final boolean isExistsQueryMethod, final boolean isSingleReturnTypeMethod, final boolean isListQueryMethod)
-            throws ParsingException, UncheckedIOException, IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws ParsingException, UncheckedIOException, IllegalArgumentException, UncheckedSQLException, SQLException {
         final QueryOperation queryOperation = queryInfo.queryOperation;
         String query = queryInfo.sql;
         ParsedSql parsedSql = queryInfo.parsedSql;
@@ -2382,6 +2580,233 @@ final class DaoImpl {
         }
 
         return balanced && depth == 0 ? found : Strings.containsAnyIgnoreCase(sql, " LIMIT ", " OFFSET ", " FETCH NEXT ", " FETCH FIRST ");
+    }
+
+    /**
+     * Removes the outer {@code ORDER BY}, {@code LIMIT}, {@code OFFSET} or {@code FETCH FIRST|NEXT} clause (and everything
+     * after it) that ends a literal condition, for {@code count(Condition)}: applied to the single aggregate row, an
+     * {@code OFFSET} skips it and an {@code ORDER BY} is rejected by strict databases.
+     *
+     * <p>The literal is left unchanged when it has no such clause, has an outer {@code GROUP BY} or set operation (the
+     * clauses are then meaningful), or when its structure is uncertain: unbalanced parentheses, an unterminated quote or
+     * comment, or a quote whose end depends on whether backslash escapes or {@code #} comments apply.</p>
+     *
+     * @param expr the literal condition
+     * @return {@code expr} itself if nothing is removed, {@code null} if nothing is left, otherwise the remaining condition
+     */
+    private static SqlExpression stripTrailingRowClauses(final SqlExpression expr) {
+        final String literal = expr.literal();
+        // Scanned under both lexical modes (MySQL: backslash escapes and # comments; standard: neither); a cut point both
+        // agree on is outside any quote or comment whichever mode the database uses.
+        final int end = indexOfTrailingRowClauses(literal, false);
+
+        if (end < 0 || end != indexOfTrailingRowClauses(literal, true)) {
+            return expr;
+        }
+
+        final String remaining = literal.substring(0, end);
+
+        return Strings.isBlank(remaining) ? null : Filters.expr(remaining);
+    }
+
+    /**
+     * Returns the end of the code preceding the outer row-limiting/ordering clause that ends {@code sql} (so trailing
+     * comments before the clause are dropped with it), or {@code -1} if it should be kept as is
+     * (see {@link #stripTrailingRowClauses(SqlExpression)}).
+     *
+     * @param sql the literal condition
+     * @param mySqlLexicalMode {@code true} to read backslash escapes in quotes and {@code #} line comments (other than a
+     *        {@code #{name}} parameter), {@code false} for neither
+     * @return the end index of the code to keep, or {@code -1}
+     */
+    private static int indexOfTrailingRowClauses(final String sql, final boolean mySqlLexicalMode) {
+        final int len = sql.length();
+        int depth = 0;
+        int lastTokenEnd = 0; // end of the last top-level token (word or symbol), comments and whitespace excluded
+        String previousWord = null; // the previous top-level token, if it was a word; null after any other token
+        int previousWordPrecedingEnd = -1;
+        boolean previousWasDot = false;
+        int pendingEnd = -1; // LIMIT/OFFSET/FETCH seen: a clause only if a row count (or FIRST/NEXT) follows
+        boolean pendingIsFetch = false;
+        boolean pendingIsLimit = false;
+        int keepEnd = -1;
+
+        for (int i = 0; i < len;) {
+            final char ch = sql.charAt(i);
+
+            if (Character.isWhitespace(ch)) {
+                i++;
+                continue;
+            } else if (ch == '-' && i + 1 < len && sql.charAt(i + 1) == '-') {
+                while (i < len && sql.charAt(i) != '\n' && sql.charAt(i) != '\r') {
+                    i++;
+                }
+
+                continue;
+            } else if (ch == '#' && mySqlLexicalMode && !(i + 1 < len && sql.charAt(i + 1) == '{')) {
+                while (i < len && sql.charAt(i) != '\n' && sql.charAt(i) != '\r') {
+                    i++;
+                }
+
+                continue;
+            } else if (ch == '/' && i + 1 < len && sql.charAt(i + 1) == '*') {
+                int commentDepth = 1;
+                i += 2;
+
+                while (i < len && commentDepth > 0) {
+                    if (sql.startsWith("/*", i)) {
+                        commentDepth++;
+                        i += 2;
+                    } else if (sql.startsWith("*/", i)) {
+                        commentDepth--;
+                        i += 2;
+                    } else {
+                        i++;
+                    }
+                }
+
+                if (commentDepth > 0) {
+                    return -1;
+                }
+
+                continue;
+            }
+
+            final int tokenStart = i;
+            String word = null;
+            boolean isParameter = false;
+
+            if (ch == '\'' || ch == '"' || ch == '`' || ch == '[') {
+                final char close = ch == '[' ? ']' : ch;
+                boolean terminated = false;
+                i++;
+
+                while (i < len) {
+                    final char c = sql.charAt(i++);
+
+                    if (mySqlLexicalMode && c == '\\' && ch != '[' && i < len) {
+                        i++;
+                    } else if (c == close) {
+                        if (i < len && sql.charAt(i) == close) {
+                            i++;
+                        } else {
+                            terminated = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!terminated) {
+                    return -1;
+                }
+            } else if (ch == '$' && isDollarQuoteTag(sql, i)) {
+                // PostgreSQL dollar-quoted string: $$...$$ or $tag$...$tag$
+                final String delimiter = sql.substring(i, sql.indexOf('$', i + 1) + 1);
+                final int closing = sql.indexOf(delimiter, i + delimiter.length());
+
+                if (closing < 0) {
+                    return -1;
+                }
+
+                i = closing + delimiter.length();
+            } else if (ch == '#' && i + 1 < len && sql.charAt(i + 1) == '{') {
+                final int closing = sql.indexOf('}', i + 2);
+
+                if (closing < 0) {
+                    return -1;
+                }
+
+                i = closing + 1;
+                isParameter = true;
+            } else if (ch == '(') {
+                depth++;
+                i++;
+            } else if (ch == ')') {
+                if (--depth < 0) {
+                    return -1;
+                }
+
+                i++;
+            } else if (Character.isLetterOrDigit(ch) || ch == '_' || ch == '$') {
+                while (i < len && (Character.isLetterOrDigit(sql.charAt(i)) || sql.charAt(i) == '_' || sql.charAt(i) == '$')) {
+                    i++;
+                }
+
+                word = sql.substring(tokenStart, i);
+            } else if (ch == ':' && i + 1 < len && (Character.isLetter(sql.charAt(i + 1)) || sql.charAt(i + 1) == '_')) {
+                // a named parameter (:name); "::" casts are read as symbols below
+                i++;
+
+                while (i < len && (Character.isLetterOrDigit(sql.charAt(i)) || sql.charAt(i) == '_')) {
+                    i++;
+                }
+
+                isParameter = true;
+            } else {
+                isParameter = ch == '?';
+                i++;
+            }
+
+            // The token sql[tokenStart, i) is outside any parentheses ('(' was counted above, a closing ')' already uncounted).
+            final boolean topLevel = ch == '(' ? depth == 1 : depth == 0;
+
+            if (pendingEnd >= 0) {
+                final boolean confirmed = topLevel && (pendingIsFetch ? "FIRST".equalsIgnoreCase(word) || "NEXT".equalsIgnoreCase(word)
+                        : (word != null && Character.isDigit(word.charAt(0))) || isParameter || (pendingIsLimit && "ALL".equalsIgnoreCase(word)));
+
+                if (confirmed && keepEnd < 0) {
+                    keepEnd = pendingEnd;
+                }
+
+                pendingEnd = -1;
+            }
+
+            if (topLevel && word != null && !previousWasDot) {
+                if ("BY".equalsIgnoreCase(word) && "GROUP".equalsIgnoreCase(previousWord)) {
+                    return -1;
+                } else if ("UNION".equalsIgnoreCase(word) || "INTERSECT".equalsIgnoreCase(word) || "EXCEPT".equalsIgnoreCase(word)
+                        || "MINUS".equalsIgnoreCase(word)) {
+                    return -1;
+                } else if ("BY".equalsIgnoreCase(word) && "ORDER".equalsIgnoreCase(previousWord)) {
+                    if (keepEnd < 0) {
+                        keepEnd = previousWordPrecedingEnd;
+                    }
+                } else if ("LIMIT".equalsIgnoreCase(word) || "OFFSET".equalsIgnoreCase(word) || "FETCH".equalsIgnoreCase(word)) {
+                    pendingEnd = lastTokenEnd;
+                    pendingIsFetch = "FETCH".equalsIgnoreCase(word);
+                    pendingIsLimit = "LIMIT".equalsIgnoreCase(word);
+                }
+            }
+
+            if (topLevel) {
+                previousWasDot = ch == '.';
+                previousWordPrecedingEnd = word == null ? -1 : lastTokenEnd;
+                previousWord = word;
+                lastTokenEnd = i;
+            }
+        }
+
+        return depth == 0 ? keepEnd : -1;
+    }
+
+    /**
+     * Returns whether a PostgreSQL dollar-quote delimiter ({@code $$} or {@code $tag$}, the tag not starting with a digit,
+     * unlike a {@code $1} parameter) starts at {@code index}.
+     */
+    private static boolean isDollarQuoteTag(final String sql, final int index) {
+        final int tagEnd = sql.indexOf('$', index + 1);
+
+        if (tagEnd < 0 || (tagEnd > index + 1 && Character.isDigit(sql.charAt(index + 1)))) {
+            return false;
+        }
+
+        for (int k = index + 1; k < tagEnd; k++) {
+            if (!(Character.isLetterOrDigit(sql.charAt(k)) || sql.charAt(k) == '_')) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -2672,6 +3097,220 @@ final class DaoImpl {
     }
 
     /**
+     * Checks that each element of {@code propNamesToUpdate} names a property of the entity, or is a raw
+     * {@code "column = expression"} SET expression (see {@link #isRawSetExpression(String)}). An unknown name would otherwise
+     * reach the database as an invalid column and fail there with a SQL error.
+     *
+     * @param propNamesToUpdate the property names to update
+     * @param entityInfo the entity's bean info
+     * @throws IllegalArgumentException if an element is {@code null} or names no property of the entity
+     */
+    private static void checkPropNamesToUpdate(final Collection<String> propNamesToUpdate, final BeanInfo entityInfo) throws IllegalArgumentException {
+        for (final String propName : propNamesToUpdate) {
+            if (propName == null || (!isRawSetExpression(propName) && entityInfo.getPropInfo(propName) == null)) {
+                throw new IllegalArgumentException(
+                        "No property found with name: " + propName + " in class: " + ClassUtil.getCanonicalClassName(entityInfo.clazz));
+            }
+        }
+    }
+
+    /**
+     * Returns whether an element of the property names to update is a raw SET assignment such as
+     * {@code "score = score + 5"}, which the query builder's {@code set(Collection)} renders as is, without a placeholder:
+     * it has an {@code '='} outside quoted text, parentheses and brackets. An {@code '='} inside a delimited name or an
+     * array index (e.g. {@code notes['a=b']}) belongs to the assignment target, which gets a placeholder. The builder reads
+     * quoted text by its dialect's rules; this check reads it both with and without backslash escapes and requires the
+     * {@code '='} in both readings, so an element it reports as raw is raw for the builder too. Any other element must name a
+     * property, so a disagreement surfaces as an "unknown property" error rather than a misbound statement.
+     *
+     * @param propName an element of the property names to update; not {@code null}
+     * @return {@code true} if the element is a raw SET assignment
+     */
+    static boolean isRawSetExpression(final String propName) {
+        return propName.indexOf('=') >= 0 && hasTopLevelEquals(propName, false) && hasTopLevelEquals(propName, true);
+    }
+
+    /**
+     * Returns whether {@code expr} has an {@code '='} outside quoted text, parentheses and brackets.
+     *
+     * @param expr the expression to scan
+     * @param backslashEscapes whether a backslash escapes the next character in a string literal
+     * @return {@code true} if such an {@code '='} occurs; {@code false} also if a quote is not closed
+     */
+    private static boolean hasTopLevelEquals(final String expr, final boolean backslashEscapes) {
+        int depth = 0;
+
+        for (int i = 0, len = expr.length(); i < len; i++) {
+            final char ch = expr.charAt(i);
+
+            if (ch == '\'' || ch == '"' || ch == '`') {
+                // Backslashes escape only in string literals (MySQL), not in backtick-quoted names.
+                final boolean escapes = backslashEscapes && ch != '`';
+                int j = i + 1;
+                boolean closed = false;
+
+                while (j < len) {
+                    final char c = expr.charAt(j++);
+
+                    if (escapes && c == '\\' && j < len) {
+                        j++;
+                    } else if (c == ch) {
+                        if (j < len && expr.charAt(j) == ch) {
+                            j++; // a doubled delimiter stands for the character itself
+                        } else {
+                            closed = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!closed) {
+                    return false;
+                }
+
+                i = j - 1;
+            } else if (ch == '(' || ch == '[') {
+                depth++;
+            } else if ((ch == ')' || ch == ']') && depth > 0) {
+                depth--;
+            } else if (ch == '=' && depth == 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Puts back the IDs that an insert generated in the application ({@link DaoConfig#callGenerateIdForInsertIfIdNotSet()},
+     * {@link DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()}) before it failed, when the failure leaves none of its rows:
+     * before any statement executed, or when its own transaction was rolled back (a single statement that has executed is
+     * covered by {@link #restoreGeneratedIdsUnlessExecuted(Runnable, ExecutionMark, Throwable)}). Its entities must not keep the
+     * IDs of rows that don't exist. IDs read back from the database are only assigned once the insert succeeded, and a later
+     * rollback of an enclosing transaction is handled by the action registered with it.
+     *
+     * @param generatedIdRestorer restores the ID values captured before the IDs were generated; {@code null} if none were generated
+     * @param failure the failure of the insert, to which a failure of the restore is attached
+     */
+    private static void restoreGeneratedIds(final Runnable generatedIdRestorer, final Throwable failure) {
+        if (generatedIdRestorer == null) {
+            return;
+        }
+
+        try {
+            generatedIdRestorer.run();
+        } catch (final RuntimeException | Error e) {
+            if (e != failure) {
+                failure.addSuppressed(e);
+            }
+        }
+    }
+
+    /**
+     * Begins (or joins) the transaction of a multi-row insert call, which may already have generated IDs in the application. If
+     * that fails, no row was inserted, so the generated IDs are put back (see {@link #restoreGeneratedIds(Runnable, Throwable)})
+     * before the failure propagates.
+     *
+     * @param ds the data source to begin the transaction on
+     * @param generatedIdRestorer restores the ID values captured before the IDs were generated; {@code null} if none were generated
+     * @return the transaction
+     */
+    private static SqlTransaction beginInsertTransaction(final javax.sql.DataSource ds, final Runnable generatedIdRestorer) {
+        try {
+            return JdbcUtil.beginTransaction(ds);
+        } catch (final RuntimeException | Error e) {
+            restoreGeneratedIds(generatedIdRestorer, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Returns the generated key of a custom INSERT into a table other than the DAO entity's as the method's declared type.
+     * The key is read with the DAO entity's id type (e.g. as a {@code Long} for a {@code long} id), so a key declared as
+     * another type (e.g. {@code int}) was returned unconverted and the call failed with a {@code ClassCastException}.
+     *
+     * @param key the generated key as read; may be {@code null}
+     * @param declaredType the method's declared key type; {@code null} if it cannot be resolved (the key is returned as is)
+     * @return the key as the declared type
+     */
+    private static Object convertGeneratedKey(final Object key, final Class<?> declaredType) {
+        return declaredType == null || key == null || declaredType.isInstance(key) ? key : N.convert(key, declaredType);
+    }
+
+    /**
+     * Returns the first non-null element of a custom batch INSERT's rows, which decides whether the batch holds DAO entities
+     * when the declared element type does not (a wildcard, a type variable or a raw collection).
+     *
+     * @param batchParameters the rows; may be empty
+     * @return the first non-null row; {@code null} if there is none
+     */
+    /**
+     * Returns the class a declared type stands for: the class itself, the raw class of a parameterized type, or the (single)
+     * upper bound of a wildcard or type variable, resolved recursively; {@code null} if it has none (an unbounded or
+     * multiply-bounded wildcard/type variable resolves to {@code Object} or {@code null}).
+     *
+     * @param type the declared type
+     * @return the class, or {@code null} if it cannot be resolved
+     */
+    private static Class<?> classOf(final Type type) {
+        if (type instanceof final Class<?> cls) {
+            return cls;
+        } else if (type instanceof final ParameterizedType pt) {
+            return pt.getRawType() instanceof final Class<?> rawCls ? rawCls : null;
+        } else if (type instanceof final WildcardType wt) {
+            final Type[] upperBounds = wt.getUpperBounds();
+
+            return upperBounds.length == 1 ? classOf(upperBounds[0]) : null;
+        } else if (type instanceof final TypeVariable<?> tv) {
+            final Type[] bounds = tv.getBounds();
+
+            return bounds.length == 1 ? classOf(bounds[0]) : null;
+        }
+
+        return null;
+    }
+
+    private static Object firstNonNullElement(final Collection<?> batchParameters) {
+        for (final Object element : batchParameters) {
+            if (element != null) {
+                return element;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Puts back the IDs generated in the application for a single-statement insert that failed, unless the statement's
+     * execution returned (reading the generated keys may still fail afterwards): with auto-commit the row, holding the
+     * generated ID, may then already be committed, and inside an enclosing transaction its rollback puts the IDs back. A
+     * failure thrown by the execution itself counts as not executed. A statement that runs in the call's own transaction
+     * needs no such check: that transaction is rolled back.
+     *
+     * @param generatedIdRestorer restores the ID values captured before the IDs were generated; {@code null} if none were generated
+     * @param executionMark marked once the statement's execution returned; {@code null} if no IDs were generated
+     * @param failure the failure of the insert, to which a failure of the restore is attached
+     */
+    private static void restoreGeneratedIdsUnlessExecuted(final Runnable generatedIdRestorer, final ExecutionMark executionMark, final Throwable failure) {
+        if (executionMark != null && !executionMark.executed) {
+            restoreGeneratedIds(generatedIdRestorer, failure);
+        }
+    }
+
+    /**
+     * Marks that the execution of an insert statement returned (reading its generated keys may still fail afterwards); see
+     * {@link #restoreGeneratedIdsUnlessExecuted(Runnable, ExecutionMark, Throwable)}.
+     */
+    private static final class ExecutionMark implements Runnable {
+        private boolean executed;
+
+        @Override
+        public void run() {
+            executed = true;
+        }
+    }
+
+    /**
      * Matches the words {@code ORDER BY} anywhere in a literal condition; used only when the tokenizer's view of the
      * condition is unreliable (see {@link #hasTopLevelOrderBy(String)}).
      */
@@ -2905,7 +3544,8 @@ final class DaoImpl {
      *
      * <p>Created DAO instances are cached by a collision-safe composite key containing the interface class,
      * target table name, and the reference identity of the data source, DSL dialect, SQL mapper, DAO cache,
-     * and executor. Subsequent calls with the same object references return the cached instance.</p>
+     * and executor. Subsequent calls with the same object references return the cached instance while it stays in
+     * the bounded pool ({@link #daoPool}); an evicted proxy keeps working, and a later call creates a new one.</p>
      *
      * <p>In addition to method-level annotations, the method also processes type-level configuration:</p>
      * <ul>
@@ -2926,7 +3566,9 @@ final class DaoImpl {
      * @param targetTableName the database table name to use, or {@code null}/{@code ""} to derive from the entity class
      * @param ds the {@link javax.sql.DataSource} providing database connections
      * @param dsl the {@link Dsl} dialect used to generate CRUD SQL; must not be {@code null}
-     * @param sqlMapper an optional {@link SqlMapper} containing pre-defined SQL statements keyed by ID; may be {@code null}
+     * @param sqlMapper an optional {@link SqlMapper} containing pre-defined SQL statements keyed by ID; may be {@code null}.
+     *        The DAO works on a copy merged with the {@code @SqlSource} and {@code @SqlScript} definitions, so later
+     *        changes to {@code sqlMapper} are not seen by the DAO
      * @param inputDaoCache an optional {@link Jdbc.DaoCache} for caching query results of methods annotated with
      *        {@code @CacheResult} (and invalidated by {@code @RefreshCache}). When {@code null}, the cache is
      *        derived from the class-level {@code @Cache} annotation (using its {@code impl()}, {@code capacity()}
@@ -2945,10 +3587,14 @@ final class DaoImpl {
      * @throws IllegalArgumentException if {@code daoInterface} is {@code null} or is not an interface, if {@code ds}
      *         is {@code null}, if {@code dsl} is {@code null}, if {@code dsl}'s SQL policy is neither {@code null}
      *         nor {@link SqlPolicy#PARAMETERIZED_SQL}, if no {@code inputDaoCache} is supplied and the {@code @Cache}
-     *         implementation does not declare an {@code (int, long)} constructor, if duplicate SQL keys are defined,
-     *         if an XML SQL mapper file referenced by {@code @SqlSource} cannot be found or holds an invalid SQL
-     *         definition, or if the DAO interface has invalid annotation configurations or generic type arguments
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
+     *         implementation does not declare an {@code (int, long)} constructor, if the same SQL id is defined more
+     *         than once across {@code sqlMapper}, {@code @SqlSource} files and {@code @SqlScript} fields, if an SQL id
+     *         is not a valid Java identifier, if an XML SQL mapper file referenced by {@code @SqlSource} cannot be found
+     *         or holds an invalid SQL definition, if the DAO interface has invalid annotation configurations or
+     *         generic type arguments (e.g. a {@code Map} 'ID' type, or a composite 'ID' bean/record class lacking one of the
+     *         entity's id properties), or if it extends a read-only (or non-update) DAO interface together with a
+     *         write-capable one ({@code Dao}/{@code NonUpdateDao} or a CRUD/{@code Unchecked} variant) whose operations it forbids
+     * @throws org.springframework.jdbc.CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a
      *         connection from {@code ds}
      * @throws UncheckedSQLException if obtaining database product info from {@code ds} fails
      * @throws UncheckedIOException if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read
@@ -2957,15 +3603,16 @@ final class DaoImpl {
      * @throws UnsupportedOperationException if a DAO method uses an unsupported annotation configuration, an
      *         incompatible return type for the declared {@link QueryOperation}, or a feature not yet enabled
      *         (e.g., cache on a non-cacheable interface that supports update/delete operations, or a
-     *         {@code RowMapper}/{@code ResultExtractor} parameter on a custom {@code @Query} method)
+     *         {@code RowMapper}/{@code ResultExtractor} parameter on a custom {@code @Query} method), if {@code @Cache}
+     *         declares a negative {@code capacity} or {@code evictDelayMillis}, or if an enabled {@code @RefreshCache} has
+     *         no enabled {@code @CacheResult} to refresh
      * @throws IllegalStateException if generated join SQL for a {@code @JoinedBy} property lacks a clause required to
      *         build the join query plans
      */
     @SuppressWarnings({ "rawtypes", "null", "resource" })
     static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final String targetTableName, final javax.sql.DataSource ds, final Dsl dsl,
-            final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UncheckedIOException, ParsingException,
-            UnsupportedOperationException, IllegalStateException {
+            final SqlMapper sqlMapper, final Jdbc.DaoCache inputDaoCache, final Executor executor) throws IllegalArgumentException, UncheckedSQLException,
+            UncheckedIOException, ParsingException, UnsupportedOperationException, IllegalStateException {
         N.checkArgNotNull(daoInterface, cs.daoInterface);
         N.checkArgument(daoInterface.isInterface(), "'daoInterface' must be an interface. It can't be {}", daoInterface);
         N.checkArgNotNull(ds, cs.ds);
@@ -2977,16 +3624,22 @@ final class DaoImpl {
         final String daoClassName = ClassUtil.getCanonicalClassName(daoInterface);
         final DaoCacheKey daoCacheKey = new DaoCacheKey(daoInterface, targetTableName, ds, dsl, sqlMapper, inputDaoCache, executor);
 
-        TD daoInstance = (TD) daoPool.get(daoCacheKey);
+        final PooledDao pooledDaoInstance = daoPool.get(daoCacheKey);
 
-        if (daoInstance != null) {
+        if (pooledDaoInstance != null) {
+            markRecentlyUsed(pooledDaoInstance);
+
             if (daoLogger.isDebugEnabled()) {
                 daoLogger.debug("Reusing cached Dao proxy(interface={}, targetTableName={}, dataSourceId={})", daoClassName, targetTableName,
                         System.identityHashCode(ds));
             }
 
-            return daoInstance;
+            return (TD) pooledDaoInstance.dao;
         }
+
+        // Identity of this proxy in DAO result-cache keys (see JdbcUtil.createCacheKey). Unique per proxy, so it also tells
+        // apart proxies of the same interface created for different DataSources or SQL mappers that share one cache.
+        final String daoId = daoInterface.getSimpleName() + "@" + daoIdSequence.incrementAndGet();
 
         if (daoLogger.isDebugEnabled()) {
             daoLogger.debug("Creating Dao proxy(interface={}, targetTableName={}, dataSourceId={}, dsl={}, sqlMapperId={}, daoCacheId={}, executorId={})",
@@ -3010,6 +3663,16 @@ final class DaoImpl {
         // Restriction level for centralizing the prepareQuery/prepareNamedQuery SQL-kind gate (formerly per-method overrides in ReadOnlyDao/NonUpdateDao).
         final boolean isReadOnlyDao = ReadOnlyDao.class.isAssignableFrom(daoInterface);
         final boolean isNonUpdateDao = !isReadOnlyDao && NonUpdateDao.class.isAssignableFrom(daoInterface);
+
+        // A restriction level combined with a capability it forbids would otherwise let the restriction win silently: raw SQL
+        // gated to SELECT (or SELECT/INSERT) and the built-in INSERT SQL not generated, while the write methods stay on the type.
+        if ((isReadOnlyDao && (Dao.class.isAssignableFrom(daoInterface) || NonUpdateDao.class.isAssignableFrom(daoInterface)))
+                || (isNonUpdateDao && Dao.class.isAssignableFrom(daoInterface))) {
+            throw new IllegalArgumentException(
+                    "Dao interface: " + daoClassName + " extends both " + (isReadOnlyDao ? "ReadOnlyDao (read-only)" : "NonUpdateDao (no update/delete)")
+                            + " and " + (Dao.class.isAssignableFrom(daoInterface) ? "Dao" : "NonUpdateDao")
+                            + ", whose write operations it forbids. Extend only the interfaces of one restriction level");
+        }
 
         final List<Class<?>> allInterfaces = Stream.of(ClassUtil.getAllInterfaces(daoInterface)).prepend(daoInterface).toList();
 
@@ -3095,6 +3758,14 @@ final class DaoImpl {
 
         final Type[] typeArguments = resolveDaoTypeArguments(daoInterface, isCrudDao);
 
+        if (isCrudDao && N.notEmpty(typeArguments) && typeArguments.length >= 2
+                && Map.class.isAssignableFrom(
+                        typeArguments[1] instanceof final ParameterizedType pt && pt.getRawType() instanceof final Class<?> rawIdClass ? rawIdClass
+                                : (typeArguments[1] instanceof final Class<?> idCls ? idCls : Object.class))) {
+            throw new IllegalArgumentException("The 'ID' type of Dao interface: " + daoClassName + " can't be a Map: " + typeArguments[1]
+                    + ". Use EntityId or an id bean/record class for a composite id");
+        }
+
         if (isCrudDao && (N.isEmpty(typeArguments) || (typeArguments.length < 2) || !(typeArguments[1] instanceof Class))) {
             throw new IllegalArgumentException("Failed to resolve entity/id generic type parameters for DAO interface: " + daoClassName);
         }
@@ -3136,6 +3807,18 @@ final class DaoImpl {
                         && !(EntityId.class.equals(declaredIdClass) || Beans.isBeanClass(declaredIdClass) || Beans.isRecordClass(declaredIdClass))) {
                     throw new IllegalArgumentException(
                             "To support composite ids, the 'ID' type must be EntityId/Entity/Record. It can't be: " + declaredIdClass);
+                } else if (idFieldNames.size() > 1 && !EntityId.class.equals(declaredIdClass)) {
+                    // Every id property is read from (and written to) the id object by name, so a missing one failed only at
+                    // runtime, with a NullPointerException in getOrNull/exists/deleteById/update(Map, id).
+                    final BeanInfo declaredIdInfo = ParserUtil.getBeanInfo(declaredIdClass);
+
+                    for (final String idFieldName : idFieldNames) {
+                        if (declaredIdInfo.getPropInfo(idFieldName) == null) {
+                            throw new IllegalArgumentException("The composite 'ID' class: " + ClassUtil.getCanonicalClassName(declaredIdClass)
+                                    + " declared in Dao: " + daoClassName + " has no property: " + idFieldName + " (an id property of entity class: "
+                                    + ClassUtil.getCanonicalClassName((Class) typeArguments[0]) + ")");
+                        }
+                    }
                 }
             }
         }
@@ -3176,14 +3859,36 @@ final class DaoImpl {
         // count(Condition) counts the records the condition matches. Its LIMIT/OFFSET and ORDER BY would otherwise apply to
         // the single aggregate row: an OFFSET skips that row (so the count became 0), and ORDER BY next to an aggregate is
         // rejected by strict databases. Both are dropped unless GROUP BY is present (one row per group, so they are meaningful).
+        // The same applies to such clauses trailing a literal expression used as (or as the WHERE of) the condition.
         final Function<Condition, Condition> countCondFunc = cond -> {
             if (cond instanceof Limit || cond instanceof OrderBy) {
                 return Criteria.builder().build();
-            } else if (cond instanceof final Criteria criteria && criteria.groupBy() == null && (criteria.limit() != null || criteria.orderBy() != null)) {
+            } else if (cond instanceof final SqlExpression expr) {
+                final SqlExpression stripped = stripTrailingRowClauses(expr);
+
+                return stripped == expr ? cond : (stripped == null ? Criteria.builder().build() : stripped);
+            } else if (cond instanceof final Where where && where.condition() instanceof final SqlExpression expr) {
+                final SqlExpression stripped = stripTrailingRowClauses(expr);
+
+                return stripped == expr ? cond : (stripped == null ? Criteria.builder().build() : Filters.where(stripped));
+            } else if (cond instanceof final Criteria criteria && criteria.groupBy() == null) {
+                final SqlExpression whereExpr = criteria.where() != null && criteria.where().condition() instanceof final SqlExpression expr ? expr : null;
+                final SqlExpression strippedWhereExpr = whereExpr == null ? null : stripTrailingRowClauses(whereExpr);
+
+                if (criteria.limit() == null && criteria.orderBy() == null && strippedWhereExpr == whereExpr) {
+                    return cond;
+                }
+
                 final Criteria.Builder builder = Criteria.builder().selectModifier(criteria.selectModifier());
 
                 for (final Condition clause : criteria.conditions()) {
-                    if (!(clause instanceof Limit || clause instanceof OrderBy)) {
+                    if (clause instanceof Limit || clause instanceof OrderBy) {
+                        continue;
+                    } else if (whereExpr != null && clause instanceof Where) {
+                        if (strippedWhereExpr != null) {
+                            builder.add(strippedWhereExpr == whereExpr ? clause : Filters.where(strippedWhereExpr));
+                        }
+                    } else {
                         builder.add(clause);
                     }
                 }
@@ -3229,12 +3934,35 @@ final class DaoImpl {
         final Condition idCond = isNoId ? null : isOneId ? Filters.eq(oneIdPropName) : Filters.and(Stream.of(idPropNameList).map(Filters::eq).toList());
         // A bean/record id is matched on the id properties only, as idParamSetter (getOrNull/exists/deleteById) and batchGet do:
         // Filters.allEqual(id) used every property of the id object, so e.g. with the entity class as the ID type its non-id
-        // properties joined the WHERE clause of update(Map, id) and the row was missed.
+        // properties joined the WHERE clause of update(Map, id) and the row was missed. Like idParamSetter, the id values are
+        // bound with the id properties' types (the entity's for a single id or an EntityId, the ID class's own for a bean/record
+        // id, exactly as idParamSetter does), so an id with a custom @Type (e.g. an enum stored as its ordinal) matches.
         final Function<Object, Condition> id2CondFunc = isNoId || idClass == null ? null
-                : (isEntityId ? id -> Filters.id2Cond((EntityId) id)
-                        : Map.class.isAssignableFrom(idClass) ? id -> Filters.allEqual((Map<String, ?>) id)
-                                : Beans.isBeanClass(idClass) || Beans.isRecordClass(idClass) ? id -> Filters.allEqual(id, idPropNameList)
-                                        : id -> Filters.eq(oneIdPropName, id));
+                : (isOneId ? id -> Filters.eq(oneIdPropName, TypedParameter.of(id, idPropInfo))
+                        : (isEntityId ? id -> Filters.and(Stream.of(idPropNameList)
+                                .map(idName -> Filters.eq(idName, TypedParameter.of(((EntityId) id).get(idName), entityInfo.getPropInfo(idName))))
+                                .toList()) : id -> Filters.and(Stream.of(idPropNameList).map(idName -> {
+                                    final PropInfo propInfo = idBeanInfo.getPropInfo(idName);
+
+                                    return Filters.eq(idName, TypedParameter.of(propInfo.getPropValue(id), propInfo));
+                                }).toList())));
+
+        // update(Map, id/cond) binds each value whose key names an entity property with that property's type, as update(entity)
+        // does, so e.g. an enum property stored as its ordinal (custom @Type) is written as such. Other keys (e.g. raw column
+        // names) and Condition values (e.g. SqlExpression, rendered inline) are left to the query builder as they are.
+        final Function<Map<String, Object>, Map<String, Object>> typedUpdatePropsFunc = updateProps -> {
+            final Map<String, Object> typedUpdateProps = N.newLinkedHashMap(updateProps.size());
+            PropInfo propInfo = null;
+
+            for (final Map.Entry<String, Object> entry : updateProps.entrySet()) {
+                final Object value = entry.getValue();
+
+                propInfo = entityInfo == null || entry.getKey() == null || value instanceof Condition ? null : entityInfo.getPropInfo(entry.getKey());
+                typedUpdateProps.put(entry.getKey(), propInfo == null ? value : TypedParameter.of(value, propInfo));
+            }
+
+            return typedUpdateProps;
+        };
 
         N.checkArgument(idPropNameList.size() > 1 || !(isEntityId || (idClass != null && (Beans.isBeanClass(idClass) || Map.class.isAssignableFrom(idClass)))),
                 "Id type/class cannot be EntityId/Map or Entity for single id");
@@ -3298,6 +4026,11 @@ final class DaoImpl {
                 : (isOneId ? JdbcUtil::isDefaultIdPropValue
                         : (isCompositeIdAsEntityId ? id -> Stream.of(((EntityId) id).entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()))
                                 : id -> {
+                                    if (id instanceof final EntityId entityId) {
+                                        // A single generated key of the composite id, extracted as an EntityId (see JdbcUtil.getIdGeneratorGetterSetter).
+                                        return Stream.of(entityId.entrySet()).allMatch(it -> JdbcUtil.isDefaultIdPropValue(it.getValue()));
+                                    }
+
                                     if (idBeanInfo == null) {
                                         throw new IllegalStateException("ID class " + idClass + " is not a bean class and cannot be used for composite ID");
                                     }
@@ -3335,28 +4068,23 @@ final class DaoImpl {
             pq.setObject(oneIdPropName, idPropInfo.getPropValue(entity), idPropInfo.dbType);
         } : (pq, entity) -> pq.settParameters(entity, objParamsSetter);
 
-        CacheResult tmpDaoClassCacheResultAnno = null;
-        RefreshCache tmpDaoClassRefreshCacheAnno = null;
+        // Every type-level @CacheResult/@RefreshCache, in interface order (the DAO interface first): like @PerfLog and
+        // @SqlLogEnabled, a method uses the first one whose filter matches its name (resolved per method below).
+        final List<CacheResult> daoClassCacheResultAnnos = new ArrayList<>(1);
+        final List<RefreshCache> daoClassRefreshCacheAnnos = new ArrayList<>(1);
         com.landawn.abacus.jdbc.annotation.Cache tmpDaoClassCacheAnno = null;
 
         for (final Class<?> itf : allInterfaces) {
             for (final Annotation anno : itf.getAnnotations()) {
-                if (tmpDaoClassCacheResultAnno == null && anno instanceof CacheResult cr) {
-                    tmpDaoClassCacheResultAnno = cr;
-                } else if (tmpDaoClassRefreshCacheAnno == null && anno instanceof RefreshCache rc) {
-                    tmpDaoClassRefreshCacheAnno = rc;
+                if (anno instanceof CacheResult cr) {
+                    daoClassCacheResultAnnos.add(cr);
+                } else if (anno instanceof RefreshCache rc) {
+                    daoClassRefreshCacheAnnos.add(rc);
                 } else if (tmpDaoClassCacheAnno == null && anno instanceof com.landawn.abacus.jdbc.annotation.Cache ca) {
                     tmpDaoClassCacheAnno = ca;
                 }
             }
-
-            if (tmpDaoClassCacheResultAnno != null && tmpDaoClassRefreshCacheAnno != null && tmpDaoClassCacheAnno != null) {
-                break;
-            }
         }
-
-        final CacheResult daoClassCacheResultAnno = tmpDaoClassCacheResultAnno;
-        final RefreshCache daoClassRefreshCacheAnno = tmpDaoClassRefreshCacheAnno;
 
         final AtomicBoolean hasCacheResult = new AtomicBoolean(false);
         final AtomicBoolean hasRefreshCache = new AtomicBoolean(false);
@@ -3384,7 +4112,7 @@ final class DaoImpl {
 
         // TODO maybe it's not a good idea to support Cache in general Dao which supports update/delete operations.
         if (!DaoUtil.isCacheable(daoInterface)
-                && (daoClassCacheResultAnno != null || daoClassRefreshCacheAnno != null || inputDaoCache != null || daoClassCacheAnno != null)) {
+                && (!daoClassCacheResultAnnos.isEmpty() || !daoClassRefreshCacheAnnos.isEmpty() || inputDaoCache != null || daoClassCacheAnno != null)) {
             throw new UnsupportedOperationException(
                     "Cache is only supported for Cacheable DAOs (NonUpdate/ReadOnly and their Unchecked variants), not supported for Dao interface: "
                             + daoClassName);
@@ -3403,7 +4131,7 @@ final class DaoImpl {
         // always-empty cache, and that configuration is rejected below anyway. A DefaultDaoCache is backed by a pool that
         // registers a JVM shutdown hook and a periodic eviction task, so it must not be created for every DAO proxy (e.g.
         // every CrudDao).
-        final boolean isDaoCacheUsed = daoClassCacheAnno != null || (daoClassCacheResultAnno != null && daoClassCacheResultAnno.enabled())
+        final boolean isDaoCacheUsed = daoClassCacheAnno != null || Stream.of(daoClassCacheResultAnnos).anyMatch(CacheResult::enabled)
                 || Stream.of(sqlMethods).anyMatch(m -> {
                     final CacheResult cacheResult = m.getAnnotation(CacheResult.class);
 
@@ -3481,6 +4209,8 @@ final class DaoImpl {
             final String fullClassMethodName = ClassUtil.getCanonicalClassName(declaringClass) + "." + methodName;
             final Class<?>[] paramTypes = method.getParameterTypes();
             final Class<?> returnType = method.getReturnType();
+            // the collection type returned for an Iterable/ImmutableCollection return type of a custom query method
+            final Class<?> queryReturnType = resolveQueryReturnType(returnType);
             final int paramLen = paramTypes.length;
 
             final boolean fetchColumnByEntityClass = Stream.of(method.getAnnotations())
@@ -3701,7 +4431,7 @@ final class DaoImpl {
 
                                     try {
                                         try (NamedQuery withoutIdQuery = proxy.prepareNamedQuery(namedInsertWithoutIdSQL).closeAfterExecution(false);
-                                                NamedQuery withIdQuery = proxy.prepareNamedQuery(namedInsertWithIdSQL).closeAfterExecution(false)) {
+                                             NamedQuery withIdQuery = proxy.prepareNamedQuery(namedInsertWithIdSQL).closeAfterExecution(false)) {
                                             final List<Object> run = new ArrayList<>(Math.min(batchSize, entities.size()));
                                             boolean runUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
 
@@ -3743,9 +4473,12 @@ final class DaoImpl {
                                     ? namedInsertWithoutIdSQL
                                     : namedInsertWithIdSQL;
 
-                            if (entities.size() <= batchSize) {
+                            if (entities.size() == 1) {
                                 proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
+                                // Transactional whenever there is more than one element, also when all fit in one JDBC batch: every chunk of this
+                                // multi-row call commits or rolls back together (CHANGES.md 4.9.3), and inside a Spring-managed transaction the
+                                // scope participates in it (its outcome is Spring's) instead of committing Spring's connection.
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 Throwable failure = null;
 
@@ -3784,9 +4517,12 @@ final class DaoImpl {
 
                             final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToSave).build().query();
 
-                            if (entities.size() <= batchSize) {
+                            if (entities.size() == 1) {
                                 proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
+                                // Transactional whenever there is more than one element, also when all fit in one JDBC batch: every chunk of this
+                                // multi-row call commits or rolls back together (CHANGES.md 4.9.3), and inside a Spring-managed transaction the
+                                // scope participates in it (its outcome is Spring's) instead of committing Spring's connection.
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 Throwable failure = null;
 
@@ -3821,9 +4557,12 @@ final class DaoImpl {
                                 return null;
                             }
 
-                            if (entities.size() <= batchSize) {
+                            if (entities.size() == 1) {
                                 proxy.prepareNamedQuery(namedInsertSql).addBatchParameters(entities).batchUpdate();
                             } else {
+                                // Transactional whenever there is more than one element, also when all fit in one JDBC batch: every chunk of this
+                                // multi-row call commits or rolls back together (CHANGES.md 4.9.3), and inside a Spring-managed transaction the
+                                // scope participates in it (its outcome is Spring's) instead of committing Spring's connection.
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 Throwable failure = null;
 
@@ -5145,8 +5884,11 @@ final class DaoImpl {
                             N.checkArgNotEmpty(updateProps, cs.updateProps);
                             N.checkArgNotNull(cond, cs.cond);
 
-                            final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass).set(updateProps).append(cond).build();
-                            return proxy.prepareQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter).update();
+                            final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass)
+                                    .set(typedUpdatePropsFunc.apply(updateProps))
+                                    .append(cond)
+                                    .build();
+                            return proxy.prepareQuery(sp.query()).settParameters(sp.parameters(), typedCollParamsSetter).update();
                         };
                     } else if (methodName.equals("update") && paramLen == 3 && !Map.class.equals(paramTypes[0])
                             && Collection.class.isAssignableFrom(paramTypes[1]) && Condition.class.isAssignableFrom(paramTypes[2])) {
@@ -5158,16 +5900,28 @@ final class DaoImpl {
                             N.checkArgNotNull(entity, cs.entity);
                             N.checkArgNotEmpty(propNamesToUpdate, cs.propNamesToUpdate);
                             N.checkArgNotNull(cond, cs.cond);
+                            // Validated before the UPDATE SQL is built, as the CrudDao twins do: an unknown (or null) name used to be
+                            // rejected only after the query builder had run on it, so a builder failure could mask the property error.
+                            checkPropNamesToUpdate(propNamesToUpdate, entityInfo);
 
                             final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass).set(propNamesToUpdate).append(cond).build();
 
+                            // set(Collection) renders a raw SET expression (e.g. "version = version + 1", see isRawSetExpression) without a
+                            // placeholder (CrudDao.update(entity, propNamesToUpdate) supports it the same way), so only the other elements
+                            // bind a value: binding every element failed on such an expression with a NullPointerException.
+                            final List<PropInfo> propInfosToBind = new ArrayList<>(propNamesToUpdate.size());
+
+                            for (final String propName : propNamesToUpdate) {
+                                if (!isRawSetExpression(propName)) {
+                                    propInfosToBind.add(entityInfo.getPropInfo(propName));
+                                }
+                            }
+
                             final Jdbc.BiParametersSetter<AbstractQuery, Object> parametersSetter = (pq, p) -> {
                                 final PreparedStatement stmt = pq.stmt;
-                                PropInfo propInfo = null;
                                 int columnIndex = 1;
 
-                                for (final String propName : propNamesToUpdate) {
-                                    propInfo = entityInfo.getPropInfo(propName);
+                                for (final PropInfo propInfo : propInfosToBind) {
                                     propInfo.dbType.set(stmt, columnIndex++, propInfo.getPropValue(p));
                                 }
 
@@ -5200,12 +5954,25 @@ final class DaoImpl {
                             N.checkArgNotNull(entity, cs.entity);
 
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
+                            // Puts back the ID this call writes onto the entity if a transaction it runs in is rolled back later.
+                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
+                                    () -> RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo));
 
                             ParsedSql namedInsertSql = null;
+                            Runnable generatedIdRestorer = null;
 
                             if (isDefaultIdTester.test(idGetter.apply(entity))) {
                                 if (callGenerateIdForInsert) {
-                                    idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                    generatedIdRestorer = RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo);
+
+                                    // An ID setter can fail after writing part of the ID (e.g. one property of a composite ID): no row was
+                                    // inserted, so the ID values are put back (see restoreGeneratedIds), as the batch paths do.
+                                    try {
+                                        idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                    } catch (final Throwable e) { //NOSONAR
+                                        restoreGeneratedIds(generatedIdRestorer, e);
+                                        throw e;
+                                    }
 
                                     namedInsertSql = namedInsertWithIdSQL;
                                 } else {
@@ -5215,17 +5982,25 @@ final class DaoImpl {
                                 namedInsertSql = namedInsertWithIdSQL;
                             }
 
-                            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
-                                    .settParameters(entity, objParamsSetter)
-                                    .insert(keyExtractor, isDefaultIdTester)
-                                    .map(ret -> {
-                                        idSetter.accept(ret, entity);
+                            final Optional<Object> generatedKey;
+                            final ExecutionMark executionMark = generatedIdRestorer == null ? null : new ExecutionMark();
 
-                                        // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
-                                        // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
-                                        return isCompositeIdAsEntityId ? idGetter.apply(entity) : ret;
-                                    })
-                                    .orElse(idGetter.apply(entity));
+                            try {
+                                generatedKey = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
+                                        .settParameters(entity, objParamsSetter)
+                                        .insert(keyExtractor, isDefaultIdTester, executionMark);
+                            } catch (final Throwable e) { //NOSONAR
+                                restoreGeneratedIdsUnlessExecuted(generatedIdRestorer, executionMark, e);
+                                throw e;
+                            }
+
+                            return generatedKey.map(ret -> {
+                                idSetter.accept(ret, entity);
+
+                                // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
+                                // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
+                                return isOneId ? ret : idGetter.apply(entity);
+                            }).orElse(idGetter.apply(entity));
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[1])) {
                         call = (proxy, args) -> {
@@ -5235,24 +6010,45 @@ final class DaoImpl {
                             N.checkArgNotEmpty(propNamesToInsert, cs.propNamesToInsert);
 
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
-
-                            if ((callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) && isDefaultIdTester.test(idGetter.apply(entity))) {
-                                idSetter.accept(DaoUtil.generateId(proxy), entity);
-                            }
+                            // Puts back the ID this call writes onto the entity if a transaction it runs in is rolled back later.
+                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
+                                    () -> RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo));
 
                             final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToInsert).build().query();
+                            Runnable generatedIdRestorer = null;
 
-                            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
-                                    .settParameters(entity, objParamsSetter)
-                                    .insert(keyExtractor, isDefaultIdTester)
-                                    .map(ret -> {
-                                        idSetter.accept(ret, entity);
+                            if ((callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) && isDefaultIdTester.test(idGetter.apply(entity))) {
+                                generatedIdRestorer = RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo);
 
-                                        // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
-                                        // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
-                                        return isCompositeIdAsEntityId ? idGetter.apply(entity) : ret;
-                                    })
-                                    .orElse(idGetter.apply(entity));
+                                // An ID setter can fail after writing part of the ID (e.g. one property of a composite ID): no row was
+                                // inserted, so the ID values are put back (see restoreGeneratedIds), as the batch paths do.
+                                try {
+                                    idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                } catch (final Throwable e) { //NOSONAR
+                                    restoreGeneratedIds(generatedIdRestorer, e);
+                                    throw e;
+                                }
+                            }
+
+                            final Optional<Object> generatedKey;
+                            final ExecutionMark executionMark = generatedIdRestorer == null ? null : new ExecutionMark();
+
+                            try {
+                                generatedKey = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
+                                        .settParameters(entity, objParamsSetter)
+                                        .insert(keyExtractor, isDefaultIdTester, executionMark);
+                            } catch (final Throwable e) { //NOSONAR
+                                restoreGeneratedIdsUnlessExecuted(generatedIdRestorer, executionMark, e);
+                                throw e;
+                            }
+
+                            return generatedKey.map(ret -> {
+                                idSetter.accept(ret, entity);
+
+                                // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
+                                // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
+                                return isOneId ? ret : idGetter.apply(entity);
+                            }).orElse(idGetter.apply(entity));
                         };
                     } else if (methodName.equals("insert") && paramLen == 2 && String.class.equals(paramTypes[0])) {
                         call = (proxy, args) -> {
@@ -5262,22 +6058,44 @@ final class DaoImpl {
                             N.checkArgNotNull(entity, cs.entity);
 
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
+                            // Puts back the ID this call writes onto the entity if a transaction it runs in is rolled back later.
+                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
+                                    () -> RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo));
+
+                            Runnable generatedIdRestorer = null;
 
                             if (callGenerateIdForInsertWithSql && isDefaultIdTester.test(idGetter.apply(entity))) {
-                                idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                generatedIdRestorer = RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo);
+
+                                // An ID setter can fail after writing part of the ID (e.g. one property of a composite ID): no row was
+                                // inserted, so the ID values are put back (see restoreGeneratedIds), as the batch paths do.
+                                try {
+                                    idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                } catch (final Throwable e) { //NOSONAR
+                                    restoreGeneratedIds(generatedIdRestorer, e);
+                                    throw e;
+                                }
                             }
 
-                            return JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
-                                    .settParameters(entity, objParamsSetter)
-                                    .insert(keyExtractor, isDefaultIdTester)
-                                    .map(ret -> {
-                                        idSetter.accept(ret, entity);
+                            final Optional<Object> generatedKey;
+                            final ExecutionMark executionMark = generatedIdRestorer == null ? null : new ExecutionMark();
 
-                                        // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
-                                        // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
-                                        return isCompositeIdAsEntityId ? idGetter.apply(entity) : ret;
-                                    })
-                                    .orElse(idGetter.apply(entity));
+                            try {
+                                generatedKey = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
+                                        .settParameters(entity, objParamsSetter)
+                                        .insert(keyExtractor, isDefaultIdTester, executionMark);
+                            } catch (final Throwable e) { //NOSONAR
+                                restoreGeneratedIdsUnlessExecuted(generatedIdRestorer, executionMark, e);
+                                throw e;
+                            }
+
+                            return generatedKey.map(ret -> {
+                                idSetter.accept(ret, entity);
+
+                                // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
+                                // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
+                                return isOneId ? ret : idGetter.apply(entity);
+                            }).orElse(idGetter.apply(entity));
                         };
                     } else if (methodName.equals("batchInsert") && paramLen == 2 && Collection.class.isAssignableFrom(paramTypes[0])
                             && int.class.equals(paramTypes[1])) {
@@ -5292,35 +6110,72 @@ final class DaoImpl {
                                 return new ArrayList<>();
                             }
 
-                            boolean allDefaultIdValue = N.allMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
+                            // The elements are validated before the rollback action is registered: inside a transaction the registration
+                            // takes the ID snapshot at once, which failed with a NullPointerException on a null element that the ID getter
+                            // rejects with an IllegalArgumentException outside a transaction. The same pass finds whether every, and
+                            // whether any, entity has a default ID.
+                            boolean allDefaultIdValue = true;
+                            boolean anyDefaultIdValue = false;
+
+                            for (final Object entity : entities) {
+                                N.checkArgNotNull(entity, cs.entity);
+
+                                if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                    anyDefaultIdValue = true;
+                                } else {
+                                    allDefaultIdValue = false;
+                                }
+                            }
+
+                            // Puts back the IDs this call writes onto the entities if a transaction it runs in is rolled back later.
+                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
+                                    () -> RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo));
+
+                            // Puts back the IDs generated below if this call fails (see restoreGeneratedIds). The snapshot of every entity's
+                            // ID is only taken when an ID will be generated: it was wasted on a batch whose entities all carry explicit IDs.
+                            final Runnable generatedIdRestorer = callGenerateIdForInsert && anyDefaultIdValue
+                                    ? RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo)
+                                    : null;
 
                             if (callGenerateIdForInsert) {
-                                for (final Object entity : entities) {
-                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                        idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                try {
+                                    for (final Object entity : entities) {
+                                        if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                            idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                        }
                                     }
+                                } catch (final Throwable e) { //NOSONAR
+                                    restoreGeneratedIds(generatedIdRestorer, e);
+                                    throw e;
                                 }
 
                                 allDefaultIdValue = false;
                             }
 
                             if (!allDefaultIdValue) {
-                                final boolean hasDefaultIdEntity = N.anyMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity)));
+                                // Reuses the validation pass above instead of a second reflective pass over every entity: without ID
+                                // generation the answer is anyDefaultIdValue; after generation only the entities that had a default ID
+                                // were touched, so a default ID can remain only if there was one and generateId() returned a default value.
+                                final boolean hasDefaultIdEntity = anyDefaultIdValue
+                                        && (!callGenerateIdForInsert || N.anyMatch(entities, entity -> isDefaultIdTester.test(idGetter.apply(entity))));
 
                                 if (hasDefaultIdEntity) {
                                     // Preserve the caller's iteration order: explicit IDs can affect database identity state before a later generated-ID insert.
-                                    final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
-                                    // Returned IDs are buffered and written back only after the commit (like the single-SQL paths
-                                    // below): assigning them run by run left entities of an earlier run holding the IDs of rows
-                                    // that a later run's failure rolled back.
+                                    final SqlTransaction tran = beginInsertTransaction(proxy.dataSource(), generatedIdRestorer);
+                                    // Returned IDs are buffered and written back only after this call's transaction scope commits (like the
+                                    // single-SQL paths below): assigning them run by run left entities of an earlier run holding the IDs of
+                                    // rows that a later run's failure rolled back.
                                     final List<Pair<Object, Object>> returnedIdEntityPairs = new ArrayList<>();
                                     Throwable failure = null;
+                                    Throwable failureAfterCommit = null;
 
                                     try {
-                                        try (NamedQuery withoutIdQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertWithoutIdSQL, generatedKeyColumnNames)
+                                        try (NamedQuery withoutIdQuery = JdbcUtil
+                                                .prepareNamedQuery(proxy.dataSource(), namedInsertWithoutIdSQL, generatedKeyColumnNames)
                                                 .closeAfterExecution(false);
-                                                NamedQuery withIdQuery = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertWithIdSQL, generatedKeyColumnNames)
-                                                        .closeAfterExecution(false)) {
+                                             NamedQuery withIdQuery = JdbcUtil
+                                                     .prepareNamedQuery(proxy.dataSource(), namedInsertWithIdSQL, generatedKeyColumnNames)
+                                                     .closeAfterExecution(false)) {
                                             final List<Object> chunk = new ArrayList<>(Math.min(batchSize, entities.size()));
                                             boolean runUsesDefaultIdSql = isDefaultIdTester.test(idGetter.apply(N.firstOrNullIfEmpty(entities)));
                                             // Created before the loop below starts iterating the input; see DeferredIdAssignments.
@@ -5353,7 +6208,15 @@ final class DaoImpl {
                                         tran.commit();
                                     } catch (final Throwable e) { //NOSONAR
                                         failure = e;
-                                        throw e;
+
+                                        // commit() can still throw from the connection cleanup after the commit went through: the rows
+                                        // exist then, so their IDs are kept (and the returned ones assigned below) before rethrowing.
+                                        if (tran.status() != Transaction.Status.COMMITTED) {
+                                            restoreGeneratedIds(generatedIdRestorer, e);
+                                            throw e;
+                                        }
+
+                                        failureAfterCommit = e;
                                     } finally {
                                         JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                     }
@@ -5362,19 +6225,31 @@ final class DaoImpl {
                                         idSetter.accept(idEntityPair.left(), idEntityPair.right());
                                     }
 
+                                    if (failureAfterCommit != null) {
+                                        throw failureAfterCommit;
+                                    }
+
                                     return Stream.of(entities).map(idGetter).toList();
                                 }
                             }
 
                             final ParsedSql namedInsertSql = allDefaultIdValue ? namedInsertWithoutIdSQL : namedInsertWithIdSQL;
                             List<Object> ids = null;
+                            Throwable failureAfterCommit = null;
 
-                            if (entities.size() <= batchSize) {
-                                ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
-                                        .addBatchParameters(entities)
-                                        .batchInsert(keyExtractor, isDefaultIdTester);
+                            if (entities.size() == 1) {
+                                final ExecutionMark executionMark = generatedIdRestorer == null ? null : new ExecutionMark();
+
+                                try {
+                                    ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
+                                            .addBatchParameters(entities)
+                                            .batchInsert(keyExtractor, isDefaultIdTester, executionMark);
+                                } catch (final Throwable e) { //NOSONAR
+                                    restoreGeneratedIdsUnlessExecuted(generatedIdRestorer, executionMark, e);
+                                    throw e;
+                                }
                             } else {
-                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = beginInsertTransaction(proxy.dataSource(), generatedIdRestorer);
                                 Throwable failure = null;
 
                                 try {
@@ -5389,7 +6264,15 @@ final class DaoImpl {
                                     tran.commit();
                                 } catch (final Throwable e) { //NOSONAR
                                     failure = e;
-                                    throw e;
+
+                                    // commit() can still throw from the connection cleanup after the commit went through: the rows exist
+                                    // then, so their IDs are kept (and the returned ones assigned below) before rethrowing.
+                                    if (tran.status() != Transaction.Status.COMMITTED) {
+                                        restoreGeneratedIds(generatedIdRestorer, e);
+                                        throw e;
+                                    }
+
+                                    failureAfterCommit = e;
                                 } finally {
                                     JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
@@ -5412,9 +6295,14 @@ final class DaoImpl {
                                         entities.size());
                             }
 
-                            // A composite id may come back partial (see insert); once the ids were assigned, return the entities' full ids.
-                            if (N.isEmpty(ids) || (isCompositeIdAsEntityId && ids.size() == N.size(entities))) {
+                            // Return the entities' ids unless the keys are exactly the single-property ids just assigned: a composite
+                            // id may come back partial (see insert), and keys that don't pair up with the entities were not assigned.
+                            if (!isOneId || N.size(ids) != N.size(entities)) {
                                 ids = Stream.of(entities).map(idGetter).toList();
+                            }
+
+                            if (failureAfterCommit != null) {
+                                throw failureAfterCommit;
                             }
 
                             return ids;
@@ -5435,23 +6323,52 @@ final class DaoImpl {
                                 return new ArrayList<>();
                             }
 
-                            if (callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet)) {
-                                for (final Object entity : entities) {
-                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                        idSetter.accept(DaoUtil.generateId(proxy), entity);
-                                    }
-                                }
+                            final boolean generatesIds = callGenerateIdForInsert && !N.disjoint(propNamesToInsert, idPropNameSet);
+                            boolean anyDefaultIdValue = false;
+
+                            // The elements are validated before the rollback action is registered (see batchInsert(entities, batchSize)).
+                            for (final Object entity : entities) {
+                                N.checkArgNotNull(entity, cs.entity);
+                                anyDefaultIdValue = anyDefaultIdValue || (generatesIds && isDefaultIdTester.test(idGetter.apply(entity)));
                             }
 
-                            final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToInsert).build().query();
-                            List<Object> ids = null;
+                            // Puts back the IDs this call writes onto the entities if a transaction it runs in is rolled back later.
+                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
+                                    () -> RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo));
 
-                            if (entities.size() <= batchSize) {
-                                ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
-                                        .addBatchParameters(entities)
-                                        .batchInsert(keyExtractor, isDefaultIdTester);
+                            final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToInsert).build().query();
+                            // Puts back the IDs generated below if this call fails (see restoreGeneratedIds); only taken when an ID will be generated.
+                            final Runnable generatedIdRestorer = anyDefaultIdValue ? RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo)
+                                    : null;
+
+                            if (generatesIds) {
+                                try {
+                                    for (final Object entity : entities) {
+                                        if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                            idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                        }
+                                    }
+                                } catch (final Throwable e) { //NOSONAR
+                                    restoreGeneratedIds(generatedIdRestorer, e);
+                                    throw e;
+                                }
+                            }
+                            List<Object> ids = null;
+                            Throwable failureAfterCommit = null;
+
+                            if (entities.size() == 1) {
+                                final ExecutionMark executionMark = generatedIdRestorer == null ? null : new ExecutionMark();
+
+                                try {
+                                    ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
+                                            .addBatchParameters(entities)
+                                            .batchInsert(keyExtractor, isDefaultIdTester, executionMark);
+                                } catch (final Throwable e) { //NOSONAR
+                                    restoreGeneratedIdsUnlessExecuted(generatedIdRestorer, executionMark, e);
+                                    throw e;
+                                }
                             } else {
-                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = beginInsertTransaction(proxy.dataSource(), generatedIdRestorer);
                                 Throwable failure = null;
 
                                 try {
@@ -5466,7 +6383,15 @@ final class DaoImpl {
                                     tran.commit();
                                 } catch (final Throwable e) { //NOSONAR
                                     failure = e;
-                                    throw e;
+
+                                    // commit() can still throw from the connection cleanup after the commit went through: the rows exist
+                                    // then, so their IDs are kept (and the returned ones assigned below) before rethrowing.
+                                    if (tran.status() != Transaction.Status.COMMITTED) {
+                                        restoreGeneratedIds(generatedIdRestorer, e);
+                                        throw e;
+                                    }
+
+                                    failureAfterCommit = e;
                                 } finally {
                                     JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
@@ -5489,9 +6414,14 @@ final class DaoImpl {
                                         entities.size());
                             }
 
-                            // A composite id may come back partial (see insert); once the ids were assigned, return the entities' full ids.
-                            if (N.isEmpty(ids) || (isCompositeIdAsEntityId && ids.size() == N.size(entities))) {
+                            // Return the entities' ids unless the keys are exactly the single-property ids just assigned: a composite
+                            // id may come back partial (see insert), and keys that don't pair up with the entities were not assigned.
+                            if (!isOneId || N.size(ids) != N.size(entities)) {
                                 ids = Stream.of(entities).map(idGetter).toList();
+                            }
+
+                            if (failureAfterCommit != null) {
+                                throw failureAfterCommit;
                             }
 
                             return ids;
@@ -5512,22 +6442,51 @@ final class DaoImpl {
                                 return new ArrayList<>();
                             }
 
+                            boolean anyDefaultIdValue = false;
+
+                            // The elements are validated before the rollback action is registered (see batchInsert(entities, batchSize)).
+                            for (final Object entity : entities) {
+                                N.checkArgNotNull(entity, cs.entity);
+                                anyDefaultIdValue = anyDefaultIdValue || (callGenerateIdForInsertWithSql && isDefaultIdTester.test(idGetter.apply(entity)));
+                            }
+
+                            // Puts back the IDs this call writes onto the entities if a transaction it runs in is rolled back later.
+                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
+                                    () -> RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo));
+
+                            // Puts back the IDs generated below if this call fails (see restoreGeneratedIds); only taken when an ID will be generated.
+                            final Runnable generatedIdRestorer = anyDefaultIdValue ? RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo)
+                                    : null;
+
                             if (callGenerateIdForInsertWithSql) {
-                                for (final Object entity : entities) {
-                                    if (isDefaultIdTester.test(idGetter.apply(entity))) {
-                                        idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                try {
+                                    for (final Object entity : entities) {
+                                        if (isDefaultIdTester.test(idGetter.apply(entity))) {
+                                            idSetter.accept(DaoUtil.generateId(proxy), entity);
+                                        }
                                     }
+                                } catch (final Throwable e) { //NOSONAR
+                                    restoreGeneratedIds(generatedIdRestorer, e);
+                                    throw e;
                                 }
                             }
 
                             List<Object> ids = null;
+                            Throwable failureAfterCommit = null;
 
-                            if (entities.size() <= batchSize) {
-                                ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
-                                        .addBatchParameters(entities)
-                                        .batchInsert(keyExtractor, isDefaultIdTester);
+                            if (entities.size() == 1) {
+                                final ExecutionMark executionMark = generatedIdRestorer == null ? null : new ExecutionMark();
+
+                                try {
+                                    ids = JdbcUtil.prepareNamedQuery(proxy.dataSource(), namedInsertSql, generatedKeyColumnNames)
+                                            .addBatchParameters(entities)
+                                            .batchInsert(keyExtractor, isDefaultIdTester, executionMark);
+                                } catch (final Throwable e) { //NOSONAR
+                                    restoreGeneratedIdsUnlessExecuted(generatedIdRestorer, executionMark, e);
+                                    throw e;
+                                }
                             } else {
-                                final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
+                                final SqlTransaction tran = beginInsertTransaction(proxy.dataSource(), generatedIdRestorer);
                                 Throwable failure = null;
 
                                 try {
@@ -5542,7 +6501,15 @@ final class DaoImpl {
                                     tran.commit();
                                 } catch (final Throwable e) { //NOSONAR
                                     failure = e;
-                                    throw e;
+
+                                    // commit() can still throw from the connection cleanup after the commit went through: the rows exist
+                                    // then, so their IDs are kept (and the returned ones assigned below) before rethrowing.
+                                    if (tran.status() != Transaction.Status.COMMITTED) {
+                                        restoreGeneratedIds(generatedIdRestorer, e);
+                                        throw e;
+                                    }
+
+                                    failureAfterCommit = e;
                                 } finally {
                                     JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                 }
@@ -5565,9 +6532,14 @@ final class DaoImpl {
                                 }
                             }
 
-                            // A composite id may come back partial (see insert); once the ids were assigned, return the entities' full ids.
-                            if (N.isEmpty(ids) || (isCompositeIdAsEntityId && ids.size() == N.size(entities))) {
+                            // Return the entities' ids unless the keys are exactly the single-property ids just assigned: a composite
+                            // id may come back partial (see insert), and keys that don't pair up with the entities were not assigned.
+                            if (!isOneId || N.size(ids) != N.size(entities)) {
                                 ids = Stream.of(entities).map(idGetter).toList();
+                            }
+
+                            if (failureAfterCommit != null) {
+                                throw failureAfterCommit;
                             }
 
                             return ids;
@@ -5886,6 +6858,7 @@ final class DaoImpl {
                             final Collection<String> propNamesToUpdate = (Collection<String>) args[1];
                             N.checkArgNotNull(entity, cs.entity);
                             N.checkArgNotEmpty(propNamesToUpdate, cs.propNamesToUpdate);
+                            checkPropNamesToUpdate(propNamesToUpdate, entityInfo);
 
                             final String query = namedUpdateFunc.apply(tableName, entityClass).set(propNamesToUpdate).where(idCond).build().query();
 
@@ -5898,12 +6871,13 @@ final class DaoImpl {
                             N.checkArgNotEmpty(updateProps, cs.updateProps);
                             N.checkArgNotNull(id, cs.id);
 
-                            // TODO not set by PropInfo.dbType of ids? it should be okay because Id should be simple type(int, long, String, UUID, Timestamp).
-                            // If want to use idParamSetter, it has to be named sql. How to prepare/set named parameters? it's a problem to resolve.
                             final Condition cond = id2CondFunc.apply(id);
 
-                            final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass).set(updateProps).append(cond).build();
-                            return proxy.prepareQuery(sp.query()).settParameters(sp.parameters(), collParamsSetter).update();
+                            final SP sp = parameterizedUpdateFunc.apply(tableName, entityClass)
+                                    .set(typedUpdatePropsFunc.apply(updateProps))
+                                    .append(cond)
+                                    .build();
+                            return proxy.prepareQuery(sp.query()).settParameters(sp.parameters(), typedCollParamsSetter).update();
                         };
                     } else if (methodName.equals("batchUpdate") && paramLen == 2 && int.class.equals(paramTypes[1])) {
                         call = (proxy, args) -> {
@@ -5917,9 +6891,12 @@ final class DaoImpl {
 
                             long result = 0;
 
-                            if (entities.size() <= batchSize) {
+                            if (entities.size() == 1) {
                                 result = sumUpdateCounts(proxy.prepareNamedQuery(namedUpdateByIdSQL).addBatchParameters(entities).batchUpdate());
                             } else {
+                                // Transactional whenever there is more than one element, also when all fit in one JDBC batch: every chunk of this
+                                // multi-row call commits or rolls back together (CHANGES.md 4.9.3), and inside a Spring-managed transaction the
+                                // scope participates in it (its outcome is Spring's) instead of committing Spring's connection.
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 Throwable failure = null;
 
@@ -5948,6 +6925,7 @@ final class DaoImpl {
                             final int batchSize = (Integer) args[2];
 
                             N.checkArgNotEmpty(propNamesToUpdate, cs.propNamesToUpdate);
+                            checkPropNamesToUpdate(propNamesToUpdate, entityInfo);
                             N.checkArgPositive(batchSize, cs.batchSize);
 
                             if (N.isEmpty(entities)) {
@@ -5957,9 +6935,12 @@ final class DaoImpl {
                             final String query = namedUpdateFunc.apply(tableName, entityClass).set(propNamesToUpdate).where(idCond).build().query();
                             long result = 0;
 
-                            if (entities.size() <= batchSize) {
+                            if (entities.size() == 1) {
                                 result = sumUpdateCounts(proxy.prepareNamedQuery(query).addBatchParameters(entities).batchUpdate());
                             } else {
+                                // Transactional whenever there is more than one element, also when all fit in one JDBC batch: every chunk of this
+                                // multi-row call commits or rolls back together (CHANGES.md 4.9.3), and inside a Spring-managed transaction the
+                                // scope participates in it (its outcome is Spring's) instead of committing Spring's connection.
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 Throwable failure = null;
 
@@ -6010,10 +6991,13 @@ final class DaoImpl {
                                 return 0;
                             }
 
-                            if (idsOrEntities.size() <= batchSize) {
+                            if (idsOrEntities.size() == 1) {
                                 return Numbers.toIntExact(sumUpdateCounts(
                                         proxy.prepareNamedQuery(namedDeleteByIdSQL).addBatchParameters(idsOrEntities, paramSetter).batchUpdate()));
                             } else {
+                                // Transactional whenever there is more than one element, also when all fit in one JDBC batch: every chunk of this
+                                // multi-row call commits or rolls back together (CHANGES.md 4.9.3), and inside a Spring-managed transaction the
+                                // scope participates in it (its outcome is Spring's) instead of committing Spring's connection.
                                 final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                 long result = 0;
                                 Throwable failure = null;
@@ -6220,6 +7204,9 @@ final class DaoImpl {
                             final DaoBase<?, ?> joinEntityDao = getApplicableDaoForJoinEntity(propJoinInfo.referencedEntityClass, primaryDataSource, proxy,
                                     true);
 
+                            // tp._2 would delete a many-to-many join's intermediate-table rows. JoinInfo currently always leaves it
+                            // null (those rows are left to the database, e.g. ON DELETE CASCADE, as documented), so only tp._1 runs;
+                            // the transactional two-statement branches here and below apply only if client-side cascade is re-enabled.
                             if (Strings.isEmpty(tp._2)) {
                                 return joinEntityDao.prepareQuery(tp._1).setParameters(entity, tp._3).update();
                             } else {
@@ -6323,6 +7310,15 @@ final class DaoImpl {
                             || java.util.OptionalLong.class.isAssignableFrom(returnType) || java.util.OptionalDouble.class.isAssignableFrom(returnType)) {
                         throw new UnsupportedOperationException("the return type of the method: " + fullClassMethodName + " can't be: " + returnType
                                 + ". Please use the OptionalXXX classes defined in com.landawn.abacus.util.u");
+                    }
+
+                    // No dispatch produces these: they fell through to the single-value dispatch, which read the first column
+                    // as the stream/iterator and failed every call. Only the abacus Stream is supported for lazy results.
+                    if (java.util.stream.BaseStream.class.isAssignableFrom(returnType) || Iterator.class.isAssignableFrom(returnType)
+                            || (BaseStream.class.isAssignableFrom(returnType) && !Stream.class.isAssignableFrom(returnType))
+                            || Seq.class.isAssignableFrom(returnType)) {
+                        throw new UnsupportedOperationException("the return type of the method: " + fullClassMethodName + " can't be: " + returnType
+                                + ". Please use com.landawn.abacus.util.stream.Stream or a Collection type");
                     }
 
                     if (!(isNonDBOperation || isUncheckedDao || throwsSQLException || throwsUncheckedSQLException || isStreamReturn)) {
@@ -6625,31 +7621,46 @@ final class DaoImpl {
 
                     final int stmtParamLen = stmtParamIndexes.length;
 
-                    // A custom INSERT requests the DAO entity's generated-key columns only when the keys can be consumed:
-                    // the method returns them, or its sole statement argument (each batch row for a batch) may be the DAO
-                    // entity whose id is written back. Requesting them unconditionally made a void INSERT into another
-                    // table fail on drivers that validate the requested column names (e.g. H2: 'Column "id" not found').
-                    final boolean returnGeneratedKeys;
+                    // Whether the sole statement argument of a custom INSERT (each batch row for a batch) may be the DAO entity,
+                    // decided from its declared type; an unresolvable element type (raw collection, wildcard, type variable) may
+                    // still hold DAO entities. Only such a method writes a generated key back onto the entity and returns the
+                    // entity's id (see isEntity in the insert branches below).
+                    final boolean mayInsertEntity;
+                    // Whether every row of a custom batch INSERT is the DAO entity (or null) by declaration: the declared element
+                    // type is the entity class or a subclass of it. Such a batch is an entity batch even when all its rows are null.
+                    final boolean insertsEntitiesByDeclaration;
 
-                    if (isNoId || !queryInfo.isInsert) {
-                        returnGeneratedKeys = false;
-                    } else if (!void.class.equals(returnType)) {
-                        returnGeneratedKeys = true;
-                    } else if (stmtParamLen == 1 || (isBatch && stmtParamLen == 2)) {
+                    if (!queryInfo.isInsert || entityClass == null || !(stmtParamLen == 1 || (isBatch && stmtParamLen == 2))) {
+                        mayInsertEntity = false;
+                        insertsEntitiesByDeclaration = false;
+                    } else {
                         final java.lang.reflect.Type insertedParamGenericType = method.getGenericParameterTypes()[stmtParamIndexes[0]];
                         final java.lang.reflect.Type insertedParamType = !isBatch ? paramTypes[stmtParamIndexes[0]]
                                 : (insertedParamGenericType instanceof final ParameterizedType pt && N.len(pt.getActualTypeArguments()) == 1
                                         ? pt.getActualTypeArguments()[0]
                                         : null);
-                        final Class<?> insertedParamClass = insertedParamType instanceof final Class<?> cls ? cls
-                                : (insertedParamType instanceof final ParameterizedType pt && pt.getRawType() instanceof final Class<?> rawCls ? rawCls : null);
+                        // WHY: resolved as a class or a parameterized type only, a wildcard-bounded element type
+                        // (Collection<? extends Entity>) counted as unresolvable, so such a batch holding only null rows was never
+                        // recognised as an entity batch and its null rows were inserted instead of being rejected.
+                        final Class<?> insertedParamClass = classOf(insertedParamType);
 
-                        // An unresolvable element type (raw collection, wildcard, type variable) may still hold DAO entities.
-                        returnGeneratedKeys = insertedParamClass == null || insertedParamClass.isAssignableFrom(entityClass)
-                                || entityClass.isAssignableFrom(insertedParamClass);
-                    } else {
-                        returnGeneratedKeys = false;
+                        // WHY: an interface the entity class does not implement (e.g. a Serializable element bound) was taken as
+                        // excluding the entity, but a subclass of a non-final entity class may implement any interface and is a
+                        // valid argument: such an entity committed its row and never received its generated key. A Map or
+                        // Collection (row list) type is bound as such and never written back to, so it stays a non-entity
+                        // argument: counting it made a void INSERT into another table request the entity's id column.
+                        mayInsertEntity = insertedParamClass == null || insertedParamClass.isAssignableFrom(entityClass)
+                                || entityClass.isAssignableFrom(insertedParamClass)
+                                || (insertedParamClass.isInterface() && !Modifier.isFinal(entityClass.getModifiers())
+                                        && !Map.class.isAssignableFrom(insertedParamClass) && !Collection.class.isAssignableFrom(insertedParamClass));
+                        insertsEntitiesByDeclaration = isBatch && insertedParamClass != null && entityClass.isAssignableFrom(insertedParamClass);
                     }
+
+                    // A custom INSERT requests the DAO entity's generated-key columns only when the keys can be consumed:
+                    // the method returns them, or its sole statement argument (each batch row for a batch) may be the DAO
+                    // entity whose id is written back. Requesting them unconditionally made a void INSERT into another
+                    // table fail on drivers that validate the requested column names (e.g. H2: 'Column "id" not found').
+                    final boolean returnGeneratedKeys = !isNoId && queryInfo.isInsert && (!void.class.equals(returnType) || mayInsertEntity);
 
                     // Only a Map is exempt for positional procedure SQL: its keys are bound through the driver's named callable
                     // setters. A bean/record/EntityId still cannot supply positional procedure parameters, even with @Bind.
@@ -6731,6 +7742,13 @@ final class DaoImpl {
                                 + "), @BindList parameters are not supported: the Collection parameter supplies the batch rows and cannot also be expanded into IN-clause placeholders");
                     }
 
+                    // Only the INSERT and update paths execute the batch rows; a query binds no statement parameters for a batch
+                    // method, so it either failed on every call with an unset parameter or silently ignored the batch Collection.
+                    if (isBatch && isQuery) {
+                        throw new UnsupportedOperationException("Batch execution is only supported for INSERT/UPDATE/DELETE statements and procedures"
+                                + " executed as updates, not for the query of method: " + fullClassMethodName);
+                    }
+
                     final MappedByKey mappedByKeyAnno = method.getAnnotation(MappedByKey.class);
                     final String mappedByKey = mappedByKeyAnno == null ? null
                             : Strings.isNotEmpty(mappedByKeyAnno.value()) ? mappedByKeyAnno.value() : oneIdPropName;
@@ -6758,10 +7776,10 @@ final class DaoImpl {
                         if (!(Map.class.isAssignableFrom(returnType)
                                 && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(ClassUtil.wrap(mappedByKeyMethod.getReturnType())))
                                 && (secondReturnEleType != null) && secondReturnEleType.isAssignableFrom(entityClass))) {
-                            throw new IllegalArgumentException(
-                                    "The return type of method(" + fullClassMethodName + ") annotated by @MappedByKey must be: Map<? super "
-                                            + ClassUtil.getSimpleClassName(ClassUtil.wrap(mappedByKeyMethod.getReturnType())) + ", ? super "
-                                            + ClassUtil.getSimpleClassName(entityClass) + ">. It can't be: " + method.getGenericReturnType());
+                            throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
+                                    + ") annotated by @MappedByKey must be: Map<K, V> with concrete (non-wildcard) type arguments, K being "
+                                    + ClassUtil.getSimpleClassName(ClassUtil.wrap(mappedByKeyMethod.getReturnType())) + " or a supertype and V being "
+                                    + ClassUtil.getSimpleClassName(entityClass) + " or a supertype. It can't be: " + method.getGenericReturnType());
                         }
 
                         final Class<? extends Map> mapClass = mappedByKeyAnno.mapClass();
@@ -6831,14 +7849,14 @@ final class DaoImpl {
 
                             // java.util.Optional return types are already rejected unconditionally above,
                             // so only u.Optional can reach here.
-                            if (!(((Collection.class.isAssignableFrom(returnType)
+                            if (!(((Collection.class.isAssignableFrom(queryReturnType)
                                     && (queryOperation == QueryOperation.list || queryOperation == QueryOperation.DEFAULT))
                                     || (u.Optional.class.isAssignableFrom(returnType) && (queryOperation == QueryOperation.findFirst
                                             || queryOperation == QueryOperation.findOnlyOne || queryOperation == QueryOperation.DEFAULT)))
                                     && (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
                                 throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
-                                        + ") annotated by @MergedById must be: Optional/List/Collection<? super " + ClassUtil.getSimpleClassName(entityClass)
-                                        + ">. It can't be: " + method.getGenericReturnType());
+                                        + ") annotated by @MergedById must be: Optional/List/Collection with a concrete (non-wildcard) element type that is "
+                                        + ClassUtil.getSimpleClassName(entityClass) + " or a supertype. It can't be: " + method.getGenericReturnType());
                             }
                         }
                     }
@@ -6863,9 +7881,9 @@ final class DaoImpl {
                                 || entityClass.isAssignableFrom(returnType)
                                 || (firstReturnEleType != null && firstReturnEleType.isAssignableFrom(entityClass)))) {
                             throw new IllegalArgumentException("The return type of method(" + fullClassMethodName
-                                    + ") annotated by @PrefixFieldMapping must be: Optional/List/Collection<? super "
-                                    + ClassUtil.getSimpleClassName(entityClass) + ">/Dataset/" + ClassUtil.getSimpleClassName(entityClass) + ". It can't be: "
-                                    + method.getGenericReturnType());
+                                    + ") annotated by @PrefixFieldMapping must be: Optional/List/Collection/Stream with a concrete (non-wildcard) element type that is "
+                                    + ClassUtil.getSimpleClassName(entityClass) + " or a supertype, Dataset, or " + ClassUtil.getSimpleClassName(entityClass)
+                                    + ". It can't be: " + method.getGenericReturnType());
                         }
 
                         // A Dataset is only built through the entity class (where the prefix mapping applies) when
@@ -6881,8 +7899,8 @@ final class DaoImpl {
 
                     // Constant per method: computed once here so prepareQuery does not re-derive them reflectively on every invocation.
                     final boolean isExistsQueryMethod = isExistsQuery(method, queryOperation, fullClassMethodName);
-                    final boolean isSingleReturnTypeMethod = isSingleReturnType(returnType);
-                    final boolean isListQueryMethod = isListQuery(method, returnType, queryOperation, fullClassMethodName);
+                    final boolean isSingleReturnTypeMethod = isSingleReturnType(queryReturnType);
+                    final boolean isListQueryMethod = isListQuery(method, queryReturnType, queryOperation, fullClassMethodName);
 
                     if (isQuery) {
                         final Throwables.BiFunction<AbstractQuery, Object[], Object, SQLException> queryFunc = createQueryFunctionByMethod(entityClass, method,
@@ -6890,7 +7908,7 @@ final class DaoImpl {
                                 isProcedure, fullClassMethodName);
 
                         call = (proxy, args) -> {
-                            final AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, returnType, args, fragmentParamIndexes,
+                            final AbstractQuery preparedQuery = prepareQuery(proxy, queryInfo, mergedByIdAnno, queryReturnType, args, fragmentParamIndexes,
                                     fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames, outParameterList, parametersSetter,
                                     isExistsQueryMethod, isSingleReturnTypeMethod, isListQueryMethod);
 
@@ -6911,21 +7929,34 @@ final class DaoImpl {
                                     + ") for no id entities only can be: void. It can't be: " + returnType);
                         }
 
-                        final TriFunction<Optional<Object>, Object, Boolean, ?> insertResultConverter = void.class.equals(returnType)
-                                ? (ret, entity, isEntity) -> null
-                                : (u.Optional.class.equals(returnType) ? (ret, entity, isEntity) -> ret
-                                        : (ret, entity, isEntity) -> ret.orElse(isEntity ? idGetter.apply(entity) : N.defaultValueOf(returnType))); //NOSONAR
+                        // A non-CRUD DAO declares no ID type, but the ids it returns still have one: the id property's type, or
+                        // EntityId for a composite id (see isCompositeIdAsEntityId). Without checking against it, a narrower return
+                        // type (e.g. int for a long id) was accepted and the method failed with ClassCastException only after the
+                        // row had been inserted. A composite EntityId is returned as a Seid, so Seid (or any supertype) is accepted too.
+                        // The check applies only to a method that may insert the DAO entity (mayInsertEntity): an INSERT into another
+                        // table (e.g. an audit row from a String) returns that table's key, not the entity's id, and keeps any return type.
+                        final Class<?> returnedIdClass = isCompositeIdAsEntityId ? Seid.class
+                                : (idClass != null || isNoId ? idClass : (isOneId ? idPropInfo.clazz : EntityId.class));
 
                         if (!isBatch) {
                             final boolean isOptionalIdReturn = u.Optional.class.equals(returnType);
                             final Class<?> declaredIdReturnType = isOptionalIdReturn ? getFirstReturnEleType(method) : returnType;
 
-                            if (!(returnType.equals(void.class) || (declaredIdReturnType != null
-                                    && (idClass == null || ClassUtil.wrap(declaredIdReturnType).isAssignableFrom(ClassUtil.wrap(idClass)))))) {
+                            if (mayInsertEntity && !(returnType.equals(void.class) || (declaredIdReturnType != null
+                                    && (returnedIdClass == null || ClassUtil.wrap(declaredIdReturnType).isAssignableFrom(ClassUtil.wrap(returnedIdClass)))))) {
                                 throw new UnsupportedOperationException("The return type of insert operations(" + fullClassMethodName
                                         + ") only can be: void, the 'ID' type (or a supertype), or Optional<ID>. It can't be: "
                                         + method.getGenericReturnType());
                             }
+
+                            // The generated key is read with the DAO entity's id type (see getIdExtractor); the key of an INSERT into
+                            // another table is returned as the declared type instead (see convertGeneratedKey).
+                            final TriFunction<Optional<Object>, Object, Boolean, ?> insertResultConverter = void.class.equals(returnType)
+                                    ? (ret, entity, isEntity) -> null
+                                    : (isOptionalIdReturn
+                                            ? (ret, entity, isEntity) -> isEntity ? ret : ret.map(key -> convertGeneratedKey(key, declaredIdReturnType))
+                                            : (ret, entity, isEntity) -> isEntity ? ret.orElse(idGetter.apply(entity)) //NOSONAR
+                                                    : ret.map(key -> convertGeneratedKey(key, declaredIdReturnType)).orElse(N.defaultValueOf(returnType)));
 
                             call = (proxy, args) -> {
                                 // Only the DAO entity carries the id property a generated key is written to (and read from);
@@ -6945,6 +7976,12 @@ final class DaoImpl {
 
                                 final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
 
+                                if (isEntity && !isNoId) {
+                                    // Puts back the ID written onto the entity below if a transaction this insert runs in is rolled back later.
+                                    JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
+                                            () -> RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo));
+                                }
+
                                 final Optional<Object> id = prepareQuery(proxy, queryInfo, mergedByIdAnno, returnType, args, fragmentParamIndexes,
                                         fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames, outParameterList, parametersSetter,
                                         isExistsQueryMethod, isSingleReturnTypeMethod, isListQueryMethod).insert(keyExtractor, isDefaultIdTester);
@@ -6952,7 +7989,7 @@ final class DaoImpl {
                                 if (isEntity && id.isPresent()) {
                                     idSetter.accept(id.get(), entity);
 
-                                    if (isCompositeIdAsEntityId) {
+                                    if (!isOneId) {
                                         // A composite id may come back partial (see the built-in insert); return the entity's full id.
                                         return insertResultConverter.apply(Optional.of(idGetter.apply(entity)), entity, isEntity);
                                     }
@@ -6964,8 +8001,9 @@ final class DaoImpl {
                             final boolean canReturnArrayList = List.class.isAssignableFrom(returnType) && returnType.isAssignableFrom(ArrayList.class);
                             final Class<?> declaredBatchIdType = canReturnArrayList ? getFirstReturnEleType(method) : null;
 
-                            if (!(returnType.equals(void.class) || (canReturnArrayList && declaredBatchIdType != null
-                                    && (idClass == null || ClassUtil.wrap(declaredBatchIdType).isAssignableFrom(ClassUtil.wrap(idClass)))))) {
+                            // A batch INSERT that cannot insert the DAO entity still needs a List return type: its keys come back as a List.
+                            if (!(returnType.equals(void.class) || (canReturnArrayList && (!mayInsertEntity || (declaredBatchIdType != null
+                                    && (returnedIdClass == null || ClassUtil.wrap(declaredBatchIdType).isAssignableFrom(ClassUtil.wrap(returnedIdClass)))))))) {
                                 throw new UnsupportedOperationException("The return type of batch insert operations(" + fullClassMethodName
                                         + ") only can be: void/List<ID>. It can't be: " + method.getGenericReturnType());
                             }
@@ -6987,11 +8025,39 @@ final class DaoImpl {
                                 final Jdbc.BiRowMapper<Object> keyExtractor = returnGeneratedKeys ? getIdExtractor(idExtractorHolder, idExtractor, proxy)
                                         : null;
 
+                                // Only DAO entities carry the id property generated keys are written to (see the non-batch branch). Whether
+                                // the batch holds DAO entities is decided by the declared element type or, failing that, by its first
+                                // non-null row: decided by the first row, a leading null row disguised an entity batch as a non-entity
+                                // one, so the null row was inserted as an all-null row (one-parameter SQL) and the real entities never
+                                // received their generated keys, while the same batch with the null row last was rejected below.
+                                // A null or empty batch executes no statement (see @Query#batch()): it is classified as nothing, so
+                                // neither the row validation nor the classification iterates it (iterating a null batch threw a
+                                // NullPointerException instead of the documented no-op).
+                                final boolean isEntityBatch = N.notEmpty(batchParameters) && (insertsEntitiesByDeclaration
+                                        || (entityClass != null && entityClass.isInstance(firstNonNullElement(batchParameters))));
+                                final boolean writesIdsBack = returnGeneratedKeys && !isNoId && isEntityBatch;
+
+                                if (writesIdsBack) {
+                                    // A null row of an entity batch cannot take its generated key: every row is validated before anything runs.
+                                    // It used to be inserted as an all-null row (see NamedQuery.addBatchParameters) and the key assignment then
+                                    // failed, after the batch had been committed, with the IllegalArgumentException thrown here (inside a
+                                    // transaction the ID snapshot below failed first, with a NullPointerException). Null rows of a non-entity
+                                    // batch stay as they are.
+                                    for (final Object entity : batchParameters) {
+                                        N.checkArgNotNull(entity, cs.entity);
+                                    }
+
+                                    // Puts back the IDs written onto the entities below if a transaction this call runs in is rolled back later.
+                                    JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
+                                            () -> RollbackActionLog.captureIdValues(batchParameters, idPropNameList, entityInfo));
+                                }
+
                                 List<Object> ids = null;
+                                Throwable failureAfterCommit = null;
 
                                 if (N.isEmpty(batchParameters)) {
                                     ids = new ArrayList<>(0);
-                                } else if (batchParameters.size() <= batchSize) {
+                                } else if (batchParameters.size() == 1) {
                                     AbstractQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
@@ -7007,6 +8073,9 @@ final class DaoImpl {
 
                                     ids = executeCustomBatchInsert(preparedQuery, returnGeneratedKeys, keyExtractor, isDefaultIdTester);
                                 } else {
+                                    // Transactional whenever there is more than one element, also when all fit in one JDBC batch: every chunk of this
+                                    // multi-row call commits or rolls back together (CHANGES.md 4.9.3), and inside a Spring-managed transaction the
+                                    // scope participates in it (its outcome is Spring's) instead of committing Spring's connection.
                                     final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                     Throwable failure = null;
 
@@ -7034,18 +8103,30 @@ final class DaoImpl {
                                         tran.commit();
                                     } catch (final Throwable e) { //NOSONAR
                                         failure = e;
-                                        throw e;
+
+                                        // commit() can still throw from the connection cleanup after the commit went through: the rows
+                                        // exist then, so the keys they returned are still written back below (as the built-in batchInsert
+                                        // does) before rethrowing; the entities used to keep null IDs for committed rows.
+                                        if (tran.status() != Transaction.Status.COMMITTED) {
+                                            throw e;
+                                        }
+
+                                        failureAfterCommit = e;
                                     } finally {
                                         JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                     }
                                 }
 
-                                final Object firstElement = N.firstOrNullIfEmpty(batchParameters);
-                                // Only DAO entities carry the id property generated keys are written to (see the non-batch branch).
-                                final boolean isEntity = entityClass != null && entityClass.isInstance(firstElement);
+                                // Only DAO entities carry the id property generated keys are written to (see isEntityBatch above).
+                                final boolean isEntity = isEntityBatch;
 
                                 if (JdbcUtil.isAllNullIds(ids, isDefaultIdTester)) {
                                     ids = new ArrayList<>();
+                                }
+
+                                if ((N.notEmpty(ids) && N.size(ids) != N.size(batchParameters)) && daoLogger.isWarnEnabled()) {
+                                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
+                                            batchParameters.size());
                                 }
 
                                 if (isEntity) {
@@ -7060,16 +8141,19 @@ final class DaoImpl {
                                         }
                                     }
 
-                                    // A composite id may come back partial (see the built-in insert); once the ids were assigned,
-                                    // return the entities' full ids.
-                                    if (N.isEmpty(ids) || (isCompositeIdAsEntityId && ids.size() == N.size(entities))) {
+                                    // Return the entities' ids unless the keys are exactly the single-property ids just assigned: a composite
+                                    // id may come back partial (see the built-in insert), and keys that don't pair up with the entities were
+                                    // not assigned.
+                                    if (!isOneId || N.size(ids) != N.size(entities)) {
                                         ids = Stream.of(entities).map(idGetter).toList();
                                     }
+                                } else if (declaredBatchIdType != null && N.notEmpty(ids)) {
+                                    // The keys of an INSERT into another table were read with the DAO entity's id type (see the non-batch branch).
+                                    ids = Stream.of(ids).map(key -> convertGeneratedKey(key, declaredBatchIdType)).toList();
                                 }
 
-                                if ((N.notEmpty(ids) && N.size(ids) != N.size(batchParameters)) && daoLogger.isWarnEnabled()) {
-                                    daoLogger.warn("The size of returned id list: {} is different from the size of input entity list: {}", ids.size(),
-                                            batchParameters.size());
+                                if (failureAfterCommit != null) {
+                                    throw failureAfterCommit;
                                 }
 
                                 if (void.class.equals(returnType)) {
@@ -7122,7 +8206,7 @@ final class DaoImpl {
 
                                 if (N.isEmpty(batchParameters)) {
                                     updatedRecordCount = 0;
-                                } else if (batchParameters.size() <= batchSize) {
+                                } else if (batchParameters.size() == 1) {
                                     AbstractQuery preparedQuery = null;
 
                                     if (isSingleParameter) {
@@ -7142,6 +8226,9 @@ final class DaoImpl {
                                         updatedRecordCount = sumUpdateCounts(preparedQuery.batchUpdate());
                                     }
                                 } else {
+                                    // Transactional whenever there is more than one element, also when all fit in one JDBC batch: every chunk of this
+                                    // multi-row call commits or rolls back together (CHANGES.md 4.9.3), and inside a Spring-managed transaction the
+                                    // scope participates in it (its outcome is Spring's) instead of committing Spring's connection.
                                     final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource());
                                     Throwable failure = null;
 
@@ -7211,14 +8298,16 @@ final class DaoImpl {
 
                 if (transactionalAnno != null && transactionalAnno.propagation() != Propagation.SUPPORTS
                         && transactionalAnno.propagation() != Propagation.MANDATORY
-                        && (BaseStream.class.isAssignableFrom(returnType) || java.util.stream.BaseStream.class.isAssignableFrom(returnType))) {
+                        && (BaseStream.class.isAssignableFrom(returnType) || java.util.stream.BaseStream.class.isAssignableFrom(returnType)
+                                || Seq.class.isAssignableFrom(returnType) || Iterator.class.isAssignableFrom(returnType))) {
                     // REQUIRED/REQUIRES_NEW can complete an invocation-owned transaction before consumption.
                     // NOT_SUPPORTED/NEVER enforce a non-transactional context only for the invocation, but lazy query
                     // setup can occur later after an outer transaction is restored or a new one starts. SUPPORTS and
-                    // MANDATORY are safe when the caller consumes the stream before changing/completing its context.
-                    throw new UnsupportedOperationException(
-                            "@Transactional with propagation " + transactionalAnno.propagation() + " is not supported on stream-returning method: "
-                                    + fullClassMethodName + ". Consume the stream inside a non-streaming transactional method instead");
+                    // MANDATORY are safe when the caller consumes the stream before changing/completing its context. A Seq or an
+                    // Iterator returned by a default method is just as lazy.
+                    throw new UnsupportedOperationException("@Transactional with propagation " + transactionalAnno.propagation()
+                            + " is not supported on stream-returning (or Seq/Iterator-returning) method: " + fullClassMethodName
+                            + ". Consume the stream inside a non-streaming transactional method instead");
                 }
 
                 //    if (transactionalAnno != null && Modifier.isAbstract(m.getModifiers())) {
@@ -7324,7 +8413,9 @@ final class DaoImpl {
                             Throwable failure = null;
 
                             try {
-                                tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolationLevel());
+                                // Participates in a Spring-managed transaction that owns the data source (see JdbcUtil.beginTransaction).
+                                tran = JdbcUtil.beginTransaction(dataSource, transactionalAnno.isolationLevel());
+
                                 result = tmp.apply(proxy, args);
 
                                 tran.commit();
@@ -7352,12 +8443,15 @@ final class DaoImpl {
                         };
                     } else {
                         call = (proxy, args) -> {
-                            if (transactionalAnno.propagation() == Propagation.MANDATORY && !JdbcUtil.isInTransaction(proxy.dataSource())) {
+                            final javax.sql.DataSource dataSource = proxy.dataSource();
+
+                            if (transactionalAnno.propagation() == Propagation.MANDATORY && !JdbcUtil.isInTransaction(dataSource)) {
                                 throw new IllegalStateException("The method: " + fullClassMethodName + " with @Transactional(propagation = "
                                         + transactionalAnno.propagation() + ") must be called in a transaction.");
                             }
 
-                            final SqlTransaction tran = JdbcUtil.beginTransaction(proxy.dataSource(), transactionalAnno.isolationLevel());
+                            // Participates in a Spring-managed transaction that owns the data source (see JdbcUtil.beginTransaction).
+                            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, transactionalAnno.isolationLevel());
                             Object result = null;
                             Throwable failure = null;
 
@@ -7502,21 +8596,21 @@ final class DaoImpl {
                         ImmutableList.wrap(N.toList(method.getParameterTypes())), method.getReturnType());
 
                 final CacheResult methodCacheResultAnno = Stream.of(method.getAnnotations()).select(CacheResult.class).last().orElseNull();
+                // A type-level annotation applies through the first one whose filter matches the method (the rule of
+                // @PerfLog/@SqlLogEnabled), even when that one is disabled: a sub-interface's disabled annotation opts its
+                // matching methods out of a super-interface's.
+                final CacheResult daoClassCacheResultAnno = Strings.containsAnyIgnoreCase(method.getName(), "page", "paginate") ? null
+                        : Stream.of(daoClassCacheResultAnnos).filter(it -> N.anyMatch(it.filter(), filterByMethodName)).first().orElseNull();
                 final CacheResult cacheResultAnno = methodCacheResultAnno != null ? (methodCacheResultAnno.enabled() ? methodCacheResultAnno : null)
-                        : ((daoClassCacheResultAnno != null //
-                                && daoClassCacheResultAnno.enabled() //
-                                && !Strings.containsAnyIgnoreCase(method.getName(), "page", "paginate") //
-                                && N.anyMatch(daoClassCacheResultAnno.filter(), filterByMethodName)) //
-                                        ? daoClassCacheResultAnno
-                                        : null);
+                        : (daoClassCacheResultAnno != null && daoClassCacheResultAnno.enabled() ? daoClassCacheResultAnno : null);
 
                 final RefreshCache methodRefreshCacheAnno = Stream.of(method.getAnnotations()).select(RefreshCache.class).last().orElseNull();
+                final RefreshCache daoClassRefreshCacheAnno = Stream.of(daoClassRefreshCacheAnnos)
+                        .filter(it -> N.anyMatch(it.filter(), filterByMethodName))
+                        .first()
+                        .orElseNull();
                 final RefreshCache refreshResultAnno = methodRefreshCacheAnno != null ? (methodRefreshCacheAnno.enabled() ? methodRefreshCacheAnno : null)
-                        : ((daoClassRefreshCacheAnno != null //
-                                && daoClassRefreshCacheAnno.enabled() //
-                                && N.anyMatch(daoClassRefreshCacheAnno.filter(), filterByMethodName)) //
-                                        ? daoClassRefreshCacheAnno
-                                        : null);
+                        : (daoClassRefreshCacheAnno != null && daoClassRefreshCacheAnno.enabled() ? daoClassRefreshCacheAnno : null);
 
                 final long cacheLiveTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxLiveTimeMillis();
                 final long cacheMaxIdleTime = cacheResultAnno == null ? 0 : cacheResultAnno.maxIdleTimeMillis();
@@ -7642,6 +8736,17 @@ final class DaoImpl {
                                 return jdkOpt.isPresent() ? java.util.Optional.of(copyHeldValue(jdkOpt.get(), declaredHeldValueType)) : r;
                             }
 
+                            // A root java.util.Date is written in its whole-second string form: a JSON round trip dropped its
+                            // milliseconds (see isSecondPrecisionJsonDate).
+                            if (isSecondPrecisionJsonDate(r)) {
+                                return ((java.util.Date) r).clone();
+                            }
+
+                            // A Timestamp lost its sub-millisecond nanos, and some java.time types can't be parsed at all.
+                            if (isExactlyCopiedJsonDateTime(r)) {
+                                return copyJsonDateTime(r);
+                            }
+
                             // A Dataset is written with its column types: without them its values were read back untyped
                             // (e.g. a BIGINT id came back as an Integer).
                             final String json = r instanceof Dataset
@@ -7715,8 +8820,9 @@ final class DaoImpl {
                         final boolean isLocalThreadCacheEnabled = isLocalThreadCacheableQueryMethod && localThreadCache != null;
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
-                        final String cacheKey = cacheResultEnabled || isAnnotatedRefreshResult || isLocalThreadCacheEnabled
-                                || isRefreshLocalThreadCacheRequired ? JdbcUtil.createCacheKey(tableName, fullClassMethodName, args, daoLogger) : null;
+                        final String cacheKey = cacheResultEnabled || isAnnotatedRefreshResult || isLocalThreadCacheEnabled || isRefreshLocalThreadCacheRequired
+                                ? JdbcUtil.createCacheKey(tableName, fullClassMethodName, daoId, args, daoLogger)
+                                : null;
 
                         Object result = null;
 
@@ -7743,10 +8849,11 @@ final class DaoImpl {
                             } finally {
                                 // Cache-key serialization is optional for query caching, but it must never
                                 // suppress write invalidation. If an argument cannot be serialized, retain the
-                                // stable method/table portion so built-in and custom caches can still identify
+                                // stable method/table/DAO portion so built-in and custom caches can still identify
                                 // the affected table (and custom caches still receive args/methodSignature).
                                 final String refreshCacheKey = Strings.isNotEmpty(cacheKey) ? cacheKey
-                                        : Strings.concat(fullClassMethodName, JdbcUtil.CACHE_KEY_SEPARATOR, tableName, JdbcUtil.CACHE_KEY_SEPARATOR);
+                                        : Strings.concat(fullClassMethodName, JdbcUtil.CACHE_KEY_SEPARATOR, tableName, JdbcUtil.CACHE_KEY_SEPARATOR, daoId,
+                                                JdbcUtil.CACHE_KEY_SEPARATOR);
 
                                 Throwable refreshFailure = null;
 
@@ -8059,7 +9166,7 @@ final class DaoImpl {
             }
         };
 
-        daoInstance = N.newProxyInstance(interfaceClasses, h);
+        final TD daoInstance = N.newProxyInstance(interfaceClasses, h);
 
         if (joinBeanInfo != null) {
             // Join plans are built per dialect on first use. Build this DAO's dialect now, as the last check after every
@@ -8076,30 +9183,56 @@ final class DaoImpl {
                     : ClassUtil.invokeConstructor(daoCacheConstructor, capacity, evictDelay));
         }
 
-        final DaoBase existingDaoInstance = daoPool.putIfAbsent(daoCacheKey, daoInstance);
+        if (joinBeanInfo != null) {
+            // The registered proxy keeps joinBeanInfo; let its per-call metadata lookups reuse that map while it is pooled.
+            // Retained before publication, so that its release on eviction (which follows publication) can never precede it.
+            JoinInfo.retainDaoJoinInfo(daoInterface, entityClass, tableName, joinBeanInfo);
+        }
 
-        if (existingDaoInstance != null) {
+        final PooledDao pooledDao = new PooledDao(daoCacheKey, daoInstance, daoInterface, entityClass, tableName, joinBeanInfo,
+                isDaoCacheCreatedHere ? daoCacheRef.get() : null, daoLogger);
+        final PooledDao existingPooledDao;
+        List<PooledDao> evictedDaos = null;
+
+        synchronized (daoPoolQueue) {
+            existingPooledDao = daoPool.putIfAbsent(daoCacheKey, pooledDao);
+
+            if (existingPooledDao == null) {
+                // Evict before queueing the new entry so the proxy this caller is about to return is not the one evicted.
+                evictedDaos = evictDaoPoolOverCapacity();
+                daoPoolQueue.addLast(pooledDao);
+            }
+        }
+
+        if (existingPooledDao != null) {
+            if (joinBeanInfo != null) {
+                JoinInfo.releaseDaoJoinInfo(daoInterface, entityClass, tableName, joinBeanInfo);
+            }
+
             if (isDaoCacheCreatedHere) {
                 // This proxy is discarded, so nothing can use the cache just created for it.
                 releaseDiscardedDaoCache(daoCacheRef.get(), daoLogger);
             }
+
+            markRecentlyUsed(existingPooledDao);
 
             if (daoLogger.isDebugEnabled()) {
                 daoLogger.debug("Discarding concurrently created Dao proxy(interface={}, targetTableName={}); using cached instance", daoClassName,
                         targetTableName);
             }
 
-            return (TD) existingDaoInstance;
+            return (TD) existingPooledDao.dao;
+        }
+
+        if (evictedDaos != null) {
+            for (final PooledDao evictedDao : evictedDaos) {
+                releaseEvictedDao(evictedDao);
+            }
         }
 
         synchronized (joinEntityDaoMisses) {
             daoRegistrationVersion++;
             joinEntityDaoMisses.clear();
-        }
-
-        if (joinBeanInfo != null) {
-            // The registered proxy keeps joinBeanInfo for its lifetime; let its per-call metadata lookups reuse that map.
-            JoinInfo.retainDaoJoinInfo(daoInterface, entityClass, tableName, joinBeanInfo);
         }
 
         daoLogger.info("Created Dao proxy(interface={}, targetTableName={}, methods={})", daoClassName, targetTableName, methodInvokerMap.size());
@@ -8131,7 +9264,8 @@ final class DaoImpl {
 
     /**
      * Releases a cache that {@code createDao} created for a proxy it then discarded because another thread published an
-     * equivalent proxy first. A cache that implements {@link AutoCloseable} is closed: for a {@link Jdbc.DefaultDaoCache}
+     * equivalent proxy first, or for a proxy evicted from {@link #daoPool} that has since become unreachable (see
+     * {@link #releaseEvictedDao(PooledDao)}). A cache that implements {@link AutoCloseable} is closed: for a {@link Jdbc.DefaultDaoCache}
      * this closes its backing pool, which cancels the eviction task and removes the JVM shutdown hook. Any other cache is
      * left as it is. A release failure is only logged: the proxy published by the other thread is still returned.
      *
@@ -8149,6 +9283,102 @@ final class DaoImpl {
     }
 
     /**
+     * Marks a {@link #daoPool} entry as used since the previous eviction scan, giving it a second chance.
+     *
+     * @param pooledDao the entry that was just looked up
+     */
+    private static void markRecentlyUsed(final PooledDao pooledDao) {
+        // Read first so a hot entry's cache line is not rewritten by every hit.
+        if (!pooledDao.recentlyUsed) {
+            pooledDao.recentlyUsed = true;
+        }
+    }
+
+    /**
+     * Evicts queued entries until {@link #daoPool} is within its capacity. Must be called while holding the
+     * {@link #daoPoolQueue} monitor. A recently used entry is requeued once instead of evicted; the number of second
+     * chances is limited to one pass over the queue so that concurrent hits cannot prolong the scan.
+     *
+     * @return the evicted entries, to be released by {@link #releaseEvictedDao(PooledDao)} outside the monitor, or
+     *         {@code null} if none was evicted
+     */
+    private static List<PooledDao> evictDaoPoolOverCapacity() {
+        List<PooledDao> evicted = null;
+        int secondChances = daoPoolQueue.size();
+
+        while (daoPool.size() > daoPoolCapacity && !daoPoolQueue.isEmpty()) {
+            final PooledDao eldest = daoPoolQueue.removeFirst();
+
+            if (eldest.recentlyUsed && secondChances-- > 0) {
+                eldest.recentlyUsed = false;
+                daoPoolQueue.addLast(eldest);
+            } else if (daoPool.remove(eldest.key, eldest)) {
+                if (evicted == null) {
+                    evicted = new ArrayList<>(1);
+                }
+
+                evicted.add(eldest);
+            }
+        }
+
+        if (evicted != null && !daoPoolCapacityWarned) {
+            daoPoolCapacityWarned = true;
+            JdbcUtil.logger.warn("The DAO proxy pool reached its capacity of {} proxies and evicts the least recently used ones. Create each DAO once and "
+                    + "reuse it, with the same DataSource and configuration instances, instead of calling createDao per request", daoPoolCapacity);
+        }
+
+        return evicted;
+    }
+
+    /**
+     * Releases what {@code createDao} registered or allocated for a proxy evicted from {@link #daoPool}. The proxy may
+     * still be in use by whoever obtained it, and keeps working: its join DAO lookups no longer return it, and its join
+     * metadata is no longer retained (unless another pooled proxy of the same DAO interface, entity class and table
+     * retains it), since the proxy holds what it needs itself. A cache that {@code createDao} created for it is closed
+     * (see {@link #releaseDiscardedDaoCache(Jdbc.DaoCache, Logger)}) only once the proxy has become unreachable, because
+     * a closed cache fails the proxy's cached methods.
+     *
+     * @param evicted the entry removed from {@link #daoPool}
+     */
+    private static void releaseEvictedDao(final PooledDao evicted) {
+        // Matched by identity rather than by recomputed keys, so the proxy is not called (its targetEntityClass() may be a
+        // DAO-defined default method). The map holds at most two entries per pooled proxy. A lookup that found the proxy
+        // just before its eviction removes its entry again itself (see getApplicableDaoForJoinEntity).
+        joinEntityDaoPool.values().removeIf(dao -> dao == evicted.dao);
+
+        if (evicted.joinBeanInfo != null) {
+            JoinInfo.releaseDaoJoinInfo(evicted.daoInterface, evicted.entityClass, evicted.tableName, evicted.joinBeanInfo);
+        }
+
+        if (evicted.createdCache instanceof AutoCloseable) {
+            // The cleaning action must not reference the proxy, or the proxy could never become unreachable.
+            final Jdbc.DaoCache cache = evicted.createdCache;
+            final Logger daoLogger = evicted.daoLogger;
+
+            EvictedDaoCacheCleaner.CLEANER.register(evicted.dao, () -> releaseDiscardedDaoCache(cache, daoLogger));
+        }
+
+        if (evicted.daoLogger.isDebugEnabled()) {
+            evicted.daoLogger.debug("Evicted Dao proxy from the DAO pool(interface={}, targetTableName={})",
+                    ClassUtil.getCanonicalClassName(evicted.daoInterface), evicted.key.targetTableName);
+        }
+    }
+
+    /**
+     * Sets the maximum number of DAO proxies kept by the process-wide DAO pool. For tests only.
+     *
+     * @param capacity the new capacity, applied when the next proxy is registered
+     * @return the previous capacity
+     */
+    static int setDaoPoolCapacity(final int capacity) {
+        synchronized (daoPoolQueue) {
+            final int previous = daoPoolCapacity;
+            daoPoolCapacity = capacity;
+            return previous;
+        }
+    }
+
+    /**
      * Classifies structural container paths requiring comparator-aware or order-preserving copying. Bean
      * properties remain governed by the JSON parser, including its annotation and property-format rules. Identity
      * memoization avoids rescanning shared/deep container trees; a null entry marks an active path, since JSON
@@ -8158,12 +9388,16 @@ final class DaoImpl {
      * {@code ImmutableBiMap} instances are flagged: their own factories promise insertion order, which the JSON
      * parser's HashSet/HashMap/BiMap stand-ins for those target classes would replace with hash order. Maps holding a
      * {@code null} key are flagged too: JSON writes map keys as quoted strings, so the parser would read that key back
-     * as the String {@code "null"}, or fail to parse it as a typed key.</p>
+     * as the String {@code "null"}, or fail to parse it as a typed key. So are maps holding a {@code java.util.Date}
+     * key, whose quoted form has whole seconds only, and containers directly holding a value for which
+     * {@link #isExactlyCopiedJsonDateTime(Object)} holds (as an element, map key, map value or held value). Leaf values
+     * are not memoized; each container's entries are inspected once per copy.</p>
      *
      * @param value the container or value to inspect
      * @param classified per-copy identity map of completed results and active paths
      * @return whether this container tree must be copied by {@code copyJsonContainerTree}: it contains a sorted
-     *         map or set with a comparator, a plain immutable set, map or bi-map wrapper, or a map with a {@code null} key
+     *         map or set with a comparator, a plain immutable set, map or bi-map wrapper, a map with a {@code null}
+     *         or {@code java.util.Date} key, or a {@code Timestamp}, {@code Calendar} or {@code java.time} value
      */
     private static boolean requiresJsonContainerTreeCopy(final Object value, final Map<Object, Boolean> classified) {
         if (!(value instanceof Collection || value instanceof Map || value instanceof Object[] || value instanceof u.Optional || value instanceof u.Nullable
@@ -8184,25 +9418,33 @@ final class DaoImpl {
         if (value instanceof final Map<?, ?> map) {
             for (final Map.Entry<?, ?> entry : map.entrySet()) {
                 // JSON writes every map key as a quoted string: a null key came back as the String "null", or failed to
-                // parse as a typed key such as an Integer. The tree copy puts it back as a real null key.
-                requiresTreeCopy |= entry.getKey() == null;
+                // parse as a typed key such as an Integer, and a java.util.Date key lost its milliseconds. The tree copy
+                // puts such keys back as they are.
+                requiresTreeCopy |= entry.getKey() == null || isSecondPrecisionJsonDate(entry.getKey());
+                // A Timestamp, Calendar or java.time key or value is put back as it is (see isExactlyCopiedJsonDateTime).
+                requiresTreeCopy |= isExactlyCopiedJsonDateTime(entry.getKey()) || isExactlyCopiedJsonDateTime(entry.getValue());
                 requiresTreeCopy |= requiresJsonContainerTreeCopy(entry.getKey(), classified);
                 requiresTreeCopy |= requiresJsonContainerTreeCopy(entry.getValue(), classified);
             }
         } else if (value instanceof final Collection<?> collection) {
             for (final Object element : collection) {
+                requiresTreeCopy |= isExactlyCopiedJsonDateTime(element);
                 requiresTreeCopy |= requiresJsonContainerTreeCopy(element, classified);
             }
         } else if (value instanceof final Object[] array) {
             for (final Object element : array) {
+                requiresTreeCopy |= isExactlyCopiedJsonDateTime(element);
                 requiresTreeCopy |= requiresJsonContainerTreeCopy(element, classified);
             }
         } else if (value instanceof final u.Optional<?> optional) {
-            requiresTreeCopy = optional.isPresent() && requiresJsonContainerTreeCopy(optional.get(), classified);
+            requiresTreeCopy = optional.isPresent()
+                    && (isExactlyCopiedJsonDateTime(optional.get()) || requiresJsonContainerTreeCopy(optional.get(), classified));
         } else if (value instanceof final u.Nullable<?> nullable) {
-            requiresTreeCopy = nullable.isPresent() && requiresJsonContainerTreeCopy(nullable.get(), classified);
+            requiresTreeCopy = nullable.isPresent()
+                    && (isExactlyCopiedJsonDateTime(nullable.get()) || requiresJsonContainerTreeCopy(nullable.get(), classified));
         } else if (value instanceof final java.util.Optional<?> optional) {
-            requiresTreeCopy = optional.isPresent() && requiresJsonContainerTreeCopy(optional.get(), classified);
+            requiresTreeCopy = optional.isPresent()
+                    && (isExactlyCopiedJsonDateTime(optional.get()) || requiresJsonContainerTreeCopy(optional.get(), classified));
         }
         classified.put(value, requiresTreeCopy);
         return requiresTreeCopy;
@@ -8215,12 +9457,16 @@ final class DaoImpl {
      * irreversibly merge comparator-distinct entries. Custom sorted classes retain their constructor-created
      * comparator and validate the copied contents. Plain {@code ImmutableSet}, {@code ImmutableMap} and
      * {@code ImmutableBiMap} copies are built on insertion-ordered backing containers so that they iterate like
-     * their source. A map with a {@code null} key is copied entry by entry, keeping that key {@code null}.
+     * their source. A map with a {@code null} key is copied entry by entry, keeping that key {@code null}; so is a
+     * map with a {@code java.util.Date} key, keeping its milliseconds. A {@code Timestamp}, {@code Calendar} or
+     * {@code java.time} value is copied exactly by {@link #copyJsonDateTime(Object)} in every position, so a container
+     * holding one is copied element by element (entry by entry).
      *
      * @param value the value to copy
      * @param declaredType the resolved type at this position, or null for the JSON default type
      * @param sortedContainers the classification for this source container tree (sorted nodes, plain
-     *        immutable set/map wrappers and maps with a {@code null} key are flagged {@code true})
+     *        immutable set/map wrappers and maps with a {@code null} or {@code java.util.Date} key are flagged
+     *        {@code true})
      * @param inferTypes whether this is the root result, retaining its runtime class and common-runtime-type fallback
      * @return the JSON copy, retaining source comparators for supported standard/library containers and
      *         constructor-created comparators for custom sorted classes
@@ -8228,7 +9474,17 @@ final class DaoImpl {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     private static Object copyJsonContainerTree(final Object value, final com.landawn.abacus.type.Type<?> declaredType,
             final Map<Object, Boolean> sortedContainers, final boolean inferTypes) {
+        if (isExactlyCopiedJsonDateTime(value)) {
+            return copyJsonDateTime(value);
+        }
+
         if (value == null || !Boolean.TRUE.equals(sortedContainers.get(value))) {
+            // A String reads back as an equal String in a String or untyped position; skip the round trip, which a map
+            // copied entry by entry (e.g. a row holding a Timestamp) would otherwise pay for each such value.
+            if (value instanceof String && (declaredType == null || declaredType.isObject() || declaredType.javaType() == String.class)) {
+                return value;
+            }
+
             // Parse in element/value context. Root deserialization does not accept every scalar type, and
             // Object positions must keep JSON's normal number and bean-to-map conversions.
             final com.landawn.abacus.parser.JsonDeserConfig config = com.landawn.abacus.parser.JsonDeserConfig.create();
@@ -8334,7 +9590,7 @@ final class DaoImpl {
                 copy = (Collection) jsonParser.deserialize("[]", config, containerClass);
             }
 
-            if (source.stream().noneMatch(element -> Boolean.TRUE.equals(sortedContainers.get(element)))) {
+            if (source.stream().noneMatch(element -> Boolean.TRUE.equals(sortedContainers.get(element)) || isExactlyCopiedJsonDateTime(element))) {
                 jsonParser.parseInto(jsonParser.serialize(source), config, copy);
             } else {
                 for (final Object element : source) {
@@ -8400,11 +9656,14 @@ final class DaoImpl {
 
         // A HashMap-like map, or a sorted map with a null-friendly comparator, can hold a real null key, which JSON's
         // quoted map-key syntax would change to the String "null" (or fail to parse as a typed key), so such a map is
-        // copied entry by entry, in iteration order, with the null key put back as is.
-        final boolean hasNullKey = source.keySet().stream().anyMatch(java.util.Objects::isNull);
-        if (!hasNullKey && source.entrySet()
+        // copied entry by entry, in iteration order, with the null key put back as is. A java.util.Date key, whose
+        // quoted form has whole seconds only, is copied the same way (see copyJsonMapKey), and so is a map with a
+        // Timestamp, Calendar or java.time key or value (see isExactlyCopiedJsonDateTime).
+        final boolean hasNullOrDateKey = source.keySet().stream().anyMatch(key -> key == null || isSecondPrecisionJsonDate(key));
+        if (!hasNullOrDateKey && source.entrySet()
                 .stream()
-                .noneMatch(entry -> Boolean.TRUE.equals(sortedContainers.get(entry.getKey())) || Boolean.TRUE.equals(sortedContainers.get(entry.getValue())))) {
+                .noneMatch(entry -> Boolean.TRUE.equals(sortedContainers.get(entry.getKey())) || Boolean.TRUE.equals(sortedContainers.get(entry.getValue()))
+                        || isExactlyCopiedJsonDateTime(entry.getKey()) || isExactlyCopiedJsonDateTime(entry.getValue()))) {
             jsonParser.parseInto(jsonParser.serialize(source), config, copy);
         } else {
             final com.landawn.abacus.parser.JsonDeserConfig keyConfig = com.landawn.abacus.parser.JsonDeserConfig.create();
@@ -8472,17 +9731,96 @@ final class DaoImpl {
 
     /**
      * Copies a key in map context, where JSON quotes scalar keys by default. Reading the same scalar as a root
-     * or collection element changes Object-typed numeric, boolean and null keys.
+     * or collection element changes Object-typed numeric and boolean keys. A {@code null} key is never passed here:
+     * map context would read it back as the String {@code "null"}, so the caller keeps it {@code null}.
      *
-     * @param key the source key
+     * <p>A {@code java.util.Date} key read back as a date (its key type is a date type) is copied by
+     * {@link java.util.Date#clone()} instead: its quoted form has whole seconds only.</p>
+     *
+     * <p>A {@code Timestamp}, {@code Calendar} or {@code java.time} key is copied by {@link #copyJsonDateTime(Object)},
+     * whatever the key type.</p>
+     *
+     * @param key the non-null source key
      * @param config the declared key type, without a map-value type
-     * @return the key produced by the JSON parser
+     * @return the copied key: the clone of such a date key, the exact copy of such a date/time key, otherwise the key
+     *         produced by the JSON parser
      */
     private static Object copyJsonMapKey(final Object key, final com.landawn.abacus.parser.JsonDeserConfig config) {
+        if (isExactlyCopiedJsonDateTime(key)) {
+            return copyJsonDateTime(key);
+        }
+
+        final com.landawn.abacus.type.Type<?> keyType = config.getMapKeyType();
+
+        // A String key reads back as an equal String in a String or untyped key position.
+        if (key instanceof String && (keyType == null || keyType.isObject() || keyType.javaType() == String.class)) {
+            return key;
+        }
+
+        // An untyped (Object) key position keeps the JSON parser's default String key.
+        if (keyType != null && java.util.Date.class.isAssignableFrom(keyType.javaType()) && isSecondPrecisionJsonDate(key)) {
+            return ((java.util.Date) key).clone();
+        }
+
         return jsonParser.deserialize(jsonParser.serialize(java.util.Collections.singletonMap(key, Boolean.TRUE)), config, Map.class)
                 .keySet()
                 .iterator()
                 .next();
+    }
+
+    /**
+     * Returns whether a JSON round trip of {@code value} as the root value, a value held by an optional/nullable
+     * wrapper or a map key drops its milliseconds: those positions write a date in its type's string form, which has
+     * whole seconds for a {@code java.util.Date} (including subclasses other than {@code java.sql.Date},
+     * {@code java.sql.Time} and {@code java.sql.Timestamp}), while collection elements, map values and bean properties
+     * write it as epoch milliseconds. Such a value is copied by {@link java.util.Date#clone()}, which keeps its
+     * milliseconds and runtime class.
+     *
+     * @param value the value to check
+     * @return {@code true} if {@code value} is a {@code java.util.Date} whose JSON string form has whole seconds only
+     */
+    private static boolean isSecondPrecisionJsonDate(final Object value) {
+        return value instanceof java.util.Date && !(value instanceof java.sql.Date || value instanceof java.sql.Time || value instanceof java.sql.Timestamp);
+    }
+
+    /**
+     * Returns whether the JSON cache copy reproduces {@code value} itself, by {@link #copyJsonDateTime(Object)}, rather
+     * than through the JSON parser, wherever it handles the value: as the root result, as the value held by an
+     * optional/nullable wrapper, and as an element, map key or map value in the result's container tree. The parser
+     * writes a {@code java.sql.Timestamp} as epoch milliseconds in every position, dropping its sub-millisecond nanos,
+     * and a {@code Calendar}, {@code ZonedDateTime}, {@code OffsetDateTime} or {@code Instant} as epoch milliseconds
+     * in a collection, array or map value, dropping any sub-millisecond part and reading a zone or offset back in the
+     * JVM default time zone; it cannot write some {@code java.time} types at all (e.g. {@code OffsetTime},
+     * {@code Period}, {@code YearMonth}). All {@code java.time} values are included, so that one is copied the same
+     * way whatever else its container holds, and an untyped ({@code Object}) position keeps it rather than the
+     * parser's number or string.
+     *
+     * @param value the value to check; may be {@code null}
+     * @return {@code true} if {@code value} is a {@code java.sql.Timestamp}, a {@code Calendar} or a value of a
+     *         {@code java.time} class
+     */
+    private static boolean isExactlyCopiedJsonDateTime(final Object value) {
+        return value instanceof java.sql.Timestamp || value instanceof java.util.Calendar
+                || ((value instanceof java.time.temporal.TemporalAccessor || value instanceof java.time.temporal.TemporalAmount
+                        || value instanceof java.time.ZoneId) && value.getClass().getName().startsWith("java.time."));
+    }
+
+    /**
+     * Copies a value for which {@link #isExactlyCopiedJsonDateTime(Object)} holds: a {@code Timestamp} or
+     * {@code Calendar} is mutable and cloned, which keeps its nanos or time zone (and its runtime class); a
+     * {@code java.time} value is immutable and returned as it is.
+     *
+     * @param value the date/time value
+     * @return the exact copy
+     */
+    private static Object copyJsonDateTime(final Object value) {
+        if (value instanceof final java.util.Date date) {
+            return date.clone();
+        } else if (value instanceof final java.util.Calendar calendar) {
+            return calendar.clone();
+        }
+
+        return value;
     }
 
     /**
@@ -8500,6 +9838,15 @@ final class DaoImpl {
     private static Object copyHeldValue(final Object value, final com.landawn.abacus.type.Type<?> declaredValueType) {
         if (value == null) {
             return null;
+        }
+
+        // stringOf writes a java.util.Date with whole seconds only (see isSecondPrecisionJsonDate).
+        if (isSecondPrecisionJsonDate(value)) {
+            return ((java.util.Date) value).clone();
+        }
+
+        if (isExactlyCopiedJsonDateTime(value)) {
+            return copyJsonDateTime(value);
         }
 
         final com.landawn.abacus.type.Type<?> resolvedType = resolvedOrRuntimeType(declaredValueType, java.util.Collections.singletonList(value));
@@ -8977,9 +10324,18 @@ final class DaoImpl {
             }
         }
 
-        for (final DaoBase dao : daoPool.values()) {
+        for (final PooledDao pooledDao : daoPool.values()) {
+            final DaoBase dao = pooledDao.dao;
+
             if (dao.targetEntityClass() == referencedEntityClass && dao.dataSource() == ds && (!forDelete || dao instanceof Dao)) {
                 final DaoBase existingDao = joinEntityDaoPool.putIfAbsent(key, dao);
+
+                if (existingDao == null && daoPool.get(pooledDao.key) != pooledDao) {
+                    // Evicted meanwhile: its eviction may have run before this entry was added, so drop the entry again
+                    // rather than retaining the evicted proxy. It is still fine to use it for this call.
+                    joinEntityDaoPool.remove(key, dao);
+                }
+
                 return existingDao == null ? dao : existingDao;
             }
         }

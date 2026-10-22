@@ -136,8 +136,8 @@ public interface Transaction {
      * }</pre>
      *
      * @throws IllegalStateException if called from a thread other than the transaction owner, or if the transaction is not in a valid state for
-     *         committing. Note: {@link SqlTransaction} (the built-in implementation) does not throw for a scope that has already completed — the call
-     *         is logged and ignored.
+     *         committing. Note: {@link SqlTransaction} (the built-in implementation) does not throw for a transaction that has already completed — the
+     *         call is logged and ignored.
      * @throws UncheckedSQLException if an SQL error occurs during commit, rollback of a rollback-only transaction, or restoration of a nested scope's
      *         isolation level
      */
@@ -170,8 +170,8 @@ public interface Transaction {
      * in favor of {@link #rollbackIfNotCommitted()}.</p>
      *
      * @throws IllegalStateException if called from a thread other than the transaction owner, or if the transaction is not in a valid state for
-     *         rollback. Note: {@link SqlTransaction} (the built-in implementation) does not throw for a scope that has already completed — the call
-     *         is logged and ignored.
+     *         rollback. Note: {@link SqlTransaction} (the built-in implementation) does not throw for a transaction that has already completed — the
+     *         call is logged and ignored.
      * @throws UncheckedSQLException if an SQL error occurs during rollback or restoration of a nested scope's isolation level
      */
     void rollback() throws IllegalStateException, UncheckedSQLException;

@@ -1339,6 +1339,72 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
         Mockito.verifyNoInteractions(unusedSource, unusedConnection);
     }
 
+    // The DataSource overloads only checked the table-name syntax before ds.getConnection(); a well-formed name that the
+    // disabled-quoting policy rejects (explicitly delimited, reserved or non-simple) was rejected only after a connection
+    // had been opened, so an unreachable database reported a connection failure instead of the invalid argument.
+    @Test
+    public void testUnrenderableTableNamesAreRejectedBeforeDataSourceConnection() {
+        final DataSource unusedSource = Mockito.mock(DataSource.class);
+        for (final String tableName : List.of("\"users\"", "order", "order-history", "app.\"Users\"")) {
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedSource, tableName), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedSource, tableName, null), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateSelectSql(unusedSource, tableName), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateSelectSql(unusedSource, tableName, null, null), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateInsertSql(unusedSource, tableName), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateInsertSql(unusedSource, tableName, null), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(unusedSource, tableName), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedInsertSql(unusedSource, tableName, null), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedSource, tableName), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedSource, tableName, "id"), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedSource, tableName, null, List.of("id"), null),
+                    tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedSource, tableName), tableName);
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedSource, tableName, "id"), tableName);
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedSource, tableName, null, List.of("id"), null), tableName);
+        }
+        Mockito.verifyNoInteractions(unusedSource);
+    }
+
+    // The Connection overloads only checked the table-name syntax before validating the other arguments, so with both a
+    // table name the disabled-quoting policy rejects and another invalid argument they reported the other argument, while
+    // the DataSource overloads reported the table name.
+    @Test
+    public void testConnectionAndDataSourceOverloadsReportUnrenderableTableNameBeforeOtherInvalidArguments() {
+        final DataSource unusedSource = Mockito.mock(DataSource.class);
+        final Connection unusedConnection = Mockito.mock(Connection.class);
+        final JdbcCodeGenerationUtil.EntityCodeConfig invalidConfig = JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("1Invalid").build();
+        final List<String> blankKeys = List.of(" ");
+
+        for (final String tableName : List.of("order", "order-history", "\"users\"")) {
+            final String tableNameMessage = assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateEntityClass(unusedSource, tableName, invalidConfig)).getMessage();
+            assertFalse(tableNameMessage.contains("1Invalid"), tableNameMessage);
+
+            assertEquals(tableNameMessage,
+                    assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedConnection, tableName, invalidConfig))
+                            .getMessage());
+            assertEquals(tableNameMessage,
+                    assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedSource, tableName, " ")).getMessage());
+            assertEquals(tableNameMessage,
+                    assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, tableName, " "))
+                            .getMessage());
+            assertEquals(tableNameMessage, assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, tableName, null, blankKeys, null)).getMessage());
+            assertEquals(tableNameMessage,
+                    assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, tableName, " "))
+                            .getMessage());
+            assertEquals(tableNameMessage, assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, tableName, null, blankKeys, null)).getMessage());
+        }
+
+        // A renderable table name still lets the other invalid argument be reported.
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedConnection, "users", invalidConfig))
+                .getMessage()
+                .contains("1Invalid"));
+        Mockito.verifyNoInteractions(unusedSource, unusedConnection);
+    }
+
     @Test
     public void testInvalidTableIsRejectedBeforeConnectionMetadata() {
         final Connection unusedConnection = Mockito.mock(Connection.class);
@@ -1697,13 +1763,18 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
         assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedSource, "users", " "));
         assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, "users", " "));
         assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, "users", " "));
-        assertThrows(IllegalArgumentException.class,
-                () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedSource, "users", null, Arrays.asList("id", null), null));
-        assertThrows(IllegalArgumentException.class,
-                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedSource, "users", null, List.of("id", " "), null));
-        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, "users", null, List.of("id", " "), null));
-        assertThrows(IllegalArgumentException.class,
-                () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, "users", null, Arrays.asList("id", null), null));
+        // A blank element of the keyColumnNames collection is reported under that parameter, not as 'keyColumnName'.
+        for (final IllegalArgumentException e : List.of(
+                assertThrows(IllegalArgumentException.class,
+                        () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedSource, "users", null, Arrays.asList("id", null), null)),
+                assertThrows(IllegalArgumentException.class,
+                        () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedSource, "users", null, List.of("id", " "), null)),
+                assertThrows(IllegalArgumentException.class,
+                        () -> JdbcCodeGenerationUtil.generateUpdateSql(unusedConnection, "users", null, List.of("id", " "), null)),
+                assertThrows(IllegalArgumentException.class,
+                        () -> JdbcCodeGenerationUtil.generateNamedUpdateSql(unusedConnection, "users", null, Arrays.asList("id", null), null)))) {
+            assertEquals("An element of 'keyColumnNames' cannot be null or empty or blank", e.getMessage());
+        }
         Mockito.verifyNoInteractions(unusedSource, unusedConnection);
     }
 
@@ -1726,6 +1797,37 @@ public class JdbcCodeGenerationEntityTest extends JdbcCodeGenerationUtilTestSupp
         }
 
         Mockito.verifyNoInteractions(unusedSource, unusedConnection, unusedResultSet);
+    }
+
+    // The class/package name, annotation-class, read-only/non-updatable and additional-body checks don't depend on column
+    // metadata but ran only after the public overloads had opened a connection and prepared (on the fallback path even
+    // executed) the caller's query, which can be expensive, before rejecting the configuration.
+    @Test
+    public void testInvalidConfigurationIsRejectedBeforeDatabaseAccess() {
+        final DataSource unusedSource = Mockito.mock(DataSource.class);
+        final Connection unusedConnection = Mockito.mock(Connection.class);
+        final List<JdbcCodeGenerationUtil.EntityCodeConfig> configurations = List.of(
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("123Entity").build(),
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().className("record").build(),
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().packageName("com.example.bad-package").build(),
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().readOnlyFields(List.of("status")).nonUpdatableFields(List.of("status")).build(),
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().tableAnnotationClass(FieldOnlyTable.class).build(),
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().idAnnotationClass(PrivateTable.class).build(),
+                JdbcCodeGenerationUtil.EntityCodeConfig.builder().additionalClassBodySource("    private int;").build());
+
+        for (final JdbcCodeGenerationUtil.EntityCodeConfig config : configurations) {
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedSource, "users", config));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClass(unusedConnection, "users", config));
+            assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(unusedSource, "Users", "SELECT 1", config));
+            assertThrows(IllegalArgumentException.class,
+                    () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(unusedConnection, "Users", "SELECT 1", config));
+        }
+
+        // Without a configured class name, the default derived from the entity name is checked as well.
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(unusedSource, "1st report", "SELECT 1"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(unusedConnection, "1st report", "SELECT 1"));
+
+        Mockito.verifyNoInteractions(unusedSource, unusedConnection);
     }
 
     @Test

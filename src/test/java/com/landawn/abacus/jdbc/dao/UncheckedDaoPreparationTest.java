@@ -1,5 +1,6 @@
 package com.landawn.abacus.jdbc.dao;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -10,12 +11,18 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.sql.CallableStatement;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -23,14 +30,19 @@ import javax.sql.DataSource;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.annotation.Id;
+import com.landawn.abacus.annotation.JoinedBy;
+import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.AbstractQuery;
 import com.landawn.abacus.jdbc.CallableQuery;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
 
 class UncheckedDaoPreparationTest extends TestBase {
@@ -86,6 +98,190 @@ class UncheckedDaoPreparationTest extends TestBase {
         assertSame(failure, thrown.getCause());
         preparation.verifyPreparation(connection);
         verify(connection).close();
+    }
+
+    // Pins the documented connection-acquisition contract of the unchecked prepare* defaults: Spring wraps every
+    // acquisition failure in CannotGetJdbcConnectionException, but DaoUtil.uncheckedSql translates one caused by a
+    // SQLException to UncheckedSQLException, so only a data source returning null (or throwing an
+    // IllegalStateException) surfaces as CannotGetJdbcConnectionException.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("preparations")
+    void mapsConnectionAcquisitionFailures(final Preparation preparation) throws Exception {
+        final SQLException failure = new SQLException("no connection", "08001");
+        final DataSource failingDataSource = mock(DataSource.class);
+        when(failingDataSource.getConnection()).thenThrow(failure);
+        final PreparationDao failingDao = mock(PreparationDao.class, CALLS_REAL_METHODS);
+        when(failingDao.dataSource()).thenReturn(failingDataSource);
+
+        final UncheckedSQLException translated = assertThrows(UncheckedSQLException.class, () -> preparation.create.apply(failingDao));
+        assertSame(failure, translated.getCause());
+
+        final DataSource nullDataSource = mock(DataSource.class);
+        final PreparationDao nullDao = mock(PreparationDao.class, CALLS_REAL_METHODS);
+        when(nullDao.dataSource()).thenReturn(nullDataSource);
+
+        assertInstanceOf(IllegalStateException.class, assertThrows(CannotGetJdbcConnectionException.class, () -> preparation.create.apply(nullDao)).getCause());
+    }
+
+    // Pins the per-operation contract documented on the unchecked DAO interfaces: operations that prepare through the
+    // unchecked prepare* methods translate an acquisition failure caused by a SQLException, while CRUD inserts and operations
+    // that open a transaction first let the CannotGetJdbcConnectionException through. A data source returning null always
+    // surfaces as CannotGetJdbcConnectionException.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("daoOperations")
+    void mapsConnectionAcquisitionFailuresOfDaoOperations(final DaoOperation operation) throws Exception {
+        final AcquisitionDao dao = acquisitionDao();
+
+        try {
+            ACQUISITION_MODE.set(1);
+            final RuntimeException thrown = assertThrows(RuntimeException.class, () -> operation.call.accept(dao));
+            final Class<? extends RuntimeException> expected = operation.translated ? UncheckedSQLException.class : CannotGetJdbcConnectionException.class;
+            assertInstanceOf(expected, thrown);
+            assertInstanceOf(SQLException.class, thrown.getCause());
+
+            ACQUISITION_MODE.set(2);
+            assertInstanceOf(IllegalStateException.class, assertThrows(CannotGetJdbcConnectionException.class, () -> operation.call.accept(dao)).getCause());
+        } finally {
+            ACQUISITION_MODE.set(0);
+        }
+    }
+
+    // Pins the contract documented on UncheckedJoinEntityReadOps/UncheckedJoinEntityDeleteOps: join entities are loaded and
+    // deleted through the DAO registered for the join entity class on the same data source, or through this DAO if there is
+    // none. This (unchecked) DAO translates a CannotGetJdbcConnectionException caused by a SQLException to
+    // UncheckedSQLException; a checked registered join DAO (a CrudDao) lets it through, as does a sequential delete that
+    // opens a transaction first (more than one entity, or more than one join property); the Executor overloads translate
+    // it whichever DAO runs their tasks. A data source returning null always surfaces as CannotGetJdbcConnectionException
+    // caused by IllegalStateException.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("joinDaoOperations")
+    void mapsConnectionAcquisitionFailuresOfJoinOperations(final JoinDaoOperation operation) throws Exception {
+        final JoinParentDao dao = joinParentDao();
+
+        // The operation is valid in itself: with the data source reachable it runs against the (empty) join tables.
+        operation.call.accept(dao);
+
+        try {
+            ACQUISITION_MODE.set(1);
+            final RuntimeException thrown = assertThrows(RuntimeException.class, () -> operation.call.accept(dao));
+            final Class<? extends RuntimeException> expected = operation.translated ? UncheckedSQLException.class : CannotGetJdbcConnectionException.class;
+            assertInstanceOf(expected, thrown);
+            assertInstanceOf(SQLException.class, thrown.getCause());
+            assertEquals("08001", ((SQLException) thrown.getCause()).getSQLState());
+
+            ACQUISITION_MODE.set(2);
+            assertInstanceOf(IllegalStateException.class, assertThrows(CannotGetJdbcConnectionException.class, () -> operation.call.accept(dao)).getCause());
+        } finally {
+            ACQUISITION_MODE.set(0);
+        }
+    }
+
+    private static Stream<JoinDaoOperation> joinDaoOperations() {
+        final Executor executor = Runnable::run;
+
+        return Stream.of(
+                // (a) no DAO is registered for OwnChild: its joins run through this DAO's unchecked prepareQuery
+                new JoinDaoOperation("loadJoinEntities of one entity through this DAO", dao -> dao.loadJoinEntities(joinParent(1L), "ownChildren"), true),
+                new JoinDaoOperation("loadJoinEntities of two entities through this DAO",
+                        dao -> dao.loadJoinEntities(List.of(joinParent(1L), joinParent(2L)), "ownChildren"), true),
+                new JoinDaoOperation("loadJoinEntities by class through this DAO", dao -> dao.loadJoinEntities(joinParent(1L), OwnChild.class), true),
+                new JoinDaoOperation("sequential loadJoinEntities of one property through this DAO",
+                        dao -> dao.loadJoinEntities(joinParent(1L), List.of("ownChildren")), true),
+                new JoinDaoOperation("deleteJoinEntities of one entity through this DAO", dao -> dao.deleteJoinEntities(joinParent(1L), "ownChildren"), true),
+                new JoinDaoOperation("deleteJoinEntities of a one-entity collection through this DAO",
+                        dao -> dao.deleteJoinEntities(List.of(joinParent(1L)), "ownChildren"), true),
+                // (b) a checked CrudDao is registered for CheckedChild on the same data source
+                new JoinDaoOperation("loadJoinEntities of one entity through the checked join DAO",
+                        dao -> dao.loadJoinEntities(joinParent(1L), "checkedChildren"), false),
+                new JoinDaoOperation("loadJoinEntities of two entities through the checked join DAO",
+                        dao -> dao.loadJoinEntities(List.of(joinParent(1L), joinParent(2L)), "checkedChildren"), false),
+                new JoinDaoOperation("sequential loadJoinEntities of one property through the checked join DAO",
+                        dao -> dao.loadJoinEntities(joinParent(1L), List.of("checkedChildren")), false),
+                new JoinDaoOperation("deleteJoinEntities of one entity through the checked join DAO",
+                        dao -> dao.deleteJoinEntities(joinParent(1L), "checkedChildren"), false),
+                // (c) a sequential delete of more than one entity or join property opens a transaction first
+                new JoinDaoOperation("deleteJoinEntities of two entities through this DAO (transaction)",
+                        dao -> dao.deleteJoinEntities(List.of(joinParent(1L), joinParent(2L)), "ownChildren"), false),
+                new JoinDaoOperation("deleteJoinEntities of two properties (transaction)",
+                        dao -> dao.deleteJoinEntities(joinParent(1L), List.of("ownChildren", "checkedChildren")), false),
+                new JoinDaoOperation("deleteJoinEntities of two entities and two properties (transaction)",
+                        dao -> dao.deleteJoinEntities(List.of(joinParent(1L), joinParent(2L)), List.of("ownChildren", "checkedChildren")), false),
+                new JoinDaoOperation("deleteAllJoinEntities (transaction)", dao -> dao.deleteAllJoinEntities(joinParent(1L)), false),
+                // (d) the Executor overloads translate whichever DAO runs their tasks
+                new JoinDaoOperation("loadJoinEntities through the checked join DAO with an Executor",
+                        dao -> dao.loadJoinEntities(joinParent(1L), List.of("checkedChildren"), executor), true),
+                new JoinDaoOperation("loadJoinEntities of two entities through the checked join DAO with an Executor",
+                        dao -> dao.loadJoinEntities(List.of(joinParent(1L), joinParent(2L)), List.of("checkedChildren"), executor), true),
+                new JoinDaoOperation("loadAllJoinEntities with an Executor", dao -> dao.loadAllJoinEntities(joinParent(1L), executor), true),
+                new JoinDaoOperation("deleteJoinEntities through the checked join DAO with an Executor",
+                        dao -> dao.deleteJoinEntities(joinParent(1L), List.of("checkedChildren"), executor), true),
+                new JoinDaoOperation("deleteJoinEntities of two entities through this DAO with an Executor",
+                        dao -> dao.deleteJoinEntities(List.of(joinParent(1L), joinParent(2L)), List.of("ownChildren"), executor), true),
+                new JoinDaoOperation("deleteAllJoinEntities with an Executor", dao -> dao.deleteAllJoinEntities(joinParent(1L), executor), true));
+    }
+
+    private record JoinDaoOperation(String name, Consumer<JoinParentDao> call, boolean translated) {
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    // Pins the contract documented on UncheckedDaoBase's Condition-based prepare* overloads: the proxy implements them through
+    // the unchecked prepareQuery(String)/prepareNamedQuery(String) defaults, so an acquisition failure caused by a SQLException
+    // is translated to UncheckedSQLException, while a data source returning null still surfaces as
+    // CannotGetJdbcConnectionException caused by IllegalStateException.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("conditionPreparations")
+    void mapsConnectionAcquisitionFailuresOfConditionPreparations(final ConditionPreparation preparation) throws Exception {
+        final AcquisitionDao dao = acquisitionDao();
+
+        try (AbstractQuery<?, ?> query = preparation.create.apply(dao)) {
+            assertInstanceOf(preparation.queryType, query);
+        }
+
+        try {
+            ACQUISITION_MODE.set(1);
+            final UncheckedSQLException translated = assertThrows(UncheckedSQLException.class, () -> preparation.create.apply(dao));
+            assertInstanceOf(SQLException.class, translated.getCause());
+            assertEquals("08001", ((SQLException) translated.getCause()).getSQLState());
+
+            ACQUISITION_MODE.set(2);
+            assertInstanceOf(IllegalStateException.class, assertThrows(CannotGetJdbcConnectionException.class, () -> preparation.create.apply(dao)).getCause());
+        } finally {
+            ACQUISITION_MODE.set(0);
+        }
+    }
+
+    private static Stream<ConditionPreparation> conditionPreparations() {
+        return Stream.of(new ConditionPreparation("prepared by condition", dao -> dao.prepareQuery(Filters.eq("name", "a")), PreparedQuery.class),
+                new ConditionPreparation("prepared props by condition", dao -> dao.prepareQuery(List.of("id"), Filters.eq("name", "a")), PreparedQuery.class),
+                new ConditionPreparation("prepared large by condition", dao -> dao.prepareQueryForLargeResult(Filters.eq("name", "a")), PreparedQuery.class),
+                new ConditionPreparation("prepared props large by condition", dao -> dao.prepareQueryForLargeResult(List.of("id"), Filters.eq("name", "a")),
+                        PreparedQuery.class),
+                new ConditionPreparation("named by condition", dao -> dao.prepareNamedQuery(Filters.eq("name", "a")), NamedQuery.class),
+                new ConditionPreparation("named props by condition", dao -> dao.prepareNamedQuery(List.of("id"), Filters.eq("name", "a")), NamedQuery.class),
+                new ConditionPreparation("named large by condition", dao -> dao.prepareNamedQueryForLargeResult(Filters.eq("name", "a")), NamedQuery.class),
+                new ConditionPreparation("named props large by condition", dao -> dao.prepareNamedQueryForLargeResult(List.of("id"), Filters.eq("name", "a")),
+                        NamedQuery.class));
+    }
+
+    private record ConditionPreparation(String name, Function<AcquisitionDao, AbstractQuery<?, ?>> create, Class<?> queryType) {
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    private static Stream<DaoOperation> daoOperations() {
+        return Stream.of(new DaoOperation("list", dao -> dao.list(Filters.eq("name", "a")), true),
+                new DaoOperation("save", dao -> dao.save(acquisitionEntity(null)), true),
+                new DaoOperation("batchUpdate of one entity", dao -> dao.batchUpdate(List.of(acquisitionEntity(1L)), 10), true),
+                new DaoOperation("insert", dao -> dao.insert(acquisitionEntity(null)), false),
+                new DaoOperation("batchInsert in one batch", dao -> dao.batchInsert(List.of(acquisitionEntity(null)), 10), false),
+                new DaoOperation("batchUpdate of two entities in one batch", dao -> dao.batchUpdate(List.of(acquisitionEntity(1L), acquisitionEntity(2L)), 10),
+                        false),
+                new DaoOperation("batchUpdate across batches", dao -> dao.batchUpdate(List.of(acquisitionEntity(1L), acquisitionEntity(2L)), 1), false));
     }
 
     private static Stream<Preparation> preparations() {
@@ -146,5 +342,210 @@ class UncheckedDaoPreparationTest extends TestBase {
     }
 
     private interface PreparationDao extends UncheckedDao<UncheckedDaoTest.TestEntity, PreparationDao> {
+    }
+
+    // 0 = delegate to H2, 1 = getConnection throws SQLException, 2 = getConnection returns null
+    private static final AtomicInteger ACQUISITION_MODE = new AtomicInteger();
+    private static DataSource switchingDataSource;
+    private static AcquisitionDao acquisitionDao;
+    private static JoinParentDao joinParentDao;
+    private static CheckedChildDao checkedChildDao;
+
+    private static synchronized AcquisitionDao acquisitionDao() throws SQLException {
+        if (acquisitionDao == null) {
+            acquisitionDao = JdbcUtil.createDao(AcquisitionDao.class, switchingDataSource());
+        }
+
+        return acquisitionDao;
+    }
+
+    private static synchronized JoinParentDao joinParentDao() throws SQLException {
+        if (joinParentDao == null) {
+            final DataSource switching = switchingDataSource();
+
+            // Registered before the first join operation: a join DAO is looked up among the DAOs created for the join entity
+            // class on the same data source. OwnChild deliberately has none, so its joins run through the parent DAO itself.
+            checkedChildDao = JdbcUtil.createDao(CheckedChildDao.class, switching);
+            joinParentDao = JdbcUtil.createDao(JoinParentDao.class, switching);
+        }
+
+        return joinParentDao;
+    }
+
+    private static synchronized DataSource switchingDataSource() throws SQLException {
+        if (switchingDataSource == null) {
+            final DataSource h2 = JdbcUtil.createHikariDataSource("jdbc:h2:mem:unchecked_acquisition;DB_CLOSE_DELAY=-1", "sa", "");
+
+            try (Connection conn = h2.getConnection();
+                 Statement stmt = conn.createStatement()) {
+                stmt.execute("CREATE TABLE IF NOT EXISTS unchecked_acquisition (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(32))");
+                stmt.execute("CREATE TABLE IF NOT EXISTS unchecked_acquisition_parent (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(32))");
+                stmt.execute("CREATE TABLE IF NOT EXISTS unchecked_acquisition_own_child (id BIGINT AUTO_INCREMENT PRIMARY KEY, parent_id BIGINT)");
+                stmt.execute("CREATE TABLE IF NOT EXISTS unchecked_acquisition_checked_child (id BIGINT AUTO_INCREMENT PRIMARY KEY, parent_id BIGINT)");
+            }
+
+            switchingDataSource = (DataSource) Proxy.newProxyInstance(DataSource.class.getClassLoader(), new Class<?>[] { DataSource.class },
+                    (proxy, method, args) -> {
+                        if (method.getName().equals("getConnection") && ACQUISITION_MODE.get() != 0) {
+                            if (ACQUISITION_MODE.get() == 1) {
+                                throw new SQLException("no connection", "08001");
+                            }
+                            return null;
+                        }
+                        try {
+                            return method.invoke(h2, args);
+                        } catch (final InvocationTargetException e) {
+                            throw e.getCause();
+                        }
+                    });
+        }
+
+        return switchingDataSource;
+    }
+
+    private static JoinParent joinParent(final Long id) {
+        final JoinParent entity = new JoinParent();
+        entity.setId(id);
+        entity.setName("p");
+        return entity;
+    }
+
+    private static AcquisitionEntity acquisitionEntity(final Long id) {
+        final AcquisitionEntity entity = new AcquisitionEntity();
+        entity.setId(id);
+        entity.setName("a");
+        return entity;
+    }
+
+    private record DaoOperation(String name, Consumer<AcquisitionDao> call, boolean translated) {
+        @Override
+        public String toString() {
+            return name;
+        }
+    }
+
+    @Table("unchecked_acquisition")
+    public static class AcquisitionEntity {
+        @Id
+        private Long id;
+        private String name;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    public interface AcquisitionDao extends UncheckedCrudDao<AcquisitionEntity, Long, AcquisitionDao> {
+    }
+
+    @Table("unchecked_acquisition_parent")
+    public static class JoinParent {
+        @Id
+        private Long id;
+        private String name;
+        // No DAO is registered for OwnChild: its joins are loaded/deleted through the parent DAO itself.
+        @JoinedBy("id=OwnChild.parentId")
+        private List<OwnChild> ownChildren;
+        // A checked CrudDao is registered for CheckedChild (see joinParentDao()).
+        @JoinedBy("id=CheckedChild.parentId")
+        private List<CheckedChild> checkedChildren;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+
+        public List<OwnChild> getOwnChildren() {
+            return ownChildren;
+        }
+
+        public void setOwnChildren(final List<OwnChild> ownChildren) {
+            this.ownChildren = ownChildren;
+        }
+
+        public List<CheckedChild> getCheckedChildren() {
+            return checkedChildren;
+        }
+
+        public void setCheckedChildren(final List<CheckedChild> checkedChildren) {
+            this.checkedChildren = checkedChildren;
+        }
+    }
+
+    @Table("unchecked_acquisition_own_child")
+    public static class OwnChild {
+        @Id
+        private Long id;
+        private Long parentId;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public Long getParentId() {
+            return parentId;
+        }
+
+        public void setParentId(final Long parentId) {
+            this.parentId = parentId;
+        }
+    }
+
+    @Table("unchecked_acquisition_checked_child")
+    public static class CheckedChild {
+        @Id
+        private Long id;
+        private Long parentId;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public Long getParentId() {
+            return parentId;
+        }
+
+        public void setParentId(final Long parentId) {
+            this.parentId = parentId;
+        }
+    }
+
+    // Non-crud, so the bodies declared in UncheckedJoinEntityReadOps/UncheckedJoinEntityDeleteOps run (the Crud helpers
+    // re-declare the join methods).
+    public interface JoinParentDao extends UncheckedDao<JoinParent, JoinParentDao>, UncheckedJoinEntityHelper<JoinParent, JoinParentDao> {
+    }
+
+    public interface CheckedChildDao extends CrudDao<CheckedChild, Long, CheckedChildDao> {
     }
 }

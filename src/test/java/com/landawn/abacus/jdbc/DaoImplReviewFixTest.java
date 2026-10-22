@@ -281,8 +281,9 @@ class DaoImplReviewFixTest extends TestBase {
             }
 
             try {
-                assertNoCacheCreated("a cacheable DAO whose join plans cannot be built", () -> assertRejected(IllegalStateException.class,
-                        "injected join plan failure", () -> DaoImpl.createDao(PlanFailureCacheDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)));
+                assertNoCacheCreated("a cacheable DAO whose join plans cannot be built",
+                        () -> assertRejected(IllegalStateException.class, "injected join plan failure",
+                                () -> DaoImpl.createDao(PlanFailureCacheDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)));
             } finally {
                 for (final Map.Entry<JoinInfo, Object> entry : builders.entrySet()) {
                     builderField.set(entry.getKey(), entry.getValue());

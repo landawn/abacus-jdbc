@@ -49,7 +49,13 @@ import com.landawn.abacus.util.N;
  * property maps directly to the {@code <ID>} type (for example {@code Long} or {@code String}), whereas a
  * composite (multi-column) key can use an {@link EntityId} or a bean/record with matching ID properties. Insert operations write a
  * database-generated key back into the entity's id property where applicable, and {@code by-id} lookups
- * treat the supplied id as a primary-key match.</p>
+ * treat the supplied id as a primary-key match: every declared id property is matched, so an {@code EntityId} that lacks
+ * one of them, or holds {@code null} for one, matches no row (keys it carries beyond the id properties are ignored).</p>
+ *
+ * <p><b>Connection acquisition failures:</b> as described for {@link UncheckedDao}, a Spring
+ * {@code CannotGetJdbcConnectionException} caused by an {@link SQLException} is translated into {@link UncheckedSQLException}
+ * unless the operation opens a transaction first. The {@code insert} and {@code batchInsert} operations, and the
+ * {@code upsert} and {@code batchUpsert} operations when they insert, don't translate it either.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -100,7 +106,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or an existing row is updated and {@code entity}
      *                                  has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if no row matches and {@code entity} is inserted
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      * @throws UnsupportedOperationException if no existing row is found,
@@ -108,8 +116,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
     @Override
-    default T upsert(final T entity)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
@@ -136,14 +143,16 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * }</pre>
      *
      * @param entity the entity to insert or update (must not be {@code null})
-     * @param matchPropNames the property names that uniquely identify each entity (must not be empty)
+     * @param matchPropNames the property names that uniquely identify the record (must not be empty)
      *            (a spelling the entity's property lookup accepts, such as the column name, is resolved to the property name)
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
      *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
      *                                  or an existing row is updated and {@code entity} has a property the loaded
      *                                  entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if no row matches and {@code entity} is inserted
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
      * @throws UnsupportedOperationException if no existing row is found,
@@ -152,7 +161,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      */
     @Override
     default T upsert(final T entity, final Collection<String> matchPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
@@ -192,7 +201,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         or the loaded database entity (with non-{@code null} non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
      *                                  and {@code entity} has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if no row matches and {@code entity} is inserted
      * @throws UncheckedSQLException if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @throws UnsupportedOperationException if no existing row is found,
@@ -202,7 +213,7 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      */
     @Override
     default T upsert(final T entity, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         try {
             return CrudDao.super.upsert(entity, cond);
         } catch (final SQLException e) {
@@ -231,18 +242,24 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or an existing row is updated
      *                                  and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
-     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope,
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *                              own while no JPA transaction owning it can be identified (see
+     *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -265,18 +282,24 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive,
      *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
-     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope,
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *                              own while no JPA transaction owning it can be identified (see
+     *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
         if (N.notEmpty(entities)) {
             N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
             for (final T entity : entities) {
@@ -318,18 +341,24 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *                                  if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty
      *                                  and a name in {@code matchPropNames} is not a property of the entity class,
      *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
-     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope,
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *                              own while no JPA transaction owning it can be identified (see
+     *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, matchPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -341,11 +370,22 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * supplied unique properties) and those that do not. New entities are inserted via
      * {@link #batchInsert(Collection, int)}; existing entities are updated by copying the non-{@code null}, non-id
      * (and non-unique-key) properties from the input entity into the loaded database entity and
-     * calling {@link #batchUpdate(Collection, int)}. When both inserts and updates are needed
-     * (or either set is large), the operation is wrapped in a transaction.</p>
+     * calling {@link #batchUpdate(Collection, int)}. When both inserts and updates are needed (or either set is large), the
+     * operation is wrapped in a transaction (each of {@code batchInsert} and {@code batchUpdate} also runs in one for more
+     * than one entity). If that transaction, or a transaction enclosing this call, rolls back, the IDs that {@code batchInsert} wrote onto the new
+     * entities are put back to their previous values. Inside an active Spring-managed transaction that owns the data
+     * source's connection, the transaction participates in it (see
+     * {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}): Spring commits the work, a failure
+     * marks the Spring transaction rollback-only, and the IDs are put back if Spring rolls it back (this needs Spring's
+     * transaction synchronization, which is enabled by default, and follows the innermost Spring-managed transaction on the
+     * thread, as for {@code insert}).</p>
      *
      * <p>For a single match property, a {@code null} key is matched with {@code IS NULL}; it is not
-     * placed in an {@code IN} predicate, whose SQL semantics would never match a {@code null} column.</p>
+     * placed in an {@code IN} predicate, whose SQL semantics would never match a {@code null} column.
+     * With several match properties, every one of them is matched (an entity's key always holds all of them), a
+     * {@code null} one with {@code IS NULL} as well; so an entity whose key holds {@code null} for a {@code NOT NULL}
+     * column (e.g. a component of the primary key, when matching by id) matches no row and is inserted.
+     * Array-typed key values (e.g. a {@code byte[]} binary UUID) are matched by content.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -368,18 +408,24 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
      *                                  or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class,
      *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
      *         existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
-     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope,
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *                              own while no JPA transaction owning it can be identified (see
+     *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
     @Override
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException {
         try {
             return CrudDao.super.batchUpsert(entities, matchPropNames, batchSize);
         } catch (final SQLException e) {

@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
 
@@ -49,6 +51,27 @@ class DBLockIntegrationTest extends TestBase {
             JdbcUtil.executeUpdate(observer, "DELETE FROM refresh_locks WHERE target = ?", "resource");
             lock.refreshLocks();
             assertTrue(((Map<?, ?>) field(lock, "targetCodePool")).isEmpty());
+        }
+    }
+
+    @Test
+    void refreshTask_survivesAnErrorAndRenewsOnALaterCycle() throws Exception {
+        final JdbcDataSource database = new JdbcDataSource();
+        database.setURL("jdbc:h2:mem:error_refresh_lock_" + System.nanoTime());
+        final AtomicInteger refreshAttempts = new AtomicInteger();
+        final CountDownLatch refreshedAfterError = new CountDownLatch(1);
+        final DataSource failingOnce = mock(DataSource.class);
+        when(failingOnce.getConnection()).thenAnswer(call -> failFirstRefresh(database.getConnection(), refreshAttempts, refreshedAfterError));
+
+        // The open connection keeps the in-memory database alive between the lock's short-lived connections.
+        try (Connection keepAlive = database.getConnection();
+             DBLock lock = new DBLock(failingOnce, "error_refresh_locks")) {
+            assertNotNull(lock.tryLock("resource", 60_000L, 0L));
+
+            // The first scheduled refresh throws an Error; before it was contained, it cancelled every later run.
+            assertTrue(refreshedAfterError.await(10, TimeUnit.SECONDS), "A refresh cycle after the Error must still renew the lock");
+            assertFalse(((ScheduledFuture<?>) field(lock, "scheduledFuture")).isDone());
+            assertEquals(1, ((Map<?, ?>) field(lock, "targetCodePool")).size());
         }
     }
 
@@ -126,6 +149,37 @@ class DBLockIntegrationTest extends TestBase {
                     final PreparedStatement statement = (PreparedStatement) result;
                     return Proxy.newProxyInstance(PreparedStatement.class.getClassLoader(), new Class<?>[] { PreparedStatement.class },
                             (statementProxy, statementMethod, statementArgs) -> {
+                                try {
+                                    final Object value = statementMethod.invoke(statement, statementArgs);
+                                    if (statementMethod.getName().equals("executeUpdate") && Integer.valueOf(1).equals(value)) {
+                                        refreshed.countDown();
+                                    }
+                                    return value;
+                                } catch (final InvocationTargetException failure) {
+                                    throw failure.getCause();
+                                }
+                            });
+                }
+                return result;
+            } catch (final InvocationTargetException failure) {
+                throw failure.getCause();
+            }
+        });
+    }
+
+    // Only the refresh task issues UPDATE statements through the lock's DataSource: the first one throws an Error,
+    // and every later successful one counts down the latch.
+    private static Connection failFirstRefresh(final Connection connection, final AtomicInteger refreshAttempts, final CountDownLatch refreshed) {
+        return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(), new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+            try {
+                final Object result = method.invoke(connection, args);
+                if (method.getName().equals("prepareStatement") && ((String) args[0]).startsWith("UPDATE ")) {
+                    final PreparedStatement statement = (PreparedStatement) result;
+                    return Proxy.newProxyInstance(PreparedStatement.class.getClassLoader(), new Class<?>[] { PreparedStatement.class },
+                            (statementProxy, statementMethod, statementArgs) -> {
+                                if (statementMethod.getName().equals("executeUpdate") && refreshAttempts.getAndIncrement() == 0) {
+                                    throw new NoClassDefFoundError("driver class unavailable for one refresh");
+                                }
                                 try {
                                     final Object value = statementMethod.invoke(statement, statementArgs);
                                     if (statementMethod.getName().equals("executeUpdate") && Integer.valueOf(1).equals(value)) {

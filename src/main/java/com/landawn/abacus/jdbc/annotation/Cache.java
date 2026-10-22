@@ -52,10 +52,17 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>The configured {@link #capacity()} and {@link #evictDelayMillis()} must both be non-negative;
  * invalid values fail DAO initialization with {@code UnsupportedOperationException}.</p>
  *
+ * <p>{@code @Cache} is optional: a cacheable DAO without it that enables {@link CacheResult @CacheResult}
+ * gets a {@link Jdbc.DefaultDaoCache} with the default capacity and eviction interval. A cache supplied
+ * through {@link JdbcUtil.DaoCreationOptions} ({@code cache}) is used instead of one configured here:
+ * {@link #capacity()}, {@link #evictDelayMillis()} and {@link #impl()} are then ignored, although
+ * negative values still fail DAO initialization.</p>
+ *
  * <p>When applied to such a DAO interface, methods annotated with {@link CacheResult} and
  * {@code enabled = true} (or eligible methods when {@code @CacheResult(enabled = true)} is applied
  * at the type level) will have their results cached according to the specified configuration. The cache key is automatically derived from the
- * fully-qualified method name, the DAO's table name and the serialized method arguments.</p>
+ * fully-qualified method name, the DAO's table name, the identity of the DAO proxy (and with it its
+ * {@code DataSource}) and the serialized method arguments.</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

@@ -22,6 +22,16 @@ package com.landawn.abacus.jdbc;
  * already active when the method is invoked: join it, require it, suspend it, or refuse it, and
  * whether a new transaction should be created when none exists.</p>
  *
+ * <p>The current transaction is the one active on the DAO's {@code DataSource} for the calling thread: a {@code JdbcUtil}
+ * transaction or a Spring-managed transaction that owns the {@code DataSource}'s connection (see
+ * {@code JdbcUtil.isInTransaction}); a connection Spring binds merely for synchronization is not one.
+ * {@link com.landawn.abacus.jdbc.annotation.Transactional#isolationLevel()} is applied only by {@link #REQUIRED},
+ * {@link #MANDATORY} and {@link #REQUIRES_NEW}, which enter a transaction scope; {@link #SUPPORTS},
+ * {@link #NOT_SUPPORTED} and {@link #NEVER} ignore it, and so do {@link #REQUIRED} and {@link #MANDATORY} when they join an
+ * active Spring-managed transaction (no JdbcUtil transaction on the {@code DataSource}). On a method returning a lazy result
+ * consumed after it returns (a stream, a {@code Seq} or an {@link java.util.Iterator}) only {@link #SUPPORTS} and
+ * {@link #MANDATORY} are accepted; the other values fail DAO creation with {@link UnsupportedOperationException}.</p>
+ *
  * @see com.landawn.abacus.jdbc.annotation.Transactional
  * @see com.landawn.abacus.jdbc.annotation.Transactional#propagation()
  */

@@ -146,6 +146,55 @@ public class JdbcUtilIntegrationTest extends TestBase {
         }
     }
 
+    // A delimited name can't be checked with the fallback query (identifier quoting is disabled), and since the metadata lookup
+    // of an unqualified name was confined to the current schema, a quoted table in a later schema of the search path was
+    // reported missing although an unqualified SELECT finds it. The other search-path schemas are now looked up too, in order;
+    // a schema that is not on the search path is still not searched.
+    @Test
+    public void testDelimitedTableInALaterSearchPathSchemaIsFound() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:metadata_search_path", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE SCHEMA OTHER");
+            stmt.execute("CREATE SCHEMA HIDDEN");
+            stmt.execute("CREATE TABLE OTHER.\"some Table\" (\"Id\" INT, \"Name\" VARCHAR(10))");
+            stmt.execute("CREATE TABLE HIDDEN.\"hidden Table\" (id INT)");
+            stmt.execute("SET SCHEMA_SEARCH_PATH PUBLIC, OTHER");
+            stmt.executeQuery("SELECT * FROM \"some Table\"").close();
+
+            assertTrue(JdbcUtil.tableExists(conn, "\"some Table\""));
+            assertEquals(List.of("Id", "Name"), JdbcUtil.getColumnNames(conn, "\"some Table\""));
+            assertFalse(JdbcUtil.tableExists(conn, "\"hidden Table\""));
+            assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(conn, "\"hidden Table\""));
+
+            stmt.execute("SET SCHEMA_SEARCH_PATH PUBLIC");
+            assertFalse(JdbcUtil.tableExists(conn, "\"some Table\""));
+        }
+    }
+
+    // H2 writes a schema name with a non-ASCII character to SESSION_STATE in the Unicode-escaped form U&"Sch\00e9ma", which the
+    // search-path parser could not read: the delimited table in that schema was reported missing although an unqualified
+    // SELECT finds it.
+    @Test
+    public void testDelimitedTableInAUnicodeNamedSearchPathSchemaIsFound() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:metadata_search_path_unicode", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            final String schema = "Sch\u00e9ma";
+            stmt.execute("CREATE SCHEMA \"" + schema + "\"");
+            stmt.execute("CREATE TABLE \"" + schema + "\".\"some Table\" (\"Id\" INT, \"Name\" VARCHAR(10))");
+            stmt.execute("SET SCHEMA_SEARCH_PATH PUBLIC, \"" + schema + "\"");
+            stmt.executeQuery("SELECT * FROM \"some Table\"").close();
+
+            try (ResultSet rs = stmt.executeQuery("SELECT STATE_COMMAND FROM INFORMATION_SCHEMA.SESSION_STATE WHERE STATE_KEY = 'SCHEMA_SEARCH_PATH'")) {
+                assertTrue(rs.next());
+                assertTrue(rs.getString(1).contains("U&\"Sch\\00e9ma\""), rs.getString(1));
+            }
+
+            assertTrue(JdbcUtil.tableExists(conn, "\"some Table\""));
+            assertEquals(List.of("Id", "Name"), JdbcUtil.getColumnNames(conn, "\"some Table\""));
+            assertFalse(JdbcUtil.tableExists(conn, "\"other Table\""));
+        }
+    }
+
     @Test
     public void testMetadataLookupEscapesLiteralSchemaAndTableNames() throws SQLException {
         try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:metadata_literal_names", "sa", "");
@@ -1021,6 +1070,44 @@ public class JdbcUtilIntegrationTest extends TestBase {
             JdbcUtil.executeUpdate(conn, "DROP TABLE \"ORDER\"");
             assertFalse(JdbcUtil.tableExists(conn, "order"));
             assertThrows(IllegalArgumentException.class, () -> JdbcUtil.dropTableIfExists(conn, "order"));
+        }
+    }
+
+    // tableExists and getColumnNames share one probe decision: the probe name is built the same way (quote-aware, case-folded
+    // parts) and both are gated on it, so for a keyword-named table (ORDER, USER) the two methods agree in every case - the
+    // table missing, present in the current schema, reachable through a qualified name, or only through the search path.
+    // getColumnNames gated on the unquoted spelling before, which was behaviorally equivalent while quoting is disabled (the
+    // quote only affects how the probe name is rendered, not whether a name is excluded); it now uses the same quote-aware probe
+    // name as tableExists so the two decisions stay textually identical.
+    @Test
+    public void testGetColumnNames_ReservedWordTableName_AgreesWithTableExists() throws SQLException {
+        try (Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:getcolumnnames_reserved_word", "sa", "");
+             Statement stmt = conn.createStatement()) {
+            for (final String name : new String[] { "order", "user", "PUBLIC.order", "other.user" }) {
+                assertFalse(JdbcUtil.tableExists(conn, name), name);
+                assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(conn, name), name);
+            }
+
+            stmt.execute("CREATE TABLE \"ORDER\" (id INT, total INT)");
+            stmt.execute("CREATE SCHEMA OTHER");
+            stmt.execute("CREATE TABLE OTHER.\"USER\" (id INT, name VARCHAR(10))");
+
+            for (final String name : new String[] { "order", "Order", "public.order", "PUBLIC.\"ORDER\"" }) {
+                assertTrue(JdbcUtil.tableExists(conn, name), name);
+                assertEquals(List.of("ID", "TOTAL"), JdbcUtil.getColumnNames(conn, name), name);
+            }
+
+            assertTrue(JdbcUtil.tableExists(conn, "other.user"));
+            assertEquals(List.of("ID", "NAME"), JdbcUtil.getColumnNames(conn, "other.user"));
+            // Not on the search path: both say the unqualified name is unknown.
+            assertFalse(JdbcUtil.tableExists(conn, "user"));
+            assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(conn, "user"));
+
+            stmt.execute("SET SCHEMA_SEARCH_PATH PUBLIC, OTHER");
+            stmt.executeQuery("SELECT * FROM \"USER\"").close();
+
+            assertTrue(JdbcUtil.tableExists(conn, "user"));
+            assertEquals(List.of("ID", "NAME"), JdbcUtil.getColumnNames(conn, "user"));
         }
     }
 

@@ -336,6 +336,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Registers a callback to be executed when this query is closed.
      * Multiple handlers can be registered and will be executed in reverse order of registration.
      *
+     * <p>Every registered handler runs even if another handler throws. The first failure in execution order
+     * propagates from {@link #close()}; failures of the handlers that run after it are kept in its
+     * suppressed-exception chain.</p>
+     *
      * <p>This is useful for cleaning up resources that were created for this query.</p>
      *
      * <p>Registration is atomic with respect to other registrations and {@link #close()}: a handler
@@ -1655,7 +1659,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets a ZonedDateTime parameter value as a SQL Timestamp.
-     * The ZonedDateTime is converted to its corresponding instant in time.
+     * The ZonedDateTime is converted to its corresponding instant in time. Its zone is not passed to the driver:
+     * the {@code Timestamp} is bound without a {@code Calendar}, so a driver that needs a local date-time (for
+     * example, for a {@code TIMESTAMP} column without time zone) derives it in the JVM default time zone.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1680,6 +1686,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets an OffsetDateTime parameter value as a SQL Timestamp.
+     * The OffsetDateTime is converted to its corresponding instant in time. Its offset is not passed to the driver:
+     * the {@code Timestamp} is bound without a {@code Calendar}, so a driver that needs a local date-time (for
+     * example, for a {@code TIMESTAMP} column without time zone) derives it in the JVM default time zone.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1704,6 +1713,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets an Instant parameter value as a SQL Timestamp.
+     * The {@code Timestamp} is bound without a {@code Calendar}, so a driver that needs a local date-time (for
+     * example, for a {@code TIMESTAMP} column without time zone) derives it in the JVM default time zone.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -2340,6 +2351,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * using the Abacus {@link Type} resolved from its runtime class, which maps it to an
      * appropriate SQL type. Note that a bean/entity value is not expanded into columns: it is bound as
      * its JSON string via {@code setString}.
+     *
+     * <p>A {@code null} value is passed to {@code PreparedStatement.setObject(parameterIndex, null)} without a SQL type.
+     * Not all drivers accept an untyped {@code NULL}; for portability use {@link #setNull(int, int)} or
+     * {@link #setObject(int, Object, int)} instead.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -5245,7 +5260,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *     .setInt(1, userId)
      *     .queryForString();   // SELECT name FROM users WHERE id = ?
      *
-     * String userName = name.orElse("Unknown");
+     * String userName = name.orElseIfNull("Unknown");   // orElse("Unknown") would return null for a SQL NULL name
      * }</pre>
      *
      * @return a <i>present</i> {@code Nullable<String>} holding the column value (possibly {@code null}
@@ -5289,7 +5304,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * Nullable<BigInteger> largeNumber = query
      *     .setString(1, accountId)
-     *     .queryForBigInteger();   // SELECT balance FROM accounts WHERE id = ?
+     *     .queryForBigInteger();   // SELECT total_bytes FROM accounts WHERE id = ? (a scaled value such as 12.50 throws NumberFormatException)
      * }</pre>
      *
      * @return a <i>present</i> {@code Nullable<BigInteger>} holding the column value (possibly {@code null}
@@ -7660,7 +7675,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * with a maximum result limit.
      *
      * <p>This method provides the most flexible row processing, with both filtering and mapping having access to
-     * the ResultSet and column metadata. Processing stops when maxResult objects have been created.</p>
+     * the ResultSet and column metadata. Processing stops when either the ResultSet is exhausted or maxResult mapped objects
+     * have been created.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7790,6 +7806,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists all the ResultSets using the provided row mapper.
      * This method is used for processing multiple ResultSets returned by stored procedures.
      *
+     * <p>The same {@code rowMapper} instance is applied to every ResultSet. A custom mapper that caches column metadata
+     * must therefore refresh it for each ResultSet when the ResultSets have different columns; the stateful mappers
+     * created by {@link Jdbc.RowMapper} factories (e.g. {@link Jdbc.RowMapper#toArray(Jdbc.ColumnGetter)}) and builders
+     * already re-initialize themselves for a ResultSet with a different column layout.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Custom mapping for each result set
@@ -7845,6 +7866,12 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists the matching rows from every ResultSet using the specified row filter and row mapper.
      * Each ResultSet contributes one inner list, including an empty list when no rows pass the filter.
      *
+     * <p>The same {@code rowFilter} and {@code rowMapper} instances are applied to every ResultSet. A custom filter or
+     * mapper that caches column metadata must therefore refresh it for each ResultSet when the ResultSets have different
+     * columns; the stateful mappers created by {@link Jdbc.RowMapper} factories (e.g.
+     * {@link Jdbc.RowMapper#toArray(Jdbc.ColumnGetter)}) and builders already re-initialize themselves for a ResultSet with
+     * a different column layout.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Process multiple result sets with filtering
@@ -7898,6 +7925,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     /**
      * Lists all the ResultSets and maps them using the provided BiRowMapper.
      * The BiRowMapper receives both ResultSet and column labels for flexible mapping.
+     *
+     * <p>The same {@code rowMapper} instance is applied to every ResultSet. A custom mapper that caches column metadata
+     * must therefore refresh it for each ResultSet when the ResultSets have different columns; the stateful mappers
+     * created by {@link Jdbc.BiRowMapper} factories (e.g. {@link Jdbc.BiRowMapper#to(Class)}) and builders already
+     * re-initialize themselves for a ResultSet with different column labels.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7957,6 +7989,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Lists the matching rows from every ResultSet using the specified BiRowFilter and BiRowMapper.
      * Both filter and mapper receive ResultSet and column labels for maximum flexibility.
      * Each ResultSet contributes one inner list, including an empty list when no rows pass the filter.
+     *
+     * <p>The same {@code rowFilter} and {@code rowMapper} instances are applied to every ResultSet. A custom filter or
+     * mapper that caches column metadata must therefore refresh it for each ResultSet when the ResultSets have different
+     * columns; the stateful mappers created by {@link Jdbc.BiRowMapper} factories (e.g. {@link Jdbc.BiRowMapper#to(Class)})
+     * and builders already re-initialize themselves for a ResultSet with different column labels.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10007,6 +10044,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * (typically an auto-increment ID). If no key is generated or the key is a
      * default value (null, 0, etc.), an empty Optional is returned.</p>
      *
+     * <p>The statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is
+     * returned or a {@code SQLException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Insert new user and get generated ID
@@ -10041,6 +10082,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * composite keys or non-standard key generation. The method executes the INSERT statement
      * and then applies the provided extractor to the generated keys ResultSet.</p>
      *
+     * <p>As with {@link #insert()}, the statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is returned or a
+     * {@code SQLException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Insert with custom key extraction
@@ -10061,7 +10106,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                                  The function receives the ResultSet positioned at the generated key row.
      *                                  Must not be {@code null}.
      * @return An Optional containing the generated key if available, otherwise empty.
-     *         Empty is returned if no key was generated, or if the extractor returns {@code null} or a default id value (e.g. {@code 0}).
+     *         Empty is returned if no key was generated, or if the extractor returns {@code null} or a default id value (e.g. {@code 0},
+     *         or a bean/record whose ID properties are all default; a bean/record that declares no ID property is returned as is).
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} is null
      * @throws SQLException if executing the insert or reading the generated keys fails, or the generated-key extractor throws {@code
@@ -10084,6 +10130,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides access to both the ResultSet and column labels when extracting
      * generated keys, offering more flexibility than the standard row mapper.</p>
      *
+     * <p>As with {@link #insert()}, the statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is returned or a
+     * {@code SQLException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Optional<Map<String, Object>> keyMap = preparedQuery.insert((rs, columnLabels) -> {
@@ -10099,7 +10149,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels.
      *                                  Must not be {@code null}.
      * @return An Optional containing the generated key if it exists, otherwise an empty Optional.
-     *         Empty is also returned if the extractor returns {@code null} or a default id value (e.g. {@code 0}).
+     *         Empty is also returned if the extractor returns {@code null} or a default id value (e.g. {@code 0},
+     *         or a bean/record whose ID properties are all default; a bean/record that declares no ID property is returned as is).
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} is null
      * @throws SQLException if executing the insert or reading the generated keys fails, or the generated-key extractor throws {@code
@@ -10170,12 +10221,34 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     <ID> Optional<ID> insert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester)
             throws IllegalStateException, IllegalArgumentException, SQLException {
+        return insert(autoGeneratedKeyExtractor, isDefaultIdTester, null);
+    }
+
+    /**
+     * Executes an INSERT statement and retrieves the auto-generated key, as {@link #insert(Jdbc.BiRowMapper, Predicate)} does,
+     * running {@code afterExecution} as soon as the statement has executed, before its parameters are cleared, the SQL log
+     * handler runs and the generated keys are read: a failure reported after it ran came after the row was inserted.
+     *
+     * @param <ID> the type of the auto-generated key (typically Long or Integer)
+     * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels
+     * @param isDefaultIdTester the predicate to test if the generated key is a default/invalid value
+     * @param afterExecution run once the statement has executed; {@code null} for none
+     * @return An Optional containing the generated key if it exists and is valid, otherwise an empty Optional
+     * @throws IllegalStateException if this query is closed
+     * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} or {@code isDefaultIdTester} is {@code null}
+     * @throws SQLException if executing the insert or reading the generated keys fails, or the generated-key extractor throws {@code
+     *         SQLException}; also if closing a consumed result set fails
+     */
+    <ID> Optional<ID> insert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester,
+            final Runnable afterExecution) throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(autoGeneratedKeyExtractor, cs.autoGeneratedKeyExtractor);
         checkArgNotNull(isDefaultIdTester, cs.isDefaultIdTester);
 
         try {
-            JdbcUtil.executeUpdate(stmt);
+            // The hook runs inside executeUpdate, right after the statement executed: run after it returned, the hook was
+            // skipped when clearing the parameters or the SQL log handler threw an Error, although the row was inserted.
+            JdbcUtil.executeUpdate(stmt, afterExecution);
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
@@ -10199,6 +10272,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p>This method uses the default single-column generated key extractor, which reads the
      * first generated-key column using {@link JdbcUtil#getColumnValue(ResultSet, int)}.</p>
+     *
+     * <p>The statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is
+     * returned or a {@code SQLException} is thrown. The statement's batch is cleared after execution,
+     * even if execution fails.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -10230,6 +10308,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method allows custom extraction of generated keys from batch insert operations,
      * useful when dealing with non-numeric keys or composite keys.</p>
      *
+     * <p>As with {@link #insert()}, the statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is returned or a
+     * {@code SQLException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<UUID> generatedUUIDs = preparedQuery.batchInsert(rs ->
@@ -10242,7 +10324,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                                  Must not be {@code null}.
      * @return the keys extracted from the generated-key rows returned by the JDBC driver, in driver order. The
      *         number of keys is driver-dependent and need not equal the number of inserted rows. Returns an empty
-     *         list if the driver returns no key rows, or if every extracted key is a default/invalid value.
+     *         list if the driver returns no key rows, or if every extracted key is a default value as
+     *         described for {@link #insert(RowMapper)}.
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} is null
      * @throws SQLException if executing the batch or reading the generated keys fails, or the generated-key extractor throws {@code
@@ -10265,6 +10348,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides access to both the ResultSet and column labels when extracting
      * generated keys from batch operations.</p>
      *
+     * <p>As with {@link #insert()}, the statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is returned or a
+     * {@code SQLException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * List<Map<String, Object>> keyMaps = preparedQuery.batchInsert((rs, labels) -> {
@@ -10281,7 +10368,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *                                  Must not be {@code null}.
      * @return the keys extracted from the generated-key rows returned by the JDBC driver, in driver order. The
      *         number of keys is driver-dependent and need not equal the number of inserted rows. Returns an empty
-     *         list if the driver returns no key rows, or if every extracted key is a default/invalid value.
+     *         list if the driver returns no key rows, or if every extracted key is a default value as
+     *         described for {@link #insert(RowMapper)}.
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} is null
      * @throws SQLException if executing the batch or reading the generated keys fails, or the generated-key extractor throws {@code
@@ -10362,12 +10450,35 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     <ID> List<ID> batchInsert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester)
             throws IllegalStateException, IllegalArgumentException, SQLException {
+        return batchInsert(autoGeneratedKeyExtractor, isDefaultIdTester, null);
+    }
+
+    /**
+     * Executes a batch INSERT statement and retrieves the generated keys, as {@link #batchInsert(Jdbc.BiRowMapper, Predicate)}
+     * does, running {@code afterExecution} as soon as the batch has executed, before the batch is cleared, the SQL log handler
+     * runs and the generated keys are read: a failure reported after it ran came after the rows were inserted.
+     *
+     * @param <ID> the type of the auto-generated keys
+     * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels
+     * @param isDefaultIdTester the predicate to test if the generated key is a default/invalid value
+     * @param afterExecution run once the batch has executed; {@code null} for none
+     * @return the keys extracted from the generated-key rows returned by the JDBC driver, in driver order; or an
+     *         empty list if the driver returns no key rows or every extracted key is a default/invalid value
+     * @throws IllegalStateException if this query is closed
+     * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} or {@code isDefaultIdTester} is {@code null}
+     * @throws SQLException if executing the batch or reading the generated keys fails, or the generated-key extractor throws {@code
+     *         SQLException}; also if closing a consumed result set fails
+     */
+    <ID> List<ID> batchInsert(final Jdbc.BiRowMapper<? extends ID> autoGeneratedKeyExtractor, final Predicate<Object> isDefaultIdTester,
+            final Runnable afterExecution) throws IllegalStateException, IllegalArgumentException, SQLException {
         assertNotClosed();
         checkArgNotNull(autoGeneratedKeyExtractor, cs.autoGeneratedKeyExtractor);
         checkArgNotNull(isDefaultIdTester, cs.isDefaultIdTester);
 
         try {
-            JdbcUtil.executeBatch(stmt);
+            // The hook runs inside executeBatch, right after the batch executed: run after it returned, the hook was skipped
+            // when clearing the batch or the SQL log handler threw an Error, although the rows were inserted.
+            JdbcUtil.executeBatch(stmt, afterExecution);
 
             final List<ID> ids = new ArrayList<>();
 
@@ -10436,6 +10547,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is useful when you need to perform an update operation that generates keys
      * (e.g., an INSERT with auto-generated columns or an UPDATE that triggers key generation).</p>
      *
+     * <p>As with {@link #insert()}, the statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is returned or a
+     * {@code SQLException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Integer, List<Long>> result = JdbcUtil.prepareQuery(conn,
@@ -10452,7 +10567,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param autoGeneratedKeyExtractor the extractor to retrieve the auto-generated keys.
      *                                  Must not be {@code null}.
      * @return A tuple containing the number of rows affected and a list of generated keys.
-     *         The list may be empty if no keys were generated.
+     *         The list may be empty if no keys were generated. Unlike {@link #insert()}, extracted keys are
+     *         returned as-is: {@code null} or default (e.g. {@code 0}) keys are not filtered out.
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} is {@code null}
      * @throws SQLException if executing the statement or reading the generated keys fails, or the generated-key extractor throws {@code
@@ -10492,6 +10608,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides access to both the ResultSet and column labels when extracting
      * generated keys from update operations.</p>
      *
+     * <p>As with {@link #insert()}, the statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is returned or a
+     * {@code SQLException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Integer, List<Map<String, Object>>> result =
@@ -10507,7 +10627,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels.
      *                                  Must not be {@code null}.
-     * @return A tuple containing the number of rows affected and a list of generated keys
+     * @return A tuple containing the number of rows affected and a list of generated keys; extracted keys are
+     *         returned as-is ({@code null} or default keys are not filtered out)
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} is {@code null}
      * @throws SQLException if executing the statement or reading the generated keys fails, or the generated-key extractor throws {@code
@@ -10561,6 +10682,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * containing one element for each command: its affected-row count, or
      * {@link java.sql.Statement#SUCCESS_NO_INFO} when it succeeded without a known count.</p>
      *
+     * <p>The statement's batch is cleared after execution, even if execution fails, so a query kept open
+     * with {@code closeAfterExecution(false)} can start a new batch.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * int[] results = JdbcUtil.prepareQuery(conn,
@@ -10603,6 +10727,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method is useful for batch INSERT operations where you need to track both
      * the success of each insert and retrieve the generated keys.</p>
      *
+     * <p>As with {@link #insert()}, the statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is returned or a
+     * {@code SQLException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<int[], List<Long>> result = JdbcUtil.prepareQuery(conn,
@@ -10618,7 +10746,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor the extractor to retrieve the auto-generated keys.
      *                                  Must not be {@code null}.
-     * @return A tuple containing an array of update counts and a list of generated keys
+     * @return A tuple containing an array of update counts and a list of generated keys; extracted keys are
+     *         returned as-is ({@code null} or default keys are not filtered out, unlike {@link #batchInsert()})
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} is {@code null}
      * @throws SQLException if executing the batch or reading the generated keys fails, or the generated-key extractor throws {@code
@@ -10658,6 +10787,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>This method provides access to both the ResultSet and column labels when extracting
      * generated keys from batch update operations.</p>
      *
+     * <p>As with {@link #insert()}, the statement must have been prepared to return generated keys (for example with
+     * {@code JdbcUtil.prepareQuery(conn, sql, true)}); otherwise, depending on the driver, no key is returned or a
+     * {@code SQLException} is thrown.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<int[], List<CompositeKey>> result =
@@ -10669,7 +10802,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param <T> the type of the auto-generated keys
      * @param autoGeneratedKeyExtractor the extractor that receives both ResultSet and column labels.
      *                                  Must not be {@code null}.
-     * @return A tuple containing an array of update counts and a list of generated keys
+     * @return A tuple containing an array of update counts and a list of generated keys; extracted keys are
+     *         returned as-is ({@code null} or default keys are not filtered out)
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code autoGeneratedKeyExtractor} is {@code null}
      * @throws SQLException if executing the batch or reading the generated keys fails, or the generated-key extractor throws {@code
@@ -10746,7 +10880,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Executes a large batch update operation that may affect more rows than can be represented by int values.
      *
      * <p>This method is similar to {@link #batchUpdate()} but returns an array of long values
-     * to accommodate update counts that exceed {@link Integer#MAX_VALUE}.</p>
+     * to accommodate update counts that exceed {@link Integer#MAX_VALUE}. As with {@code batchUpdate()},
+     * the statement's batch is cleared after execution, even if execution fails.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11052,7 +11187,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Note:</b> Keep the connection open until {@code sqlAction} completes. The query is
      * automatically closed when the action completes unless {@code closeAfterExecution(false)}
      * is configured. With automatic closing enabled, return a materialized value rather than
-     * a JDBC-backed lazy {@link Stream}, which would depend on the closed query.</p>
+     * a JDBC-backed lazy {@link Stream}, which would depend on the closed query. If the task cannot
+     * be submitted, the query is likewise closed before the submission failure is rethrown.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11104,7 +11240,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * executor determines where the action runs and may execute it on the calling thread.
      * The query is automatically closed when the action completes unless
      * {@code closeAfterExecution(false)} is configured. With automatic closing enabled, return
-     * a materialized value rather than a JDBC-backed lazy {@link Stream}.</p>
+     * a materialized value rather than a JDBC-backed lazy {@link Stream}. If the task cannot be
+     * submitted, the query is likewise closed before the submission failure is rethrown.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11162,7 +11299,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Note:</b> Keep the connection open until {@code sqlAction} completes. The query is
      * automatically closed when the action completes unless {@code closeAfterExecution(false)}
-     * is configured.</p>
+     * is configured. If the task cannot be submitted, the query is likewise closed before the
+     * submission failure is rethrown.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11218,7 +11356,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p><b>Note:</b> Keep the connection open until {@code sqlAction} completes. The supplied
      * executor determines where the action runs and may execute it on the calling thread.
      * The query is automatically closed when the action completes unless
-     * {@code closeAfterExecution(false)} is configured.</p>
+     * {@code closeAfterExecution(false)} is configured. If the task cannot be submitted, the query
+     * is likewise closed before the submission failure is rethrown.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -11445,14 +11584,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <p>The method will, in order:</p>
      * <ul>
      *   <li>Mark this instance as closed</li>
-     *   <li>Reset any modified statement properties to their defaults</li>
+     *   <li>Restore any statement properties this query modified to their original values</li>
      *   <li>Close the underlying PreparedStatement</li>
      *   <li>Execute any registered close handler</li>
      * </ul>
      *
-     * <p><b>Note:</b> After calling close(), execution and parameter-setting methods
-     * that check the query state throw {@link IllegalStateException}; calling
-     * {@code close()} again is a no-op.</p>
+     * <p><b>Note:</b> After calling close(), execution methods, statement-configuration setters
+     * such as {@code setFetchSize}, and {@code addBatch} throw {@link IllegalStateException};
+     * plain parameter setters such as {@code setInt} leave the closed-statement check to the JDBC
+     * driver, which typically throws {@code SQLException}. Calling {@code close()} again is a no-op.</p>
      *
      * <p>SQL and runtime exceptions raised by the driver while restoring properties or closing the
      * statement are logged rather than thrown. If statement cleanup still fails (for example with an

@@ -198,6 +198,23 @@ class JdbcCodeGenerationSqlConversionTest extends JdbcCodeGenerationUtilTestSupp
     }
 
     @Test
+    public void testConvertInsertSqlToUpdateSql_MySqlHashBracePlaceholderIsNotAComment() throws SQLException {
+        for (final String productName : List.of("MySQL", "MariaDB")) {
+            final DataSource mySql = dataSourceReporting(productName);
+
+            // A #{name} named parameter is not a MySQL '#' comment; reading it as one hid the rest of the line and
+            // rejected valid named SQL with "unclosed parenthesis".
+            assertEquals("UPDATE t SET a = #{a}, b = #{b} WHERE id = #{id}",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a, b) VALUES (#{a}, #{b})", "id = #{id}"), productName);
+            assertEquals("UPDATE t SET a = (#{a} + 1), b = #{b}",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a, b) VALUES ((#{a} + 1), #{b});"), productName);
+            // A '#' that does not open a placeholder still starts a line comment, which keeps its terminating newline.
+            assertEquals("UPDATE t SET a = #{a}, b = 1 # {b}, )\n WHERE id = 2",
+                    JdbcCodeGenerationUtil.convertInsertSqlToUpdateSql(mySql, "INSERT INTO t(a, b) VALUES (#{a}, 1 # {b}, )\n)", "id = 2"), productName);
+        }
+    }
+
+    @Test
     public void testConvertInsertSqlToUpdateSql_RemovesColumnListComments() throws SQLException {
         final DataSource dataSource = Mockito.mock(DataSource.class);
         when(dataSource.getConnection()).thenReturn(connection);

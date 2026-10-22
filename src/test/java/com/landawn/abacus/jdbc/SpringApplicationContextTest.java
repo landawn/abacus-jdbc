@@ -13,7 +13,9 @@ import java.lang.reflect.Modifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.BeanCreationException;
+import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.ContextClosedEvent;
 import org.springframework.context.support.GenericApplicationContext;
 
 import com.landawn.abacus.TestBase;
@@ -153,6 +155,107 @@ public class SpringApplicationContextTest extends TestBase {
             assertSame("replacement", target.getBean("value"));
 
             replacementContext.close();
+            assertNull(target.getBean("value"));
+        } finally {
+            target.setApplicationContext(null);
+        }
+    }
+
+    @Test
+    public void testClosingChildContextFallsBackToStillRunningParent() {
+        try (GenericApplicationContext parent = new GenericApplicationContext();
+             GenericApplicationContext child = new GenericApplicationContext()) {
+            final SpringApplicationContext parentBridge = new SpringApplicationContext();
+            parent.registerBean(SpringApplicationContext.class, () -> parentBridge);
+            parent.registerBean("value", String.class, () -> "parent");
+            parent.refresh();
+            parentBridge.setApplicationContext(parent);
+
+            child.setParent(parent);
+            child.registerBean(SpringApplicationContext.class, () -> target);
+            child.registerBean("childOnly", String.class, () -> "child");
+            child.refresh();
+            target.setApplicationContext(child);
+
+            assertSame("child", target.getBean("childOnly"));
+            assertSame("parent", target.getBean("value"));
+
+            child.close();
+            assertSame("parent", target.getBean("value"));
+            assertSame("parent", new SpringApplicationContext().getBean("value", String.class));
+            assertThrows(NoSuchBeanDefinitionException.class, () -> target.getBean("childOnly"));
+
+            parent.close();
+            assertNull(target.getBean("value"));
+        } finally {
+            target.setApplicationContext(null);
+        }
+    }
+
+    @Test
+    public void testReRegisteringContextIsIdempotentAndKeepsItsPosition() {
+        try (GenericApplicationContext parent = new GenericApplicationContext();
+             GenericApplicationContext child = new GenericApplicationContext()) {
+            final SpringApplicationContext parentBridge = new SpringApplicationContext();
+            parent.registerBean(SpringApplicationContext.class, () -> parentBridge);
+            parent.registerBean("value", String.class, () -> "parent");
+            parent.refresh();
+            parentBridge.setApplicationContext(parent);
+
+            child.setParent(parent);
+            child.registerBean(SpringApplicationContext.class, () -> target);
+            child.registerBean("value", String.class, () -> "child");
+            child.refresh();
+            target.setApplicationContext(child);
+
+            // A repeated injection, or another (e.g. lazily created) bridge of an already registered context,
+            // neither duplicates it nor moves it ahead of a context registered later.
+            target.setApplicationContext(child);
+            parentBridge.setApplicationContext(parent);
+            new SpringApplicationContext().setApplicationContext(parent);
+            assertSame("child", target.getBean("value"));
+
+            child.close();
+            assertSame("parent", target.getBean("value"));
+
+            // One close removes the context however often it was registered.
+            parent.close();
+            assertNull(target.getBean("value"));
+        } finally {
+            target.setApplicationContext(null);
+        }
+    }
+
+    @Test
+    public void testReleasingOneContextKeepsTheOthersInRegistrationOrder() {
+        final ApplicationContext first = mock(ApplicationContext.class);
+        final ApplicationContext second = mock(ApplicationContext.class);
+        final ApplicationContext third = mock(ApplicationContext.class);
+        when(first.getBean("value")).thenReturn("first");
+        when(second.getBean("value")).thenReturn("second");
+        when(third.getBean("value")).thenReturn("third");
+        final SpringApplicationContext firstBridge = new SpringApplicationContext();
+        final SpringApplicationContext secondBridge = new SpringApplicationContext();
+        final SpringApplicationContext thirdBridge = new SpringApplicationContext();
+
+        try {
+            firstBridge.setApplicationContext(first);
+            secondBridge.setApplicationContext(second);
+            thirdBridge.setApplicationContext(third);
+            assertSame("third", target.getBean("value"));
+
+            // Releasing a context other than the newest leaves the lookup context unchanged.
+            target.onApplicationEvent(new ContextClosedEvent(second));
+            assertSame("third", target.getBean("value"));
+
+            // Destroying the newest context's bridge falls back to the newest one still registered.
+            thirdBridge.destroy();
+            assertSame("first", target.getBean("value"));
+
+            secondBridge.destroy();
+            assertSame("first", target.getBean("value"));
+
+            firstBridge.destroy();
             assertNull(target.getBean("value"));
         } finally {
             target.setApplicationContext(null);

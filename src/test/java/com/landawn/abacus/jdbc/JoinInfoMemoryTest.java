@@ -56,8 +56,8 @@ class JoinInfoMemoryTest {
         for (int i = 0; i < 2_048; i++) {
             final String rotatingTable = "bounded_partition_" + i;
             JoinInfo.getEntityJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, rotatingTable);
-            assertEquals(List.of("orders"), JoinInfo.getJoinEntityPropNamesByType(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class,
-                    rotatingTable, JoinInfoTest.OrderEntity.class));
+            assertEquals(List.of("orders"), JoinInfo.getJoinEntityPropNamesByType(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, rotatingTable,
+                    JoinInfoTest.OrderEntity.class));
         }
 
         assertTrue(metadataPool().size() <= 1_024);
@@ -94,8 +94,8 @@ class JoinInfoMemoryTest {
         }
 
         assertSame(retained, JoinInfo.getEntityJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, "dao_owned"));
-        assertEquals(List.of("orders"), JoinInfo.getJoinEntityPropNamesByType(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, "dao_owned",
-                JoinInfoTest.OrderEntity.class));
+        assertEquals(List.of("orders"),
+                JoinInfo.getJoinEntityPropNamesByType(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, "dao_owned", JoinInfoTest.OrderEntity.class));
     }
 
     @Test
@@ -121,6 +121,39 @@ class JoinInfoMemoryTest {
         }
 
         assertEquals(metadataPool().size(), metadataQueue().size(), "the eviction queue holds exactly the cached keys");
+    }
+
+    // Each pooled DAO proxy retains its combination once; the metadata is released when the last one leaves the DAO pool
+    // (e.g. evicted DAOs created per tenant table), so retained metadata cannot accumulate either.
+    @Test
+    void retainedDaoMetadataIsReleasedByItsLastDao() throws Exception {
+        final String table = "dao_released";
+        final Object key = Tuple.of(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table);
+        final Map<String, JoinInfo> first = JoinInfo.getEntityJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table);
+        final Map<String, JoinInfo> second = JoinInfo.getEntityJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table);
+        final Field field = JoinInfo.class.getDeclaredField("daoJoinMetadataPool");
+        field.setAccessible(true);
+        final Map<?, ?> daoMetadataPool = (Map<?, ?>) field.get(null);
+
+        JoinInfo.retainDaoJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table, first);
+        JoinInfo.retainDaoJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table, second);
+
+        JoinInfo.releaseDaoJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table, second);
+        assertTrue(daoMetadataPool.containsKey(key), "still retained by the other DAO");
+        assertSame(first, JoinInfo.getEntityJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table));
+
+        JoinInfo.releaseDaoJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table, first);
+        assertFalse(daoMetadataPool.containsKey(key), "released by its last DAO");
+
+        // Later lookups use the bounded cache again; the released maps stay usable.
+        final Map<String, JoinInfo> rebuilt = JoinInfo.getEntityJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table);
+        assertTrue(metadataPool().containsKey(key));
+        assertEquals(table, rebuilt.get("orders").tableName);
+        assertEquals(table, first.get("orders").tableName);
+
+        // Releasing a combination that is not retained is a no-op.
+        JoinInfo.releaseDaoJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, table, first);
+        assertFalse(daoMetadataPool.containsKey(key));
     }
 
     static final String REENTRANT_TABLE = "reentrant_user";
@@ -193,8 +226,7 @@ class JoinInfoMemoryTest {
         final Object key = Tuple.of(JoinInfoMemoryTest.class, RaceUser.class, RACE_TABLE);
         // retainDaoJoinInfo stores whatever map the DAO captured. This one is built up front: building RaceUser's map
         // here would wait for the bean metadata the racing lookup is in the middle of building.
-        final Map<String, JoinInfo> registered = JoinInfo.getEntityJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class,
-                "race_registered");
+        final Map<String, JoinInfo> registered = JoinInfo.getEntityJoinInfo(JoinInfoTest.UserDao.class, JoinInfoTest.UserEntity.class, "race_registered");
         final ExecutorService executor = Executors.newSingleThreadExecutor();
 
         try {
@@ -335,7 +367,16 @@ class JoinInfoMemoryTest {
     private static java.util.Collection<?> registeredDaos() throws Exception {
         final Field field = DaoImpl.class.getDeclaredField("daoPool");
         field.setAccessible(true);
-        return ((Map<?, ?>) field.get(null)).values();
+        final List<Object> daos = new java.util.ArrayList<>();
+
+        // The pool holds an entry per registered proxy; its 'dao' field is the proxy.
+        for (final Object pooledDao : ((Map<?, ?>) field.get(null)).values()) {
+            final Field daoField = pooledDao.getClass().getDeclaredField("dao");
+            daoField.setAccessible(true);
+            daos.add(daoField.get(pooledDao));
+        }
+
+        return daos;
     }
 
     @Test

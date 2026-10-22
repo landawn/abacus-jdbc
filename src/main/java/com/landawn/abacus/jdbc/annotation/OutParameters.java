@@ -34,7 +34,8 @@ import java.lang.annotation.Target;
  * {@link java.sql.CallableStatement} in declaration order; the registered values are then
  * exposed to the caller only through a {@code Jdbc.OutParamResult} return value (with
  * {@code op = QueryOperation.executeAndGetOutParameters}) or a {@code Tuple2<T, Jdbc.OutParamResult>}
- * return value.</p>
+ * return value (with {@code op} {@code DEFAULT}, {@code list}, {@code query}, {@code listAll} or
+ * {@code queryAll}).</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code

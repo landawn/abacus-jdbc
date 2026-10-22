@@ -3,6 +3,7 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -34,6 +35,32 @@ class JdbcUtilQuotedSqlIntegrationTest {
                         "SELECT \"a\\\" INTO archive FROM source", "SELECT '\\' AS ordinary, E'a\\'b' AS escaped FROM FINAL TABLE (UPDATE source SET qty = 42)",
                         "WITH data AS (SELECT '\\' AS value) UPDATE source SET qty = 42" }) {
                     assertSame(tran, JdbcUtil.getTransaction(ds, sql + " /* dialect lookup */", SqlTransaction.CreatedBy.JDBC_UTIL), product + ": " + sql);
+                }
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+        }
+    }
+
+    // A ';' after a backslash-terminated string separates a further statement under one escape reading only; a write there
+    // must still join. PostgreSQL reads E'a\'...' as one escape string, so there the text after it is not a statement.
+    @Test
+    void ambiguousQuotedSemicolonsSeparateStatementsUnderEitherEscapeReading() throws SQLException {
+        final String ordinary = "SELECT 'a\\'; UPDATE source SET qty = 42; SELECT '";
+        final String escaped = "SELECT E'a\\'; UPDATE source SET qty = 42; SELECT '";
+        final String plain = "SELECT 'a\\'; SELECT 1; SELECT '";
+
+        for (final String product : new String[] { "PostgreSQL", "MySQL", "MariaDB", "Microsoft SQL Server", "H2", "Oracle" }) {
+            final DataSource ds = mockDataSource(product);
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
+            try {
+                assertSame(tran, JdbcUtil.getTransaction(ds, ordinary, SqlTransaction.CreatedBy.JDBC_UTIL), product);
+                assertNull(JdbcUtil.getTransaction(ds, plain, SqlTransaction.CreatedBy.JDBC_UTIL), product);
+
+                if (product.equals("PostgreSQL")) {
+                    assertNull(JdbcUtil.getTransaction(ds, escaped, SqlTransaction.CreatedBy.JDBC_UTIL), product);
+                } else {
+                    assertSame(tran, JdbcUtil.getTransaction(ds, escaped, SqlTransaction.CreatedBy.JDBC_UTIL), product);
                 }
             } finally {
                 tran.rollbackIfNotCommitted();
@@ -215,6 +242,65 @@ class JdbcUtilQuotedSqlIntegrationTest {
                 assertTrue(rows.next());
                 assertEquals(1, rows.getInt(1), "The subscript's embedded UPDATE must roll back with its for-update-only transaction");
             }
+        }
+    }
+
+    // H2 runs every statement of "SELECT ...; UPDATE ...": the UPDATE must roll back with the for-update-only transaction.
+    @Test
+    void aWriteAfterASelectInMultiStatementSqlRollsBackWithTheTransaction() throws SQLException {
+        final JdbcDataSource ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:multi_statement_" + UUID.randomUUID());
+
+        try (Connection observer = ds.getConnection();
+             Statement stmt = observer.createStatement()) {
+            stmt.execute("CREATE TABLE scan_widget (id INT PRIMARY KEY, qty INT)");
+            stmt.execute("INSERT INTO scan_widget VALUES (1, 1)");
+
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
+            try {
+                final int qty = JdbcUtil.prepareQuery(ds, "SELECT qty FROM scan_widget WHERE id = 1; UPDATE scan_widget SET qty = 42 WHERE id = 1")
+                        .query((Jdbc.ResultExtractor<Integer>) rs -> {
+                            assertTrue(rs.next());
+                            return rs.getInt(1);
+                        });
+                assertEquals(1, qty);
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+
+            try (ResultSet rows = stmt.executeQuery("SELECT qty FROM scan_widget WHERE id = 1")) {
+                assertTrue(rows.next());
+                assertEquals(1, rows.getInt(1), "The second statement's UPDATE must roll back with its for-update-only transaction");
+            }
+        }
+    }
+
+    // A SELECT ... FOR UPDATE under a for-update-only transaction runs on the transaction's connection, so its row lock is held
+    // until the transaction ends instead of being released by an auto-commit connection right away.
+    @Test
+    void aLockingReadHoldsItsLocksUntilTheTransactionEnds() throws SQLException {
+        final JdbcDataSource ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:locking_read_" + UUID.randomUUID());
+
+        try (Connection observer = ds.getConnection();
+             Statement stmt = observer.createStatement()) {
+            stmt.execute("CREATE TABLE scan_widget (id INT PRIMARY KEY, qty INT)");
+            stmt.execute("INSERT INTO scan_widget VALUES (1, 1)");
+            stmt.execute("SET LOCK_TIMEOUT 100");
+
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
+            try {
+                final int qty = JdbcUtil.prepareQuery(ds, "SELECT qty FROM scan_widget WHERE id = 1 FOR UPDATE").query((Jdbc.ResultExtractor<Integer>) rs -> {
+                    assertTrue(rs.next());
+                    return rs.getInt(1);
+                });
+                assertEquals(1, qty);
+                assertThrows(SQLException.class, () -> stmt.executeUpdate("UPDATE scan_widget SET qty = 2 WHERE id = 1"));
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+
+            assertEquals(1, stmt.executeUpdate("UPDATE scan_widget SET qty = 2 WHERE id = 1"));
         }
     }
 

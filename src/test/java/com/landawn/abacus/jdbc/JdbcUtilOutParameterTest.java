@@ -167,6 +167,27 @@ class JdbcUtilOutParameterTest extends JdbcUtilTestSupport {
         verifyNoInteractions(stmt);
     }
 
+    // An OutParam built with the unvalidated canonical constructor may have neither a positive index nor a name; it used
+    // to reach the driver as getObject((String) null) after earlier parameters had already been read.
+    @Test
+    public void testOutParametersRejectUnaddressableEntriesBeforeReadingTheStatement() throws SQLException {
+        final CallableStatement stmt = mock(CallableStatement.class);
+
+        for (final OutParam unaddressable : List.of(new OutParam(0, null, Types.INTEGER, null, 0), new OutParam(-1, "", Types.VARCHAR, null, -1))) {
+            assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getOutParameters(stmt, List.of(OutParam.of(1, Types.INTEGER), unaddressable)));
+        }
+
+        verifyNoInteractions(stmt);
+
+        // Index-based and name-based entries remain valid.
+        when(stmt.getInt(1)).thenReturn(5);
+        when(stmt.getString("status")).thenReturn("ok");
+        final OutParamResult result = JdbcUtil.getOutParameters(stmt,
+                List.of(new OutParam(1, null, Types.INTEGER, null, -1), new OutParam(-1, "status", Types.VARCHAR, null, -1)));
+        assertEquals(5, (Integer) result.getOutParamValue(1));
+        assertEquals("ok", result.getOutParamValue("status"));
+    }
+
     @Test
     public void testGetOutParameters_BlobSizeOverflowThrowsAndFreesBlob() throws SQLException {
         final OutParam blobParam = OutParam.of("blob_out", Types.BLOB);

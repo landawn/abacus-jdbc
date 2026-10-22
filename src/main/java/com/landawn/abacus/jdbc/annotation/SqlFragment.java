@@ -24,7 +24,8 @@ import java.lang.annotation.Target;
 /**
  * Performs SQL template substitution for one query fragment. The annotated method parameter's
  * string value replaces the {@code {name}} token in the surrounding {@link Query @Query} SQL
- * <em>before</em> the statement is prepared.
+ * <em>before</em> the statement is prepared. A non-{@code String} value is rendered with
+ * {@code N.stringOf}, and a {@code null} value replaces the token with an empty string.
  *
  * <p>Unlike {@link Bind} — which sends the value through a JDBC parameter placeholder —
  * {@code @SqlFragment} rewrites the SQL text itself. That makes it the right tool for tokens

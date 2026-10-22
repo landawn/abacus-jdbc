@@ -56,6 +56,12 @@ import com.landawn.abacus.annotation.Beta;
  * initialization rejects it with {@code UnsupportedOperationException}. Declare a second parameter
  * bound to the same collection value at the call site instead.</p>
  *
+ * <p><b>Parameter order:</b> the statement parameters, including the values expanded from a
+ * {@code @BindList} parameter, are bound in method-parameter order, not in the order their placeholders
+ * appear in the SQL. Declare the method parameters in placeholder order: for
+ * {@code ... WHERE status = ? AND id IN ({ids})} the {@code status} parameter must precede the
+ * {@code @BindList("ids")} parameter, otherwise the values are bound to the wrong placeholders.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {

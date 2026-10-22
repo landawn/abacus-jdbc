@@ -1,10 +1,13 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -12,6 +15,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -28,6 +33,10 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.jdbc.datasource.ConnectionHolder;
+import org.springframework.jdbc.datasource.ConnectionProxy;
+import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.landawn.abacus.util.Throwables;
 
@@ -372,6 +381,208 @@ class DataTransferCopyTest extends DataTransferUtilTestSupport {
         verify(targetStmt).executeBatch();
     }
 
+    // MySQL/MariaDB cannot run the batch inserts on a connection whose streaming result set is still open. When the
+    // source and target resolve to the same connection (one connection passed twice, or one DataSource inside a Spring
+    // transaction), the source must be read with the plain fetch-size hint instead of Integer.MIN_VALUE streaming.
+    @Test
+    public void testCopy_SameMySqlConnectionDoesNotStreamSource() throws SQLException {
+        final String selectSql = "SELECT id FROM src";
+        final String insertSql = "INSERT INTO dst(id) VALUES (?)";
+
+        final SameConnectionFixture viaConnection = new SameConnectionFixture("MySQL");
+        assertEquals(1, DataTransferUtil.copy(viaConnection.conn, selectSql, viaConnection.conn, insertSql));
+        viaConnection.verifyReadWithFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
+
+        final SameConnectionFixture viaBuilder = new SameConnectionFixture("MariaDB");
+        assertEquals(1, DataTransferUtil.copyFrom(viaBuilder.conn, selectSql).fetchSize(123).to(viaBuilder.conn, insertSql));
+        viaBuilder.verifyReadWithFetchSize(123);
+
+        final SameConnectionFixture viaDataSource = new SameConnectionFixture("MySQL");
+        assertEquals(1, DataTransferUtil.copy(viaDataSource.dataSource, selectSql, viaDataSource.dataSource, insertSql));
+        viaDataSource.verifyReadWithFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
+
+        final SameConnectionFixture viaDataSourceBuilder = new SameConnectionFixture("MySQL");
+        assertEquals(1, DataTransferUtil.copyFrom(viaDataSourceBuilder.dataSource, selectSql).fetchSize(77).to(viaDataSourceBuilder.dataSource, insertSql));
+        viaDataSourceBuilder.verifyReadWithFetchSize(77);
+    }
+
+    // Table copies reach the same code path: one DataSource on both sides (as inside a Spring transaction) yields one connection.
+    @Test
+    public void testCopyTable_SameMySqlDataSourceDoesNotStreamSource() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(anyInt())).thenReturn("value");
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+
+        assertEquals(1, DataTransferUtil.copy(mockDataSource, mockDataSource, "src_table", "dst_table"));
+
+        verify(mockPreparedStatement, atLeastOnce()).setFetchSize(Math.max(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET, JdbcUtil.DEFAULT_BATCH_SIZE));
+        verify(mockPreparedStatement, never()).setFetchSize(Integer.MIN_VALUE);
+    }
+
+    // Guard: distinct MySQL connections keep streaming the source row by row.
+    @Test
+    public void testCopy_DistinctMySqlConnectionsStillStreamSource() throws SQLException {
+        final SameConnectionFixture source = new SameConnectionFixture("MySQL");
+        final SameConnectionFixture target = new SameConnectionFixture("MySQL");
+
+        assertEquals(1, DataTransferUtil.copyFrom(source.conn, "SELECT id FROM src").fetchSize(123).to(target.conn, "INSERT INTO dst(id) VALUES (?)"));
+
+        verify(source.selectStmt).setFetchSize(Integer.MIN_VALUE);
+        verify(source.selectStmt, never()).setFetchSize(123);
+    }
+
+    // Spring's TransactionAwareDataSourceProxy hands out a distinct ConnectionProxy around the transaction's connection on
+    // every acquisition, so comparing the two Connection objects by identity saw two connections and streamed the source
+    // ("Streaming result set ... is still active" on the batch insert); the underlying connections decide.
+    @Test
+    public void testCopy_SpringConnectionProxiesOfOneMySqlConnectionDoNotStreamSource() throws SQLException {
+        final String selectSql = "SELECT id FROM src";
+        final String insertSql = "INSERT INTO dst(id) VALUES (?)";
+
+        final SameConnectionFixture viaConnection = new SameConnectionFixture("MySQL");
+        assertEquals(1, DataTransferUtil.copy(springConnectionProxy(viaConnection.conn), selectSql, springConnectionProxy(viaConnection.conn), insertSql));
+        viaConnection.verifyReadWithFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
+
+        // Proxy layers are unwrapped repeatedly.
+        final SameConnectionFixture viaBuilder = new SameConnectionFixture("MariaDB");
+        assertEquals(1,
+                DataTransferUtil.copyFrom(springConnectionProxy(springConnectionProxy(viaBuilder.conn)), selectSql)
+                        .fetchSize(123)
+                        .to(springConnectionProxy(viaBuilder.conn), insertSql));
+        viaBuilder.verifyReadWithFetchSize(123);
+
+        // Proxies of distinct connections still stream.
+        final SameConnectionFixture source = new SameConnectionFixture("MySQL");
+        final SameConnectionFixture target = new SameConnectionFixture("MySQL");
+        assertEquals(1, DataTransferUtil.copy(springConnectionProxy(source.conn), selectSql, springConnectionProxy(target.conn), insertSql));
+        verify(source.selectStmt).setFetchSize(Integer.MIN_VALUE);
+    }
+
+    // The shape this guards: one TransactionAwareDataSourceProxy used for both sides of a copy inside a Spring-managed
+    // transaction run without transaction synchronization, so each acquisition from the proxy yields a new handle around the
+    // transaction's connection (with synchronization active, Spring binds the first handle and returns it again).
+    @Test
+    public void testCopy_TransactionAwareDataSourceProxyInsideSpringTransactionDoesNotStreamSource() throws SQLException {
+        final SameConnectionFixture fixture = new SameConnectionFixture("MySQL");
+        final DataSource proxyDataSource = new TransactionAwareDataSourceProxy(fixture.dataSource);
+        TransactionSynchronizationManager.bindResource(fixture.dataSource, new ConnectionHolder(fixture.conn));
+
+        try {
+            assertEquals(1, DataTransferUtil.copy(proxyDataSource, "SELECT id FROM src", proxyDataSource, "INSERT INTO dst(id) VALUES (?)"));
+        } finally {
+            TransactionSynchronizationManager.unbindResource(fixture.dataSource);
+        }
+
+        fixture.verifyReadWithFetchSize(JdbcUtil.DEFAULT_FETCH_SIZE_FOR_LARGE_RESULT_SET);
+        // The transaction's connection served both sides and stays open for the transaction.
+        verify(fixture.dataSource, never()).getConnection();
+        verify(fixture.conn, never()).close();
+    }
+
+    @Test
+    public void testIsSameConnection_UnwrapsSpringConnectionProxiesOnly() throws SQLException {
+        final Connection conn = mock(Connection.class);
+        final Connection other = mock(Connection.class);
+
+        assertTrue(DataTransferUtil.isSameConnection(conn, conn));
+        assertFalse(DataTransferUtil.isSameConnection(conn, other));
+        assertTrue(DataTransferUtil.isSameConnection(springConnectionProxy(conn), springConnectionProxy(conn)));
+        assertTrue(DataTransferUtil.isSameConnection(conn, springConnectionProxy(springConnectionProxy(conn))));
+        assertFalse(DataTransferUtil.isSameConnection(springConnectionProxy(conn), springConnectionProxy(other)));
+
+        // A proxy whose target cannot be obtained (e.g. a closed transaction-aware handle) is left as it is; the statement
+        // prepared on it reports the failure.
+        final Connection closedHandle = (Connection) Proxy.newProxyInstance(ConnectionProxy.class.getClassLoader(), new Class<?>[] { ConnectionProxy.class },
+                (proxy, method, args) -> {
+                    if ("toString".equals(method.getName())) {
+                        return "closed handle";
+                    }
+
+                    throw new IllegalStateException("Connection handle already closed");
+                });
+        assertFalse(DataTransferUtil.isSameConnection(closedHandle, conn));
+        assertFalse(DataTransferUtil.isSameConnection(springConnectionProxy(conn), closedHandle));
+    }
+
+    /**
+     * A Spring {@code ConnectionProxy} around {@code target}, as {@code TransactionAwareDataSourceProxy} creates one per acquisition.
+     */
+    private static Connection springConnectionProxy(final Connection target) {
+        return (Connection) Proxy.newProxyInstance(ConnectionProxy.class.getClassLoader(), new Class<?>[] { ConnectionProxy.class }, (proxy, method, args) -> {
+            if ("getTargetConnection".equals(method.getName())) {
+                return target;
+            }
+
+            try {
+                return method.invoke(target, args);
+            } catch (final InvocationTargetException e) {
+                throw e.getCause();
+            }
+        });
+    }
+
+    // Statements opened by a copy are closed as by try-with-resources: a close failure after an otherwise successful
+    // copy propagates, and the result set opened from a caller-supplied statement is treated the same way.
+    @Test
+    public void testCopy_OwnedResourceCloseFailurePropagates() throws SQLException {
+        final SameConnectionFixture source = new SameConnectionFixture("PostgreSQL");
+        final SameConnectionFixture target = new SameConnectionFixture("PostgreSQL");
+        final SQLException insertCloseFailure = new SQLException("insert statement close failed");
+        Mockito.doThrow(insertCloseFailure).when(target.insertStmt).close();
+
+        assertSame(insertCloseFailure, assertThrows(SQLException.class,
+                () -> DataTransferUtil.copy(source.conn, "SELECT id FROM src", target.conn, "INSERT INTO dst(id) VALUES (?)")));
+        verify(source.selectStmt).close();
+
+        final SameConnectionFixture statements = new SameConnectionFixture("PostgreSQL");
+        final SQLException resultSetCloseFailure = new SQLException("result set close failed");
+        Mockito.doThrow(resultSetCloseFailure).when(statements.rs).close();
+
+        assertSame(resultSetCloseFailure, assertThrows(SQLException.class, () -> DataTransferUtil.copyFrom(statements.selectStmt).to(statements.insertStmt)));
+        verify(statements.selectStmt, never()).close();
+        verify(statements.insertStmt, never()).close();
+    }
+
+    /**
+     * One mocked connection (also served by a DataSource) that prepares a distinct select and insert statement and
+     * yields a one-row, one-column source result.
+     */
+    private static final class SameConnectionFixture {
+        final DataSource dataSource = mock(DataSource.class);
+        final Connection conn = mock(Connection.class);
+        final PreparedStatement selectStmt = mock(PreparedStatement.class);
+        final PreparedStatement insertStmt = mock(PreparedStatement.class);
+        final ResultSet rs = mock(ResultSet.class);
+
+        SameConnectionFixture(final String productName) throws SQLException {
+            final DatabaseMetaData metaData = mock(DatabaseMetaData.class);
+            final ResultSetMetaData rsMetaData = mock(ResultSetMetaData.class);
+
+            when(dataSource.getConnection()).thenReturn(conn);
+            when(conn.getMetaData()).thenReturn(metaData);
+            when(metaData.getDatabaseProductName()).thenReturn(productName);
+            when(metaData.getDatabaseProductVersion()).thenReturn("8");
+            when(metaData.getIdentifierQuoteString()).thenReturn("`");
+            when(conn.prepareStatement(anyString(), anyInt(), anyInt())).thenReturn(selectStmt);
+            when(conn.prepareStatement(anyString())).thenReturn(insertStmt);
+            when(selectStmt.executeQuery()).thenReturn(rs);
+            when(rs.getMetaData()).thenReturn(rsMetaData);
+            when(rsMetaData.getColumnCount()).thenReturn(1);
+            when(rs.next()).thenReturn(true, false);
+            when(rs.getObject(1)).thenReturn("value");
+            when(insertStmt.executeBatch()).thenReturn(new int[] { 1 });
+        }
+
+        void verifyReadWithFetchSize(final int fetchSize) throws SQLException {
+            verify(selectStmt).setFetchSize(fetchSize);
+            verify(selectStmt, never()).setFetchSize(Integer.MIN_VALUE);
+            verify(insertStmt).addBatch();
+            verify(insertStmt).executeBatch();
+        }
+    }
+
     // Regression: copy(srcConn, tgtConn, srcTable, tgtTable, batchSize) previously generated the
     // SELECT and INSERT independently from source/target metadata. When the two schemas had the
     // same column SET but a different declaration ORDER, positional setObject(i,...) silently
@@ -619,6 +830,26 @@ class DataTransferCopyTest extends DataTransferUtilTestSupport {
                         .to(targetStmt));
     }
 
+    // Table names that parse but cannot be rendered while identifier quoting is disabled (explicit delimiters, reserved
+    // names) are rejected before either connection is acquired or the source table is probed for its columns.
+    @Test
+    public void testCopyTables_UnrenderableTableNamesRejectedBeforeDatabaseAccess() throws SQLException {
+        final DataSource targetDs = mock(DataSource.class);
+        final Connection targetConn = mock(Connection.class);
+
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(mockDataSource, targetDs, "\"Users\"", "users_backup"));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(mockDataSource, targetDs, "users", "order"));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(mockDataSource, targetDs, "users", "user", List.of("id")));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyTable(mockDataSource, "users").to(targetDs, "sales.\"Archive\""));
+
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(mockConnection, targetConn, "users", "select"));
+        assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copyTable(mockConnection, "\"Users\"").to(targetConn, "users_backup"));
+
+        verify(mockDataSource, never()).getConnection();
+        verify(targetDs, never()).getConnection();
+        verifyNoInteractions(mockConnection, targetConn);
+    }
+
     // Malformed table/column names of a table copy are rejected before either connection is acquired, and are
     // reported under the public parameter name.
     @Test
@@ -638,5 +869,32 @@ class DataTransferCopyTest extends DataTransferUtilTestSupport {
 
         verify(mockDataSource, never()).getConnection();
         verify(targetDs, never()).getConnection();
+    }
+
+    // The single-name overloads report a bad name under their own parameter, 'tableName', not the delegate's
+    // 'sourceTableName'/'targetTableName'; null resources are still reported first.
+    @Test
+    public void testCopyTables_SingleTableNameOverloadsReportTableNameParameter() throws SQLException {
+        final DataSource targetDs = mock(DataSource.class);
+        final Connection targetConn = mock(Connection.class);
+
+        for (final String badName : new String[] { "a..b", null, "  " }) {
+            final String dataSourceMessage = assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(mockDataSource, targetDs, badName))
+                    .getMessage();
+            assertTrue(dataSourceMessage.contains("tableName") && !dataSourceMessage.contains("sourceTableName"), dataSourceMessage);
+
+            final String connectionMessage = assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(mockConnection, targetConn, badName))
+                    .getMessage();
+            assertTrue(connectionMessage.contains("tableName") && !connectionMessage.contains("sourceTableName"), connectionMessage);
+        }
+
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy((DataSource) null, targetDs, "a..b")).getMessage()
+                .contains("sourceDataSource"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.copy(mockConnection, (Connection) null, "a..b")).getMessage()
+                .contains("targetConn"));
+
+        verify(mockDataSource, never()).getConnection();
+        verify(targetDs, never()).getConnection();
+        verifyNoInteractions(mockConnection, targetConn);
     }
 }

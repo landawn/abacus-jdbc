@@ -112,6 +112,12 @@ public @interface OutParameter {
      *   <li>The database doesn't support named parameters</li>
      * </ul>
      *
+     * <p>Declared positions only register OUT parameters; they do not move the IN arguments. In positional
+     * procedure SQL the method's arguments (no {@code @Bind}, no {@code Map}) are bound to positions {@code 1..n} in
+     * method-parameter order, so every OUT-only position must come after all IN positions (an INOUT
+     * parameter takes its input from the argument bound at its position). Otherwise bind the IN arguments
+     * by name with {@code @Bind} and declare the OUT parameters by {@link #name()}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * @Query(value = "{call sp_analyze_customer(?, ?, ?, ?)}",

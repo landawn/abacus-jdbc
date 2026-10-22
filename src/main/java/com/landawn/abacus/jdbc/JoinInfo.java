@@ -72,6 +72,7 @@ import com.landawn.abacus.util.stream.Stream;
  *
  * <p><b>Supported Join Types:</b></p>
  * <ul>
+ *   <li><b>One-to-One:</b> Direct foreign key relationship to a single entity (a non-collection, non-map join property)</li>
  *   <li><b>One-to-Many:</b> Direct foreign key relationship between entities</li>
  *   <li><b>Many-to-Many:</b> Relationship through an intermediate join table</li>
  * </ul>
@@ -333,7 +334,7 @@ public final class JoinInfo {
         // Hard-wired to true: the cascade delete of the middle (join) table is assumed to be handled by the DB
         // (e.g. via an ON DELETE CASCADE foreign key), so no middle-table delete SQL is emitted below (the
         // `cascadeDeleteDefinedInDB ? null : ...` ternaries always yield null). Re-enabling client-side cascade
-        // delete would require reading joinedByAnno.cascadeDeleteDefinedInDB(). TODO: define/implement on the DB side.
+        // delete would require a new @JoinedBy attribute to read here (JoinedBy has only value()). TODO: define/implement on the DB side.
         final boolean cascadeDeleteDefinedInDB = true;
         final String joinByVal = Strings.join(joinedByAnno.value(), ", ");
 
@@ -474,7 +475,8 @@ public final class JoinInfo {
             };
 
             planBuilder = dsl -> {
-                final Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(dsl);
+                final Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(
+                        dsl);
 
                 final String middleSelectSql = funcs._1.apply(middleSelectPropNames).from(middleEntityClass).where(middleEntityCond).build().query();
                 final String leftSelectSql = funcs._2.apply(referencedEntityClass).where(cond).build().query();
@@ -708,7 +710,8 @@ public final class JoinInfo {
             });
 
             planBuilder = dsl -> {
-                final Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(dsl);
+                final Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncs(
+                        dsl);
 
                 final String selectSql = funcs._2.apply(referencedEntityClass).where(cond).build().query();
 
@@ -1084,8 +1087,10 @@ public final class JoinInfo {
      * @param dsl a parameterized-SQL DSL.
      * @return the predefined functions for PSC, PAC, or PLC, otherwise functions bound to {@code dsl}.
      */
-    private static Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> sqlBuilderFuncs(final Dsl dsl) {
-        final Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncMap.get(dsl);
+    private static Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> sqlBuilderFuncs(
+            final Dsl dsl) {
+        final Tuple3<Function<Collection<String>, SqlBuilder>, Function<Class<?>, SqlBuilder>, Function<Class<?>, SqlBuilder>> funcs = sqlBuilderFuncMap
+                .get(dsl);
 
         if (funcs != null) {
             return funcs;
@@ -1107,6 +1112,9 @@ public final class JoinInfo {
      * exactly one matching entity per key is expected and more than one match throws
      * {@link IllegalArgumentException}. A source entity with no matching joined entity receives an
      * empty collection/map or {@code null} for a single-valued property, replacing any stale value.
+     * A joined entity whose single-column join key is {@code null} (for example an unassigned row of a
+     * nullable foreign key) matches no source entity and is ignored, as in the generated SQL.
+     * Join keys are matched with {@code equals}, except that array-typed keys (e.g. {@code byte[]}) are matched by content.
      * The source entities are mutated in place as the iteration proceeds and the operation is not
      * atomic; see {@link #setJoinPropEntities(Collection, Map)} for the partial-update behavior on
      * failure.</p>
@@ -1151,16 +1159,24 @@ public final class JoinInfo {
                     + "or have the framework load join entities via DaoImpl.");
         }
 
-        // Array join keys are grouped by content directly, so each group keeps the encounter order of joinPropEntities. A
-        // null key is passed through unwrapped: groupTo rejects it, as it did before content keys were introduced.
-        final Function<Object, Object> keyExtractor = hasArrayJoinKey ? entity -> {
-            final Object joinKey = referencedEntityKeyExtractor.apply(entity);
-            return joinKey == null ? null : contentJoinKey(joinKey);
-        } : referencedEntityKeyExtractor;
+        final Map<Object, List<Object>> groupedPropEntities = new HashMap<>();
 
-        final Map<Object, List<Object>> groupedPropEntities = Stream.of((Collection<Object>) joinPropEntities)
-                .onEach(entity -> N.checkArgNotNull(entity, "An element of 'joinPropEntities' cannot be null"))
-                .groupTo(keyExtractor);
+        if (joinPropEntities != null) {
+            for (final Object propEntity : joinPropEntities) {
+                N.checkArgNotNull(propEntity, "An element of 'joinPropEntities' cannot be null");
+
+                final Object joinKey = referencedEntityKeyExtractor.apply(propEntity);
+
+                // A null single-column key (e.g. an unassigned row of a nullable foreign key) matches no source entity, just
+                // as "fk = ?" never matches NULL in the generated SQL. Grouping with Stream.groupTo rejected it with a
+                // NullPointerException, so one such row failed the whole assignment. Array join keys are grouped by
+                // content; each group keeps the encounter order of joinPropEntities.
+                if (joinKey != null) {
+                    groupedPropEntities.computeIfAbsent(hasArrayJoinKey ? contentJoinKey(joinKey) : joinKey, k -> new ArrayList<>()).add(propEntity);
+                }
+            }
+        }
+
         assignJoinPropEntities(entities, groupedPropEntities);
     }
 
@@ -1201,7 +1217,9 @@ public final class JoinInfo {
      *
      * @param entities the source entities to populate with joined entities.
      * @param groupedPropEntities a map of grouped joined entities keyed by the join key used to match source entities
-     *                            (the source key for one-to-many; the junction-table-derived key for many-to-many);
+     *                            (the source key for one-to-many; the junction-table-derived key for many-to-many):
+     *                            the single key value, or for a multi-column join a {@code Tuple} of the key values
+     *                            (two or three columns) or a {@code List} of them (more columns), in {@code @JoinedBy} order;
      *                            may be {@code null} when {@code entities} is empty.
      * @throws IllegalArgumentException if {@code entities} is {@code null}, if it is nonempty and {@code groupedPropEntities} is {@code null},
      *                                  if a {@code null} source entity is encountered,
@@ -1356,9 +1374,9 @@ public final class JoinInfo {
         return value;
     }
 
-    // DAO proxies are cached for the life of the JVM and keep the join map captured at creation, so that metadata
-    // is retained anyway. Registering it here lets the per-call lookups of those DAOs reuse it instead of
-    // rebuilding duplicates (and their SQL plans) after the bounded cache below has evicted it.
+    // DAO proxies held by the DAO pool keep the join map captured at creation, so that metadata is retained anyway.
+    // Registering it here lets the per-call lookups of those DAOs reuse it instead of rebuilding duplicates (and their
+    // SQL plans) after the bounded cache below has evicted it. It is released when the last such proxy leaves the pool.
     private static final Map<Tuple3<Class<?>, Class<?>, String>, JoinMetadata> daoJoinMetadataPool = new ConcurrentHashMap<>();
 
     // Other lookups (e.g. through this public API with rotating tenant or partition table names) share a bounded
@@ -1411,6 +1429,9 @@ public final class JoinInfo {
         final Map<Class<?>, List<String>> propertiesByType;
         // Set by cache hits and cleared by eviction scans; a lost update only changes which entry is evicted.
         volatile boolean recentlyUsed;
+        // Number of pooled DAO proxies retaining this entry in daoJoinMetadataPool; only changed inside that map's
+        // compute functions for its key, which serialize the updates.
+        int daoReferences;
 
         JoinMetadata(final Map<String, JoinInfo> byProperty, final Map<Class<?>, List<String>> propertiesByType) {
             this.byProperty = byProperty;
@@ -1542,9 +1563,10 @@ public final class JoinInfo {
     }
 
     /**
-     * Retains the join map captured by a DAO proxy that has been registered for the life of the JVM, so later lookups
-     * for the same DAO class, entity class and table name return it regardless of the bounded cache. The bounded-cache
-     * entry of that combination and its queued key are removed, since those lookups no longer reach them.
+     * Retains the join map captured by a DAO proxy that is being registered in the DAO pool, so later lookups for the
+     * same DAO class, entity class and table name return it regardless of the bounded cache, until every proxy that
+     * retained it has released it with {@link #releaseDaoJoinInfo(Class, Class, String, Map)}. The bounded-cache entry of
+     * that combination and its queued key are removed, since those lookups no longer reach them.
      *
      * @param daoClass the DAO interface of the registered proxy
      * @param entityClass the target entity class of the proxy
@@ -1558,10 +1580,19 @@ public final class JoinInfo {
 
         final Tuple3<Class<?>, Class<?>, String> key = Tuple.of(daoClass, entityClass, tableName);
 
-        daoJoinMetadataPool.computeIfAbsent(key, k -> {
-            final JoinMetadata cached = joinMetadataPool.get(k);
+        // Proxies of one DAO class, entity class and table (e.g. for different data sources) share the entry: the first
+        // map registered is kept, and each proxy counts as one reference.
+        daoJoinMetadataPool.compute(key, (k, registered) -> {
+            JoinMetadata metadata = registered;
 
-            return cached != null && cached.byProperty == entityJoinInfo ? cached : JoinMetadata.of(entityJoinInfo);
+            if (metadata == null) {
+                final JoinMetadata cached = joinMetadataPool.get(k);
+                metadata = cached != null && cached.byProperty == entityJoinInfo ? cached : JoinMetadata.of(entityJoinInfo);
+            }
+
+            metadata.daoReferences++;
+
+            return metadata;
         });
 
         // Lookups of this key no longer reach the bounded cache, so an entry there would only take a slot from other keys.
@@ -1572,6 +1603,25 @@ public final class JoinInfo {
                 joinMetadataKeys.remove(key);
             }
         }
+    }
+
+    /**
+     * Releases the join metadata retained by {@link #retainDaoJoinInfo(Class, Class, String, Map)} for a DAO proxy
+     * that is no longer pooled (evicted from the DAO pool, or discarded after losing a concurrent registration). When
+     * no pooled proxy of the same DAO class, entity class and table name retains it any more, later lookups use the
+     * bounded cache again. The released proxy keeps its own map, which stays valid.
+     *
+     * @param daoClass the DAO interface of the proxy
+     * @param entityClass the target entity class of the proxy
+     * @param tableName the target table name of the proxy
+     * @param entityJoinInfo the map passed to {@link #retainDaoJoinInfo(Class, Class, String, Map)} for the proxy
+     */
+    static void releaseDaoJoinInfo(final Class<?> daoClass, final Class<?> entityClass, final String tableName, final Map<String, JoinInfo> entityJoinInfo) {
+        if (entityJoinInfo.isEmpty()) {
+            return;
+        }
+
+        daoJoinMetadataPool.computeIfPresent(Tuple.of(daoClass, entityClass, tableName), (k, metadata) -> --metadata.daoReferences > 0 ? metadata : null);
     }
 
     /**

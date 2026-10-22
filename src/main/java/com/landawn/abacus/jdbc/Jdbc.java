@@ -18,6 +18,8 @@ package com.landawn.abacus.jdbc;
 
 import java.io.InputStream;
 import java.io.Reader;
+import java.lang.ref.Reference;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.sql.Blob;
@@ -117,6 +119,16 @@ import lombok.ToString;
  *       ({@link DaoCache}, {@link DefaultDaoCache}).</li>
  * </ul>
  *
+ * <p><b>Reusing stateful callbacks:</b> The row mappers, consumers and extractors marked {@code @Stateful} cache
+ * column metadata per {@code ResultSet} and tell result sets apart by object identity: the {@code ResultSet} object
+ * they were initialized for is processed with the cached metadata, and the first row of another object has its
+ * column count or labels compared once, with the metadata rebuilt if they differ. A driver that reuses one
+ * {@code ResultSet} object across executions of a {@code Statement} (sqlite-jdbc does) therefore presents a
+ * re-executed statement as the same result set, and a changed column layout is not detected: a column the new query
+ * adds is dropped, a column it removes fails when read, and a configured column index or name is not re-validated.
+ * Create a new callback per query with such a driver. The query methods of this library prepare a statement per
+ * query, so only a {@code java.sql.Statement} that the caller re-executes with a different query is affected.</p>
+ *
  * <p>This class is a stateless utility namespace and is not instantiable.</p>
  *
  * @see ParametersSetter
@@ -162,6 +174,119 @@ public final class Jdbc {
      */
     private Jdbc() {
         // utility class - prevent instantiation.
+    }
+
+    /**
+     * Remembers the {@code ResultSet}, and the column layout, that a stateful row mapper, consumer or extractor was
+     * last initialized for. Applying the callback to that same {@code ResultSet} again costs one reference
+     * comparison; the first row of a different {@code ResultSet} compares its column count or labels once, and the
+     * callback re-initializes only when they differ. The {@code ResultSet} is referenced weakly so that a long-lived
+     * (e.g. cached) callback does not keep a closed result set, and its statement and connection, reachable.
+     *
+     * <p>Result sets are told apart by identity only, which keeps the per-row cost at one reference comparison: a
+     * driver that reuses one {@code ResultSet} object across executions of a {@code Statement} (sqlite-jdbc creates
+     * one {@code JDBC4ResultSet} per statement and returns it from every {@code executeQuery}) is treated as the same
+     * result set, and a layout changed by the re-execution is not detected. Detecting it would require re-reading the
+     * metadata on every row, because a re-execution cannot be observed through the {@code ResultSet}; the limitation
+     * is documented on the {@link Jdbc} class and on every stateful factory instead.</p>
+     *
+     * <p>Not thread-safe, like the {@code @Stateful} callbacks that use it.</p>
+     */
+    private static final class ResultSetLayout {
+        private Reference<ResultSet> boundResultSet;
+        private String[] columnLabels; // layout recorded by bind(ResultSet, List)
+        private int columnCount = -1; // layout recorded by bind(ResultSet, int)
+
+        /**
+         * Checks whether the callback was initialized for, or rebound to, this exact {@code ResultSet}.
+         *
+         * @param rs the result set being processed
+         * @return {@code true} if the cached initialization applies to {@code rs} without any further check
+         */
+        boolean isBoundTo(final ResultSet rs) {
+            final Reference<ResultSet> ref = boundResultSet;
+
+            return ref != null && ref.get() == rs;
+        }
+
+        /**
+         * Binds {@code rs} if its column labels equal the recorded ones. Otherwise the recorded layout is forgotten,
+         * so that a failed re-initialization is retried, and the caller must re-initialize and then call
+         * {@link #bind(ResultSet, List)}.
+         *
+         * @param rs the result set being processed
+         * @param labels the column labels of {@code rs}
+         * @return {@code true} if the cached initialization can be reused for {@code rs}
+         */
+        boolean bindIfSameLayout(final ResultSet rs, final List<String> labels) {
+            boundResultSet = null;
+
+            if (columnLabels != null && hasLabels(labels, columnLabels)) {
+                boundResultSet = new WeakReference<>(rs);
+                return true;
+            }
+
+            columnLabels = null;
+            return false;
+        }
+
+        /**
+         * Binds {@code rs} if its column count equals the recorded one. Otherwise the recorded layout is forgotten,
+         * and the caller must re-initialize and then call {@link #bind(ResultSet, int)}.
+         *
+         * @param rs the result set being processed
+         * @param count the column count of {@code rs}
+         * @return {@code true} if the cached initialization can be reused for {@code rs}
+         */
+        boolean bindIfSameLayout(final ResultSet rs, final int count) {
+            boundResultSet = null;
+
+            if (columnCount >= 0 && columnCount == count) {
+                boundResultSet = new WeakReference<>(rs);
+                return true;
+            }
+
+            columnCount = -1;
+            return false;
+        }
+
+        /**
+         * Records a successful initialization for {@code rs} and its column labels.
+         *
+         * @param rs the result set the callback was initialized for
+         * @param labels the column labels the callback was initialized with
+         */
+        void bind(final ResultSet rs, final List<String> labels) {
+            columnLabels = labels.toArray(N.EMPTY_STRING_ARRAY);
+            boundResultSet = new WeakReference<>(rs);
+        }
+
+        /**
+         * Records a successful initialization for {@code rs} and its column count.
+         *
+         * @param rs the result set the callback was initialized for
+         * @param count the column count the callback was initialized with
+         */
+        void bind(final ResultSet rs, final int count) {
+            columnCount = count;
+            boundResultSet = new WeakReference<>(rs);
+        }
+
+        private static boolean hasLabels(final List<String> labels, final String[] expected) {
+            final int size = labels.size();
+
+            if (size != expected.length) {
+                return false;
+            }
+
+            for (int i = 0; i < size; i++) {
+                if (!Objects.equals(labels.get(i), expected[i])) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 
     /**
@@ -437,18 +562,25 @@ public final class Jdbc {
      * to the parsed SQL structure. This allows for more advanced parameter setting logic
      * that may depend on the details of the SQL statement itself.
      *
+     * <p>It is accepted by {@link NamedQuery#setParameters(Object, Jdbc.TriParametersSetter)}, which passes the
+     * query's parsed SQL and the {@code NamedQuery} itself, so a setter for that method is declared with
+     * {@code NamedQuery} (or a supertype) as {@code QS}.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * // Assuming a User class and a ParsedSql object
-     * TriParametersSetter<PreparedStatement, User> setter = (parsedSql, ps, user) -> {
-     *     // Use parsedSql to find parameter indices dynamically if needed
-     *     ps.setString(1, user.getName());
-     *     ps.setInt(2, user.getAge());
+     * // Assuming a User class with getName() and getAge()
+     * TriParametersSetter<NamedQuery, User> setter = (parsedSql, query, user) -> {
+     *     // parsedSql.namedParameters() lists the named parameters, if the binding depends on them
+     *     query.setString("name", user.getName());
+     *     query.setInt("age", user.getAge());
      * };
+     *
+     * // namedQuery.setParameters(user, setter).update();
      * }</pre>
      *
-     * @param <QS> query statement type (e.g., {@code PreparedStatement}, {@code CallableStatement})
+     * @param <QS> query type the parameters are bound to (e.g., {@code NamedQuery})
      * @param <T> parameter object type
+     * @see NamedQuery#setParameters(Object, Jdbc.TriParametersSetter)
      */
     @SuppressWarnings("RedundantThrows")
     @FunctionalInterface
@@ -487,8 +619,8 @@ public final class Jdbc {
      *
      * <p>The extractor itself does not take ownership of the result set. Calling an extractor's
      * {@code apply} method directly leaves closing the result set to the caller. Extractor factories
-     * that accept a mapper or filter retain that same callback, so any restrictions on its reuse
-     * or concurrent use also apply to the resulting extractor.</p>
+     * that accept a mapper, filter, or {@link RowExtractor} retain that same callback, so any restrictions
+     * on its reuse or concurrent use also apply to the resulting extractor.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1093,6 +1225,10 @@ public final class Jdbc {
          * merged entities, using a specific property to identify unique entities for merging.
          * This is useful when the default ID detection is not sufficient.
          *
+         * <p>{@code idPropNameForMerge} is matched against the result set's columns when the returned extractor is
+         * applied, so an {@code IllegalArgumentException} is raised then - not by this method - if no matching column
+         * is found.</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * // Merge User entities based on the 'email' property instead of 'id'.
@@ -1123,6 +1259,10 @@ public final class Jdbc {
         /**
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code List} of
          * merged entities, using a composite key (multiple properties) to identify unique entities for merging.
+         *
+         * <p>The key properties are matched against the result set's columns when the returned extractor is
+         * applied, so an {@code IllegalArgumentException} is raised then - not by this method - if any of them
+         * has no matching column.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -1235,6 +1375,11 @@ public final class Jdbc {
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}
          * using a custom {@code RowExtractor} for fine-grained control over value extraction.
          *
+         * <p>The same {@code rowExtractor} instance is used for every {@code ResultSet} this extractor processes, so the
+         * returned extractor is not thread-safe if {@code rowExtractor} is stateful. An extractor from
+         * {@link RowExtractor#forType(Class)} or {@link RowExtractor#builder()} re-initializes itself for a result set whose
+         * column layout differs from the previous one, so it can serve different query structures.</p>
+         *
          * @param rowExtractor the custom row extractor to process each row
          * @return a {@code ResultExtractor} that produces a {@code Dataset}
          * @throws IllegalArgumentException if {@code rowExtractor} is {@code null}
@@ -1248,6 +1393,10 @@ public final class Jdbc {
         /**
          * Creates a {@code ResultExtractor} that converts a {@code ResultSet} into a {@code Dataset}
          * using both a filter and a custom row extractor.
+         *
+         * <p>The same {@code rowFilter} and {@code rowExtractor} instances are used for every {@code ResultSet}
+         * this extractor processes. The extractor from {@link RowExtractor#forType(Class)} in the example below
+         * re-initializes itself for a result set whose column layout differs from the previous one.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -1987,8 +2136,11 @@ public final class Jdbc {
          * The specified {@code columnGetterForAll} is used to extract the value from each column.
          *
          * <p>
-         * <b>Warning:</b> The returned mapper is stateful because it caches the column count
-         * after the first execution. It should not be cached, shared, or used in parallel streams.
+         * <b>Warning:</b> The returned mapper is stateful because it caches the column count of the {@code ResultSet}
+         * it is applied to, so it must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column count is re-read once per {@code ResultSet}.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -2008,12 +2160,14 @@ public final class Jdbc {
             N.checkArgNotNull(columnGetterForAll, cs.columnGetterForAll);
 
             return new RowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private int columnCount = -1;
 
                 @Override
                 public Object[] apply(final ResultSet rs) throws SQLException {
-                    if (columnCount < 0) {
+                    if (!layout.isBoundTo(rs)) {
                         columnCount = JdbcUtil.getColumnCount(rs);
+                        layout.bind(rs, columnCount);
                     }
 
                     final Object[] result = new Object[columnCount];
@@ -2032,8 +2186,11 @@ public final class Jdbc {
          * The specified {@code columnGetterForAll} is used to extract the value from each column.
          *
          * <p>
-         * <b>Warning:</b> The returned mapper is stateful because it caches the column count
-         * after the first execution. It should not be cached, shared, or used in parallel streams.
+         * <b>Warning:</b> The returned mapper is stateful because it caches the column count of the {@code ResultSet}
+         * it is applied to, so it must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column count is re-read once per {@code ResultSet}.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -2059,8 +2216,11 @@ public final class Jdbc {
          * the collection instance (e.g., {@code ArrayList::new}, {@code HashSet::new}).
          *
          * <p>
-         * <b>Warning:</b> The returned mapper is stateful because it caches the column count
-         * after the first execution. It should not be cached, shared, or used in parallel streams.
+         * <b>Warning:</b> The returned mapper is stateful because it caches the column count of the {@code ResultSet}
+         * it is applied to, so it must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column count is re-read once per {@code ResultSet}.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -2087,12 +2247,14 @@ public final class Jdbc {
             N.checkArgNotNull(supplier, cs.supplier);
 
             return new RowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private int columnCount = -1;
 
                 @Override
                 public C apply(final ResultSet rs) throws SQLException {
-                    if (columnCount < 0) {
+                    if (!layout.isBoundTo(rs)) {
                         columnCount = JdbcUtil.getColumnCount(rs);
+                        layout.bind(rs, columnCount);
                     }
 
                     final Collection<Object> result = (Collection<Object>) supplier.apply(columnCount);
@@ -2114,8 +2276,11 @@ public final class Jdbc {
          * <p>
          * <b>Warning:</b> The returned mapper is highly stateful. The returned {@code DisposableObjArray}
          * is a wrapper around an internal array that will be overwritten on the next call to {@code apply}.
-         * You must process or copy its contents before the next row is mapped. Do not cache, share, or
-         * use this mapper in parallel streams.
+         * You must process or copy its contents before the next row is mapped. Do not share this mapper
+         * between threads or use it in parallel streams. It can be reused with another {@code ResultSet}: the
+         * column count is re-read once per {@code ResultSet}, and the internal array is re-created when it changes.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -2132,16 +2297,22 @@ public final class Jdbc {
         @Stateful
         static RowMapper<DisposableObjArray> toDisposableObjArray() {
             return new RowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private DisposableObjArray disposable = null;
                 private int columnCount = -1;
                 private Object[] output = null;
 
                 @Override
                 public DisposableObjArray apply(final ResultSet rs) throws SQLException {
-                    if (disposable == null) {
-                        columnCount = JdbcUtil.getColumnCount(rs);
-                        output = new Object[columnCount];
-                        disposable = DisposableObjArray.wrap(output);
+                    if (!layout.isBoundTo(rs)) {
+                        final int rsColumnCount = JdbcUtil.getColumnCount(rs);
+
+                        if (!layout.bindIfSameLayout(rs, rsColumnCount)) {
+                            columnCount = rsColumnCount;
+                            output = new Object[columnCount];
+                            disposable = DisposableObjArray.wrap(output);
+                            layout.bind(rs, columnCount);
+                        }
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -2161,7 +2332,11 @@ public final class Jdbc {
          * <b>Warning:</b> The returned mapper is highly stateful and caches type information and the output array.
          * The returned {@code DisposableObjArray} is a wrapper around an internal array that will be overwritten on
          * the next call to {@code apply}. You must process or copy its contents before the next row is mapped.
-         * Do not cache, share, or use this mapper in parallel streams.
+         * Do not share this mapper between threads or use it in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>Columns whose label does not match any property of {@code entityClass} are read with the default
@@ -2189,6 +2364,7 @@ public final class Jdbc {
             N.checkArgNotNull(entityClass, cs.entityClass);
 
             return new RowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private DisposableObjArray disposable = null;
                 private int columnCount = -1;
                 private Object[] output = null;
@@ -2203,9 +2379,9 @@ public final class Jdbc {
                  */
                 @Override
                 public DisposableObjArray apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
-                    if (disposable == null) {
-                        final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
+                    final List<String> columnLabels = layout.isBoundTo(rs) ? null : JdbcUtil.getColumnLabels(rs);
 
+                    if (columnLabels != null && !layout.bindIfSameLayout(rs, columnLabels)) {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
 
@@ -2238,6 +2414,7 @@ public final class Jdbc {
 
                         output = new Object[columnCount];
                         disposable = DisposableObjArray.wrap(output);
+                        layout.bind(rs, columnLabels);
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -2295,16 +2472,19 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> All {@code RowMapper} instances created by this builder are stateful,
-         * as they cache metadata (like column count and getter configurations) upon first execution.
-         * They should not be cached, shared, or used in parallel streams.
+         * as they cache metadata (like column count and getter configurations) for the {@code ResultSet} they are
+         * applied to, so they must not be shared between threads or used in parallel streams. They can be reused with
+         * other result sets: the metadata is read once per {@code ResultSet} and rebuilt when the layout differs.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>Each terminal operation snapshots the builder's configured getters. The builder may therefore
          * be reused or changed to create another mapper without altering mappers that were already built.</p>
          *
          * <p>Every mapper built here resolves the snapshotted getters against the {@code ResultSet}'s column count
-         * on its first row, so the mapper's {@code apply} method throws an {@link IllegalArgumentException} if a
-         * configured column index exceeds that count.</p>
+         * on the first row of each result set with a new layout, so the mapper's {@code apply} method throws an
+         * {@link IllegalArgumentException} if a configured column index exceeds that count.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -2578,11 +2758,11 @@ public final class Jdbc {
              * Builds a stateful {@code RowMapper} that maps each row to an {@code Object[]}.
              *
              * <p>
-             * The mapper caches the column count and resolved getters on first access, then creates a
-             * fresh array for each row.
+             * The mapper caches the column count and resolved getters once per {@code ResultSet} (rebuilding them only
+             * when the column count changes), then creates a fresh array for each row.
              * </p>
              *
-             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be cached, shared, or used concurrently.</p>
+             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be used concurrently.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -2600,6 +2780,7 @@ public final class Jdbc {
                 final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
 
                 return new RowMapper<>() {
+                    private final ResultSetLayout layout = new ResultSetLayout();
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
 
@@ -2611,9 +2792,14 @@ public final class Jdbc {
                      */
                     @Override
                     public Object[] apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
-                        if (rsColumnGetters == null) {
-                            rsColumnCount = rs.getMetaData().getColumnCount();
-                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
+                        if (!layout.isBoundTo(rs)) {
+                            final int columnCount = rs.getMetaData().getColumnCount();
+
+                            if (!layout.bindIfSameLayout(rs, columnCount)) {
+                                rsColumnGetters = initColumnGetter(columnCount, configuredColumnGetters);
+                                rsColumnCount = columnCount;
+                                layout.bind(rs, columnCount);
+                            }
                         }
 
                         final Object[] row = new Object[rsColumnCount];
@@ -2634,7 +2820,7 @@ public final class Jdbc {
              * This is equivalent to {@link #toCollection(IntFunction)} with a list supplier.
              * </p>
              *
-             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             * <p><b>Warning:</b> The returned mapper is stateful and must not be shared between threads or used in parallel streams.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -2658,7 +2844,7 @@ public final class Jdbc {
              * The provided supplier receives the column count and should return a collection to hold the row values.
              * </p>
              *
-             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             * <p><b>Warning:</b> The returned mapper is stateful and must not be shared between threads or used in parallel streams.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -2680,6 +2866,7 @@ public final class Jdbc {
                 final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
 
                 return new RowMapper<>() {
+                    private final ResultSetLayout layout = new ResultSetLayout();
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
 
@@ -2691,9 +2878,14 @@ public final class Jdbc {
                      */
                     @Override
                     public C apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
-                        if (rsColumnGetters == null) {
-                            rsColumnCount = rs.getMetaData().getColumnCount();
-                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
+                        if (!layout.isBoundTo(rs)) {
+                            final int columnCount = rs.getMetaData().getColumnCount();
+
+                            if (!layout.bindIfSameLayout(rs, columnCount)) {
+                                rsColumnGetters = initColumnGetter(columnCount, configuredColumnGetters);
+                                rsColumnCount = columnCount;
+                                layout.bind(rs, columnCount);
+                            }
                         }
 
                         final Collection<Object> row = (Collection<Object>) supplier.apply(rsColumnCount);
@@ -2712,11 +2904,11 @@ public final class Jdbc {
              * keyed by column labels.
              *
              * <p>
-             * The returned mapper caches column labels and getters at first row access and then maps each row
-             * into a new map using those labels as keys.
+             * The returned mapper caches column labels and getters once per {@code ResultSet} (rebuilding them only when
+             * the labels change) and then maps each row into a new map using those labels as keys.
              * </p>
              *
-             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             * <p><b>Warning:</b> The returned mapper is stateful and must not be shared between threads or used in parallel streams.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -2741,7 +2933,7 @@ public final class Jdbc {
              * The supplier receives the row column count and should return a mutable map instance for each row.
              * </p>
              *
-             * <p><b>Warning:</b> The returned mapper is stateful and should not be cached, shared, or used in parallel streams.</p>
+             * <p><b>Warning:</b> The returned mapper is stateful and must not be shared between threads or used in parallel streams.</p>
              *
              * @param mapSupplier a function that provides a new map instance, given the column count
              * @return a new stateful {@code RowMapper<Map<String, Object>>}
@@ -2755,6 +2947,7 @@ public final class Jdbc {
                 final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
 
                 return new RowMapper<>() {
+                    private final ResultSetLayout layout = new ResultSetLayout();
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private List<String> columnLabels = null;
                     private int rsColumnCount = -1;
@@ -2767,10 +2960,15 @@ public final class Jdbc {
                      */
                     @Override
                     public Map<String, Object> apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
-                        if (rsColumnGetters == null) {
-                            columnLabels = JdbcUtil.getColumnLabels(rs);
-                            rsColumnCount = columnLabels.size();
-                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
+                        if (!layout.isBoundTo(rs)) {
+                            final List<String> labels = JdbcUtil.getColumnLabels(rs);
+
+                            if (!layout.bindIfSameLayout(rs, labels)) {
+                                rsColumnGetters = initColumnGetter(labels.size(), configuredColumnGetters);
+                                columnLabels = labels;
+                                rsColumnCount = labels.size();
+                                layout.bind(rs, labels);
+                            }
                         }
 
                         final Map<String, Object> row = mapSupplier.apply(rsColumnCount);
@@ -2793,7 +2991,7 @@ public final class Jdbc {
              * for each subsequent row.
              * </p>
              *
-             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be cached, shared, or used concurrently.
+             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be used concurrently.
              * The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.</p>
              *
              * <p><b>Usage Examples:</b></p>
@@ -2817,6 +3015,7 @@ public final class Jdbc {
                 final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
 
                 return new RowMapper<>() {
+                    private final ResultSetLayout layout = new ResultSetLayout();
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
                     private Object[] outputRow = null;
@@ -2831,11 +3030,16 @@ public final class Jdbc {
                      */
                     @Override
                     public R apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
-                        if (rsColumnGetters == null) {
-                            rsColumnCount = rs.getMetaData().getColumnCount();
-                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
-                            outputRow = new Object[rsColumnCount];
-                            output = DisposableObjArray.wrap(outputRow);
+                        if (!layout.isBoundTo(rs)) {
+                            final int columnCount = rs.getMetaData().getColumnCount();
+
+                            if (!layout.bindIfSameLayout(rs, columnCount)) {
+                                rsColumnGetters = initColumnGetter(columnCount, configuredColumnGetters);
+                                rsColumnCount = columnCount;
+                                outputRow = new Object[rsColumnCount];
+                                output = DisposableObjArray.wrap(outputRow);
+                                layout.bind(rs, columnCount);
+                            }
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
@@ -2855,7 +3059,7 @@ public final class Jdbc {
              * {@link DisposableObjArray} containing the current row values.
              * </p>
              *
-             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be cached, shared, or used concurrently.
+             * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be used concurrently.
              * The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.</p>
              *
              * <p><b>Usage Examples:</b></p>
@@ -2882,6 +3086,7 @@ public final class Jdbc {
                 final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
 
                 return new RowMapper<>() {
+                    private final ResultSetLayout layout = new ResultSetLayout();
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private List<String> columnLabels = null;
                     private int rsColumnCount = -1;
@@ -2897,12 +3102,17 @@ public final class Jdbc {
                      */
                     @Override
                     public R apply(final ResultSet rs) throws SQLException, IllegalArgumentException {
-                        if (rsColumnGetters == null) {
-                            columnLabels = JdbcUtil.getColumnLabels(rs);
-                            rsColumnCount = columnLabels.size();
-                            rsColumnGetters = initColumnGetter(rsColumnCount, configuredColumnGetters);
-                            outputRow = new Object[rsColumnCount];
-                            output = DisposableObjArray.wrap(outputRow);
+                        if (!layout.isBoundTo(rs)) {
+                            final List<String> labels = JdbcUtil.getColumnLabels(rs);
+
+                            if (!layout.bindIfSameLayout(rs, labels)) {
+                                rsColumnGetters = initColumnGetter(labels.size(), configuredColumnGetters);
+                                columnLabels = labels;
+                                rsColumnCount = labels.size();
+                                outputRow = new Object[rsColumnCount];
+                                output = DisposableObjArray.wrap(outputRow);
+                                layout.bind(rs, labels);
+                            }
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
@@ -3056,13 +3266,15 @@ public final class Jdbc {
 
         /**
          * Converts this {@code BiRowMapper} to a stateful {@code RowMapper}. The resulting
-         * {@code RowMapper} caches the column labels on its first execution.
+         * {@code RowMapper} reads the column labels once per {@code ResultSet} it is applied to.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          *
-         * @return a stateful {@code RowMapper}. Do not cache, share, or use it in parallel streams.
+         * @return a stateful {@code RowMapper}. Do not share it between threads or use it in parallel streams.
          * @see RowMapper#toBiRowMapper()
          * @deprecated This method creates a stateful {@code RowMapper} that can be easily misused,
-         * leading to potential issues in multithreaded environments or when reused across different
-         * queries. It is recommended to use {@code BiRowMapper} directly where possible.
+         * leading to potential issues in multithreaded environments. It is recommended to use
+         * {@code BiRowMapper} directly where possible.
          */
         @Deprecated
         @SequentialOnly
@@ -3071,12 +3283,14 @@ public final class Jdbc {
             final BiRowMapper<T> biRowMapper = this;
 
             return new RowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private List<String> cls = null;
 
                 @Override
                 public T apply(final ResultSet rs) throws SQLException {
-                    if (cls == null) {
+                    if (!layout.isBoundTo(rs)) {
                         cls = JdbcUtil.getColumnLabels(rs);
+                        layout.bind(rs, cls);
                     }
 
                     return biRowMapper.apply(rs, cls);
@@ -3149,9 +3363,12 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful. It caches metadata (like property and column mappings)
-         * upon its first execution. It should not be cached or shared for use with different SQL queries
-         * (which may have different column structures), nor should it be used in parallel streams.
-         * Create a new instance for each distinct query structure.
+         * for the {@code ResultSet} it is applied to, so it must not be shared between threads or used in parallel
+         * streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>This is equivalent to {@code to(targetClass, false)}: for a bean target, the returned mapper's
@@ -3166,7 +3383,7 @@ public final class Jdbc {
          *
          * @param <T> target type
          * @param targetClass the class to map rows to
-         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @return a new stateful {@code BiRowMapper}. Do not share it between threads or use it in parallel streams.
          * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata
          */
         @SequentialOnly
@@ -3180,8 +3397,12 @@ public final class Jdbc {
          * with an option to ignore columns in the {@code ResultSet} that do not have a matching property in the class.
          *
          * <p>
-         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
-         * cached, shared across different query structures, or used in parallel streams.
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata for the {@code ResultSet} it is applied to,
+         * so it must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>For a reference-array target such as {@code String[]}, each included column is read through
@@ -3192,7 +3413,7 @@ public final class Jdbc {
          * @param targetClass the class to map rows to
          * @param ignoreUnmatchedColumns if {@code true}, columns without a corresponding property in {@code targetClass} are silently skipped;
          * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column (only relevant for bean targets).
-         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @return a new stateful {@code BiRowMapper}. Do not share it between threads or use it in parallel streams.
          * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata
          */
         @SequentialOnly
@@ -3206,8 +3427,12 @@ public final class Jdbc {
          * them to object properties.
          *
          * <p>
-         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
-         * cached, shared across different query structures, or used in parallel streams.
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata for the {@code ResultSet} it is applied to,
+         * so it must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>This is equivalent to {@code to(targetClass, columnNameFilter, columnNameConverter, false)}: for a bean
@@ -3227,10 +3452,12 @@ public final class Jdbc {
          * @param targetClass the class to map rows to
          * @param columnNameFilter a predicate to filter which columns should be considered for mapping
          * @param columnNameConverter a function to transform column names before matching them to properties
-         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @return a new stateful {@code BiRowMapper}. Do not share it between threads or use it in parallel streams.
          * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata, or if a
-         *         non-trivial {@code columnNameFilter}/{@code columnNameConverter} is supplied together with a
-         *         single-column scalar {@code targetClass} (which does not support filtering or conversion).
+         *         {@code columnNameFilter} other than {@code null}/{@code Fn.alwaysTrue()} or a {@code columnNameConverter} other than
+         *         {@code null}/{@code Fn.identity()} is supplied together with a single-column scalar {@code targetClass} (which does not
+         *         support filtering or conversion; an equivalent lambda such as {@code s -> true} or
+         *         {@code java.util.function.Function.identity()} is rejected too).
          */
         @SequentialOnly
         @Stateful
@@ -3244,14 +3471,22 @@ public final class Jdbc {
          * and handling of non-matched columns.
          *
          * <p>
-         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
-         * cached, shared across different query structures, or used in parallel streams.
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata for the {@code ResultSet} it is applied to,
+         * so it must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>Positional targets represent a filtered-out column differently: for an array target the
          * column keeps its original index and its slot is left {@code null}, while for a {@code List}
          * target the column is omitted entirely (the list is compacted, so list index no longer equals
          * column index when a filter drops columns).</p>
+         *
+         * <p>A {@code columnNameConverter} that returns {@code null} for a column excludes that column, exactly
+         * as if {@code columnNameFilter} had rejected it. For a {@code Map} target the converted names are the
+         * map keys.</p>
          *
          * <p>Column configuration is cached only after every column is configured successfully. If a
          * filter, converter, or property lookup fails, the next invocation retries configuration.</p>
@@ -3266,10 +3501,12 @@ public final class Jdbc {
          * to a property of {@code targetClass} are silently skipped;
          * if {@code false}, an {@code IllegalArgumentException} is thrown by the returned mapper whenever
          * initialization encounters an unmatched column (only relevant for bean targets).
-         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @return a new stateful {@code BiRowMapper}. Do not share it between threads or use it in parallel streams.
          * @throws IllegalArgumentException if {@code targetClass} is {@code null} or a bean target has conflicting or invalid property metadata, or if a
-         *         non-trivial {@code columnNameFilter}/{@code columnNameConverter} is supplied together with a
-         *         single-column scalar {@code targetClass} (which does not support filtering or conversion).
+         *         {@code columnNameFilter} other than {@code null}/{@code Fn.alwaysTrue()} or a {@code columnNameConverter} other than
+         *         {@code null}/{@code Fn.identity()} is supplied together with a single-column scalar {@code targetClass} (which does not
+         *         support filtering or conversion; an equivalent lambda such as {@code s -> true} or
+         *         {@code java.util.function.Function.identity()} is rejected too).
          */
         @SequentialOnly
         @Stateful
@@ -3305,17 +3542,17 @@ public final class Jdbc {
                     };
                 } else {
                     return new BiRowMapper<>() {
+                        private final ResultSetLayout layout = new ResultSetLayout();
                         private String[] columnLabels = null;
                         private int columnCount = -1;
 
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws SQLException {
-                            if (columnLabels == null) {
-                                columnCount = columnLabelList.size();
+                            if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
+                                final int rsColumnCount = columnLabelList.size();
+                                final String[] columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
 
-                                final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
-
-                                for (int i = 0; i < columnCount; i++) {
+                                for (int i = 0; i < rsColumnCount; i++) {
                                     if (columnNameFilterToBeUsed.test(columnLabels[i])) {
                                         columnLabels[i] = columnNameConverterToBeUsed.apply(columnLabels[i]);
                                     } else {
@@ -3324,6 +3561,8 @@ public final class Jdbc {
                                 }
 
                                 this.columnLabels = columnLabels;
+                                columnCount = rsColumnCount;
+                                layout.bind(rs, columnLabelList);
                             }
 
                             final Object[] a = Array.newInstance(targetClass.getComponentType(), columnCount);
@@ -3355,6 +3594,7 @@ public final class Jdbc {
                     };
                 } else {
                     return new BiRowMapper<>() {
+                        private final ResultSetLayout layout = new ResultSetLayout();
                         private String[] columnLabels = null;
 
                         /**
@@ -3366,12 +3606,10 @@ public final class Jdbc {
                          */
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
-                            final int columnCount = columnLabelList.size();
+                            if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
+                                final String[] columnLabels = columnLabelList.toArray(new String[columnLabelList.size()]);
 
-                            if (columnLabels == null) {
-                                final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
-
-                                for (int i = 0; i < columnCount; i++) {
+                                for (int i = 0; i < columnLabels.length; i++) {
                                     if (columnNameFilterToBeUsed.test(columnLabels[i])) {
                                         columnLabels[i] = columnNameConverterToBeUsed.apply(columnLabels[i]);
                                     } else {
@@ -3380,7 +3618,10 @@ public final class Jdbc {
                                 }
 
                                 this.columnLabels = columnLabels;
+                                layout.bind(rs, columnLabelList);
                             }
+
+                            final int columnCount = columnLabels.length;
 
                             @SuppressWarnings("rawtypes")
                             final Collection<Object> c = N.newCollection((Class<Collection>) targetClass, columnCount);
@@ -3400,6 +3641,7 @@ public final class Jdbc {
             } else if (Map.class.isAssignableFrom(targetClass)) {
                 if (noColumnNameFilterOrConversion) {
                     return new BiRowMapper<>() {
+                        private final ResultSetLayout layout = new ResultSetLayout();
                         private String[] columnLabels = null;
                         private int columnCount = -1;
 
@@ -3412,11 +3654,10 @@ public final class Jdbc {
                          */
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
-                            if (columnLabels == null) {
-                                columnCount = columnLabelList.size();
-                                final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
-
-                                this.columnLabels = columnLabels;
+                            if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
+                                columnLabels = columnLabelList.toArray(new String[columnLabelList.size()]);
+                                columnCount = columnLabels.length;
+                                layout.bind(rs, columnLabelList);
                             }
 
                             @SuppressWarnings("rawtypes")
@@ -3431,6 +3672,7 @@ public final class Jdbc {
                     };
                 } else {
                     return new BiRowMapper<>() {
+                        private final ResultSetLayout layout = new ResultSetLayout();
                         private String[] columnLabels = null;
                         private int columnCount = -1;
 
@@ -3443,11 +3685,11 @@ public final class Jdbc {
                          */
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
-                            if (columnLabels == null) {
-                                columnCount = columnLabelList.size();
-                                final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
+                            if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
+                                final int rsColumnCount = columnLabelList.size();
+                                final String[] columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
 
-                                for (int i = 0; i < columnCount; i++) {
+                                for (int i = 0; i < rsColumnCount; i++) {
                                     if (columnNameFilterToBeUsed.test(columnLabels[i])) {
                                         columnLabels[i] = columnNameConverterToBeUsed.apply(columnLabels[i]);
                                     } else {
@@ -3456,6 +3698,8 @@ public final class Jdbc {
                                 }
 
                                 this.columnLabels = columnLabels;
+                                columnCount = rsColumnCount;
+                                layout.bind(rs, columnLabelList);
                             }
 
                             @SuppressWarnings("rawtypes")
@@ -3477,6 +3721,7 @@ public final class Jdbc {
                 final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
                 return new BiRowMapper<>() {
+                    private final ResultSetLayout layout = new ResultSetLayout();
                     private String[] columnLabels = null;
                     private PropInfo[] propInfos;
                     private Type<?>[] columnTypes = null;
@@ -3491,7 +3736,7 @@ public final class Jdbc {
                      */
                     @Override
                     public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
-                        if (columnLabels == null) {
+                        if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
                             final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(targetClass);
 
                             columnCount = columnLabelList.size();
@@ -3570,6 +3815,7 @@ public final class Jdbc {
                             }
 
                             this.columnLabels = columnLabels;
+                            layout.bind(rs, columnLabelList);
                         }
 
                         final Object result = entityInfo.createBeanResult();
@@ -3592,8 +3838,8 @@ public final class Jdbc {
             } else {
                 // Single-column scalar target: a non-trivial filter/converter was already rejected above.
                 return new BiRowMapper<>() {
+                    private final ResultSetLayout layout = new ResultSetLayout();
                     private final Type<? extends T> targetType = N.typeOf(targetClass);
-                    private int columnCount = -1;
 
                     /**
                      * {@inheritDoc}
@@ -3603,9 +3849,13 @@ public final class Jdbc {
                      */
                     @Override
                     public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
-                        if (columnCount != 1 && (columnCount = columnLabelList.size()) != 1) {
-                            throw new IllegalArgumentException(
-                                    "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
+                        if (!layout.isBoundTo(rs)) {
+                            if (columnLabelList.size() != 1) {
+                                throw new IllegalArgumentException(
+                                        "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
+                            }
+
+                            layout.bind(rs, 1);
                         }
 
                         return targetType.get(rs, 1);
@@ -3620,8 +3870,12 @@ public final class Jdbc {
          * queries where column labels use dot-separated prefixes (e.g., {@code "u.id"}, {@code "a.street"}).
          *
          * <p>
-         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
-         * cached, shared across different query structures, or used in parallel streams.
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata for the {@code ResultSet} it is applied to,
+         * so it must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>This is equivalent to {@code to(entityClass, prefixAndPropNameMap, false)}: for a bean target, the
@@ -3640,7 +3894,7 @@ public final class Jdbc {
          * @param <T> target entity type
          * @param entityClass the class to map rows to
          * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
-         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @return a new stateful {@code BiRowMapper}. Do not share it between threads or use it in parallel streams.
          * @throws IllegalArgumentException if {@code entityClass} is {@code null}, its bean property metadata is invalid, or if
          *         {@code prefixAndPropNameMap} is non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
          *         {@link #to(Class, boolean)}, which also accepts array/{@code List}/{@code Map}/scalar targets)
@@ -3656,8 +3910,12 @@ public final class Jdbc {
          * non-matched columns.
          *
          * <p>
-         * <b>Warning:</b> The returned mapper is stateful and caches metadata upon first execution. It should not be
-         * cached, shared across different query structures, or used in parallel streams.
+         * <b>Warning:</b> The returned mapper is stateful and caches metadata for the {@code ResultSet} it is applied to,
+         * so it must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>A non-empty {@code prefixAndPropNameMap} is defensively copied when this method is called;
@@ -3668,7 +3926,7 @@ public final class Jdbc {
          * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
          * @param ignoreUnmatchedColumns if {@code true}, columns without a matching property are silently skipped;
          * if {@code false}, an {@code IllegalArgumentException} is thrown for any unmatched column
-         * @return a new stateful {@code BiRowMapper}. Do not cache or reuse across different query structures.
+         * @return a new stateful {@code BiRowMapper}. Do not share it between threads or use it in parallel streams.
          * @throws IllegalArgumentException if {@code entityClass} is {@code null}, its bean property metadata is invalid, or if
          *         {@code prefixAndPropNameMap} is non-empty and {@code entityClass} is not a valid bean class (with an empty map this method delegates to
          *         {@link #to(Class, boolean)}, which also accepts array/{@code List}/{@code Map}/scalar targets)
@@ -3688,6 +3946,7 @@ public final class Jdbc {
             final Map<String, String> configuredprefixAndPropNameMap = new HashMap<>(prefixAndPropNameMap);
 
             return new BiRowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private String[] columnLabels = null;
                 private PropInfo[] propInfos;
                 private Type<?>[] columnTypes = null;
@@ -3703,7 +3962,7 @@ public final class Jdbc {
                 @Override
                 public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
 
-                    if (columnLabels == null) {
+                    if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
                         final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClass);
 
                         columnCount = columnLabelList.size();
@@ -3765,6 +4024,7 @@ public final class Jdbc {
                         }
 
                         this.columnLabels = columnLabels;
+                        layout.bind(rs, columnLabelList);
                     }
 
                     final Object result = entityInfo.createBeanResult();
@@ -3841,7 +4101,10 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful because it reuses an internal array for the extractor.
-         * It should not be cached, shared, or used in parallel streams.
+         * It must not be shared between threads or used in parallel streams. It can be reused with another
+         * {@code ResultSet}; the array is re-created when the column count changes.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -3871,6 +4134,7 @@ public final class Jdbc {
             N.checkArgNotNull(mapSupplier, cs.mapSupplier);
 
             return new BiRowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private Object[] outputValuesForRowExtractor = null;
 
                 /**
@@ -3881,11 +4145,12 @@ public final class Jdbc {
                  */
                 @Override
                 public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
-                    final int columnCount = columnLabels.size();
-
-                    if (outputValuesForRowExtractor == null) {
-                        outputValuesForRowExtractor = new Object[columnCount];
+                    if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabels.size())) {
+                        outputValuesForRowExtractor = new Object[columnLabels.size()];
+                        layout.bind(rs, columnLabels.size());
                     }
+
+                    final int columnCount = outputValuesForRowExtractor.length;
 
                     rowExtractor.accept(rs, outputValuesForRowExtractor);
 
@@ -3912,7 +4177,11 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it caches the converted key names.
-         * It should not be cached, shared across different query structures, or used in parallel streams.
+         * It must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * Failed name conversion is retried on the next invocation; partially converted keys are not cached.
          * </p>
          *
@@ -3941,7 +4210,11 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it caches the converted key names.
-         * It should not be cached, shared across different query structures, or used in parallel streams.
+         * It must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * Failed name conversion is retried on the next invocation; partially converted keys are not cached.
          * </p>
          *
@@ -3967,11 +4240,12 @@ public final class Jdbc {
             N.checkArgNotNull(mapSupplier, cs.mapSupplier);
 
             return new BiRowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private String[] keyNames = null;
 
                 @Override
                 public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    if (keyNames == null) {
+                    if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabels)) {
                         final String[] convertedNames = new String[columnLabels.size()];
 
                         for (int i = 0, size = columnLabels.size(); i < size; i++) {
@@ -3979,6 +4253,7 @@ public final class Jdbc {
                         }
 
                         keyNames = convertedNames;
+                        layout.bind(rs, columnLabels);
                     }
 
                     final int columnCount = keyNames.length;
@@ -4000,7 +4275,10 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it reuses an internal array.
-         * It should not be cached, shared, or used in parallel streams.
+         * It must not be shared between threads or used in parallel streams. It can be reused with another
+         * {@code ResultSet}; the array is re-created when the column count changes.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -4020,6 +4298,7 @@ public final class Jdbc {
             N.checkArgNotNull(rowExtractor, cs.rowExtractor);
 
             return new BiRowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private Object[] outputValuesForRowExtractor = null;
 
                 /**
@@ -4030,11 +4309,12 @@ public final class Jdbc {
                  */
                 @Override
                 public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
-                    final int columnCount = columnLabels.size();
-
-                    if (outputValuesForRowExtractor == null) {
-                        outputValuesForRowExtractor = new Object[columnCount];
+                    if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabels.size())) {
+                        outputValuesForRowExtractor = new Object[columnLabels.size()];
+                        layout.bind(rs, columnLabels.size());
                     }
+
+                    final int columnCount = outputValuesForRowExtractor.length;
 
                     rowExtractor.accept(rs, outputValuesForRowExtractor);
 
@@ -4056,7 +4336,11 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> The returned mapper is stateful as it caches converted key names and reuses an internal array.
-         * It should not be cached, shared across different query structures, or used in parallel streams.
+         * It must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * Failed name conversion is retried on the next invocation; partially converted keys are not cached.
          * </p>
          *
@@ -4086,6 +4370,7 @@ public final class Jdbc {
             N.checkArgNotNull(mapSupplier, cs.mapSupplier);
 
             return new BiRowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private Object[] outputValuesForRowExtractor = null;
                 private String[] keyNames = null;
 
@@ -4097,18 +4382,19 @@ public final class Jdbc {
                  */
                 @Override
                 public Map<String, Object> apply(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
-                    final int columnCount = columnLabels.size();
+                    if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabels)) {
+                        final String[] convertedNames = new String[columnLabels.size()];
 
-                    if (outputValuesForRowExtractor == null) {
-                        final String[] convertedNames = new String[columnCount];
-
-                        for (int i = 0; i < columnCount; i++) {
+                        for (int i = 0; i < convertedNames.length; i++) {
                             convertedNames[i] = columnNameConverter.apply(columnLabels.get(i));
                         }
 
                         keyNames = convertedNames;
-                        outputValuesForRowExtractor = new Object[columnCount];
+                        outputValuesForRowExtractor = new Object[convertedNames.length];
+                        layout.bind(rs, columnLabels);
                     }
+
+                    final int columnCount = keyNames.length;
 
                     rowExtractor.accept(rs, outputValuesForRowExtractor);
 
@@ -4216,8 +4502,11 @@ public final class Jdbc {
          * <p>
          * <b>Warning:</b> The returned mapper is highly stateful. The returned {@code DisposableObjArray}
          * is a wrapper around an internal array that will be overwritten on the next call.
-         * You must process or copy its contents before the next row is mapped. Do not cache, share, or
-         * use this mapper in parallel streams.
+         * You must process or copy its contents before the next row is mapped. Do not share this mapper
+         * between threads or use it in parallel streams. It can be reused with another {@code ResultSet}: the
+         * column count is re-read once per {@code ResultSet}, and the internal array is re-created when it changes.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -4234,16 +4523,18 @@ public final class Jdbc {
         @Stateful
         static BiRowMapper<DisposableObjArray> toDisposableObjArray() {
             return new BiRowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private DisposableObjArray disposable = null;
                 private int columnCount = -1;
                 private Object[] output = null;
 
                 @Override
                 public DisposableObjArray apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    if (disposable == null) {
+                    if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabels.size())) {
                         columnCount = columnLabels.size();
                         output = new Object[columnCount];
                         disposable = DisposableObjArray.wrap(output);
+                        layout.bind(rs, columnCount);
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -4262,8 +4553,12 @@ public final class Jdbc {
          * <p>
          * <b>Warning:</b> The returned mapper is highly stateful. The returned {@code DisposableObjArray}
          * is a wrapper around an internal array that will be overwritten on the next call.
-         * You must process or copy its contents before the next row is mapped. Do not cache, share, or
-         * use this mapper in parallel streams.
+         * You must process or copy its contents before the next row is mapped. Do not share this mapper
+         * between threads or use it in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>Columns that cannot be matched to a property of {@code entityClass} are not skipped; they are
@@ -4292,6 +4587,7 @@ public final class Jdbc {
             N.checkArgNotNull(entityClass, cs.entityClass);
 
             return new BiRowMapper<>() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private DisposableObjArray disposable = null;
                 private int columnCount = -1;
                 private Object[] output = null;
@@ -4306,7 +4602,7 @@ public final class Jdbc {
                  */
                 @Override
                 public DisposableObjArray apply(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
-                    if (disposable == null) {
+                    if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabels)) {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
 
@@ -4339,6 +4635,7 @@ public final class Jdbc {
 
                         output = new Object[columnCount];
                         disposable = DisposableObjArray.wrap(output);
+                        layout.bind(rs, columnLabels);
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -4395,17 +4692,26 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> All {@code BiRowMapper} instances created by this builder are stateful,
-         * as they cache metadata upon first execution. They should not be cached, shared, or used
-         * in parallel streams.
+         * as they cache metadata for the {@code ResultSet} they are applied to, so they must not be shared between
+         * threads or used in parallel streams. They can be reused with other result sets: the column labels are
+         * compared once per {@code ResultSet}, and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>Calling a terminal {@code to(...)} operation snapshots the configured getters. Later changes
          * to this builder affect only mappers built afterward.</p>
          *
          * <p>Every mapper built here resolves the snapshotted getters against the {@code ResultSet}'s column labels
-         * on its first row, matching a configured name case-insensitively when no exact-case match exists, so the
+         * on the first row of each result set with new labels, matching a configured name case-insensitively when no exact-case match exists, so the
          * mapper's {@code apply} method throws an {@link IllegalArgumentException} if a configured column name is not
          * among the result columns.</p>
+         *
+         * <p>The primitive getters ({@code getBoolean}, {@code getByte}, {@code getShort}, {@code getInt}, {@code getLong},
+         * {@code getFloat}, {@code getDouble}) read through the matching {@code ResultSet.getXxx} method, so SQL {@code NULL}
+         * becomes {@code false}/{@code 0} even for a wrapper-typed property. To keep {@code null}, leave the column
+         * unconfigured in a builder from {@link BiRowMapper#builder()}, or use {@link #getObject(String, Class)} with the
+         * wrapper class.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -4585,7 +4891,8 @@ public final class Jdbc {
              * @return this builder instance for method chaining
              * @throws IllegalArgumentException if {@code columnName} is {@code null}
              * @deprecated A builder created by {@link BiRowMapper#builder()} already uses {@link ColumnGetter#GET_OBJECT}
-             *             for any column without a specific getter.
+             *             for any column without a specific getter. To override a different default getter (see
+             *             {@link BiRowMapper#builder(ColumnGetter)}), use {@code get(columnName, ColumnGetter.GET_OBJECT)}.
              */
             @Deprecated
             public BiRowMapperBuilder getObject(final String columnName) throws IllegalArgumentException {
@@ -4696,12 +5003,17 @@ public final class Jdbc {
              * It uses the configured column getters for specific columns and the default getter for others.
              *
              * <p>
-             * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
+             * <b>Warning:</b> The returned mapper is stateful. Do not share it between threads or use it in parallel streams.
+             * It can be reused with another {@code ResultSet}; it re-initializes when the column labels differ.
+             * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+             * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
              * </p>
              *
-             * <p>The configured getters are snapshotted when this method is called. For reference-array
-             * targets, a default {@link ColumnGetter#GET_OBJECT} is refined to the array component type;
-             * explicitly configured non-default getters continue to take precedence.</p>
+             * <p>The configured getters are snapshotted when this method is called. A column whose resolved getter is
+             * {@link ColumnGetter#GET_OBJECT} (the default of {@link BiRowMapper#builder()}, or configured explicitly) is
+             * instead read with the getter for the array component type (reference-array targets), the matched
+             * property's type (bean targets) or {@code targetClass} (single-column scalar targets); any other getter is
+             * used as is. {@code List} and {@code Map} targets use the resolved getters unchanged.</p>
              *
              * <p>Note: when {@code targetClass} is a bean class, the returned mapper's {@code apply} method throws
              * an {@link IllegalArgumentException} whenever initialization finds a result column that cannot be mapped to
@@ -4723,7 +5035,10 @@ public final class Jdbc {
              * with an option to ignore columns that don't match any property.
              *
              * <p>
-             * <b>Warning:</b> The returned mapper is stateful. Do not cache, share, or use it in parallel streams.
+             * <b>Warning:</b> The returned mapper is stateful. Do not share it between threads or use it in parallel streams.
+             * It can be reused with another {@code ResultSet}; it re-initializes when the column labels differ.
+             * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+             * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
              * </p>
              *
              * <p>Note: when {@code targetClass} is a bean class and {@code ignoreUnmatchedColumns} is
@@ -4748,6 +5063,7 @@ public final class Jdbc {
                     final ColumnGetter<?> componentGetter = ColumnGetter.forType(targetClass.getComponentType());
 
                     return new BiRowMapper<>() {
+                        private final ResultSetLayout layout = new ResultSetLayout();
                         private ColumnGetter<?>[] rsColumnGetters = null;
                         private int rsColumnCount = -1;
 
@@ -4759,15 +5075,18 @@ public final class Jdbc {
                          */
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
-                            if (rsColumnGetters == null) {
-                                rsColumnCount = columnLabelList.size();
-                                rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
+                            if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
+                                final ColumnGetter<?>[] columnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
 
-                                for (int i = 0; i < rsColumnCount; i++) {
-                                    if (rsColumnGetters[i] == ColumnGetter.GET_OBJECT) {
-                                        rsColumnGetters[i] = componentGetter;
+                                for (int i = 0; i < columnGetters.length; i++) {
+                                    if (columnGetters[i] == ColumnGetter.GET_OBJECT) {
+                                        columnGetters[i] = componentGetter;
                                     }
                                 }
+
+                                rsColumnGetters = columnGetters;
+                                rsColumnCount = columnGetters.length;
+                                layout.bind(rs, columnLabelList);
                             }
 
                             final Object[] a = Array.newInstance(targetClass.getComponentType(), rsColumnCount);
@@ -4781,6 +5100,7 @@ public final class Jdbc {
                     };
                 } else if (List.class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<>() {
+                        private final ResultSetLayout layout = new ResultSetLayout();
                         private ColumnGetter<?>[] rsColumnGetters = null;
                         private int rsColumnCount = -1;
 
@@ -4794,9 +5114,10 @@ public final class Jdbc {
                          */
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
-                            if (rsColumnGetters == null) {
-                                rsColumnCount = columnLabelList.size();
+                            if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
                                 rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
+                                rsColumnCount = rsColumnGetters.length;
+                                layout.bind(rs, columnLabelList);
                             }
 
                             @SuppressWarnings("rawtypes")
@@ -4811,6 +5132,7 @@ public final class Jdbc {
                     };
                 } else if (Map.class.isAssignableFrom(targetClass)) {
                     return new BiRowMapper<>() {
+                        private final ResultSetLayout layout = new ResultSetLayout();
                         private ColumnGetter<?>[] rsColumnGetters = null;
                         private int rsColumnCount = -1;
                         private String[] columnLabels = null;
@@ -4826,11 +5148,11 @@ public final class Jdbc {
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, RuntimeException, SQLException {
 
-                            if (rsColumnGetters == null) {
-                                rsColumnCount = columnLabelList.size();
+                            if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
                                 rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
-
+                                rsColumnCount = rsColumnGetters.length;
                                 columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
+                                layout.bind(rs, columnLabelList);
                             }
 
                             @SuppressWarnings("rawtypes")
@@ -4847,6 +5169,7 @@ public final class Jdbc {
 
                 {
                     return new BiRowMapper<>() {
+                        private final ResultSetLayout layout = new ResultSetLayout();
                         private final BeanInfo entityInfo = ParserUtil.getBeanInfo(targetClass);
 
                         private int rsColumnCount = -1;
@@ -4863,16 +5186,16 @@ public final class Jdbc {
                          */
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
-                            if (rsColumnGetters == null) {
-                                rsColumnCount = columnLabelList.size();
+                            if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
+                                final int columnCount = columnLabelList.size();
                                 final ColumnGetter<?>[] columnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
 
-                                columnLabels = columnLabelList.toArray(new String[rsColumnCount]);
-                                final PropInfo[] localPropInfos = new PropInfo[rsColumnCount];
+                                final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
+                                final PropInfo[] localPropInfos = new PropInfo[columnCount];
 
                                 final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(targetClass);
 
-                                for (int i = 0; i < rsColumnCount; i++) {
+                                for (int i = 0; i < columnCount; i++) {
                                     localPropInfos[i] = entityInfo.getPropInfo(columnLabels[i]);
 
                                     if (localPropInfos[i] == null) {
@@ -4901,18 +5224,26 @@ public final class Jdbc {
                                     }
                                 }
 
+                                this.columnLabels = columnLabels;
                                 propInfos = localPropInfos;
                                 rsColumnGetters = columnGetters;
+                                rsColumnCount = columnCount;
+                                layout.bind(rs, columnLabelList);
                             }
 
                             final Object result = entityInfo.createBeanResult();
+                            Object value = null;
 
                             for (int i = 0; i < rsColumnCount; i++) {
                                 if (columnLabels[i] == null) {
                                     continue;
                                 }
 
-                                propInfos[i].setPropValue(result, rsColumnGetters[i].get(rs, i + 1));
+                                value = rsColumnGetters[i].get(rs, i + 1);
+
+                                // setPropValue converts a mismatched value (e.g. Integer from getInt() into a Long property) for a record
+                                // component too: abacus-common 8.2.1+ converts constructor arguments as it does setter arguments.
+                                propInfos[i].setPropValue(result, value);
                             }
 
                             return entityInfo.finishBeanResult(result);
@@ -4920,7 +5251,7 @@ public final class Jdbc {
                     };
                 } else {
                     return new BiRowMapper<>() {
-                        private int rsColumnCount = -1;
+                        private final ResultSetLayout layout = new ResultSetLayout();
                         private ColumnGetter<?>[] rsColumnGetters = null;
 
                         /**
@@ -4932,17 +5263,20 @@ public final class Jdbc {
                          */
                         @Override
                         public T apply(final ResultSet rs, final List<String> columnLabelList) throws IllegalArgumentException, SQLException {
-                            if (rsColumnCount != 1 && (rsColumnCount = columnLabelList.size()) != 1) {
-                                throw new IllegalArgumentException(
-                                        "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
-                            }
-
-                            if (rsColumnGetters == null) {
-                                rsColumnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
-
-                                if (rsColumnGetters[0] == ColumnGetter.GET_OBJECT) {
-                                    rsColumnGetters[0] = ColumnGetter.forType(N.typeOf(targetClass));
+                            if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabelList)) {
+                                if (columnLabelList.size() != 1) {
+                                    throw new IllegalArgumentException(
+                                            "It's not supported to retrieve value from multiple columns: " + columnLabelList + " for type: " + targetClass);
                                 }
+
+                                final ColumnGetter<?>[] columnGetters = initColumnGetter(columnLabelList, configuredColumnGetters);
+
+                                if (columnGetters[0] == ColumnGetter.GET_OBJECT) {
+                                    columnGetters[0] = ColumnGetter.forType(N.typeOf(targetClass));
+                                }
+
+                                rsColumnGetters = columnGetters;
+                                layout.bind(rs, columnLabelList);
                             }
 
                             return (T) rsColumnGetters[0].get(rs, 1);
@@ -5019,10 +5353,11 @@ public final class Jdbc {
         /**
          * Creates a stateful {@code RowConsumer} that iterates over all columns in each row and applies the specified action.
          *
-         * <p><b>Warning:</b> The returned {@code RowConsumer} is stateful. It determines the column count
-         * from the {@code ResultSet} on its first execution and reuses that count for all subsequent
-         * rows. Therefore, it should not be reused across different queries with varying column counts
-         * or used in parallel streams. A new instance should be created for each distinct query execution.</p>
+         * <p><b>Warning:</b> The returned {@code RowConsumer} is stateful. It reads the column count once per
+         * {@code ResultSet} and reuses that count for the remaining rows of that result set, so it must not be shared
+         * between threads or used in parallel streams. It can be reused with another {@code ResultSet}.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -5045,12 +5380,14 @@ public final class Jdbc {
             N.checkArgNotNull(consumerForAll, cs.consumerForAll);
 
             return new RowConsumer() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private int columnCount = -1;
 
                 @Override
                 public void accept(final ResultSet rs) throws SQLException {
-                    if (columnCount < 0) {
+                    if (!layout.isBoundTo(rs)) {
                         columnCount = JdbcUtil.getColumnCount(rs);
+                        layout.bind(rs, columnCount);
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -5067,8 +5404,10 @@ public final class Jdbc {
          *
          * <p><b>Warning:</b> The returned {@code RowConsumer} is stateful and reuses an internal buffer.
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
-         * Do not store references to it. This consumer should not be reused across different queries
-         * with varying column counts or used in parallel streams.</p>
+         * Do not store references to it. This consumer must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}; the buffer is re-created when the column count changes.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -5091,16 +5430,22 @@ public final class Jdbc {
             N.checkArgNotNull(consumer, cs.consumer);
 
             return new RowConsumer() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private DisposableObjArray disposable = null;
                 private int columnCount = -1;
                 private Object[] output = null;
 
                 @Override
                 public void accept(final ResultSet rs) throws SQLException {
-                    if (disposable == null) {
-                        columnCount = JdbcUtil.getColumnCount(rs);
-                        output = new Object[columnCount];
-                        disposable = DisposableObjArray.wrap(output);
+                    if (!layout.isBoundTo(rs)) {
+                        final int rsColumnCount = JdbcUtil.getColumnCount(rs);
+
+                        if (!layout.bindIfSameLayout(rs, rsColumnCount)) {
+                            columnCount = rsColumnCount;
+                            output = new Object[columnCount];
+                            disposable = DisposableObjArray.wrap(output);
+                            layout.bind(rs, columnCount);
+                        }
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -5119,7 +5464,14 @@ public final class Jdbc {
          *
          * <p><b>Warning:</b> The returned {@code RowConsumer} is stateful and reuses an internal buffer.
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
-         * This consumer should not be reused across different queries or used in parallel streams.</p>
+         * This consumer must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
+         *
+         * <p>Columns whose label does not match any property of {@code entityClass} are not skipped; they are read
+         * with {@link JdbcUtil#getColumnValue(ResultSet, int)} instead of a property type.</p>
          *
          * <p>{@code entityClass} is only checked for {@code null} here; its bean metadata is resolved when the
          * returned consumer processes its first row, so a class that is not a bean class makes that first
@@ -5138,6 +5490,7 @@ public final class Jdbc {
             N.checkArgNotNull(consumer, cs.consumer);
 
             return new RowConsumer() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private DisposableObjArray disposable = null;
                 private int columnCount = -1;
                 private Object[] output = null;
@@ -5152,9 +5505,9 @@ public final class Jdbc {
                  */
                 @Override
                 public void accept(final ResultSet rs) throws SQLException, IllegalArgumentException {
-                    if (disposable == null) {
-                        final List<String> columnLabels = JdbcUtil.getColumnLabels(rs);
+                    final List<String> columnLabels = layout.isBoundTo(rs) ? null : JdbcUtil.getColumnLabels(rs);
 
+                    if (columnLabels != null && !layout.bindIfSameLayout(rs, columnLabels)) {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
 
@@ -5187,6 +5540,7 @@ public final class Jdbc {
 
                         output = new Object[columnCount];
                         disposable = DisposableObjArray.wrap(output);
+                        layout.bind(rs, columnLabels);
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -5292,7 +5646,10 @@ public final class Jdbc {
          *
          * <p><b>Warning:</b> The returned {@code BiRowConsumer} is stateful and reuses an internal buffer.
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
-         * Do not store references to it. This consumer should not be reused across different queries or in parallel streams.</p>
+         * Do not store references to it. This consumer must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}; the buffer is re-created when the column count changes.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
          *
          * @param consumer the consumer to process the column labels and {@code DisposableObjArray} for each row.
          * @return a new stateful {@code BiRowConsumer}.
@@ -5305,16 +5662,18 @@ public final class Jdbc {
             N.checkArgNotNull(consumer, cs.consumer);
 
             return new BiRowConsumer() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private DisposableObjArray disposable = null;
                 private int columnCount = -1;
                 private Object[] output = null;
 
                 @Override
                 public void accept(final ResultSet rs, final List<String> columnLabels) throws SQLException {
-                    if (disposable == null) {
+                    if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabels.size())) {
                         columnCount = columnLabels.size();
                         output = new Object[columnCount];
                         disposable = DisposableObjArray.wrap(output);
+                        layout.bind(rs, columnCount);
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -5333,7 +5692,14 @@ public final class Jdbc {
          *
          * <p><b>Warning:</b> The returned {@code BiRowConsumer} is stateful and reuses an internal buffer.
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
-         * This consumer should not be reused across different queries or in parallel streams.</p>
+         * This consumer must not be shared between threads or used in parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
+         *
+         * <p>Columns whose label does not match any property of {@code entityClass} are not skipped; they are read
+         * with {@link JdbcUtil#getColumnValue(ResultSet, int)} instead of a property type.</p>
          *
          * <p>{@code entityClass} is only checked for {@code null} here; its bean metadata is resolved when the
          * returned consumer processes its first row, so a class that is not a bean class makes that first
@@ -5353,6 +5719,7 @@ public final class Jdbc {
             N.checkArgNotNull(consumer, cs.consumer);
 
             return new BiRowConsumer() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private DisposableObjArray disposable = null;
                 private int columnCount = -1;
                 private Object[] output = null;
@@ -5367,7 +5734,7 @@ public final class Jdbc {
                  */
                 @Override
                 public void accept(final ResultSet rs, final List<String> columnLabels) throws IllegalArgumentException, SQLException {
-                    if (disposable == null) {
+                    if (!layout.isBoundTo(rs) && !layout.bindIfSameLayout(rs, columnLabels)) {
                         columnCount = columnLabels.size();
                         columnTypes = new Type[columnCount];
 
@@ -5400,6 +5767,7 @@ public final class Jdbc {
 
                         output = new Object[columnCount];
                         disposable = DisposableObjArray.wrap(output);
+                        layout.bind(rs, columnLabels);
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -5676,8 +6044,12 @@ public final class Jdbc {
          * based on the properties of the given entity class.
          *
          * <p><b>Warning:</b> The returned extractor is stateful. It initializes its internal type mapping
-         * on the first execution. It should not be reused across queries with different column structures
-         * or in parallel streams.</p>
+         * for the {@code ResultSet} it is applied to, so it must not be shared between threads or used in parallel
+         * streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
          *
          * @param entityClassForFetch the entity class whose properties guide the type mapping.
          * @return a new stateful {@code RowExtractor}.
@@ -5694,8 +6066,12 @@ public final class Jdbc {
          * Creates a stateful {@code RowExtractor} based on an entity class, with custom mapping from
          * column-label prefixes to bean property names. This is useful for handling flattened one-to-one relationships.
          *
-         * <p><b>Warning:</b> The returned extractor is stateful and should not be reused across different
-         * queries or in parallel streams.</p>
+         * <p><b>Warning:</b> The returned extractor is stateful and must not be shared between threads or used in
+         * parallel streams.
+         * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
+         * and the cached metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
          *
          * @param entityClassForFetch the entity class for type mapping.
          * @param prefixAndPropNameMap a map where keys are the column-label prefix preceding a {@code .}; values are the corresponding bean property name (the segment after the column's {@code .} is appended to it).
@@ -5713,11 +6089,14 @@ public final class Jdbc {
          * Creates a stateful {@code RowExtractor} based on an entity class, using a predefined list of column labels.
          * This can be more efficient than discovering labels from {@code ResultSetMetaData}.
          *
-         * <p><b>Warning:</b> The returned extractor is stateful and should not be reused across different
-         * queries or in parallel streams.</p>
+         * <p><b>Warning:</b> The returned extractor is stateful and must not be shared between threads or used in
+         * parallel streams. When column labels are given, its type mapping is resolved once, on first use, and applies to
+         * every {@code ResultSet} it is used with. A {@code null} or empty list gives none: the labels are then discovered from
+         * each {@code ResultSet}, as by {@link #forType(Class)}.</p>
          *
          * @param entityClassForFetch the entity class for type mapping.
-         * @param columnLabels the explicit list of column labels to use for mapping.
+         * @param columnLabels the explicit list of column labels to use for mapping; if {@code null} or empty, the labels are
+         *        discovered from each {@code ResultSet}.
          * @return a new stateful {@code RowExtractor}.
          * @throws IllegalArgumentException if {@code entityClassForFetch} is {@code null}, is not a bean class with getter/setter methods,
          *         or has conflicting aliases or invalid property metadata.
@@ -5733,13 +6112,21 @@ public final class Jdbc {
          * for type mapping, an explicit list of column labels, and a prefix map for complex mappings.
          *
          * <p><b>Warning:</b> The returned extractor is stateful. It initializes its internal type mapping
-         * on the first execution. It should not be reused across queries with different column structures
-         * or in parallel streams.</p>
+         * for the {@code ResultSet} it is applied to, so it must not be shared between threads or used in parallel
+         * streams.
+         * It can be reused with another {@code ResultSet}. With non-empty {@code columnLabels}, the mapping is resolved once
+         * and applies to every {@code ResultSet}; otherwise the labels of each {@code ResultSet} are read once and the cached
+         * metadata is rebuilt when they differ.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
          *
          * <p>The returned extractor writes column values into positions {@code 0..columnCount-1} of the
          * {@code outputRow} passed to {@code accept}, so that array must be at least as long as the number of
          * mapped columns. A {@code null} result set or a {@code null} or undersized output array is rejected with
          * {@link IllegalArgumentException} before any values are written.</p>
+         *
+         * <p>A column that matches a property is read with that property's type; a column that matches no property is
+         * not rejected but read with {@link JdbcUtil#getColumnValue(ResultSet, int)}.</p>
          *
          * <p>Non-empty {@code columnLabels} and {@code prefixAndPropNameMap} inputs are defensively copied when
          * this method is called; later caller mutations do not change the returned extractor.</p>
@@ -5762,6 +6149,7 @@ public final class Jdbc {
             final Map<String, String> configuredprefixAndPropNameMap = N.isEmpty(prefixAndPropNameMap) ? null : new HashMap<>(prefixAndPropNameMap);
 
             return new RowExtractor() {
+                private final ResultSetLayout layout = new ResultSetLayout();
                 private Type<?>[] columnTypes = null;
                 private int columnCount = -1;
 
@@ -5777,24 +6165,26 @@ public final class Jdbc {
                     N.checkArgNotNull(rs, cs.rs);
                     N.checkArgNotNull(outputRow, cs.outputRow);
 
-                    final List<String> columnLabelList = columnTypes == null
+                    // Configured labels fix the mapping regardless of the result set, so it is resolved only once;
+                    // otherwise the labels of each new result set are read once and compared with the cached layout.
+                    final boolean isNewResultSet = configuredColumnLabels == null ? !layout.isBoundTo(rs) : columnTypes == null;
+                    final List<String> columnLabelList = isNewResultSet
                             ? (configuredColumnLabels == null ? JdbcUtil.getColumnLabels(rs) : configuredColumnLabels)
                             : null;
-                    final int requiredColumnCount = columnTypes == null ? columnLabelList.size() : columnCount;
+                    final int requiredColumnCount = isNewResultSet ? columnLabelList.size() : columnCount;
                     N.checkArgument(outputRow.length >= requiredColumnCount, "The output array length (%s) must be at least the column count (%s)",
                             outputRow.length, requiredColumnCount);
 
-                    if (columnTypes == null) {
+                    if (isNewResultSet && (configuredColumnLabels != null || !layout.bindIfSameLayout(rs, columnLabelList))) {
                         final Map<String, String> columnToPropNameMap = JdbcUtil.getColumnToPropNameMap(entityClassForFetch);
-                        columnCount = requiredColumnCount;
-                        final String[] columnLabels = columnLabelList.toArray(new String[columnCount]);
+                        final String[] columnLabels = columnLabelList.toArray(new String[requiredColumnCount]);
 
-                        // Resolve into a local array and publish it only once every column is mapped: 'columnTypes != null'
-                        // is the initialized flag, so a failed first call must not leave a partial mapping behind.
-                        final Type<?>[] resolvedColumnTypes = new Type[columnCount];
+                        // Resolve into a local array and publish it only once every column is mapped, so that a failed
+                        // initialization never leaves a partial mapping behind.
+                        final Type<?>[] resolvedColumnTypes = new Type[requiredColumnCount];
                         PropInfo propInfo = null;
 
-                        for (int i = 0; i < columnCount; i++) {
+                        for (int i = 0; i < requiredColumnCount; i++) {
                             propInfo = entityInfo.getPropInfo(columnLabels[i]);
 
                             if (propInfo == null) {
@@ -5855,6 +6245,11 @@ public final class Jdbc {
                         }
 
                         columnTypes = resolvedColumnTypes;
+                        columnCount = requiredColumnCount;
+
+                        if (configuredColumnLabels == null) {
+                            layout.bind(rs, columnLabelList);
+                        }
                     }
 
                     for (int i = 0; i < columnCount; i++) {
@@ -5893,8 +6288,11 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> All {@code RowExtractor} instances created by this builder are stateful,
-         * as they cache metadata (like column count and getter configurations) upon first execution.
-         * They should not be cached, shared, or used in parallel streams.
+         * as they cache metadata (like column count and getter configurations) for the {@code ResultSet} they are
+         * applied to, so they must not be shared between threads or used in parallel streams. They can be reused with
+         * other result sets: the column count is re-read once per {@code ResultSet}.
+         * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
+         * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).
          * </p>
          *
          * <p>{@link #build()} snapshots the configured getters, so later builder changes do not alter an
@@ -6131,14 +6529,13 @@ public final class Jdbc {
             /**
              * Builds a stateful {@code RowExtractor} that fills a supplied output array with the mapped row values.
              *
-             * <p>The extractor initializes its internal column getter cache on first use, based on the
-             * column count read from {@code ResultSetMetaData}. Position {@code i} in the output array
+             * <p>The extractor initializes its internal column getter cache once per {@code ResultSet} (rebuilding it only
+             * when the column count changes), based on the column count read from {@code ResultSetMetaData}. Position {@code i} in the output array
              * (0-based) is populated using the {@code ColumnGetter} configured for column {@code i + 1}
              * (or the default getter if none was configured).</p>
              *
-             * <p><b>Warning:</b> The returned {@code RowExtractor} is stateful. It should be built for each
-             * execution context and must not be cached or shared across incompatible queries or used in
-             * parallel streams.</p>
+             * <p><b>Warning:</b> The returned {@code RowExtractor} is stateful. It must not be shared between threads or
+             * used in parallel streams.</p>
              *
              * <p>Note: the returned extractor's {@code accept} method throws an {@link IllegalArgumentException}
              * if the supplied result set or output array is {@code null}, the output array is shorter than the result set's column count,
@@ -6153,6 +6550,7 @@ public final class Jdbc {
                 final Map<Integer, ColumnGetter<?>> configuredColumnGetters = new HashMap<>(columnGetterMap);
 
                 return new RowExtractor() {
+                    private final ResultSetLayout layout = new ResultSetLayout();
                     private ColumnGetter<?>[] rsColumnGetters = null;
                     private int rsColumnCount = -1;
 
@@ -6168,13 +6566,15 @@ public final class Jdbc {
                         N.checkArgNotNull(rs, cs.rs);
                         N.checkArgNotNull(outputRow, cs.outputRow);
 
-                        final int requiredColumnCount = rsColumnGetters == null ? rs.getMetaData().getColumnCount() : rsColumnCount;
+                        final boolean isNewResultSet = !layout.isBoundTo(rs);
+                        final int requiredColumnCount = isNewResultSet ? rs.getMetaData().getColumnCount() : rsColumnCount;
                         N.checkArgument(outputRow.length >= requiredColumnCount, "The output array length (%s) must be at least the column count (%s)",
                                 outputRow.length, requiredColumnCount);
 
-                        if (rsColumnGetters == null) {
+                        if (isNewResultSet && !layout.bindIfSameLayout(rs, requiredColumnCount)) {
+                            rsColumnGetters = initColumnGetter(requiredColumnCount);
                             rsColumnCount = requiredColumnCount;
-                            rsColumnGetters = initColumnGetter(rsColumnCount);
+                            layout.bind(rs, requiredColumnCount);
                         }
 
                         for (int i = 0; i < rsColumnCount; i++) {
@@ -7064,7 +7464,8 @@ public final class Jdbc {
         }
 
         /**
-         * Retrieves the value of an output parameter by its 1-based index.
+         * Retrieves the value of an output parameter by its 1-based index. A parameter registered by name cannot be
+         * retrieved by index.
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -7082,7 +7483,8 @@ public final class Jdbc {
         }
 
         /**
-         * Retrieves the value of an output parameter by its name.
+         * Retrieves the value of an output parameter by its name. The name must equal the name the parameter was
+         * registered with (case-sensitive); a parameter registered by index cannot be retrieved by name.
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -7242,10 +7644,11 @@ public final class Jdbc {
          */
         private static final Map<String, Handler<?>> handlerPool = new ConcurrentHashMap<>();
         /**
-         * The Spring application context used to look up handlers as beans, or {@code null} when Spring
-         * is not available on the classpath.
+         * The Spring application context ({@link SpringApplicationContext}) used to look up handlers as beans, or {@code null}
+         * when Spring is not available on the classpath. Declared as {@code Object}: a field of a type that implements Spring
+         * interfaces would make reflection over this class ({@code getDeclaredFields()}) fail without Spring.
          */
-        private static final SpringApplicationContext springAppContext;
+        private static final Object springAppContext;
 
         static {
             handlerPool.put(ClassUtil.getCanonicalClassName(Handler.class), EMPTY);
@@ -7288,11 +7691,13 @@ public final class Jdbc {
         }
 
         /**
-         * Registers a handler instance. The handler is registered using its canonical class name as the qualifier.
+         * Registers a handler instance. The handler is registered using its canonical class name as the qualifier, or its
+         * {@link Class#getName()} when the class has no canonical name (for example an anonymous class).
          *
          * <p>Because the qualifier is derived from the class, all handlers returned by the same factory method
          * (for example {@link #create(Throwables.TriConsumer, Throwables.QuadConsumer)}) share one qualifier: only the
-         * first of them is registered by this method, and later ones return {@code false}.</p>
+         * first of them is registered by this method, and later ones return {@code false}. Use
+         * {@link #register(String, Handler)} when an explicit, stable qualifier is required.</p>
          *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
@@ -7305,9 +7710,7 @@ public final class Jdbc {
          *
          * @param handler the handler instance to register.
          * @return {@code true} if the handler was registered successfully, {@code false} if a handler with the same qualifier already exists.
-         * @throws IllegalArgumentException if {@code handler} is {@code null}, or if the qualifier derived by
-         *         {@link ClassUtil#getCanonicalClassName(Class)} is empty. Use {@link #register(String, Handler)}
-         *         when an explicit, stable qualifier is required (particularly for anonymous or lambda-built handlers).
+         * @throws IllegalArgumentException if {@code handler} is {@code null}.
          */
         public static boolean register(final Handler<?> handler) throws IllegalArgumentException {
             N.checkArgNotNull(handler, cs.handler);
@@ -7370,7 +7773,7 @@ public final class Jdbc {
             }
 
             try {
-                final Object bean = springAppContext.getBean(qualifier);
+                final Object bean = ((SpringApplicationContext) springAppContext).getBean(qualifier);
 
                 if (bean instanceof Handler) {
                     // Spring owns the bean's scope and destruction. Caching it here would retain
@@ -7421,14 +7824,14 @@ public final class Jdbc {
             }
 
             try {
-                result = springAppContext.getBean(handlerClass);
+                result = ((SpringApplicationContext) springAppContext).getBean(handlerClass);
             } catch (final Exception | LinkageError e) {
                 // Fall back to lookup by qualifier, then recheck the registry.
             }
 
             if (result == null) {
                 try {
-                    final Object bean = springAppContext.getBean(qualifier);
+                    final Object bean = ((SpringApplicationContext) springAppContext).getBean(qualifier);
 
                     if (bean instanceof Handler) {
                         result = (Handler<?>) bean;
@@ -7638,9 +8041,15 @@ public final class Jdbc {
      * An interface for caching the results of DAO method calls. Implementations can provide
      * various caching strategies (e.g., in-memory, distributed) to improve application performance.
      *
-     * <p>The default cache key format is {@code fullMethodName#tableName#serializedParameters}.
-     * Arguments are serialized with Kryo when available, otherwise with JSON. Treat this key as opaque;
-     * its argument encoding can depend on the runtime classpath.</p>
+     * <p>The default cache key format is {@code fullMethodName#tableName#daoId#serializedParameters}, where
+     * {@code daoId} identifies the DAO proxy that made the call, and with it the DAO interface and the
+     * {@code DataSource} the proxy was created with: a cache shared by several DAOs, such as the thread-local cache
+     * of {@link JdbcUtil#openDaoCacheScope()} or one cache passed to several {@code createDao} calls, never returns a
+     * result read through another DAO or {@code DataSource}. The table name is always the segment between the first
+     * and the second {@code '#'}; the built-in caches invalidate by it, so a write through any DAO sharing the cache
+     * invalidates the entries of that table for all of them. Arguments are serialized with Kryo when available,
+     * otherwise with JSON. Treat the rest of the key as opaque; its DAO identity is assigned per proxy, and its
+     * argument encoding can depend on the runtime classpath.</p>
      *
      * <p>Two built-in implementations are provided:</p>
      * <ul>
@@ -7659,10 +8068,11 @@ public final class Jdbc {
          *
          * <p>The caller owns the returned cache. Its pool registers a JVM shutdown hook and, when {@code evictDelay} is
          * positive, runs a periodic eviction task; the hook closes the pool when the JVM exits, and {@link DefaultDaoCache#close()}
-         * releases both earlier, once nothing uses the cache any more. A DAO proxy created with a cache stays registered for the life of the JVM and keeps that
-         * cache: closing the cache does not unregister the proxy, and its methods that read or invalidate the cache then
-         * fail with {@link IllegalStateException}. Create such a cache and its DAOs once, for as long as the application
-         * uses them, not per request or unit of work (each new cache instance registers another proxy):</p>
+         * releases both earlier, once nothing uses the cache any more. A DAO proxy created with a cache stays registered in
+         * the bounded DAO proxy pool (see {@link JdbcUtil#createDao(Class, javax.sql.DataSource)}) and keeps that cache:
+         * closing the cache does not unregister the proxy, and its methods that read or invalidate the cache then fail
+         * with {@link IllegalStateException}. Create such a cache and its DAOs once, for as long as the application uses
+         * them, not per request or unit of work (each new cache instance registers another proxy):</p>
          * <pre>{@code
          * // At application startup:
          * Jdbc.DefaultDaoCache userCache = new Jdbc.DefaultDaoCache(1000, 3000);
@@ -7676,7 +8086,7 @@ public final class Jdbc {
          * {@link DefaultDaoCache}, which is {@link AutoCloseable}, as above.</p>
          *
          * @param capacity the maximum number of entries in the cache.
-         * @param evictDelay the interval in milliseconds for the eviction scheduler to run.
+         * @param evictDelay the interval in milliseconds for the eviction scheduler to run; {@code 0} disables periodic eviction.
          * @return a new {@code DaoCache} instance.
          * @throws IllegalArgumentException if {@code capacity} or {@code evictDelay} is negative.
          * @throws IllegalStateException if JVM shutdown has begun and the backing pool cannot register its shutdown hook.
@@ -7736,14 +8146,14 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * DaoCache cache = DaoCache.create(1000, 3000);
-         * // defaultCacheKey format: fullMethodName#tableName#serializedParameters
-         * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig);
+         * // defaultCacheKey format: fullMethodName#tableName#daoId#serializedParameters
+         * Object hit = cache.get("com.example.UserDao.findById#users#UserDao@1#[1]", daoProxy, args, sig);
          * if (hit == null) {
          *     // cache miss: execute the query and populate the cache via put(...)
          * }
          * }</pre>
          *
-         * @param defaultCacheKey the default cache key (fullMethodName#tableName#serializedParameters).
+         * @param defaultCacheKey the default cache key (fullMethodName#tableName#daoId#serializedParameters).
          * @param daoProxy the DAO proxy instance on which the method was called.
          * @param args the arguments passed to the method.
          * @param methodSignature a tuple containing method metadata.
@@ -7762,7 +8172,7 @@ public final class Jdbc {
          * <pre>{@code
          * DaoCache cache = DaoCache.create(1000, 3000);
          * User user = ...; // result of a query
-         * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
+         * boolean cached = cache.put("com.example.UserDao.findById#users#UserDao@1#[1]", user, daoProxy, args, sig);
          * // cached == true when the non-null result was stored
          * }</pre>
          *
@@ -7787,7 +8197,7 @@ public final class Jdbc {
          * DaoCache cache = DaoCache.create(1000, 3000);
          * User user = ...;
          * // Cache for at most 60 seconds, evicting after 10 seconds of inactivity.
-         * boolean cached = cache.put("com.example.UserDao.findById#users#[1]", user, 60_000L, 10_000L, daoProxy, args, sig);
+         * boolean cached = cache.put("com.example.UserDao.findById#users#UserDao@1#[1]", user, 60_000L, 10_000L, daoProxy, args, sig);
          * }</pre>
          *
          * @param defaultCacheKey the default cache key.
@@ -7810,17 +8220,24 @@ public final class Jdbc {
          * invalidate every entry whose key references the affected table (parsed from {@code defaultCacheKey}), or
          * clear the whole cache when the table name cannot be determined.</p>
          *
+         * <p>A DAO calls this method after a method annotated with {@link com.landawn.abacus.jdbc.annotation.RefreshCache}
+         * and, for a cache bound to the current thread by {@link JdbcUtil#openDaoCacheScope(DaoCache)}, after each write
+         * method. It is called even when that method throws, in which case {@code result} is {@code null}. If the
+         * arguments cannot be serialized, {@code defaultCacheKey} ends after the DAO identity
+         * ({@code fullMethodName#tableName#daoId#}).</p>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * DaoCache cache = DaoCache.create(1000, 3000);
-         * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
+         * cache.put("com.example.UserDao.findById#users#UserDao@1#[1]", user, daoProxy, args, sig);
          * // After updating the "users" table, invalidate the cached entries for that table.
-         * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
-         * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null
+         * cache.update("com.example.UserDao.update#users#UserDao@1#[1]", 1, daoProxy, args, sig);
+         * Object hit = cache.get("com.example.UserDao.findById#users#UserDao@1#[1]", daoProxy, args, sig); // returns null
          * }</pre>
          *
          * @param defaultCacheKey the default cache key from the modification method.
-         * @param result the result of the modification operation (e.g., number of rows affected).
+         * @param result the result of the modification operation (e.g., number of rows affected); {@code null} if the method
+         *        returns {@code void} or threw.
          * @param daoProxy the DAO proxy instance.
          * @param args the arguments of the modification method.
          * @param methodSignature a tuple containing method metadata.
@@ -7844,9 +8261,11 @@ public final class Jdbc {
      * The default implementation of {@link DaoCache}, using a {@link KeyedObjectPool} for in-memory caching
      * with support for time-to-live (TTL) and idle time-based eviction.
      *
-     * <p>When a data modification operation occurs (insert, update, delete), this cache invalidates all
-     * entries associated with the affected table. If the table name cannot be determined from the cache key,
-     * the entire cache is cleared.</p>
+     * <p>When {@link #update(String, Object, Object, Object[], Tuple3)} is called after a data modification
+     * (insert, update, delete), this cache invalidates all entries associated with the affected table. If the
+     * table name cannot be determined from the cache key, the entire cache is cleared.</p>
+     *
+     * <p>When the cache is full, storing a new entry first evicts a portion of the least recently accessed entries.</p>
      *
      * @see DaoCache#create(int, long)
      */
@@ -7870,7 +8289,8 @@ public final class Jdbc {
          * }</pre>
          *
          * @param capacity the maximum number of entries the cache can hold.
-         * @param evictDelay the interval in milliseconds for the background eviction thread.
+         * @param evictDelay the interval in milliseconds for the background eviction thread; {@code 0} disables periodic eviction
+         *        (an expired entry is still never returned, and is removed when it is next read).
          * @throws IllegalArgumentException if {@code capacity} or {@code evictDelay} is negative.
          * @throws IllegalStateException if JVM shutdown has begun and the backing pool cannot register its shutdown hook.
          */
@@ -7883,7 +8303,7 @@ public final class Jdbc {
          * The {@code daoProxy}, {@code args}, and {@code methodSignature} arguments are unused by this
          * implementation; only {@code defaultCacheKey} is consulted.
          *
-         * @param defaultCacheKey the cache key (fullMethodName#tableName#serializedParameters).
+         * @param defaultCacheKey the cache key (fullMethodName#tableName#daoId#serializedParameters).
          * @param daoProxy the DAO proxy instance (unused).
          * @param args the method arguments (unused).
          * @param methodSignature a tuple containing method metadata (unused).
@@ -7978,11 +8398,11 @@ public final class Jdbc {
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * Jdbc.DefaultDaoCache cache = new Jdbc.DefaultDaoCache(1000, 3000);
-         * // Cache key format: fullMethodName#tableName#serializedParameters
-         * cache.put("com.example.UserDao.findById#users#[1]", user, daoProxy, args, sig);
+         * // Cache key format: fullMethodName#tableName#daoId#serializedParameters
+         * cache.put("com.example.UserDao.findById#users#UserDao@1#[1]", user, daoProxy, args, sig);
          * // An update against the "users" table invalidates all entries for that table.
-         * cache.update("com.example.UserDao.update#users#[1]", 1, daoProxy, args, sig);
-         * Object hit = cache.get("com.example.UserDao.findById#users#[1]", daoProxy, args, sig); // returns null (evicted)
+         * cache.update("com.example.UserDao.update#users#UserDao@1#[1]", 1, daoProxy, args, sig);
+         * Object hit = cache.get("com.example.UserDao.findById#users#UserDao@1#[1]", daoProxy, args, sig); // returns null (evicted)
          * }</pre>
          *
          * @param defaultCacheKey the cache key from the modification method (used to extract the affected table name).

@@ -52,6 +52,14 @@ import com.landawn.abacus.util.u.Optional;
  * selective read. Streams are caller-owned and must be closed. Parallel loaders do not propagate the
  * caller's thread-bound transaction and may partially populate entities before a task fails.</p>
  *
+ * <p><b>Connection acquisition failures:</b> with Spring connection acquisition enabled, Spring reports every failure to
+ * obtain a connection as a {@code CannotGetJdbcConnectionException}. Join entities are loaded through a DAO created for the
+ * join entity class on the same data source, or through this DAO if there is none. An unchecked DAO translates such an
+ * exception caused by an {@link SQLException} into {@link UncheckedSQLException}, leaving a
+ * {@code CannotGetJdbcConnectionException} only for a data source that returns {@code null} or throws an
+ * {@code IllegalStateException}; a checked DAO (such as a {@link CrudDao}) lets it through for any acquisition failure.
+ * The {@link Executor} overloads translate it like an unchecked DAO, whichever DAO runs their tasks.</p>
+ *
  * @param <T> the entity type managed by this DAO
  * @param <TD> the DAO implementation type (self-referencing for method chaining)
  *
@@ -84,14 +92,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code joinEntityClass} or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property of the specified type exists in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -126,14 +136,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property exists for one of the specified types in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -169,14 +181,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default Optional<T> findFirst(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(cond, cs.cond);
 
         final Optional<T> result = DaoUtil.getReadOps(this)
@@ -211,7 +225,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code joinEntityClass} or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property of the specified type exists in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the condition
@@ -219,8 +235,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      */
     @Override
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException,
-            UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -255,7 +270,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property exists for one of the specified types in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the condition
@@ -263,8 +280,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      */
     @Override
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException,
-            UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -301,7 +317,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the condition
@@ -309,8 +327,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      */
     @Override
     default Optional<T> findOnlyOne(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, DuplicateResultException,
-            UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(cond, cs.cond);
 
         final Optional<T> result = DaoUtil.getReadOps(this)
@@ -346,7 +363,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code joinEntityClass} or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property of the specified type exists in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -354,7 +373,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default List<T> list(final Collection<String> sourceSelectPropNames, final Class<?> joinEntityClass, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -395,7 +414,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property exists for one of the specified types in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -403,7 +424,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default List<T> list(final Collection<String> sourceSelectPropNames, final Collection<Class<?>> joinEntityClasses, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkElementNotNull(joinEntityClasses, cs.joinEntityClasses);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -449,7 +470,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @return a list of entities matching the condition with join entities loaded as specified
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -457,7 +480,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default List<T> list(final Collection<String> sourceSelectPropNames, final boolean includeAllJoinEntities, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(cond, cs.cond);
 
         final List<T> result = DaoUtil.getReadOps(this)
@@ -491,13 +514,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         loadJoinEntities(entity, joinEntityClass, null);
     }
 
@@ -523,14 +548,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @SuppressWarnings("deprecation")
     @Override
     default void loadJoinEntities(final T entity, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
@@ -561,13 +588,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         loadJoinEntities(entities, joinEntityClass, null);
     }
 
@@ -596,14 +625,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @SuppressWarnings("deprecation")
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
         if (N.isEmpty(entities)) {
@@ -638,13 +669,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code joinEntityPropName} is {@code null} or empty, or if the
      *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntities(final T entity, final String joinEntityPropName)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         loadJoinEntities(entity, joinEntityPropName, null);
     }
 
@@ -690,13 +723,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code joinEntityPropName} is {@code null} or empty, or if the
      *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     void loadJoinEntities(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException;
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException;
 
     /**
      * Loads join entities for a collection of entities by property name.
@@ -715,13 +750,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         loadJoinEntities(entities, joinEntityPropName, null);
     }
 
@@ -778,13 +815,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     void loadJoinEntities(final Collection<T> entities, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException;
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException;
 
     /**
      * Loads multiple join entities for a single entity by property names.
@@ -805,13 +844,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
      *                                  annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
 
         if (N.isEmpty(joinEntityPropNames)) {
@@ -845,7 +886,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
@@ -854,8 +897,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws IllegalArgumentException, RejectedExecutionException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            UnsupportedOperationException, UncheckedInterruptedException {
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         if (inParallel) {
             loadJoinEntities(entity, joinEntityPropNames, executor());
         } else {
@@ -899,8 +941,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default void loadJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws IllegalArgumentException, RejectedExecutionException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            UnsupportedOperationException, UncheckedInterruptedException {
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
@@ -933,13 +974,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return;
         }
@@ -964,14 +1007,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
@@ -980,8 +1025,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws IllegalArgumentException, RejectedExecutionException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            UnsupportedOperationException, UncheckedInterruptedException {
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         if (inParallel) {
             loadJoinEntities(entities, joinEntityPropNames, executor());
         } else {
@@ -1009,7 +1053,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
@@ -1026,8 +1070,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default void loadJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws IllegalArgumentException, RejectedExecutionException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            UnsupportedOperationException, UncheckedInterruptedException {
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
@@ -1054,14 +1097,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load all join entities
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadAllJoinEntities(final T entity)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+    default void loadAllJoinEntities(final T entity) throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
 
         loadJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
@@ -1083,7 +1127,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
@@ -1091,8 +1137,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadAllJoinEntities(final T entity, final boolean inParallel) throws IllegalArgumentException, RejectedExecutionException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
+    default void loadAllJoinEntities(final T entity, final boolean inParallel)
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         if (inParallel) {
             loadAllJoinEntities(entity, executor());
         } else {
@@ -1131,8 +1177,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadAllJoinEntities(final T entity, final Executor executor) throws IllegalArgumentException, RejectedExecutionException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
+    default void loadAllJoinEntities(final T entity, final Executor executor)
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
@@ -1154,14 +1200,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities for which to load all join entities. If {@code null} or empty, this method returns immediately
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadAllJoinEntities(final Collection<T> entities)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+    default void loadAllJoinEntities(final Collection<T> entities) throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         if (N.isEmpty(entities)) {
             return;
         }
@@ -1180,12 +1227,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntities(users, true);
      * }</pre>
      *
-     * @param entities the collection of entities for which to load all join entities
+     * @param entities the collection of entities for which to load all join entities. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
@@ -1193,8 +1242,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws IllegalArgumentException, RejectedExecutionException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
+    default void loadAllJoinEntities(final Collection<T> entities, final boolean inParallel)
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         if (inParallel) {
             loadAllJoinEntities(entities, executor());
         } else {
@@ -1234,8 +1283,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadAllJoinEntities(final Collection<T> entities, final Executor executor) throws IllegalArgumentException, RejectedExecutionException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
+    default void loadAllJoinEntities(final Collection<T> entities, final Executor executor)
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(entities)) {
@@ -1262,13 +1311,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         loadJoinEntitiesIfAbsent(entity, joinEntityClass, null);
     }
 
@@ -1295,14 +1346,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @SuppressWarnings("deprecation")
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
@@ -1334,13 +1387,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         loadJoinEntitiesIfAbsent(entities, joinEntityClass, null);
     }
 
@@ -1369,14 +1424,16 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @SuppressWarnings("deprecation")
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Class<?> joinEntityClass, final Collection<String> joinSelectPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
         if (N.isEmpty(entities)) {
@@ -1410,13 +1467,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  or does not exist in the entity class, or names a property that is currently {@code null}
      *                                  and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         loadJoinEntitiesIfAbsent(entity, joinEntityPropName, null);
     }
 
@@ -1443,13 +1502,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  or does not exist in the entity class, or names a property that is currently {@code null}
      *                                  and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(joinEntityPropName, cs.joinEntityPropName);
 
@@ -1484,13 +1545,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  and its entity class has no property named {@code joinEntityPropName},
      *                                  or that property is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         loadJoinEntitiesIfAbsent(entities, joinEntityPropName, null);
     }
 
@@ -1519,13 +1582,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  and its entity class has no property named {@code joinEntityPropName},
      *                                  or that property is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final String joinEntityPropName, final Collection<String> joinSelectPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         // Reject all null elements before metadata lookup or property getters can run.
         if (N.notEmpty(entities)) {
             N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
@@ -1576,13 +1641,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist, or names a property
      *                                  that is currently {@code null} and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
 
         if (N.isEmpty(joinEntityPropNames)) {
@@ -1616,7 +1683,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  that is currently {@code null} and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
@@ -1625,8 +1694,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws IllegalArgumentException, RejectedExecutionException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            UnsupportedOperationException, UncheckedInterruptedException {
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         if (inParallel) {
             loadJoinEntitiesIfAbsent(entity, joinEntityPropNames, executor());
         } else {
@@ -1673,8 +1741,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default void loadJoinEntitiesIfAbsent(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws IllegalArgumentException, RejectedExecutionException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            UnsupportedOperationException, UncheckedInterruptedException {
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
@@ -1730,13 +1797,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return;
         }
@@ -1761,7 +1830,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * );
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist,
@@ -1769,7 +1838,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
@@ -1778,8 +1849,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws IllegalArgumentException, RejectedExecutionException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            UnsupportedOperationException, UncheckedInterruptedException {
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         if (inParallel) {
             loadJoinEntitiesIfAbsent(entities, joinEntityPropNames, executor());
         } else {
@@ -1807,7 +1877,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
@@ -1825,8 +1895,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default void loadJoinEntitiesIfAbsent(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws IllegalArgumentException, RejectedExecutionException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            UnsupportedOperationException, UncheckedInterruptedException {
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
@@ -1853,14 +1922,15 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @param entity the entity for which to load join entities
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @SuppressWarnings("deprecation")
     @Override
-    default void loadAllJoinEntitiesIfAbsent(final T entity)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+    default void loadAllJoinEntitiesIfAbsent(final T entity) throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
 
         loadJoinEntitiesIfAbsent(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
@@ -1882,7 +1952,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
@@ -1890,8 +1962,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadAllJoinEntitiesIfAbsent(final T entity, final boolean inParallel) throws IllegalArgumentException, RejectedExecutionException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
+    default void loadAllJoinEntitiesIfAbsent(final T entity, final boolean inParallel)
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         if (inParallel) {
             loadAllJoinEntitiesIfAbsent(entity, executor());
         } else {
@@ -1929,8 +2001,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadAllJoinEntitiesIfAbsent(final T entity, final Executor executor) throws IllegalArgumentException, RejectedExecutionException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
+    default void loadAllJoinEntitiesIfAbsent(final T entity, final Executor executor)
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
@@ -1948,17 +2020,19 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntitiesIfAbsent(users);
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
     @SuppressWarnings("deprecation")
     @Override
     default void loadAllJoinEntitiesIfAbsent(final Collection<T> entities)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, UnsupportedOperationException {
         if (N.isEmpty(entities)) {
             return;
         }
@@ -1977,12 +2051,14 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * userDao.loadAllJoinEntitiesIfAbsent(users, true);
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param inParallel if {@code true}, join entities will be loaded in parallel
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if a checked DAO loads the join entities (see {@link UncheckedJoinEntityReadOps})
      * @throws UncheckedSQLException if acquiring a connection fails, or selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel join tasks to finish
@@ -1991,8 +2067,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @Beta
     @Override
     default void loadAllJoinEntitiesIfAbsent(final Collection<T> entities, final boolean inParallel)
-            throws IllegalArgumentException, RejectedExecutionException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            UnsupportedOperationException, UncheckedInterruptedException {
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         if (inParallel) {
             loadAllJoinEntitiesIfAbsent(entities, executor());
         } else {
@@ -2016,7 +2091,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }
      * }</pre>
      *
-     * @param entities the collection of entities for which to load join entities
+     * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param executor the executor to use for parallel loading
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
@@ -2031,8 +2106,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     @SuppressWarnings("deprecation")
     @Beta
     @Override
-    default void loadAllJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor) throws IllegalArgumentException, RejectedExecutionException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
+    default void loadAllJoinEntitiesIfAbsent(final Collection<T> entities, final Executor executor)
+            throws IllegalArgumentException, RejectedExecutionException, UncheckedSQLException, UnsupportedOperationException, UncheckedInterruptedException {
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(entities)) {

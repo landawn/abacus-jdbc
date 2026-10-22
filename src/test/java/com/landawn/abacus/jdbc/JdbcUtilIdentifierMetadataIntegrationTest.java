@@ -412,8 +412,8 @@ class JdbcUtilIdentifierMetadataIntegrationTest extends TestBase {
                 final DatabaseMetaData metadata = conn.getMetaData();
                 final ResultSet tables = metadataRows(names[1]);
                 final ResultSet columns = metadataRows(names[1]);
-                when(metadata.getTables(null, null, names[1], null)).thenReturn(tables);
-                when(metadata.getColumns(null, null, names[1], null)).thenReturn(columns);
+                when(metadata.getTables(null, "APP", names[1], null)).thenReturn(tables);
+                when(metadata.getColumns(null, "APP", names[1], null)).thenReturn(columns);
                 when(columns.getString("COLUMN_NAME")).thenReturn("ID");
 
                 assertTrue(JdbcUtil.tableExists(conn, names[0]), names[0]);
@@ -432,8 +432,8 @@ class JdbcUtilIdentifierMetadataIntegrationTest extends TestBase {
             final DatabaseMetaData metadata = conn.getMetaData();
             final ResultSet tables = metadataRows("MIXEDCASE");
             final ResultSet columns = metadataRows("MIXEDCASE");
-            when(metadata.getTables(null, null, "MixedCase", null)).thenReturn(tables);
-            when(metadata.getColumns(null, null, "MixedCase", null)).thenReturn(columns);
+            when(metadata.getTables(null, "APP", "MixedCase", null)).thenReturn(tables);
+            when(metadata.getColumns(null, "APP", "MixedCase", null)).thenReturn(columns);
             when(columns.getString("COLUMN_NAME")).thenReturn("WRONG_ID");
 
             assertFalse(JdbcUtil.tableExists(conn, "\"MixedCase\""));
@@ -474,6 +474,8 @@ class JdbcUtilIdentifierMetadataIntegrationTest extends TestBase {
             when(conn.getMetaData()).thenReturn(metadata);
             when(metadata.storesUpperCaseIdentifiers()).thenReturn(true);
             when(metadata.supportsSchemasInTableDefinitions()).thenReturn(true);
+            // A schema-aware database: unqualified metadata lookups are confined to the reported current schema.
+            when(conn.getSchema()).thenReturn("APP");
             when(metadata.getIdentifierQuoteString()).thenThrow(new SQLException("Identifier quote metadata must not be read when quoting is disabled"));
             return conn;
         }
@@ -482,6 +484,7 @@ class JdbcUtilIdentifierMetadataIntegrationTest extends TestBase {
             final ResultSet rows = mock(ResultSet.class);
             when(rows.next()).thenReturn(true, false);
             when(rows.getString("TABLE_NAME")).thenReturn(tableName);
+            when(rows.getString("TABLE_SCHEM")).thenReturn("APP");
             return rows;
         }
     }

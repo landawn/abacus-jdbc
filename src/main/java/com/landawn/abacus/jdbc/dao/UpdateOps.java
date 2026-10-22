@@ -58,7 +58,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     default int update(final String propName, final Object propValue, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotEmpty(propName, cs.propName);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -71,6 +71,10 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
     /**
      * Updates multiple properties for all records matching the condition.
      * The map keys are property names and values are the new values.
+     * A value whose key names an entity property and which is {@code null} or an instance of that property's type is bound
+     * with the property's declared type (e.g. a custom {@code @Type} such as an enum stored as its ordinal), as an entity
+     * update binds it; other values are left to the query builder (bound by their runtime class, or rendered inline for a
+     * {@code Condition} such as an expression value).
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -88,8 +92,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    int update(final Map<String, Object> updateProps, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
+    int update(final Map<String, Object> updateProps, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Updates records matching the condition using all updatable properties from the entity.
@@ -118,8 +121,7 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
-    default int update(final T entity, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+    default int update(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -146,16 +148,19 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * }</pre>
      *
      * @param entity the entity containing update values
-     * @param propNamesToUpdate the property names to update
+     * @param propNamesToUpdate the property names to update; an element that is a raw SET expression, such as
+     *                          {@code "score = score + 5"}, is used as the assignment itself, without a generated placeholder
+     *                          (property names in it are mapped to column names)
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
-     *                                  or if {@code cond} is {@code null}
+     *                                  if an element of {@code propNamesToUpdate} is {@code null} or blank, or, other than a raw
+     *                                  {@code col = expr} SET expression, names no property of the entity, or if {@code cond} is {@code null}
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
      * @throws UncheckedSQLException if acquiring a required database connection fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
 }

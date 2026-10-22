@@ -43,9 +43,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>A result-cache hit bypasses the method execution and its performance-logging scope; no
  * whole-method timing is added for that cached return.</p>
  *
- * <p><b>Lookup precedence:</b> a method-level {@code @PerfLog} overrides a type-level one. When
- * neither is present, SQL execution follows the current global/thread-local performance-logging
- * settings on {@link JdbcUtil}; the DAO proxy does not add whole-method timing for that invocation.</p>
+ * <p><b>Lookup precedence:</b> a method-level {@code @PerfLog} overrides a type-level one entirely:
+ * elements it omits take their defaults, not the type-level values. When neither is present, SQL
+ * execution follows the current global/thread-local performance-logging settings on {@link JdbcUtil};
+ * the DAO proxy does not add whole-method timing for that invocation.</p>
  *
  * <p><b>Filter semantics (type-level only):</b> each entry matches when the method name starts with
  * it (case-insensitive) or matches the full method name as a regular expression. The
@@ -58,7 +59,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  *          daoMethodPerfLogThresholdMillis = 5000)
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
  *
- *     // Method-level override: this hot path uses a tighter threshold and shorter logs.
+ *     // Method-level override: this hot path uses a tighter threshold and shorter logs
+ *     // (daoMethodPerfLogThresholdMillis reverts to its default, 3000, not the type's 5000).
  *     @PerfLog(sqlPerfLogThresholdMillis = 100,
  *              maxSqlLogLength = 200)
  *     @Query("SELECT * FROM users WHERE id = :id")

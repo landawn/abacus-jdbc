@@ -14,6 +14,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -112,6 +113,42 @@ public class CapabilityGatingTest extends TestBase {
     public void testCacheAllowedOnReadOnlyAndNonUpdateDao() throws SQLException {
         assertDoesNotThrow(() -> JdbcUtil.createDao(CachedReadOnlyDao.class, newDataSource()));
         assertDoesNotThrow(() -> JdbcUtil.createDao(CachedNonUpdateDao.class, newDataSource()));
+    }
+
+    interface ReadOnlyAndFullDao extends ReadOnlyDao<Account, ReadOnlyAndFullDao>, Dao<Account, ReadOnlyAndFullDao> {
+    }
+
+    interface ReadOnlyAndNonUpdateDao extends ReadOnlyDao<Account, ReadOnlyAndNonUpdateDao>, NonUpdateDao<Account, ReadOnlyAndNonUpdateDao> {
+    }
+
+    interface ReadOnlyCrudAndCrudDao extends ReadOnlyCrudDao<Account, Long, ReadOnlyCrudAndCrudDao>, CrudDao<Account, Long, ReadOnlyCrudAndCrudDao> {
+    }
+
+    interface UncheckedReadOnlyAndUncheckedDao
+            extends UncheckedReadOnlyDao<Account, UncheckedReadOnlyAndUncheckedDao>, UncheckedDao<Account, UncheckedReadOnlyAndUncheckedDao> {
+    }
+
+    interface NonUpdateAndFullDao extends NonUpdateDao<Account, NonUpdateAndFullDao>, Dao<Account, NonUpdateAndFullDao> {
+    }
+
+    interface UncheckedAndCheckedReadOnlyDao
+            extends UncheckedReadOnlyDao<Account, UncheckedAndCheckedReadOnlyDao>, ReadOnlyDao<Account, UncheckedAndCheckedReadOnlyDao> {
+    }
+
+    // A restriction level combined with a write capability it forbids used to let the restriction win silently (raw SQL gated
+    // to SELECT, no INSERT SQL while insert/save stayed on the type); the combination is rejected at DAO creation.
+    @Test
+    public void testRestrictionLevelCombinedWithWriteCapabilityRejected() throws SQLException {
+        final DataSource ds = newDataSource();
+
+        for (final Class<? extends DaoBase> daoClass : List.<Class<? extends DaoBase>> of(ReadOnlyAndFullDao.class, ReadOnlyAndNonUpdateDao.class,
+                ReadOnlyCrudAndCrudDao.class, UncheckedReadOnlyAndUncheckedDao.class, NonUpdateAndFullDao.class)) {
+            final IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createDao((Class) daoClass, ds));
+            assertTrue(ex.getMessage().contains("extends both"), ex.getMessage());
+        }
+
+        // Guard: the same restriction level through checked and Unchecked twins is fine.
+        assertDoesNotThrow(() -> JdbcUtil.createDao(UncheckedAndCheckedReadOnlyDao.class, ds));
     }
 
     @Test

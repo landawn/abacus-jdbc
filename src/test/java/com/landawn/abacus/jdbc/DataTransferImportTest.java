@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -14,6 +15,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.BufferedReader;
 import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -432,6 +434,43 @@ class DataTransferImportTest extends DataTransferUtilTestSupport {
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.importData(mockDataset, List.of("missing"), mockPreparedStatement));
     }
 
+    // An empty column selection imports every dataset column, as importFrom(dataset).columns(emptyList) does, instead of
+    // binding no parameters for each row.
+    @Test
+    public void testImportDataWithEmptyColumnNamesImportsAllColumnsLikeBuilder() throws SQLException {
+        final Dataset dataset = Dataset.rows(List.of("a", "b"), new Object[][] { { "a1", "b1" }, { "a2", "b2" } });
+        final List<String> noColumns = List.of();
+        final String insertSql = "INSERT INTO t (a, b) VALUES (?, ?)";
+        final Predicate<Object[]> acceptAll = row -> true;
+
+        final List<Throwables.Function<PreparedStatement, Integer, SQLException>> imports = List.of( //
+                stmt -> DataTransferUtil.importData(dataset, noColumns, connectionFor(stmt), insertSql),
+                stmt -> DataTransferUtil.importData(dataset, noColumns, connectionFor(stmt), insertSql, 1, 0),
+                stmt -> DataTransferUtil.importData(dataset, noColumns, acceptAll, connectionFor(stmt), insertSql, 10, 0),
+                stmt -> DataTransferUtil.importData(dataset, noColumns, stmt), stmt -> DataTransferUtil.importData(dataset, noColumns, stmt, 10, 0),
+                stmt -> DataTransferUtil.importData(dataset, noColumns, acceptAll, stmt, 10, 0),
+                stmt -> DataTransferUtil.importFrom(dataset).columns(noColumns).to(stmt));
+
+        for (final Throwables.Function<PreparedStatement, Integer, SQLException> importer : imports) {
+            final PreparedStatement stmt = mock(PreparedStatement.class);
+            when(stmt.executeBatch()).thenReturn(new int[] { 1, 1 });
+
+            assertEquals(2, importer.apply(stmt));
+
+            verify(stmt).setString(1, "a1");
+            verify(stmt).setString(2, "b1");
+            verify(stmt).setString(1, "a2");
+            verify(stmt).setString(2, "b2");
+            verify(stmt, times(2)).addBatch();
+        }
+    }
+
+    private static Connection connectionFor(final PreparedStatement stmt) throws SQLException {
+        final Connection conn = mock(Connection.class);
+        when(conn.prepareStatement(anyString())).thenReturn(stmt);
+        return conn;
+    }
+
     // Edge case tests
 
     @Test
@@ -606,5 +645,43 @@ class DataTransferImportTest extends DataTransferUtilTestSupport {
         });
         failure = assertThrows(IllegalArgumentException.class, () -> rowBuilder.to((DataSource) null, "INSERT INTO test VALUES (?)"));
         assertTrue(failure.getMessage().contains("targetDataSource"), failure.getMessage());
+    }
+
+    // Class doc: a caller-supplied Reader is never closed, whether the import wraps it in its own pooled buffer or uses a
+    // caller-supplied BufferedReader directly.
+    @Test
+    public void testImportCsv_CallerSuppliedReaderIsNotClosed() throws SQLException {
+        when(mockPreparedStatement.executeBatch()).thenReturn(new int[] { 2 });
+        final Throwables.BiConsumer<PreparedQuery, String[], SQLException> setter = (query, row) -> query.setString(1, row[0]);
+
+        final ClosableStringReader plain = new ClosableStringReader("id\n1\n2");
+        assertEquals(2, DataTransferUtil.importCsv(plain, mockPreparedStatement, setter));
+        assertFalse(plain.closed);
+
+        final ClosableStringReader wrapped = new ClosableStringReader("id\n1\n2");
+        assertEquals(2, DataTransferUtil.importCsvFrom(new BufferedReader(wrapped)).parameterSetter(setter).to(mockPreparedStatement));
+        assertFalse(wrapped.closed);
+
+        final ClosableStringReader viaBuilder = new ClosableStringReader("id\n1\n2");
+        assertEquals(2, DataTransferUtil.importCsvFrom(viaBuilder).parameterSetter(setter).to(mockPreparedStatement));
+        assertFalse(viaBuilder.closed);
+
+        verify(mockPreparedStatement, times(6)).addBatch();
+        verify(mockPreparedStatement, times(3)).setString(1, "1");
+        verify(mockPreparedStatement, times(3)).setString(1, "2");
+    }
+
+    private static final class ClosableStringReader extends StringReader {
+        boolean closed = false;
+
+        ClosableStringReader(final String s) {
+            super(s);
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+            super.close();
+        }
     }
 }

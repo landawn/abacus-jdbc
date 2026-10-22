@@ -182,6 +182,17 @@ public class BinaryKeyMatchingTest extends TestBase {
         assertEquals("missing", missing.getName());
     }
 
+    // A Set of binary ids collected from separate rows holds content-equal ids as separate instances. batchGet copied a Set
+    // as is, so such a duplicate that fell into another query chunk returned the same row twice.
+    @Test
+    public void batchGetTreatsContentEqualBinaryIdsInASetAsOneId() {
+        ownerDao.batchInsert(List.of(owner(key(1, 2, 3), "a"), owner(key(9), "b")));
+        final java.util.Set<byte[]> ids = new java.util.LinkedHashSet<>(List.of(key(1, 2, 3), key(9), key(1, 2, 3)));
+
+        assertEquals(List.of("a", "b"), ownerDao.batchGet(ids, 2).stream().map(BinKeyOwner::getName).sorted().toList());
+        assertEquals(2, ownerDao.count(ids));
+    }
+
     // More than one source entity takes the batch path, which groups the loaded pets by their join key.
     @Test
     public void batchJoinLoadMatchesBinaryJoinKeys() {
@@ -261,6 +272,21 @@ public class BinaryKeyMatchingTest extends TestBase {
         joinInfo.setJoinPropEntities(List.of(owner), grouped);
 
         assertEquals(List.of("first", "second"), owner.getPets().stream().map(BinKeyPet::getName).toList());
+    }
+
+    // A pet whose binary owner id is null (an unassigned row of the nullable foreign key) matches no owner. The null key
+    // was passed through the content-key grouping unwrapped, which failed the whole assignment with a NullPointerException.
+    @Test
+    public void nullBinaryJoinKeyMatchesNoSourceEntity() {
+        final JoinInfo joinInfo = new JoinInfo(BinKeyOwner.class, "bin_key_owner", "pets", false);
+        final BinKeyPet unassigned = pet("unassigned");
+        final BinKeyPet assigned = pet("assigned");
+        assigned.setOwnerId(key(1));
+        final BinKeyOwner owner = owner(key(1), "owner");
+
+        joinInfo.setJoinPropEntities(List.of(owner), List.of(unassigned, assigned));
+
+        assertEquals(List.of("assigned"), owner.getPets().stream().map(BinKeyPet::getName).toList());
     }
 
     // A single-valued join property receives its match by content, and null when nothing matches.

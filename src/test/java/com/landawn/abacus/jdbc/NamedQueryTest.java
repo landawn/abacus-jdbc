@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -64,6 +65,39 @@ class NamedQueryTest extends NamedQueryTestSupport {
             verify(stmt, times(1)).close();
             verify(stmt, never()).setLong(anyInt(), anyLong());
         }
+    }
+
+    // Like AbstractQuery.setLong(int, BigInteger) and CallableQuery.setLong(String, BigInteger), a binding failure of a
+    // non-null value closes the query, not only an overflow.
+    @Test
+    public void testBigIntegerBindingFailureClosesQueryInBothLookupStrategies() throws SQLException {
+        for (final String sql : List.of("SELECT :param1, :param2", "SELECT :param1, :param2, :param3, :param4, :param5")) {
+            final PreparedStatement stmt = mock(PreparedStatement.class);
+            final SQLException driverFailure = new SQLException("rejected");
+            doThrow(driverFailure).when(stmt).setLong(1, 42L);
+            final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse(sql));
+
+            assertSame(driverFailure, assertThrows(SQLException.class, () -> query.setLong("param1", BigInteger.valueOf(42L))));
+            verify(stmt, times(1)).close();
+        }
+
+        // Guard: SQL NULL for a null value keeps the plain-setter behavior (no close on driver failure).
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        doThrow(new SQLException("rejected")).when(stmt).setNull(1, java.sql.Types.BIGINT);
+        final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse("SELECT :param1"));
+
+        assertThrows(SQLException.class, () -> query.setLong("param1", (BigInteger) null));
+        verify(stmt, never()).close();
+    }
+
+    @Test
+    public void testNamedParameterNotFoundListsEachNameOnce() throws SQLException {
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse("SELECT :p, :other, :p, :p"));
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> query.setString("missing", "x"));
+
+        assertTrue(failure.getMessage().contains("Available named parameters: [p, other]. SQL:"), failure.getMessage());
     }
 
     @Test

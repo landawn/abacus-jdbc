@@ -34,15 +34,22 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * <p>Consider carefully whether caching at the DAO layer is appropriate for your use case,
  * as it can lead to stale data issues if not managed properly.</p>
  *
- * <p>The cache key is automatically derived from the fully-qualified method name, the DAO's table name
- * and the serialized method arguments; when the arguments cannot be serialized, a warning is logged and
- * the result is not cached. Results are cached after the first execution and returned from cache for subsequent
+ * <p>The cache key is automatically derived from the fully-qualified method name, the DAO's table name,
+ * the identity of the DAO proxy (so DAOs of different interfaces or {@code DataSource}s that share a cache never
+ * share entries) and the serialized method arguments; when the arguments cannot be serialized, a warning is logged
+ * and the result is not cached. Results are cached after the first execution and returned from cache for subsequent
  * calls with the same parameters until the cache expires or is invalidated. A {@code null}
  * method result is not cached; use an empty {@code Optional}, collection, or other non-null
  * result object when caching an explicit "no result" value is important.</p>
  *
  * <p>Per its {@code @Target}, this annotation can be placed on an individual DAO method, or on a
- * DAO interface type to enable caching for every method whose name matches {@link #filter()}.</p>
+ * DAO interface type to enable caching for every method whose name matches {@link #filter()}. A
+ * method-level annotation replaces the type-level one for that method: elements it omits take their
+ * defaults, not the type-level values. When several interfaces of the DAO (the DAO interface itself first, then
+ * its super-interfaces) declare a type-level {@code @CacheResult}, a method uses the first one whose
+ * {@link #filter()} matches its name, as for {@link PerfLog @PerfLog} and {@link SqlLogEnabled @SqlLogEnabled};
+ * if that one is disabled, the method is not cached, so a sub-interface can opt matching methods out of a
+ * super-interface's caching.</p>
  *
  * <p><strong>Restriction:</strong> {@code @CacheResult} (together with {@link Cache @Cache} and
  * {@link RefreshCache @RefreshCache}) is only honored on cacheable DAOs &mdash; {@code NonUpdateDao} or
@@ -251,7 +258,8 @@ public @interface CacheResult {
      * populated optional/nullable wrappers are copied even when they implement
      * {@link com.landawn.abacus.util.Immutable}. Other top-level {@code Immutable} values are stored and returned
      * as-is; their contents must be deeply immutable to avoid sharing mutable state. Values without this
-     * marker pass through the selected serializer even if their Java types are immutable. Selecting
+     * marker pass through the selected serializer even if their Java types are immutable, except that
+     * {@link CacheSerialization#JSON} shares {@code java.time} values as-is. Selecting
      * {@link CacheSerialization#KRYO} requires an available Kryo parser whenever copying is needed; this is
      * not checked at DAO creation, so missing dependencies or parser initialization failures surface at
      * invocation time with {@code UnsupportedOperationException}, whose message quotes the failure and states
@@ -269,7 +277,9 @@ public @interface CacheResult {
      * Plain {@code ImmutableSet}, {@code ImmutableMap} and {@code ImmutableBiMap} copies keep the source's
      * iteration order, and a {@code null} map key in such a container tree stays a {@code null} key. Natural-order
      * container trees without a custom comparator, one of those wrappers or a {@code null} map key follow
-     * the ordinary JSON parser path. JSON does not preserve shared object identity
+     * the ordinary JSON parser path. A {@code java.sql.Timestamp}, {@code Calendar} or {@code java.time} value is
+     * copied exactly (nanos, zone and offset included) as the result, as an optional/nullable's value and anywhere
+     * in such a container tree. JSON does not preserve shared object identity
      * or cycles. Shared comparator state and bean-property copying retain the limitations described in
      * {@link CacheSerialization#JSON}.</p>
      *

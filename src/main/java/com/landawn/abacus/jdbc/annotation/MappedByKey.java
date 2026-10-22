@@ -68,7 +68,10 @@ import java.util.Map;
  * <p>Important considerations:</p>
  * <ul>
  *   <li>The key must be a property (getter) of the DAO's target entity class</li>
- *   <li>The map's value type must be the target entity type or a supertype ({@code Map<K, ? super Entity>})</li>
+ *   <li>The map's value type must be the target entity type or a supertype. Declare both type arguments
+ *       as concrete types (for example {@code Map<Long, User>}): a wildcard such as
+ *       {@code Map<Long, ? super User>} cannot be resolved and fails DAO initialization with
+ *       {@code IllegalArgumentException}</li>
  *   <li>Rows whose key value is {@code null} are skipped while merging, so they never appear in the
  *       map and no {@code null} key is ever produced</li>
  *   <li>Rows sharing the same key are merged into one entity before the map is built</li>

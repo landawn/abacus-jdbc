@@ -25,6 +25,7 @@ import java.sql.Blob;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -315,6 +316,22 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         verify(mockClob).free();
     }
 
+    // BUG FIX: an empty LOB was read with getBytes(1, 0) / getSubString(1, 0), which the JDK's SerialBlob/SerialClob (also
+    // what CachedRowSet returns) reject with SerialException because position 1 is past the end; it now reads as empty.
+    @Test
+    public void testGetColumnValue_EmptySerialLobs_ReadAsEmpty() throws SQLException {
+        when(mockResultSet.getObject(1)).thenReturn(new javax.sql.rowset.serial.SerialBlob(new byte[0]));
+        when(mockResultSet.getObject(2)).thenReturn(new javax.sql.rowset.serial.SerialClob(new char[0]));
+
+        assertArrayEquals(new byte[0], (byte[]) JdbcUtil.getColumnValue(mockResultSet, 1));
+        assertEquals("", JdbcUtil.getColumnValue(mockResultSet, 2));
+        assertEquals("", JdbcUtil.blobToString(new javax.sql.rowset.serial.SerialBlob(new byte[0])));
+        assertEquals("", JdbcUtil.clobToString(new javax.sql.rowset.serial.SerialClob(new char[0])));
+        // Guards (pass before and after the fix): a non-empty LOB is still read whole.
+        assertEquals("ab", JdbcUtil.clobToString(new javax.sql.rowset.serial.SerialClob("ab".toCharArray())));
+        assertEquals("ab", JdbcUtil.blobToString(new javax.sql.rowset.serial.SerialBlob(new byte[] { 'a', 'b' })));
+    }
+
     @Test
     public void testGetAllColumnValues() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, true, false);
@@ -436,6 +453,57 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         Dataset data = JdbcUtil.extractData(mockResultSet);
         assertNotNull(data);
         assertEquals(1, data.size());
+    }
+
+    // A Dataset rejects duplicate/empty column names, so every extraction used to fail with IllegalArgumentException for
+    // e.g. SELECT * over a join where both tables have ID, or an unlabeled expression column. Clashing labels are renamed.
+    @Test
+    public void testExtractData_DuplicateAndEmptyLabelsAreRenamed() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(5);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("ID");
+        when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("NAME");
+        when(mockResultSetMetaData.getColumnLabel(3)).thenReturn("ID");
+        when(mockResultSetMetaData.getColumnLabel(4)).thenReturn("");
+        when(mockResultSetMetaData.getColumnName(4)).thenReturn("");
+        when(mockResultSetMetaData.getColumnLabel(5)).thenReturn("id");
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.getObject(1)).thenReturn(1L);
+        when(mockResultSet.getObject(2)).thenReturn("John");
+        when(mockResultSet.getObject(3)).thenReturn(10L);
+        when(mockResultSet.getObject(4)).thenReturn(3L);
+        when(mockResultSet.getObject(5)).thenReturn(100L);
+
+        final Dataset data = JdbcUtil.extractData(mockResultSet);
+
+        assertEquals(List.of("ID", "NAME", "ID_2", "column4", "id"), data.columnNames());
+        assertEquals(10L, (Long) data.moveToRow(0).get("ID_2"));
+        assertEquals(3L, (Long) data.moveToRow(0).get("column4"));
+        // The row-extractor/filter overloads share the same naming.
+        when(mockResultSet.next()).thenReturn(true, false);
+        assertEquals(List.of("ID", "NAME", "ID_2", "column4", "id"),
+                JdbcUtil.extractData(mockResultSet, 0, 10, rs -> true, (rs, row) -> Arrays.fill(row, 0L), false).columnNames());
+    }
+
+    @Test
+    public void testMakeColumnNamesUnique() {
+        assertEquals(List.of("ID", "NAME", "ID_2"), uniqueColumnNames("ID", "NAME", "ID"));
+        assertEquals(List.of("ID", "ID_2", "ID_3"), uniqueColumnNames("ID", "ID", "ID"));
+        // A generated name never takes a label used by another column.
+        assertEquals(List.of("ID", "ID_3", "ID_2", "ID_4"), uniqueColumnNames("ID", "ID", "ID_2", "ID"));
+        assertEquals(List.of("column1", "column2_2", "column2"), uniqueColumnNames("", null, "column2"));
+        assertEquals(List.of("a_2", "a", "a_3"), uniqueColumnNames("a_2", "a", "a"));
+        // Case-sensitive, as Dataset compares names: no rename.
+        assertEquals(List.of("id", "ID"), uniqueColumnNames("id", "ID"));
+        assertEquals(List.of("column1"), uniqueColumnNames(""));
+        assertEquals(List.of("column1"), uniqueColumnNames((String) null));
+        assertEquals(List.of("x"), uniqueColumnNames("x"));
+        assertEquals(List.of(), uniqueColumnNames());
+    }
+
+    private static List<String> uniqueColumnNames(final String... labels) {
+        final List<String> names = new java.util.ArrayList<>(Arrays.asList(labels));
+        JdbcUtil.makeColumnNamesUnique(names);
+        return names;
     }
 
     @Test
@@ -561,10 +629,17 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         assertFalse(JdbcUtil.isDefaultIdPropValue(withId));
     }
 
-    // isDefaultIdPropValue: a bean with no id property is treated as default.
+    // isDefaultIdPropValue: a non-null bean/record with no id property is a real value (e.g. a key built by a custom
+    // generated-key extractor), not a default id. It used to count as default, so insert(RowMapper) returned empty.
     @Test
     public void testIsDefaultIdPropValue_Bean_NoIdProp() {
-        assertTrue(JdbcUtil.isDefaultIdPropValue(new SubAddress()));
+        assertFalse(JdbcUtil.isDefaultIdPropValue(new SubAddress()));
+        assertFalse(JdbcUtil.isDefaultIdPropValue(new NoIdKey(0L, null)));
+        assertFalse(JdbcUtil.isAllNullIds(List.of(new NoIdKey(1L, "a"), new NoIdKey(2L, "b"))));
+        assertTrue(JdbcUtil.isAllNullIds(Arrays.asList(null, 0L)));
+    }
+
+    public record NoIdKey(long seq, String code) {
     }
 
     @Test

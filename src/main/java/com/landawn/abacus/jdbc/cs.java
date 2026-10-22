@@ -456,6 +456,14 @@ public final class cs { // NOSONAR
      */
     public static final String id = "id";
     /**
+     * Parameter name for a collection of identifier values.
+     */
+    public static final String ids = "ids";
+    /**
+     * Parameter name for a transaction savepoint.
+     */
+    public static final String savepoint = "savepoint";
+    /**
      * Parameter name for collections of property names to include in insert operations.
      */
     public static final String propNamesToInsert = "propNamesToInsert";

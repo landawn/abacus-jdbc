@@ -50,10 +50,11 @@ sealed interface UncheckedDeleteOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      * @param cond the condition to match records for deletion
      * @return the number of records deleted, or {@code 0} if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing a DELETE statement fails
      */
     @Override
-    int delete(final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException;
+    int delete(final Condition cond) throws IllegalArgumentException, UncheckedSQLException;
 
 }

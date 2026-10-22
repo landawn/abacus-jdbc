@@ -32,8 +32,11 @@
  * ({@link com.landawn.abacus.jdbc.annotation.MappedByKey} and
  * {@link com.landawn.abacus.jdbc.annotation.MergedById}), invocation interception
  * ({@link com.landawn.abacus.jdbc.annotation.Handler}), caching
- * ({@link com.landawn.abacus.jdbc.annotation.Cache} and
- * {@link com.landawn.abacus.jdbc.annotation.CacheResult}), and SQL or performance logging.</p>
+ * ({@link com.landawn.abacus.jdbc.annotation.Cache},
+ * {@link com.landawn.abacus.jdbc.annotation.CacheResult} and
+ * {@link com.landawn.abacus.jdbc.annotation.RefreshCache}), and SQL or performance logging
+ * ({@link com.landawn.abacus.jdbc.annotation.SqlLogEnabled} and
+ * {@link com.landawn.abacus.jdbc.annotation.PerfLog}).</p>
  *
  * <p><b>&#9888; Warning:</b> SQL fragments are textual substitutions rather than JDBC bind
  * parameters. Fragment values should be selected from application-controlled input;

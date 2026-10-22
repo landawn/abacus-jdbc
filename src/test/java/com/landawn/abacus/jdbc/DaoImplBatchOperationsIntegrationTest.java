@@ -2,11 +2,15 @@ package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -135,6 +139,104 @@ public class DaoImplBatchOperationsIntegrationTest extends TestBase {
         assertFalse(dao.exists(Filters.eq("name", "ignored")));
     }
 
+    @Test
+    void update_selectedPropertiesWithRawSetExpression_bindsOnlyPlainProperties() throws SQLException {
+        dao.batchSave(records(true, false), 10);
+
+        // "score = score + 5" is rendered as a raw SET expression without a placeholder, so only "name" is bound;
+        // previously every element was bound and the expression failed with a NullPointerException.
+        assertEquals(1, dao.update(new Record(null, "renamed", 0), List.of("name", "score = score + 5"), Filters.eq("id", 11L)));
+        assertEquals("renamed", dao.get(11L).get().getName());
+        assertEquals(25, dao.get(11L).get().getScore());
+        assertEquals("alpha", dao.get(10L).get().getName());
+
+        // The CrudDao twin already accepts the same raw SET expression.
+        assertEquals(1, dao.update(new Record(12L, "renamed2", 0), List.of("name", "score = score + 5")));
+        assertEquals(35, dao.get(12L).get().getScore());
+    }
+
+    // abacus-query 4.9.5 renders an element as a raw SET expression only if it has an '=' outside quotes, parentheses and
+    // brackets; an '=' inside an array index or a delimited name belongs to the assignment target, which gets a placeholder.
+    // Every element containing '=' was treated as raw here: such an element was left unbound (the condition value shifted into
+    // its placeholder) and skipped the unknown-property check. It is now rejected as an unknown property up front.
+    @Test
+    void update_selectedPropertiesWithEqualsInsideTheTarget_rejectsItAsUnknownProperty() throws SQLException {
+        dao.batchSave(records(true, false), 10);
+        final Record renamed = new Record(11L, "renamed", 0);
+
+        for (final String target : List.of("name['a=b']", "\"a=b\"", "score[(1 = 1)]")) {
+            for (final org.junit.jupiter.api.function.Executable call : List.<org.junit.jupiter.api.function.Executable> of(
+                    () -> dao.update(renamed, List.of("name", target), Filters.eq("id", 11L)), () -> dao.update(renamed, List.of("name", target)),
+                    () -> dao.batchUpdate(List.of(renamed), List.of("name", target)))) {
+                final IllegalArgumentException e = assertThrows(IllegalArgumentException.class, call);
+                assertTrue(e.getMessage().startsWith("No property found with name: " + target), e.getMessage());
+            }
+        }
+
+        // An '=' at the top level still makes a raw SET expression, also when quoted text in it contains another '='.
+        assertEquals(1, dao.update(renamed, List.of("score = score + 5", "name = CONCAT(name, '=x')"), Filters.eq("id", 11L)));
+        assertEquals("beta=x", dao.get(11L).get().getName());
+        assertEquals(25, dao.get(11L).get().getScore());
+    }
+
+    @Test
+    void update_selectedPropertiesWithUnknownProperty_throwsIllegalArgumentException() throws SQLException {
+        dao.batchSave(records(true, false), 10);
+
+        final IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> dao.update(new Record(null, "renamed", 0), List.of("name", "nmae"), Filters.eq("id", 11L)));
+        assertTrue(e.getMessage().contains("nmae"));
+        assertEquals("beta", dao.get(11L).get().getName());
+    }
+
+    // The unknown-name check ran only after the UPDATE SQL had been built from the names, so a name the builder cannot render
+    // (null) failed in the builder instead of with the property error that the CrudDao twins raise before building.
+    @Test
+    void update_selectedPropertiesWithNullName_isRejectedBeforeTheSqlIsBuilt() throws SQLException {
+        dao.batchSave(records(true, false), 10);
+
+        final IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> dao.update(new Record(null, "renamed", 0), Arrays.asList("name", null), Filters.eq("id", 11L)));
+        assertTrue(e.getMessage().contains("No property found with name: null"));
+        assertEquals("beta", dao.get(11L).get().getName());
+
+        // A blank element ("" / " ") is documented as rejected the same way: it names no property and is no raw SET expression.
+        for (final String blank : List.of("", " ")) {
+            final IllegalArgumentException blankRejected = assertThrows(IllegalArgumentException.class,
+                    () -> dao.update(new Record(null, "renamed", 0), List.of("name", blank), Filters.eq("id", 11L)));
+            assertTrue(blankRejected.getMessage().startsWith("No property found with name: " + blank + " in class"), blankRejected.getMessage());
+        }
+
+        assertEquals("beta", dao.get(11L).get().getName());
+    }
+
+    // The CrudDao (by-id) twins reached the driver with the unknown name and failed there with a SQL error.
+    @Test
+    void updateById_selectedPropertiesWithUnknownProperty_throwsIllegalArgumentException() throws SQLException {
+        dao.batchSave(records(true, false), 10);
+        final Record renamed = new Record(11L, "renamed", 0);
+
+        for (final org.junit.jupiter.api.function.Executable call : List.<org.junit.jupiter.api.function.Executable> of(
+                () -> dao.update(renamed, List.of("name", "nmae")), () -> dao.batchUpdate(List.of(renamed), List.of("name", "nmae")),
+                () -> dao.batchUpdate(List.of(renamed), List.of("name", "nmae"), 1),
+                () -> dao.batchUpdate(List.of(renamed), java.util.Arrays.asList("name", null)),
+                // a blank element names no property either
+                () -> dao.update(renamed, List.of("name", "")), () -> dao.update(renamed, List.of("name", " ")),
+                () -> dao.batchUpdate(List.of(renamed), List.of("name", " ")), () -> dao.batchUpdate(List.of(renamed), List.of("name", ""), 1),
+                // validated before the empty-input early return
+                () -> dao.batchUpdate(List.of(), List.of("nmae"), 1))) {
+            final IllegalArgumentException e = assertThrows(IllegalArgumentException.class, call);
+            assertTrue(e.getMessage().startsWith("No property found with name: "), e.getMessage());
+        }
+
+        assertEquals("beta", dao.get(11L).get().getName());
+
+        // Guard: a raw SET expression is still accepted by the batch twin.
+        assertEquals(1, dao.batchUpdate(List.of(renamed), List.of("name", "score = score + 5"), 1));
+        assertEquals("renamed", dao.get(11L).get().getName());
+        assertEquals(25, dao.get(11L).get().getScore());
+    }
+
     @ParameterizedTest(name = "{0}, large={1}, batchSize={2}")
     @MethodSource("annotatedUpdateModes")
     void annotatedBatchUpdate_bindingAndCountWidth_preserveRows(final UpdateBinding binding, final boolean large, final int batchSize) throws SQLException {
@@ -236,6 +338,333 @@ public class DaoImplBatchOperationsIntegrationTest extends TestBase {
         assertEquals(1001L, JdbcUtil.prepareQuery(keeper, "SELECT NEXT VALUE FOR application_ids").queryForLong().get());
     }
 
+    // An application-generated ID was written onto the entity before the insert ran and stayed there when the call failed (a
+    // later chunk failed and the call's own transaction rolled back): the entity then held the ID of a row that doesn't exist.
+    // A failed call now puts back the IDs it generated; explicit IDs are left as they were.
+    @ParameterizedTest(name = "{0}, batchSize={1}")
+    @MethodSource("generatedIdBatchModes")
+    void applicationGeneratedIds_failedBatchInsert_putsBackTheIdsItGenerated(final InsertMode mode, final int batchSize) throws SQLException {
+        final GeneratedRecordDao generatedDao = generatedRecordDao();
+        final List<Record> records = List.of(new Record(null, "alpha", 10), new Record(10L, "beta", 20), new Record(0L, "gamma", 101));
+
+        assertThrows(Exception.class, () -> batchInsert(generatedDao, mode, records, batchSize));
+
+        assertNull(records.get(0).getId());
+        assertEquals(10L, records.get(1).getId());
+        assertEquals(0L, records.get(2).getId());
+        assertEquals(0, rowCount());
+    }
+
+    // The multi-row paths begin their own transaction after generating the IDs: if it can't be begun (e.g. no connection),
+    // nothing was inserted, so the generated IDs are put back as well.
+    @ParameterizedTest(name = "{0}, batchSize={1}")
+    @MethodSource("generatedIdBatchModes")
+    void applicationGeneratedIds_transactionCannotBegin_putsBackTheIdsItGenerated(final InsertMode mode, final int batchSize) throws SQLException {
+        final GeneratedRecordDao generatedDao = generatedRecordDao();
+        final List<Record> records = List.of(new Record(null, "alpha", 10), new Record(10L, "beta", 20), new Record(0L, "gamma", 30));
+        final IllegalStateException failure = new IllegalStateException("no connection");
+
+        try (org.mockito.MockedStatic<JdbcUtil> jdbcUtil = org.mockito.Mockito.mockStatic(JdbcUtil.class, org.mockito.Mockito.CALLS_REAL_METHODS)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(org.mockito.ArgumentMatchers.any(javax.sql.DataSource.class))).thenThrow(failure);
+
+            assertSame(failure, assertThrows(IllegalStateException.class, () -> batchInsert(generatedDao, mode, records, batchSize)));
+        }
+
+        assertNull(records.get(0).getId());
+        assertEquals(10L, records.get(1).getId());
+        assertEquals(0L, records.get(2).getId());
+        assertEquals(0, rowCount());
+    }
+
+    // The same for a single insert and a batch of one, which run without a transaction of their own: the failed statement
+    // inserted nothing, so the generated ID is put back.
+    @ParameterizedTest
+    @EnumSource(InsertMode.class)
+    void applicationGeneratedId_failedSingleInsert_isPutBack(final InsertMode mode) throws SQLException {
+        final GeneratedRecordDao generatedDao = generatedRecordDao();
+        final Record single = new Record(null, "single", 101);
+        final Record batchOfOne = new Record(null, "batch", 101);
+
+        assertThrows(Exception.class, () -> insert(generatedDao, mode, single));
+        assertThrows(Exception.class, () -> batchInsert(generatedDao, mode, List.of(batchOfOne), 10));
+
+        assertNull(single.getId());
+        assertNull(batchOfOne.getId());
+        assertEquals(0, rowCount());
+
+        final Record inserted = new Record(null, "inserted", 10);
+        final Long insertedId = insert(generatedDao, mode, inserted);
+        assertNotNull(insertedId);
+        assertEquals(insertedId, inserted.getId());
+    }
+
+    // A single statement that has executed may already be committed (auto-commit): when reading the generated keys failed
+    // afterwards, the generated ID was put back although the row holding it exists, and a retry would insert it again. Only a
+    // failure before the statement executed puts the ID back now.
+    @ParameterizedTest(name = "{0}, batchOfOne={1}")
+    @MethodSource("generatedKeyFailureModes")
+    void applicationGeneratedId_keysUnreadableAfterTheInsert_keepsTheIdOfTheInsertedRow(final InsertMode mode, final boolean batchOfOne) throws SQLException {
+        generatedRecordDao();
+        final GeneratedRecordDao generatedDao = JdbcUtil.createDao(GeneratedRecordDao.class, generatedKeysFailing(dataSource));
+        final Record record = new Record(null, "keys", 10);
+
+        assertThrows(SQLException.class, () -> {
+            if (batchOfOne) {
+                batchInsert(generatedDao, mode, List.of(record), 10);
+            } else {
+                insert(generatedDao, mode, record);
+            }
+        });
+
+        assertEquals(1000L, record.getId());
+        assertEquals("keys", dao.get(1000L).get().getName());
+    }
+
+    // JdbcUtil.executeUpdate/executeBatch clear the statement's parameters/batch (and run the SQL log handler) in a finally block
+    // after the statement executed. An Error thrown there (the clearing swallows SQLExceptions and RuntimeExceptions only)
+    // propagated before the execution mark was set, so the application-generated ID was put back although the row was
+    // committed under auto-commit, and a retry inserted it again. The mark is set right after the execution now, before any
+    // cleanup, and the Error is still thrown.
+    @ParameterizedTest(name = "{0}, batchOfOne={1}")
+    @MethodSource("generatedKeyFailureModes")
+    void applicationGeneratedId_cleanupFailsAfterTheInsert_keepsTheIdOfTheInsertedRow(final InsertMode mode, final boolean batchOfOne) throws SQLException {
+        generatedRecordDao();
+        final GeneratedRecordDao generatedDao = JdbcUtil.createDao(GeneratedRecordDao.class, cleanupFailingAfterExecution(dataSource));
+        final Record record = new Record(null, "cleanup", 10);
+
+        final AssertionError e = assertThrows(AssertionError.class, () -> {
+            if (batchOfOne) {
+                batchInsert(generatedDao, mode, List.of(record), 10);
+            } else {
+                insert(generatedDao, mode, record);
+            }
+        });
+
+        assertEquals("injected cleanup failure", e.getMessage());
+        assertEquals(1000L, record.getId());
+        assertEquals("cleanup", dao.get(1000L).get().getName());
+    }
+
+    // A multi-row batch runs in its own transaction, which the same cleanup Error rolls back: no row exists, so the generated
+    // IDs are put back (unchanged behaviour, pinned as the contrast to the single-statement paths above).
+    @ParameterizedTest
+    @EnumSource(InsertMode.class)
+    void applicationGeneratedId_cleanupFailsAfterAMultiRowBatch_rollsBackAndPutsTheIdsBack(final InsertMode mode) throws SQLException {
+        generatedRecordDao();
+        final GeneratedRecordDao generatedDao = JdbcUtil.createDao(GeneratedRecordDao.class, cleanupFailingAfterExecution(dataSource));
+        final List<Record> records = List.of(new Record(null, "alpha", 10), new Record(null, "beta", 20));
+
+        final AssertionError e = assertThrows(AssertionError.class, () -> batchInsert(generatedDao, mode, records, 10));
+
+        assertEquals("injected cleanup failure", e.getMessage());
+        assertEquals(0, rowCount());
+
+        for (final Record record : records) {
+            assertNull(record.getId(), record.getName());
+        }
+    }
+
+    // A single insert wrote the application-generated ID onto the entity outside the code that puts it back on failure (the
+    // batch paths had it inside): an ID setter that failed after storing the value (or a part of a composite ID) left the entity
+    // holding the ID of a row that was never inserted.
+    @ParameterizedTest
+    @EnumSource(InsertMode.class)
+    void applicationGeneratedId_idSetterFails_isPutBack(final InsertMode mode) throws SQLException {
+        JdbcUtil.executeUpdate(keeper, "CREATE SEQUENCE application_ids START WITH 1000");
+        final RejectingRecordDao rejectingDao = JdbcUtil.createDao(RejectingRecordDao.class, dataSource);
+        final RejectingRecord record = new RejectingRecord();
+        record.setName("rejected");
+
+        assertThrows(RuntimeException.class, () -> {
+            switch (mode) {
+                case DEFAULT -> rejectingDao.insert(record);
+                case SELECTED_COLUMNS -> rejectingDao.insert(record, ALL_COLUMNS);
+                case CUSTOM_SQL -> rejectingDao.insert(INSERT_ALL, record);
+            }
+        });
+
+        assertNull(record.getId());
+        assertEquals(0, rowCount());
+    }
+
+    // SqlTransaction.commit() can throw from the connection cleanup after the commit went through (here: restoring auto-commit
+    // fails with a RuntimeException). The rows then exist: the multi-row paths put back the application-generated IDs anyway, and never assigned the
+    // database-generated ones. Now both are kept/assigned, and the cleanup failure is still thrown.
+    @ParameterizedTest(name = "{0}, batchSize={1}")
+    @MethodSource("generatedIdBatchModes")
+    void batchInsert_cleanupFailsAfterTheCommit_keepsTheIdsOfTheCommittedRows(final InsertMode mode, final int batchSize) throws SQLException {
+        generatedRecordDao();
+        final javax.sql.DataSource failingCleanup = failingConnections(dataSource, "setAutoCommit", true);
+        final GeneratedRecordDao generatedDao = JdbcUtil.createDao(GeneratedRecordDao.class, failingCleanup);
+        final List<Record> generated = List.of(new Record(null, "alpha", 10), new Record(10L, "beta", 20), new Record(0L, "gamma", 30));
+
+        assertThrows(Exception.class, () -> batchInsert(generatedDao, mode, generated, batchSize));
+
+        assertEquals(1000L, generated.get(0).getId());
+        assertEquals(10L, generated.get(1).getId());
+        assertEquals(1001L, generated.get(2).getId());
+        assertEquals(3, rowCount());
+
+        // Database-generated keys are assigned too.
+        final RecordDao databaseDao = JdbcUtil.createDao(RecordDao.class, failingCleanup);
+        final List<Record> keyed = List.of(new Record(null, "delta", 40), new Record(null, "epsilon", 50));
+
+        assertThrows(Exception.class, () -> {
+            switch (mode) {
+                case DEFAULT -> databaseDao.batchInsert(keyed, batchSize);
+                case SELECTED_COLUMNS -> databaseDao.batchInsert(keyed, VALUE_COLUMNS, batchSize);
+                case CUSTOM_SQL -> databaseDao.batchInsert(INSERT_VALUES, keyed, batchSize);
+            }
+        });
+
+        assertEquals(5, rowCount());
+
+        for (final Record record : keyed) {
+            assertNotNull(record.getId());
+            assertEquals(record.getName(), dao.get(record.getId()).get().getName());
+        }
+    }
+
+    // The mixed path (explicit and database-generated IDs in one call, no application ID generation) buffers the returned keys
+    // until its own transaction commits. Like the other paths above, it must keep going when commit() throws from the connection
+    // cleanup after the commit went through: the rows exist, so the keys of the committed rows are assigned before the rethrow.
+    @ParameterizedTest(name = "batchSize={0}")
+    @ValueSource(ints = { 1, 8 })
+    void batchInsert_mixedIds_cleanupFailsAfterTheCommit_assignsTheKeysOfTheCommittedRows(final int batchSize) throws SQLException {
+        final RecordDao databaseDao = JdbcUtil.createDao(RecordDao.class, failingConnections(dataSource, "setAutoCommit", true));
+        final List<Record> mixed = List.of(new Record(null, "alpha", 10), new Record(100L, "beta", 20), new Record(null, "gamma", 30),
+                new Record(200L, "delta", 40));
+
+        final IllegalStateException e = assertThrows(IllegalStateException.class, () -> databaseDao.batchInsert(mixed, batchSize));
+
+        assertEquals("injected setAutoCommit failure", e.getMessage());
+        assertEquals(4, rowCount());
+        assertEquals(100L, mixed.get(1).getId());
+        assertEquals(200L, mixed.get(3).getId());
+
+        for (final Record record : mixed) {
+            assertNotNull(record.getId(), record.getName());
+            assertEquals(record.getName(), dao.get(record.getId()).get().getName());
+        }
+    }
+
+    /** Wraps {@code target}: calling {@code methodName} with {@code argument} on its connections throws a RuntimeException. */
+    private static javax.sql.DataSource failingConnections(final javax.sql.DataSource target, final String methodName, final Object argument) {
+        return (javax.sql.DataSource) java.lang.reflect.Proxy.newProxyInstance(DaoImplBatchOperationsIntegrationTest.class.getClassLoader(),
+                new Class<?>[] { javax.sql.DataSource.class }, (proxy, method, args) -> {
+                    final Object result = invoke(target, method, args);
+
+                    if (!(result instanceof final Connection connection)) {
+                        return result;
+                    }
+
+                    return java.lang.reflect.Proxy.newProxyInstance(DaoImplBatchOperationsIntegrationTest.class.getClassLoader(),
+                            new Class<?>[] { Connection.class }, (connectionProxy, connectionMethod, connectionArgs) -> {
+                                if (connectionMethod.getName().equals(methodName) && connectionArgs != null && argument.equals(connectionArgs[0])) {
+                                    // A RuntimeException: SqlTransaction only logs an SQLException from restoring the connection's settings.
+                                    throw new IllegalStateException("injected " + methodName + " failure");
+                                }
+
+                                return invoke(connection, connectionMethod, connectionArgs);
+                            });
+                });
+    }
+
+    /** Wraps {@code target}: clearing the parameters or the batch of a prepared statement that has executed throws an {@link AssertionError}. */
+    private static javax.sql.DataSource cleanupFailingAfterExecution(final javax.sql.DataSource target) {
+        return (javax.sql.DataSource) java.lang.reflect.Proxy.newProxyInstance(DaoImplBatchOperationsIntegrationTest.class.getClassLoader(),
+                new Class<?>[] { javax.sql.DataSource.class }, (proxy, method, args) -> {
+                    final Object result = invoke(target, method, args);
+
+                    return result instanceof final Connection connection ? cleanupFailingConnection(connection) : result;
+                });
+    }
+
+    private static Connection cleanupFailingConnection(final Connection connection) {
+        return (Connection) java.lang.reflect.Proxy.newProxyInstance(DaoImplBatchOperationsIntegrationTest.class.getClassLoader(),
+                new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+                    final Object result = invoke(connection, method, args);
+
+                    if (!(result instanceof final java.sql.PreparedStatement statement) || result instanceof java.sql.CallableStatement) {
+                        return result;
+                    }
+
+                    final boolean[] executed = { false };
+
+                    return java.lang.reflect.Proxy.newProxyInstance(DaoImplBatchOperationsIntegrationTest.class.getClassLoader(),
+                            new Class<?>[] { java.sql.PreparedStatement.class }, (statementProxy, statementMethod, statementArgs) -> {
+                                final String name = statementMethod.getName();
+
+                                if (executed[0] && (name.equals("clearParameters") || name.equals("clearBatch"))) {
+                                    throw new AssertionError("injected cleanup failure");
+                                }
+
+                                final Object statementResult = invoke(statement, statementMethod, statementArgs);
+
+                                // Only the insert itself: the application ID generator's query runs on its own statement.
+                                if (name.equals("executeUpdate") || name.equals("executeBatch")) {
+                                    executed[0] = true;
+                                }
+
+                                return statementResult;
+                            });
+                });
+    }
+
+    private static Stream<Arguments> generatedKeyFailureModes() {
+        return Stream.of(InsertMode.values()).flatMap(mode -> Stream.of(false, true).map(batchOfOne -> Arguments.of(mode, batchOfOne)));
+    }
+
+    /** Wraps {@code target}: statements execute normally, but reading their generated keys fails. */
+    private static javax.sql.DataSource generatedKeysFailing(final javax.sql.DataSource target) {
+        return (javax.sql.DataSource) java.lang.reflect.Proxy.newProxyInstance(DaoImplBatchOperationsIntegrationTest.class.getClassLoader(),
+                new Class<?>[] { javax.sql.DataSource.class }, (proxy, method, args) -> {
+                    final Object result = invoke(target, method, args);
+
+                    return result instanceof final Connection connection ? proxy(Connection.class, connection) : result;
+                });
+    }
+
+    private static <T> T proxy(final Class<T> type, final T target) {
+        return type.cast(java.lang.reflect.Proxy.newProxyInstance(DaoImplBatchOperationsIntegrationTest.class.getClassLoader(), new Class<?>[] { type },
+                (proxy, method, args) -> {
+                    if ("getGeneratedKeys".equals(method.getName())) {
+                        throw new SQLException("generated keys unavailable");
+                    }
+
+                    final Object result = invoke(target, method, args);
+
+                    return result instanceof final java.sql.PreparedStatement statement && !(result instanceof java.sql.CallableStatement)
+                            ? proxy(java.sql.PreparedStatement.class, statement)
+                            : result;
+                }));
+    }
+
+    private static Object invoke(final Object target, final java.lang.reflect.Method method, final Object[] args) throws Throwable {
+        try {
+            return method.invoke(target, args);
+        } catch (final java.lang.reflect.InvocationTargetException e) {
+            throw e.getCause();
+        }
+    }
+
+    private static List<Long> batchInsert(final GeneratedRecordDao dao, final InsertMode mode, final List<Record> records, final int batchSize)
+            throws SQLException {
+        return switch (mode) {
+            case DEFAULT -> dao.batchInsert(records, batchSize);
+            case SELECTED_COLUMNS -> dao.batchInsert(records, ALL_COLUMNS, batchSize);
+            case CUSTOM_SQL -> dao.batchInsert(INSERT_ALL, records, batchSize);
+        };
+    }
+
+    private static Long insert(final GeneratedRecordDao dao, final InsertMode mode, final Record record) throws SQLException {
+        return switch (mode) {
+            case DEFAULT -> dao.insert(record);
+            case SELECTED_COLUMNS -> dao.insert(record, ALL_COLUMNS);
+            case CUSTOM_SQL -> dao.insert(INSERT_ALL, record);
+        };
+    }
+
     @Test
     void selectedColumnsWithoutIdUseDatabaseGeneration() throws SQLException {
         final GeneratedRecordDao generatedDao = generatedRecordDao();
@@ -271,6 +700,54 @@ public class DaoImplBatchOperationsIntegrationTest extends TestBase {
         @Override
         default Long generateId() throws SQLException {
             return prepareQuery("SELECT NEXT VALUE FOR application_ids").queryForLong().get();
+        }
+    }
+
+    @DaoConfig(callGenerateIdForInsertIfIdNotSet = true, callGenerateIdForInsertWithSqlIfIdNotSet = true)
+    public interface RejectingRecordDao extends CrudDao<RejectingRecord, Long, RejectingRecordDao> {
+        @Override
+        default Long generateId() throws SQLException {
+            return prepareQuery("SELECT NEXT VALUE FOR application_ids").queryForLong().get();
+        }
+    }
+
+    /**
+     * A row of batch_record whose ID setter stores the value, then rejects every generated one (they start at 1000). The ID is
+     * kept in a field of another name: a field named after the property is written directly, not through the setter.
+     */
+    @Table("batch_record")
+    @Id("id")
+    public static class RejectingRecord {
+        private Long storedId;
+        private String name;
+        private int score;
+
+        public Long getId() {
+            return storedId;
+        }
+
+        public void setId(final Long id) {
+            storedId = id;
+
+            if (id != null && id >= 1000) {
+                throw new IllegalArgumentException("Rejected ID: " + id);
+            }
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+
+        public int getScore() {
+            return score;
+        }
+
+        public void setScore(final int score) {
+            this.score = score;
         }
     }
 

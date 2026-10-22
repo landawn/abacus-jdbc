@@ -40,12 +40,33 @@ import com.landawn.abacus.jdbc.Propagation;
  *   <li>Runs the method body.</li>
  *   <li>Commits an invocation-owned transaction on normal return, or rolls it back if an exception
  *       or error escapes. A transaction joined through {@code REQUIRED}, {@code SUPPORTS}, or
- *       {@code MANDATORY} remains governed by its outer owner.</li>
+ *       {@code MANDATORY} remains governed by its outer owner; an exception or error escaping a
+ *       {@code REQUIRED}/{@code MANDATORY} invocation that joined a {@code JdbcUtil} transaction
+ *       marks that transaction rollback-only, so its outermost commit rolls it back, and one escaping
+ *       an invocation that joined a Spring-managed transaction marks the Spring transaction
+ *       rollback-only, so Spring rolls it back (a commit attempt then fails with
+ *       {@code UnexpectedRollbackException}).</li>
  * </ol>
  * The propagation rules follow the same semantics as the Spring equivalent: {@code REQUIRED}
  * joins an existing transaction or starts a new one, {@code REQUIRES_NEW} always starts a new
  * one (suspending any current transaction), {@code MANDATORY} requires an existing transaction,
  * etc.
+ * <p>An existing transaction is one started through {@code JdbcUtil} (for example
+ * {@code JdbcUtil.beginTransaction}) on the current thread for the DAO's {@code DataSource} or,
+ * when there is none and Spring transaction participation is enabled (Spring on the classpath and
+ * not disabled on the thread, e.g. by {@code JdbcUtil.runIgnoringSpringTransaction}), an active Spring-managed
+ * transaction on that {@code DataSource}. A {@code REQUIRED}/{@code MANDATORY} method that joins
+ * a Spring-managed transaction runs in a transaction scope that participates in it (see
+ * {@code JdbcUtil.beginTransaction}): Spring commits or rolls it back, a failure marks it
+ * rollback-only, and {@link #isolationLevel()} is not applied. It joins only a
+ * transaction that owns the {@code DataSource}'s connection: one begun by
+ * {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} for that {@code DataSource},
+ * or by a JPA or Hibernate transaction manager that exposes its JDBC connection. A connection Spring
+ * has bound only for synchronization (in a non-transactional scope such as {@code SUPPORTS}, or while
+ * a transaction runs on another {@code DataSource}) is not such a transaction, so the method then runs
+ * in a transaction of its own, which commits it, {@code MANDATORY} rejects the call, and {@code NEVER}
+ * accepts it. JTA transactions are not detected, so they are neither joined nor reported as existing
+ * transactions.</p>
  * <p>Transaction handling surrounds method execution inside the cache interceptor. A result served
  * from a DAO or thread-local cache bypasses execution and therefore does not start, suspend, or
  * validate a transaction context. In particular, {@code MANDATORY}/{@code NEVER} checks do not run
@@ -59,8 +80,9 @@ import com.landawn.abacus.jdbc.Propagation;
  * {@link Propagation#REQUIRES_NEW}, {@link Propagation#NOT_SUPPORTED}, and
  * {@link Propagation#NEVER} cannot be used on a method returning an
  * Abacus {@link com.landawn.abacus.util.stream.BaseStream} (including
- * {@link com.landawn.abacus.util.stream.Stream}) or a {@link java.util.stream.BaseStream}. Such a
- * stream performs work after the method returns: an invocation-owned transaction may already have
+ * {@link com.landawn.abacus.util.stream.Stream}), a {@link java.util.stream.BaseStream}, a
+ * {@link com.landawn.abacus.util.Seq} or an {@link java.util.Iterator}. Such a lazy result
+ * performs work after the method returns: an invocation-owned transaction may already have
  * completed, while a temporarily suspended or prohibited transaction context may have changed.
  * The DAO rejects those combinations at initialization with {@code UnsupportedOperationException}.
  * Consume the stream inside a transactional,
@@ -134,8 +156,8 @@ public @interface Transactional {
      * <p>The two context-demanding policies are enforced before an uncached method execution, before the method
      * body runs, and both report an {@link IllegalStateException}: {@link Propagation#MANDATORY} when the
      * calling thread has no active transaction on the DAO's {@code DataSource}, and
-     * {@link Propagation#NEVER} when it does. A stream-returning method combined with a propagation other
-     * than {@link Propagation#SUPPORTS}/{@link Propagation#MANDATORY} is instead rejected at DAO
+     * {@link Propagation#NEVER} when it does. A stream-, {@code Seq}- or {@code Iterator}-returning method combined
+     * with a propagation other than {@link Propagation#SUPPORTS}/{@link Propagation#MANDATORY} is instead rejected at DAO
      * initialization with {@code UnsupportedOperationException} (see the type-level documentation).</p>
      *
      * <p>Example scenarios:</p>
@@ -195,6 +217,15 @@ public @interface Transactional {
      *
      * <p><strong>Note:</strong> Higher isolation levels may impact performance due to
      * increased locking. Choose the lowest level that meets your consistency requirements.</p>
+     *
+     * <p>The level is applied only when the invocation opens a {@code JdbcUtil} transaction scope
+     * ({@link Propagation#REQUIRED}, {@link Propagation#REQUIRES_NEW} or {@link Propagation#MANDATORY}).
+     * It is ignored with {@link Propagation#SUPPORTS}, {@link Propagation#NOT_SUPPORTED} and
+     * {@link Propagation#NEVER}, and when the method joins a Spring-managed transaction. A
+     * {@code REQUIRED}/{@code MANDATORY} invocation that joins an existing {@code JdbcUtil} transaction
+     * applies a non-{@code DEFAULT} level to the shared connection for its duration and restores the
+     * previous level afterwards; some databases reject changing the isolation level after the
+     * transaction has started work.</p>
      *
      * @return the configured isolation level; defaults to {@link IsolationLevel#DEFAULT}
      * @see IsolationLevel

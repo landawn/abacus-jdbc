@@ -959,6 +959,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
     /**
      * Sets a java.util.Date value as a java.sql.Timestamp for the specified parameter.
+     * If {@code value} is already a {@code java.sql.Timestamp}, it is passed to the driver as-is (keeping its
+     * nanoseconds); otherwise a new {@code java.sql.Timestamp} is constructed from {@code value.getTime()}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1576,12 +1578,14 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * The appropriate SQL type is automatically inferred from the runtime class of {@code value}
      * via the abacus type system. If {@code value} is {@code null}, the parameter will be
      * set to SQL {@code NULL} by delegating to {@link CallableStatement#setObject(String, Object)}.
+     * Note that a bean/entity value is not mapped to a structured SQL type: it is bound as its JSON string
+     * via {@code setString}, as with {@link AbstractQuery#setObject(int, Object)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * query.setObject("value", 123);           // Integer
      * query.setObject("name", "John");         // String
-     * query.setObject("data", customObject);   // Custom object
+     * query.setObject("data", userBean);       // bean: bound as its JSON string
      * }</pre>
      *
      * @param parameterName the name of the parameter
@@ -1787,7 +1791,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * parameter names, making it convenient for mapping entity properties to stored procedure parameters.
      *
      * <p>The method uses the bean information of the entity class to extract property values.
-     * Each parameter name in the list should correspond to a property name in the entity object.
+     * Each listed name must resolve to a property of the entity, by exact property name, {@code @Column} name,
+     * or the usual case/underscore-insensitive matching (so {@code "user_name"} resolves to a {@code userName}
+     * property). The listed name itself, not the resolved property name, is passed to the driver as the
+     * procedure parameter name.
      * The appropriate database type is automatically determined based on the property type. If any
      * binding fails, this query is closed because its parameters may have been only partially set.</p>
      *
@@ -1808,8 +1815,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param entity the entity object containing the parameter values. Must not be {@code null}.
-     * @param parameterNamesToSet a list of parameter names corresponding to properties in the entity.
-     *                       Each name should match a property name in the entity class.
+     * @param parameterNamesToSet the names of the procedure parameters to bind; each name must resolve to a property of the
+     *                       {@code entity} class
      * @return this CallableQuery instance for method chaining
      * @throws IllegalArgumentException if {@code entity} is {@code null} or is not a bean class (it has no property getter/setter method and no
      *         public field), or if {@code parameterNamesToSet} is {@code null}, contains a {@code null} element, or contains a name that does
@@ -1877,8 +1884,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * {@link NamedQuery#setParameters(Object)}.
      *
      * <ul>
-     *   <li><b>Bean/Entity</b>: every readable property is bound to the procedure parameter of the same name
-     *       (equivalent to {@code setParameters(parameters, Beans.getPropNameList(parameters.getClass()))}).</li>
+     *   <li><b>Bean/Entity</b>: every property listed by {@link Beans#getPropNameList(Class)} is bound to the procedure
+     *       parameter of the same (property) name, equivalent to
+     *       {@code setParameters(parameters, Beans.getPropNameList(parameters.getClass()))}. On an ordinary mutable
+     *       class a getter without a matching setter (for example, a computed getter) is not a property and is not bound.</li>
      *   <li><b>Map</b>: delegates to {@link #setParameters(Map)} (each entry bound by its key).</li>
      * </ul>
      *
@@ -3486,7 +3495,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p>If the stored procedure returns fewer than two result sets, the corresponding
      * result values will be {@code null}. If more than two result sets are returned,
-     * only the first two are processed.</p>
+     * only the first two are processed; any remaining result sets and update counts are discarded
+     * before the OUT parameters are read, because some drivers (notably SQL Server and Oracle) only
+     * finalize OUT parameter values once all results have been consumed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3576,7 +3587,9 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * <p>If the stored procedure returns fewer than three result sets, the corresponding
      * result values will be {@code null}. If more than three result sets are returned,
-     * only the first three are processed.</p>
+     * only the first three are processed; any remaining result sets and update counts are discarded
+     * before the OUT parameters are read, because some drivers (notably SQL Server and Oracle) only
+     * finalize OUT parameter values once all results have been consumed.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3674,11 +3687,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * along with any OUT parameters. This is a convenience method that automatically maps
      * each row to the specified target type using reflection.
      *
-     * <p>The mapping uses the following rules:</p>
+     * <p>For a bean target, the mapping uses the following rules:</p>
      * <ul>
-     *   <li>Column names are matched to property names (case-insensitive)</li>
+     *   <li>Column names are matched to property names case- and underscore-insensitively (e.g., {@code ID} maps to {@code id}
+     *       and {@code first_name} maps to {@code firstName})</li>
      *   <li>Automatic type conversion is performed where possible</li>
-     *   <li>Properties annotated with {@code @Transient} are ignored</li>
+     *   <li>{@code @Transient} does not exclude a property from row mapping: a result column that matches it is still set</li>
      *   <li>Column name mapping can be customized using {@code @Column} annotation</li>
      * </ul>
      *

@@ -84,7 +84,13 @@ public @interface SqlSource {
      * Specifies the path to the SQL mapper XML file.
      * After surrounding whitespace is trimmed, the location is passed to
      * {@code SqlMapper.loadFrom(...)} at DAO initialization time and should include the file
-     * extension.
+     * extension. Several locations may be separated by {@code ,} or {@code ;}.
+     *
+     * <p>Each location is resolved on the file system only: as given (absolute, or relative to the working
+     * directory), and otherwise by searching the common configuration directories (such as build-output,
+     * resources and {@code config} directories) and then the working directory tree. A class-path resource
+     * packaged inside a JAR is not found; a location that resolves to no file fails DAO initialization with
+     * {@code IllegalArgumentException}.</p>
      *
      * <p>Common conventions:</p>
      * <ul>

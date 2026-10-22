@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -444,6 +445,122 @@ class JdbcUtilParameterBindingTest extends JdbcUtilTestSupport {
         verify(mockPreparedStatement).setString(1, "Ada");
     }
 
+    // A non-idempotent getter is read once per name, so every occurrence binds the same value; both name-index
+    // strategies (short list scan, long list map) are covered.
+    @Test
+    public void testSetParameters_NamedBeanReadsEachRepeatedNameOnce() throws SQLException {
+        final StringBuilder longSql = new StringBuilder("SELECT * FROM t WHERE a = :p");
+        for (int i = 1; i < 40; i++) {
+            longSql.append(i % 10 == 0 ? " AND a = :p" : " AND b = :q");
+        }
+
+        for (final String sql : List.of("SELECT * FROM t WHERE a = :p OR b = :q OR c = :p", longSql.toString())) {
+            final java.sql.PreparedStatement stmt = mock(java.sql.PreparedStatement.class);
+            final ParsedSql parsedSql = JdbcUtil.parseSql(sql);
+            final CountingBean bean = new CountingBean();
+
+            JdbcUtil.setParameters(parsedSql, stmt, new Object[] { bean });
+
+            assertEquals(1, bean.pReads);
+            assertEquals(1, bean.qReads);
+            for (int i = 0; i < parsedSql.parameterCount(); i++) {
+                verify(stmt).setString(i + 1, parsedSql.namedParameters().get(i).equals("p") ? "p1" : "q1");
+            }
+        }
+    }
+
+    // Lists of 32 names or more are indexed with a map instead of the pairwise scan; both strategies must answer alike.
+    @Test
+    public void testFirstIndexesOfRepeatedNames_MapStrategyForLongLists() {
+        for (final int size : new int[] { 31, 32, 33, 100 }) {
+            final List<String> distinct = new java.util.ArrayList<>(size);
+            for (int i = 0; i < size; i++) {
+                distinct.add("n" + i);
+            }
+
+            assertNull(JdbcUtil.firstIndexesOfRepeatedNames(distinct), "size " + size);
+
+            // A late repeat of the 4th name, and a repeat of the last distinct name right after it.
+            final List<String> repeated = new java.util.ArrayList<>(distinct);
+            repeated.set(size - 1, "n3");
+            repeated.add("n" + (size - 2));
+            final int[] expected = new int[size + 1];
+            for (int i = 0; i < expected.length; i++) {
+                expected[i] = i;
+            }
+            expected[size - 1] = 3;
+            expected[size] = size - 2;
+
+            assertArrayEquals(expected, JdbcUtil.firstIndexesOfRepeatedNames(repeated), "size " + size);
+        }
+
+        // Every occurrence maps to the first one, not to the previous one.
+        assertArrayEquals(new int[] { 0, 1, 0, 0, 1 }, JdbcUtil.firstIndexesOfRepeatedNames(List.of("a", "b", "a", "a", "b")));
+        assertNull(JdbcUtil.firstIndexesOfRepeatedNames(List.of()));
+        assertNull(JdbcUtil.firstIndexesOfRepeatedNames(List.of("a")));
+    }
+
+    // End to end through the map strategy: 40 named placeholders, two names, each bean getter read once.
+    @Test
+    public void testSetParameters_NamedBeanWithManyPlaceholdersReadsEachRepeatedNameOnce() throws SQLException {
+        final StringBuilder sql = new StringBuilder("SELECT * FROM t WHERE a = :p");
+        for (int i = 1; i < 40; i++) {
+            sql.append(i % 7 == 0 ? " AND a = :p" : " AND b = :q");
+        }
+        final ParsedSql parsedSql = JdbcUtil.parseSql(sql.toString());
+        assertEquals(40, parsedSql.parameterCount());
+        final int[] firstIndexes = JdbcUtil.firstIndexesOfRepeatedNames(parsedSql.namedParameters());
+        assertNotNull(firstIndexes);
+        assertEquals(0, firstIndexes[7]);
+        assertEquals(1, firstIndexes[39]);
+
+        final CountingBean bean = new CountingBean();
+
+        JdbcUtil.setParameters(parsedSql, mockPreparedStatement, new Object[] { bean });
+
+        assertEquals(1, bean.pReads);
+        assertEquals(1, bean.qReads);
+        for (int i = 0; i < 40; i++) {
+            verify(mockPreparedStatement).setString(i + 1, i % 7 == 0 ? "p1" : "q1");
+        }
+    }
+
+    @Test
+    public void testSetParameters_NamedBeanBindsNestedPropertyPaths() throws SQLException {
+        final ParsedSql parsedSql = JdbcUtil.parseSql("SELECT * FROM users WHERE street = :address.street AND id = :id AND zip = :address.zip");
+        final NamedQueryParameterBindingTest.NestedUser user = NamedQueryParameterBindingTest.NestedUser.of(7L, "Main", 12345);
+
+        JdbcUtil.setParameters(parsedSql, mockPreparedStatement, new Object[] { user });
+
+        verify(mockPreparedStatement).setString(1, "Main");
+        verify(mockPreparedStatement).setLong(2, 7L);
+        verify(mockPreparedStatement).setInt(3, 12345);
+
+        // A null intermediate binds SQL NULL through the leaf property's type.
+        final java.sql.PreparedStatement stmt = mock(java.sql.PreparedStatement.class);
+        user.setAddress(null);
+
+        JdbcUtil.setParameters(parsedSql, stmt, new Object[] { user });
+
+        verify(stmt).setString(1, null);
+        verify(stmt).setLong(2, 7L);
+        verify(stmt).setNull(3, Types.INTEGER);
+    }
+
+    @Test
+    public void testSetParameters_NamedBeanRejectsUnresolvableNestedPath() throws SQLException {
+        for (final String name : List.of("address.country", "nothing.street", "addresses.street")) {
+            final java.sql.PreparedStatement stmt = mock(java.sql.PreparedStatement.class);
+            final ParsedSql parsedSql = JdbcUtil.parseSql("SELECT * FROM users WHERE id = :id AND street = :" + name);
+
+            final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                    () -> JdbcUtil.setParameters(parsedSql, stmt, new Object[] { NamedQueryParameterBindingTest.NestedUser.of(7L, "Main", 1) }));
+
+            assertTrue(failure.getMessage().contains("No property found with name: " + name), failure.getMessage());
+            verify(stmt, never()).setLong(anyInt(), org.mockito.ArgumentMatchers.anyLong());
+        }
+    }
+
     @Test
     public void testGetNamedParameters() {
         String sql = "SELECT * FROM users WHERE name = :name AND age > :age";
@@ -462,5 +579,27 @@ class JdbcUtilParameterBindingTest extends JdbcUtilTestSupport {
     }
 
     private record NamedRecordParameter(String firstName, String lastName) {
+    }
+
+    /** Each getter call returns a new value, so a second read of a name would be visible. */
+    public static class CountingBean {
+        private int pReads;
+        private int qReads;
+
+        public String getP() {
+            return "p" + (++pReads);
+        }
+
+        public void setP(final String p) {
+            // read-only for the test
+        }
+
+        public String getQ() {
+            return "q" + (++qReads);
+        }
+
+        public void setQ(final String q) {
+            // read-only for the test
+        }
     }
 }

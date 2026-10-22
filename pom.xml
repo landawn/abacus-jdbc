@@ -59,14 +59,14 @@
 		<dependency>
 			<groupId>com.landawn.abacus</groupId>
 			<artifactId>abacus-common</artifactId>
-			<version>8.1.0</version>
+		    <version>8.3.0</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>com.landawn.abacus</groupId>
 			<artifactId>abacus-query</artifactId>
-			<version>4.9.4</version>
+			<version>4.9.5</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -119,6 +119,14 @@
 			<artifactId>spring-beans</artifactId>
 			<version>${spring.version}</version>
 			<scope>provided</scope>
+		</dependency>
+
+		<!-- Test only: JpaTransactionManager, to test JdbcUtil transactions participating in Spring-managed JPA transactions. -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-orm</artifactId>
+			<version>${spring.version}</version>
+			<scope>test</scope>
 		</dependency>
 
 		<dependency>

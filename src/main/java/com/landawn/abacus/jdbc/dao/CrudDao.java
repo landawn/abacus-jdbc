@@ -30,7 +30,6 @@ import com.landawn.abacus.jdbc.cs;
 import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
-import com.landawn.abacus.jdbc.Transaction;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
@@ -62,7 +61,8 @@ import com.landawn.abacus.util.stream.Stream;
  * property maps directly to the {@code <ID>} type (for example {@code Long} or {@code String}), whereas a
  * composite (multi-column) key can use an {@link EntityId} or a bean/record with matching ID properties. Insert operations write a
  * database-generated key back into the entity's id property where applicable, and {@code by-id} lookups
- * treat the supplied id as a primary-key match.</p>
+ * treat the supplied id as a primary-key match: every declared id property is matched, so an {@code EntityId} that lacks
+ * one of them, or holds {@code null} for one, matches no row (keys it carries beyond the id properties are ignored).</p>
  *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
@@ -117,8 +117,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set
      *         and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default T upsert(final T entity) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException,
-            DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
 
         final Class<?> cls = entity.getClass();
@@ -157,8 +157,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @see Filters
      */
     @Override
-    default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException,
-            SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity, final Condition cond)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 
@@ -202,13 +202,17 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
-     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope,
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *                              own while no JPA transaction owning it can be identified (see
+     *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities) throws IllegalArgumentException, CannotGetJdbcConnectionException,
-            UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -236,13 +240,17 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
-     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope,
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *                              own while no JPA transaction owning it can be identified (see
+     *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, CannotGetJdbcConnectionException,
-            UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         if (N.notEmpty(entities)) {
             N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
             for (final T entity : entities) {
@@ -288,13 +296,17 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
-     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope,
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *                              own while no JPA transaction owning it can be identified (see
+     *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
-    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws IllegalArgumentException,
-            CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
+    default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames)
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         return batchUpsert(entities, matchPropNames, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -306,11 +318,21 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * supplied unique properties) and those that do not. New entities are inserted via
      * {@link #batchInsert(Collection, int)}; existing entities are updated by copying the non-{@code null}, non-id
      * (and non-unique-key) properties from the input entity into the loaded database entity and
-     * calling {@link #batchUpdate(Collection, int)}. When both inserts and updates are needed
-     * (or either set is large), the operation is wrapped in a transaction.</p>
+     * calling {@link #batchUpdate(Collection, int)}. When both inserts and updates are needed (or either set is large), the
+     * operation is wrapped in a transaction (each of {@code batchInsert} and {@code batchUpdate} also runs in one for more
+     * than one entity). If that transaction, or a transaction enclosing this call, rolls back, the IDs that {@code batchInsert} wrote onto the new
+     * entities are put back to their previous values. Inside an active Spring-managed transaction that owns the data
+     * source's connection, the transaction participates in it (see
+     * {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}): Spring commits the work, a failure
+     * marks the Spring transaction rollback-only, and the IDs are put back if Spring rolls it back (this needs Spring's
+     * transaction synchronization, which is enabled by default, and follows the innermost Spring-managed transaction on the
+     * thread, as for {@code insert}).</p>
      *
      * <p>For a single match property, a {@code null} key is matched with {@code IS NULL}; it is not
      * placed in an {@code IN} predicate, whose SQL semantics would never match a {@code null} column.
+     * With several match properties, every one of them is matched (an entity's key always holds all of them), a
+     * {@code null} one with {@code IS NULL} as well; so an entity whose key holds {@code null} for a {@code NOT NULL}
+     * column (e.g. a component of the primary key, when matching by id) matches no row and is inserted.
      * Array-typed key values (e.g. a {@code byte[]} binary UUID) are matched by content.</p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -334,14 +356,17 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key, or an existing transaction
-     *                              on the current thread is no longer active and cannot accept the internally required transaction scope
+     *                              on the current thread is no longer active and cannot accept the internally required transaction scope,
+     *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *                              own while no JPA transaction owning it can be identified (see
+     *                              {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an entity is inserted while
      *         {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and
      *         {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
      */
     default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException, IllegalStateException,
-            UnsupportedOperationException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException {
         if (N.notEmpty(entities)) {
             N.checkArgNotNull(N.firstOrNullIfEmpty(entities), "The first element in the specified collection 'entities' cannot be null");
             for (final T entity : entities) {
@@ -402,6 +427,10 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                         .toList()
                 : Seq.of(N.distinct(N.map(entities, entityIdExtractor)), SQLException.class) //
                         .split(batchSize)
+                        // Each key holds EVERY match property (entityIdExtractor sets them all, null included), so unlike a
+                        // caller-supplied EntityId (see DaoUtil.entityIdToCondition) it cannot be incomplete and pair an
+                        // entity with a row that agrees on only some of them. A null component renders IS NULL: the
+                        // documented match of a null key, which a NOT NULL (e.g. primary key) column never satisfies.
                         .flatmap(it -> list(Filters.idToCond(it)))
                         .toList();
 
@@ -415,12 +444,10 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
         final boolean isInTransaction = (N.notEmpty(entitiesToInsert) && N.notEmpty(entitiesToUpdate))
                 || (N.notEmpty(entitiesToInsert) && entitiesToInsert.size() > batchSize)
                 || (N.notEmpty(entitiesToUpdate) && entitiesToUpdate.size() > batchSize);
-        // batchInsert writes the generated IDs back onto the inserted entities before this transaction commits. If the
-        // updates or the commit then fail, the rollback discards those rows, so the pre-insert IDs are put back: otherwise
-        // the entities keep IDs of rows that no longer exist, and a retry inserts them with those IDs as explicit values.
-        final Runnable insertedIdRestorer = isInTransaction && N.notEmpty(entitiesToInsert)
-                ? DaoUtil.captureIdValues(entitiesToInsert, idPropNameList, entityInfo)
-                : null;
+        // batchInsert writes the generated IDs back onto the inserted entities before this transaction commits; if it rolls back
+        // (or a transaction enclosing this call does), batchInsert puts the pre-insert IDs back, as it registers them with the
+        // transaction it runs in: otherwise the entities would keep IDs of rows that no longer exist. Inside a Spring-managed
+        // transaction this transaction participates in it (see JdbcUtil.beginTransaction).
         final SqlTransaction tran = isInTransaction ? JdbcUtil.beginTransaction(dataSource()) : null;
         Throwable failure = null;
 
@@ -448,16 +475,6 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             }
         } catch (final Throwable e) { //NOSONAR
             failure = e;
-
-            // Not once the commit went through: commit() can still throw from the connection cleanup after it.
-            if (insertedIdRestorer != null && tran.status() != Transaction.Status.COMMITTED) {
-                try {
-                    insertedIdRestorer.run();
-                } catch (final RuntimeException | Error restoreFailure) {
-                    DaoUtil.addSuppressedIfDifferent(e, restoreFailure);
-                }
-            }
-
             throw e;
         } finally {
             if (tran != null) {

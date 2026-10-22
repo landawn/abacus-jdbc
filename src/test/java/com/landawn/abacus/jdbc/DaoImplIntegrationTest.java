@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -668,6 +669,258 @@ public class DaoImplIntegrationTest extends TestBase {
         }
     }
 
+    public interface UncheckedEntityIdRowDao extends UncheckedCrudDao<CompositeKeyRow, com.landawn.abacus.util.EntityId, UncheckedEntityIdRowDao> {
+    }
+
+    // batchGet/count(ids) matched a composite EntityId on the keys it CONTAINED (Filters.idToCond): an EntityId lacking a
+    // component matched every row agreeing on the present one (batchGet threw DuplicateResultException over the two rows of
+    // tenant 1, count counted both), while getOrNull/exists bind every declared id property and match nothing. All of them
+    // match on every declared id property now; keys beyond the id properties stay ignored.
+    @Test
+    public void testBatchGetAndCount_CompositeEntityIdLackingComponentMatchesNoRow() throws SQLException {
+        try (Connection connection = ds.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE entity_id_record(tenant_id BIGINT, row_id BIGINT, name VARCHAR(64), PRIMARY KEY(tenant_id, row_id))");
+            try {
+                statement.executeUpdate("INSERT INTO entity_id_record VALUES(1, 2, 'target'), (1, 3, 'other row'), (2, 2, 'other tenant')");
+                final JdbcUtil.DaoCreationOptions options = JdbcUtil.DaoCreationOptions.builder().targetTableName("entity_id_record").build();
+                final EntityIdRowDao entityDao = JdbcUtil.createDao(EntityIdRowDao.class, ds, options);
+                final UncheckedEntityIdRowDao uncheckedDao = JdbcUtil.createDao(UncheckedEntityIdRowDao.class, ds, options);
+                final com.landawn.abacus.util.EntityId complete = com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", 2L);
+                final com.landawn.abacus.util.EntityId lackingRowId = com.landawn.abacus.util.EntityId.of("tenantId", 1L);
+                final com.landawn.abacus.util.EntityId lackingTenantId = com.landawn.abacus.util.EntityId.of("rowId", 2L);
+                final com.landawn.abacus.util.EntityId nullRowId = com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", null);
+                final com.landawn.abacus.util.EntityId extraKey = com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", 2L, "name", "ignored");
+
+                // The single-id semantics the batch paths now share.
+                assertFalse(entityDao.exists(lackingRowId));
+                assertFalse(entityDao.exists(nullRowId));
+
+                assertTrue(entityDao.batchGet(List.of(lackingRowId)).isEmpty());
+                assertTrue(entityDao.batchGet(List.of(lackingTenantId)).isEmpty());
+                assertTrue(entityDao.batchGet(List.of(nullRowId)).isEmpty());
+                assertTrue(uncheckedDao.batchGet(List.of(lackingRowId)).isEmpty());
+                assertEquals(0, entityDao.count(List.of(lackingRowId)));
+                assertEquals(0, entityDao.count(List.of(lackingTenantId)));
+                assertEquals(0, entityDao.count(List.of(nullRowId)));
+                assertEquals(0, uncheckedDao.count(List.of(lackingRowId)));
+
+                // A complete id still matches, next to incomplete ones in the same and in their own chunk.
+                final List<CompositeKeyRow> rows = entityDao.batchGet(List.of(lackingRowId, complete, nullRowId), null, 2);
+                assertEquals(1, rows.size());
+                assertEquals("target", rows.get(0).getName());
+                assertEquals(1, entityDao.count(List.of(lackingRowId, complete, nullRowId)));
+                assertEquals(1, uncheckedDao.batchGet(List.of(lackingRowId, complete, nullRowId), null, 2).size());
+                assertEquals(1, uncheckedDao.count(List.of(lackingRowId, complete, nullRowId)));
+
+                // Keys beyond the declared id properties are ignored, as getOrNull ignores them.
+                assertEquals("target", entityDao.getOrNull(extraKey).getName());
+                assertEquals("target", entityDao.batchGet(List.of(extraKey)).get(0).getName());
+                assertEquals(1, entityDao.count(List.of(extraKey)));
+            } finally {
+                statement.executeUpdate("DROP TABLE entity_id_record");
+            }
+        }
+    }
+
+    // batchGet/count(ids) match a composite EntityId on the declared id properties only, but de-duplicated the ids by their
+    // full content: two EntityIds agreeing on the key and differing in an extra key were both kept and, in separate chunks,
+    // returned/counted the same row twice. They are de-duplicated by the declared id properties now.
+    @Test
+    public void testBatchGetAndCount_CompositeEntityIdsDifferingBeyondTheIdPropertiesAreOneId() throws SQLException {
+        try (Connection connection = ds.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE entity_id_record(tenant_id BIGINT, row_id BIGINT, name VARCHAR(64), PRIMARY KEY(tenant_id, row_id))");
+            try {
+                statement.executeUpdate("INSERT INTO entity_id_record VALUES(1, 2, 'target'), (1, 3, 'other row')");
+                final JdbcUtil.DaoCreationOptions options = JdbcUtil.DaoCreationOptions.builder().targetTableName("entity_id_record").build();
+                final EntityIdRowDao entityDao = JdbcUtil.createDao(EntityIdRowDao.class, ds, options);
+                final UncheckedEntityIdRowDao uncheckedDao = JdbcUtil.createDao(UncheckedEntityIdRowDao.class, ds, options);
+                final com.landawn.abacus.util.EntityId complete = com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", 2L);
+                final com.landawn.abacus.util.EntityId extraKey = com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", 2L, "name", "ignored");
+                final com.landawn.abacus.util.EntityId otherRow = com.landawn.abacus.util.EntityId.of("rowId", 3L, "tenantId", 1L);
+                final List<com.landawn.abacus.util.EntityId> ids = List.of(complete, extraKey, otherRow, complete);
+
+                // One id per chunk: the duplicates used to be queried again.
+                assertEquals(2, entityDao.batchGet(ids, null, 1).size());
+                assertEquals(2, entityDao.batchGet(ids, null, 2).size());
+                assertEquals(2, entityDao.count(ids));
+                assertEquals(2, uncheckedDao.batchGet(ids, null, 1).size());
+                assertEquals(2, uncheckedDao.count(ids));
+
+                // count chunks 200 ids at a time: 201 ids of one row differing in an extra key straddled the boundary and counted
+                // the row twice.
+                final List<com.landawn.abacus.util.EntityId> manyOfOneRow = new ArrayList<>(201);
+
+                for (int i = 0; i < 201; i++) {
+                    manyOfOneRow.add(com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", 2L, "name", "n" + i));
+                }
+
+                assertEquals(1, entityDao.count(manyOfOneRow));
+                assertEquals(1, entityDao.batchGet(manyOfOneRow, null, 200).size());
+                assertEquals(1, uncheckedDao.count(manyOfOneRow));
+                assertEquals(1, uncheckedDao.batchGet(manyOfOneRow, null, 200).size());
+
+                // An invalid id is rejected whatever its position: an EntityId with no keys shares its de-duplication key with one
+                // lacking every declared id property and was dropped silently when it came second.
+                final com.landawn.abacus.util.EntityId noKeys = com.landawn.abacus.util.Seid.of("Row");
+                final com.landawn.abacus.util.EntityId noIdKeys = com.landawn.abacus.util.EntityId.of("name", "ignored");
+                assertThrows(IllegalArgumentException.class, () -> entityDao.batchGet(List.of(noKeys, noIdKeys)));
+                assertThrows(IllegalArgumentException.class, () -> entityDao.batchGet(List.of(noIdKeys, noKeys)));
+                assertThrows(IllegalArgumentException.class, () -> entityDao.count(List.of(noIdKeys, noKeys)));
+                assertThrows(IllegalArgumentException.class, () -> uncheckedDao.batchGet(List.of(noIdKeys, noKeys)));
+                assertThrows(IllegalArgumentException.class, () -> uncheckedDao.count(List.of(noIdKeys, noKeys)));
+            } finally {
+                statement.executeUpdate("DROP TABLE entity_id_record");
+            }
+        }
+    }
+
+    // batchUpsert matches by the match properties (the id properties here), every one of them: a key holding null for a NOT
+    // NULL id column matches no row, so the entity is inserted (and rejected by the database); the row sharing the present
+    // component is untouched. A guard: the key is built from every match property, so it can never be incomplete.
+    @Test
+    public void testBatchUpsert_CompositeIdWithNullComponentDoesNotUpdateRowSharingTheOtherComponent() throws SQLException {
+        try (Connection connection = ds.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE entity_id_record(tenant_id BIGINT, row_id BIGINT, name VARCHAR(64), PRIMARY KEY(tenant_id, row_id))");
+            try {
+                statement.executeUpdate("INSERT INTO entity_id_record VALUES(1, 2, 'target')");
+                final JdbcUtil.DaoCreationOptions options = JdbcUtil.DaoCreationOptions.builder().targetTableName("entity_id_record").build();
+                final EntityIdRowDao entityDao = JdbcUtil.createDao(EntityIdRowDao.class, ds, options);
+                final UncheckedEntityIdRowDao uncheckedDao = JdbcUtil.createDao(UncheckedEntityIdRowDao.class, ds, options);
+                final com.landawn.abacus.util.EntityId complete = com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", 2L);
+
+                final CompositeKeyRow partial = new CompositeKeyRow();
+                partial.setTenantId(1L);
+                partial.setName("upserted");
+
+                assertThrows(SQLException.class, () -> entityDao.batchUpsert(List.of(partial)));
+                assertEquals("target", entityDao.getOrNull(complete).getName());
+                assertEquals(1, entityDao.count(Filters.expr("1 = 1")));
+
+                assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> uncheckedDao.batchUpsert(List.of(partial)));
+                assertEquals("target", entityDao.getOrNull(complete).getName());
+                assertEquals(1, entityDao.count(Filters.expr("1 = 1")));
+
+                // A complete key pairs with its row.
+                final CompositeKeyRow update = newCompositeKeyRow(1, 2, "updated");
+                assertEquals("updated", entityDao.batchUpsert(List.of(update)).get(0).getName());
+                assertEquals("updated", entityDao.getOrNull(complete).getName());
+                assertEquals(1, entityDao.count(Filters.expr("1 = 1")));
+            } finally {
+                statement.executeUpdate("DROP TABLE entity_id_record");
+            }
+        }
+    }
+
+    // A null component of a composite EntityId rendered as IS NULL (Filters.idToCond), which matched every row holding NULL
+    // in a nullable key column: batchGet/count returned/counted them (two of them: DuplicateResultException from batchGet)
+    // and refresh raised DuplicateResultException, while getOrNull/exists bind NULL and match nothing. A null component
+    // matches no row on every path now.
+    @Test
+    public void testCompositeEntityIdNullComponentMatchesNoRow_NullableKeyColumn() throws SQLException {
+        try (Connection connection = ds.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE entity_id_record(tenant_id BIGINT, row_id BIGINT, name VARCHAR(64))");
+            try {
+                statement.executeUpdate("INSERT INTO entity_id_record VALUES(1, NULL, 'null row'), (1, NULL, 'another null row'), (1, 2, 'target')");
+                final JdbcUtil.DaoCreationOptions options = JdbcUtil.DaoCreationOptions.builder().targetTableName("entity_id_record").build();
+                final EntityIdRowDao entityDao = JdbcUtil.createDao(EntityIdRowDao.class, ds, options);
+                final UncheckedEntityIdRowDao uncheckedDao = JdbcUtil.createDao(UncheckedEntityIdRowDao.class, ds, options);
+                final com.landawn.abacus.util.EntityId nullRowId = com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", null);
+                final com.landawn.abacus.util.EntityId complete = com.landawn.abacus.util.EntityId.of("tenantId", 1L, "rowId", 2L);
+
+                assertFalse(entityDao.exists(nullRowId));
+                assertTrue(entityDao.batchGet(List.of(nullRowId)).isEmpty());
+                assertEquals(0, entityDao.count(List.of(nullRowId)));
+                assertEquals("target", entityDao.batchGet(List.of(nullRowId, complete)).get(0).getName());
+                assertEquals(1, entityDao.count(List.of(nullRowId, complete)));
+                assertTrue(uncheckedDao.batchGet(List.of(nullRowId)).isEmpty());
+                assertEquals(0, uncheckedDao.count(List.of(nullRowId)));
+
+                final CompositeKeyRow stale = new CompositeKeyRow();
+                stale.setTenantId(1L);
+                stale.setName("stale");
+                assertFalse(entityDao.refresh(stale));
+                assertFalse(entityDao.refresh(stale, List.of("name")));
+                assertFalse(uncheckedDao.refresh(stale));
+                assertFalse(uncheckedDao.refresh(stale, List.of("name")));
+                assertEquals("stale", stale.getName());
+                // batchRefresh loads through batchGet: left unrefreshed as well.
+                assertEquals(0, entityDao.batchRefresh(List.of(stale)));
+                assertEquals(0, uncheckedDao.batchRefresh(List.of(stale), List.of("name")));
+                assertEquals("stale", stale.getName());
+
+                final CompositeKeyRow current = newCompositeKeyRow(1, 2, "old");
+                assertTrue(entityDao.refresh(current));
+                assertEquals("target", current.getName());
+                current.setName("old again");
+                assertEquals(1, uncheckedDao.batchRefresh(List.of(current, stale)));
+                assertEquals("target", current.getName());
+                assertEquals("stale", stale.getName());
+            } finally {
+                statement.executeUpdate("DROP TABLE entity_id_record");
+            }
+        }
+    }
+
+    // The same for composite ids given as id beans: Filters.anyOfAllEqual rendered a null id property as IS NULL, so
+    // batchGet/count(ids) with an id class or the entity itself as the id type returned/counted every row holding NULL in a
+    // nullable key column (two of them: DuplicateResultException from batchGet) that getOrNull/exists (binding NULL) do not
+    // find. A null component matches no row on the batch paths as well now.
+    @Test
+    public void testBatchGetAndCount_CompositeBeanIdNullComponentMatchesNoRow_NullableKeyColumn() throws SQLException {
+        try (Connection connection = ds.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE entity_id_record(tenant_id BIGINT, row_id BIGINT, name VARCHAR(64))");
+            try {
+                statement.executeUpdate("INSERT INTO entity_id_record VALUES(1, NULL, 'null row'), (1, NULL, 'another null row'), (1, 2, 'target')");
+                final JdbcUtil.DaoCreationOptions options = JdbcUtil.DaoCreationOptions.builder().targetTableName("entity_id_record").build();
+                final CompositeRefreshDao idClassDao = JdbcUtil.createDao(CompositeRefreshDao.class, ds, options);
+                final UncheckedCompositeRefreshDao uncheckedIdClassDao = JdbcUtil.createDao(UncheckedCompositeRefreshDao.class, ds, options);
+                final EntityAsCompositeIdDao entityAsIdDao = JdbcUtil.createDao(EntityAsCompositeIdDao.class, ds, options);
+                final UncheckedEntityAsCompositeIdDao uncheckedEntityAsIdDao = JdbcUtil.createDao(UncheckedEntityAsCompositeIdDao.class, ds, options);
+
+                final GeneratedKeyRowId nullRowId = new GeneratedKeyRowId();
+                nullRowId.setTenantId(1L);
+                final GeneratedKeyRowId complete = new GeneratedKeyRowId();
+                complete.setTenantId(1L);
+                complete.setRowId(2L);
+                final CompositeKeyRow nullRowIdEntity = new CompositeKeyRow();
+                nullRowIdEntity.setTenantId(1L);
+                nullRowIdEntity.setName("ignored");
+                final CompositeKeyRow completeEntity = newCompositeKeyRow(1, 2, "ignored");
+
+                // The single-id semantics the batch paths now share.
+                assertFalse(idClassDao.exists(nullRowId));
+                assertFalse(entityAsIdDao.exists(nullRowIdEntity));
+
+                assertTrue(idClassDao.batchGet(List.of(nullRowId)).isEmpty());
+                assertEquals(0, idClassDao.count(List.of(nullRowId)));
+                assertTrue(uncheckedIdClassDao.batchGet(List.of(nullRowId)).isEmpty());
+                assertEquals(0, uncheckedIdClassDao.count(List.of(nullRowId)));
+                assertTrue(entityAsIdDao.batchGet(List.of(nullRowIdEntity)).isEmpty());
+                assertEquals(0, entityAsIdDao.count(List.of(nullRowIdEntity)));
+                assertTrue(uncheckedEntityAsIdDao.batchGet(List.of(nullRowIdEntity)).isEmpty());
+                assertEquals(0, uncheckedEntityAsIdDao.count(List.of(nullRowIdEntity)));
+
+                // A complete id still matches, next to one that can't and a null id, in the same and in its own chunk.
+                final List<CompositeKeyRow> rows = idClassDao.batchGet(Arrays.asList(nullRowId, null, complete), null, 2);
+                assertEquals(1, rows.size());
+                assertEquals("target", rows.get(0).getName());
+                assertEquals(1, idClassDao.count(Arrays.asList(nullRowId, null, complete)));
+                assertEquals(1, uncheckedIdClassDao.batchGet(Arrays.asList(nullRowId, null, complete), null, 1).size());
+                assertEquals("target", entityAsIdDao.batchGet(List.of(nullRowIdEntity, completeEntity), null, 1).get(0).getName());
+                assertEquals(1, entityAsIdDao.count(List.of(nullRowIdEntity, completeEntity)));
+                assertEquals("target", uncheckedEntityAsIdDao.batchGet(List.of(nullRowIdEntity, completeEntity)).get(0).getName());
+                assertEquals(1, uncheckedEntityAsIdDao.count(List.of(nullRowIdEntity, completeEntity)));
+            } finally {
+                statement.executeUpdate("DROP TABLE entity_id_record");
+            }
+        }
+    }
+
     // A plain (non-CRUD) Dao declares no ID type.
     public interface CompositeKeyRowDao extends Dao<CompositeKeyRow, CompositeKeyRowDao> {
     }
@@ -703,6 +956,147 @@ public class DaoImplIntegrationTest extends TestBase {
             assertFalse(checked.refresh(missing));
             assertFalse(unchecked.refresh(missing, List.of("name")));
             assertEquals("unchanged", missing.getName());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS composite_key_row");
+            }
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    public interface RawMapIdDao extends CrudDao<CompositeKeyRow, Map, RawMapIdDao> {
+    }
+
+    public interface MapIdDao extends CrudDao<CompositeKeyRow, Map<String, Object>, MapIdDao> {
+    }
+
+    // A Map ID type is not supported (ids are read from and returned as EntityId/bean/record instances): it is rejected
+    // with a message naming the problem instead of "must be EntityId/Entity/Record" or "Failed to resolve ... type parameters".
+    @Test
+    public void testCreateDao_MapIdTypeRejected() {
+        for (final Class<? extends CrudDao> daoClass : List.<Class<? extends CrudDao>> of(RawMapIdDao.class, MapIdDao.class)) {
+            final IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createDao((Class) daoClass, ds));
+            assertTrue(e.getMessage().contains("can't be a Map"), e.getMessage());
+        }
+    }
+
+    public static class TenantOnlyId {
+        private Long tenantId;
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+    }
+
+    public interface TenantOnlyIdDao extends CrudDao<CompositeKeyRow, TenantOnlyId, TenantOnlyIdDao> {
+    }
+
+    public record TenantOnlyIdRecord(Long tenantId) {
+    }
+
+    public interface TenantOnlyIdRecordDao extends CrudDao<CompositeKeyRow, TenantOnlyIdRecord, TenantOnlyIdRecordDao> {
+    }
+
+    // A composite id class lacking one of the entity's id properties was accepted and every id-based call failed with a
+    // NullPointerException; it is rejected at DAO creation, naming the missing property.
+    @Test
+    public void testCreateDao_CompositeIdClassMissingIdPropertyRejected() {
+        for (final Class<? extends CrudDao> daoClass : List.<Class<? extends CrudDao>> of(TenantOnlyIdDao.class, TenantOnlyIdRecordDao.class)) {
+            final IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createDao((Class) daoClass, ds));
+            assertTrue(e.getMessage().contains("has no property: rowId"), e.getMessage());
+        }
+
+        // Guard: a complete id class is still accepted.
+        assertNotNull(JdbcUtil.createDao(CompositeRefreshDao.class, ds));
+    }
+
+    // An INSERT into another table from a DAO whose entity has a long id was rejected at creation for an int return type;
+    // its int key, read with the entity's id type (Long), is returned as the declared type.
+    public interface AuditLogDao extends Dao<UserAccount, AuditLogDao> {
+        @Query("INSERT INTO audit_log (msg) VALUES (?)")
+        int log(String msg) throws SQLException;
+
+        @Query("INSERT INTO audit_log (msg) VALUES (?)")
+        Optional<Integer> logReturningOptional(String msg) throws SQLException;
+
+        @Query(value = "INSERT INTO audit_log (msg) VALUES (?)", batch = true, collectionAsSingleParameter = true)
+        List<Integer> logAll(List<String> msgs) throws SQLException;
+    }
+
+    @Test
+    public void testCustomInsert_IntoAnotherTableReturnsItsKeyAsTheDeclaredType() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("DROP TABLE IF EXISTS audit_log");
+            st.execute("CREATE TABLE audit_log (id INT AUTO_INCREMENT PRIMARY KEY, msg VARCHAR(64))");
+        }
+
+        try {
+            final AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, ds);
+
+            assertEquals(1, auditDao.log("a"));
+            assertEquals(Integer.valueOf(2), auditDao.logReturningOptional("b").get());
+            assertEquals(List.of(3, 4), auditDao.logAll(List.of("c", "d")));
+
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM audit_log")) {
+                assertTrue(rs.next());
+                assertEquals(4, rs.getInt(1));
+            }
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS audit_log");
+            }
+        }
+    }
+
+    // A plain Dao returns a composite id as a Seid (an EntityId): a custom insert declared to return Seid was rejected.
+    public interface SeidInsertDao extends Dao<CompositeKeyRow, SeidInsertDao> {
+        @Query("INSERT INTO composite_key_row (tenant_id, row_id, name) VALUES (:tenantId, :rowId, :name)")
+        com.landawn.abacus.util.Seid insertRow(CompositeKeyRow row) throws SQLException;
+
+        @Query("INSERT INTO composite_key_row (tenant_id, row_id, name) VALUES (:tenantId, :rowId, :name)")
+        com.landawn.abacus.util.EntityId insertRowAsEntityId(CompositeKeyRow row) throws SQLException;
+
+        @Query(value = "INSERT INTO composite_key_row (tenant_id, row_id, name) VALUES (:tenantId, :rowId, :name)", batch = true)
+        List<com.landawn.abacus.util.Seid> batchInsertRows(List<CompositeKeyRow> rows) throws SQLException;
+    }
+
+    public interface NarrowCompositeIdInsertDao extends Dao<CompositeKeyRow, NarrowCompositeIdInsertDao> {
+        @Query("INSERT INTO composite_key_row (tenant_id, row_id, name) VALUES (:tenantId, :rowId, :name)")
+        Long insertRow(CompositeKeyRow row) throws SQLException;
+    }
+
+    @Test
+    public void testCustomInsert_CompositeIdReturnedAsSeid() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS composite_key_row (tenant_id BIGINT, row_id BIGINT, name VARCHAR(64), PRIMARY KEY (tenant_id, row_id))");
+            st.execute("DELETE FROM composite_key_row");
+        }
+
+        try {
+            final SeidInsertDao seidDao = JdbcUtil.createDao(SeidInsertDao.class, ds);
+
+            final com.landawn.abacus.util.Seid id = seidDao.insertRow(newCompositeKeyRow(1, 2, "a"));
+            assertEquals(Long.valueOf(1L), id.<Long> get("tenantId"));
+            assertEquals(Long.valueOf(2L), id.<Long> get("rowId"));
+
+            final com.landawn.abacus.util.EntityId entityId = seidDao.insertRowAsEntityId(newCompositeKeyRow(1, 3, "b"));
+            assertEquals(Long.valueOf(3L), entityId.<Long> get("rowId"));
+
+            final List<com.landawn.abacus.util.Seid> ids = seidDao.batchInsertRows(List.of(newCompositeKeyRow(2, 1, "c"), newCompositeKeyRow(2, 2, "d")));
+            assertEquals(List.of(1L, 2L), Stream.of(ids).map(it -> it.get("rowId")).toList());
+
+            // Guard: a type the returned id isn't is still rejected.
+            assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao(NarrowCompositeIdInsertDao.class, ds));
         } finally {
             try (Connection conn = ds.getConnection();
                  Statement st = conn.createStatement()) {
@@ -925,6 +1319,29 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(1, dao.count(Criteria.builder().where(Filters.eq("age", 18)).limit(1, 5).build()));
     }
 
+    // The same for an outer LIMIT/OFFSET/ORDER BY written at the end of a literal condition: it used to be used verbatim,
+    // so an OFFSET made the count 0 and ORDER BY failed next to the aggregate.
+    @Test
+    public void testCount_IgnoresTrailingLimitOffsetAndOrderByOfLiteralCondition() throws SQLException {
+        dao.insert(newUser("Q1", "Cond", 18));
+        dao.insert(newUser("Q2", "Cond", 25));
+        dao.insert(newUser("Q3", "Cond", 25));
+        dao.insert(newUser("Q4", "Other", 25));
+
+        assertEquals(3, dao.count(Filters.expr("last_name = 'Cond' LIMIT 1 OFFSET 1")));
+        assertEquals(3, dao.count(Filters.expr("last_name = 'Cond' ORDER BY id")));
+        assertEquals(3, dao.count(Filters.expr("last_name = 'Cond' ORDER BY id OFFSET 1 ROWS FETCH NEXT 1 ROWS ONLY")));
+        assertEquals(3, dao.count(Criteria.builder().where(Filters.expr("last_name = 'Cond' ORDER BY id LIMIT 1 OFFSET 1")).build()));
+        assertEquals(3, dao.count(Filters.where(Filters.expr("last_name = 'Cond' LIMIT 1 OFFSET 1"))));
+        assertEquals(4, dao.count(Filters.expr("ORDER BY id LIMIT 1 OFFSET 1")));
+
+        // Unchanged: clauses inside a subquery, a quoted literal or a comment, and a literal with its own GROUP BY.
+        assertEquals(2, dao.count(Filters.expr("id IN (SELECT id FROM user_account WHERE last_name = 'Cond' ORDER BY id LIMIT 2)")));
+        assertEquals(4, dao.count(Filters.expr("last_name <> 'x LIMIT 1 OFFSET 1'")));
+        assertEquals(3, dao.count(Filters.expr("last_name = 'Cond' -- LIMIT 1 OFFSET 1")));
+        assertEquals(3, dao.count(Filters.expr("age > 0 GROUP BY age ORDER BY age DESC LIMIT 1")));
+    }
+
     // upsert inserts when absent and updates when the unique-prop match exists.
     @Test
     public void testUpsert() throws SQLException {
@@ -1099,6 +1516,45 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(0, dao.count(Filters.eq("firstName", "UpsertFresh")));
     }
 
+    // Outside any transaction, a mixed batchUpsert (inserts and updates) runs in a transaction of its own. When the update
+    // fails, that transaction rolls back and batchInsert, which registered the pre-insert IDs with it, puts them back:
+    // batchUpsert no longer restores them itself, so the end-to-end path is pinned here for both DAO twins, with a
+    // single-row and a multi-row insert part (the two batchInsert branches).
+    @Test
+    public void testBatchUpsert_OwnTransactionFailureRestoresInsertedIds() throws SQLException {
+        final Long existingId = dao.insert(newUser("UpsertKeep", "Before", 40));
+        final UncheckedUserAccountCrudDao uncheckedDao = JdbcUtil.createDao(UncheckedUserAccountCrudDao.class, ds);
+
+        for (final int freshCount : new int[] { 1, 2 }) {
+            final List<UserAccount> fresh = new ArrayList<>();
+
+            for (int i = 0; i < freshCount; i++) {
+                fresh.add(newUser("UpsertFresh" + i, "New", 41 + i));
+            }
+
+            final List<UserAccount> batch = new ArrayList<>(fresh);
+            batch.add(newUser("UpsertKeep", "x".repeat(65), 50));
+
+            assertThrows(SQLException.class, () -> dao.batchUpsert(batch, List.of("firstName"), 10));
+            assertInsertedIdsRestoredAndRowsAbsent(fresh, existingId);
+
+            final List<UserAccount> uncheckedBatch = new ArrayList<>(fresh);
+            uncheckedBatch.add(newUser("UpsertKeep", "x".repeat(65), 50));
+
+            assertThrows(com.landawn.abacus.exception.UncheckedSQLException.class, () -> uncheckedDao.batchUpsert(uncheckedBatch, List.of("firstName"), 10));
+            assertInsertedIdsRestoredAndRowsAbsent(fresh, existingId);
+        }
+    }
+
+    private void assertInsertedIdsRestoredAndRowsAbsent(final List<UserAccount> fresh, final Long existingId) throws SQLException {
+        for (final UserAccount account : fresh) {
+            assertNull(account.getId(), "the ID of a row that was rolled back must be put back");
+        }
+
+        assertEquals(0, dao.count(Filters.eq("lastName", "New")));
+        assertEquals("Before", dao.getOrNull(existingId).getLastName());
+    }
+
     // SqlTransaction.commit() rethrows an unchecked failure from resetting/releasing the connection after the rows were
     // committed; the generated IDs of those committed rows must then be kept, not restored. (Also passes on pass9-baseline,
     // which never restored IDs.)
@@ -1141,6 +1597,262 @@ public class DaoImplIntegrationTest extends TestBase {
         assertNotNull(fresh.getId(), "the rows were committed, so the generated ID must be kept");
         assertEquals("UpsertFresh", dao.getOrNull(fresh.getId()).getFirstName());
         assertEquals("After", dao.getOrNull(existingId).getLastName());
+    }
+
+    // A @Query(batch = true) INSERT of entities ran its transaction like the built-in batchInsert but rethrew a failure of the
+    // connection cleanup after the commit went through before writing the generated keys back: two committed rows left both
+    // entity IDs null, so a retry would duplicate them. The keys are written back before the failure is rethrown now.
+    @Test
+    public void testCustomBatchInsert_ConnectionCleanupFailureAfterCommitKeepsInsertedIds() throws SQLException {
+        final DataSource cleanupFailingDs = newCleanupFailingAfterCommitDataSource();
+        final CrossTableInsertDao cleanupFailingDao = JdbcUtil.createDao(CrossTableInsertDao.class, cleanupFailingDs);
+        final UncheckedCrossTableInsertDao uncheckedCleanupFailingDao = JdbcUtil.createDao(UncheckedCrossTableInsertDao.class, cleanupFailingDs);
+        final UserAccount first = newUser("CustomBatchKeep", "One", 51);
+        final UserAccount second = newUser("CustomBatchKeep", "Two", 52);
+        final UserAccount third = newUser("CustomBatchKeep", "Three", 53);
+        final UserAccount fourth = newUser("CustomBatchKeep", "Four", 54);
+
+        assertThrows(IllegalStateException.class, () -> cleanupFailingDao.batchInsertAccountsWildcard(List.of(first, second)));
+        assertThrows(IllegalStateException.class, () -> uncheckedCleanupFailingDao.batchInsertAccountsWildcard(List.of(third, fourth)));
+
+        for (final UserAccount account : List.of(first, second, third, fourth)) {
+            assertNotNull(account.getId(), "the rows were committed, so the generated ID must be kept");
+        }
+
+        assertEquals("One", dao.getOrNull(first.getId()).getLastName());
+        assertEquals("Two", dao.getOrNull(second.getId()).getLastName());
+        assertEquals("Three", dao.getOrNull(third.getId()).getLastName());
+        assertEquals("Four", dao.getOrNull(fourth.getId()).getLastName());
+        assertEquals(4, dao.count(Filters.eq("firstName", "CustomBatchKeep")));
+    }
+
+    public interface UncheckedCrossTableInsertDao extends UncheckedCrudDao<UserAccount, Long, UncheckedCrossTableInsertDao> {
+        @Query(value = "INSERT INTO user_account (first_name, last_name, age, active) VALUES (:firstName, :lastName, :age, :active)", batch = true)
+        void batchInsertAccountsWildcard(Collection<? extends UserAccount> accounts);
+
+        // One-parameter SQL: NamedQuery binds a null row as a single NULL, so a null row that escapes the entity-batch check is inserted.
+        @Query(value = "INSERT INTO user_account (first_name) VALUES (:firstName)", batch = true)
+        void batchInsertFirstNames(Collection<? extends UserAccount> accounts);
+
+        @Query(value = "INSERT INTO user_account (first_name) VALUES (:firstName)", batch = true)
+        void batchInsertFirstNamesTyped(List<UserAccount> accounts);
+
+        @Query(value = "INSERT INTO user_account (first_name, last_name, age, active) VALUES (:firstName, :lastName, :age, :active)", batch = true)
+        void batchInsertSerializableAccounts(Collection<? extends java.io.Serializable> accounts);
+
+        @Query("INSERT INTO dao_it_audit_note (note) VALUES (:note)")
+        void insertAuditNoteMap(Map<String, Object> note);
+
+        @Query(value = "INSERT INTO dao_it_audit_note (note) VALUES (:note)", batch = true)
+        void batchInsertAuditNoteMaps(Collection<? extends Map<String, Object>> notes);
+    }
+
+    /** An entity subclass implementing an interface the entity class itself does not implement. */
+    public static class SerializableUserAccount extends UserAccount implements java.io.Serializable {
+        private static final long serialVersionUID = 1L;
+    }
+
+    // A @Query(batch = true) INSERT decided whether its rows were DAO entities from the FIRST row, so an entity batch whose
+    // first row was null passed for a non-entity batch: with a one-parameter SQL the null row was inserted as an all-null row
+    // and the real entities never received their generated keys (with more parameters it failed inside NamedQuery, after the
+    // transaction had begun), while the same batch with the null row last was rejected up front. The decision is made from
+    // the declared element type or the first non-null row now, and every row is validated before anything runs.
+    @Test
+    public void testCustomBatchInsert_LeadingNullEntityRowIsRejectedBeforeAnythingRuns() throws SQLException {
+        final CrossTableInsertDao crossDao = JdbcUtil.createDao(CrossTableInsertDao.class, ds);
+        final UncheckedCrossTableInsertDao uncheckedCrossDao = JdbcUtil.createDao(UncheckedCrossTableInsertDao.class, ds);
+        final int rowsBefore = countUserAccounts();
+        final UserAccount checkedAccount = newUser("LeadingNull", "Checked", 61);
+        final UserAccount uncheckedAccount = newUser("LeadingNull", "Unchecked", 62);
+
+        assertThrows(IllegalArgumentException.class, () -> crossDao.batchInsertFirstNames(Arrays.asList(null, checkedAccount)));
+        assertThrows(IllegalArgumentException.class, () -> uncheckedCrossDao.batchInsertFirstNames(Arrays.asList(null, uncheckedAccount)));
+        assertThrows(IllegalArgumentException.class, () -> crossDao.batchInsertAccountsWildcard(Arrays.asList(null, checkedAccount)));
+        assertThrows(IllegalArgumentException.class, () -> uncheckedCrossDao.batchInsertAccountsWildcard(Arrays.asList(null, uncheckedAccount)));
+        // The null row last is still rejected.
+        assertThrows(IllegalArgumentException.class, () -> crossDao.batchInsertFirstNames(Arrays.asList(checkedAccount, null)));
+        assertThrows(IllegalArgumentException.class, () -> uncheckedCrossDao.batchInsertFirstNames(Arrays.asList(uncheckedAccount, null)));
+        // An all-null batch of a method whose declared element type is the DAO entity is an entity batch too.
+        assertThrows(IllegalArgumentException.class, () -> crossDao.batchInsertFirstNamesTyped(Arrays.asList((UserAccount) null)));
+        assertThrows(IllegalArgumentException.class, () -> uncheckedCrossDao.batchInsertFirstNamesTyped(Arrays.asList((UserAccount) null)));
+        assertThrows(IllegalArgumentException.class, () -> crossDao.batchInsertFirstNamesTyped(Arrays.asList(null, null)));
+        assertThrows(IllegalArgumentException.class, () -> uncheckedCrossDao.batchInsertFirstNamesTyped(Arrays.asList(null, null)));
+        // A wildcard-bounded element type (Collection<? extends UserAccount>) declares an entity batch as well: all-null rows were
+        // neither recognised by declaration nor by a non-null row, and were inserted.
+        assertThrows(IllegalArgumentException.class, () -> crossDao.batchInsertFirstNames(Arrays.asList((UserAccount) null)));
+        assertThrows(IllegalArgumentException.class, () -> uncheckedCrossDao.batchInsertFirstNames(Arrays.asList((UserAccount) null)));
+        assertThrows(IllegalArgumentException.class, () -> crossDao.batchInsertFirstNames(Arrays.asList(null, null)));
+        assertThrows(IllegalArgumentException.class, () -> uncheckedCrossDao.batchInsertFirstNames(Arrays.asList(null, null)));
+        assertThrows(IllegalArgumentException.class, () -> crossDao.batchInsertAccountsWildcard(Arrays.asList(null, null)));
+        assertThrows(IllegalArgumentException.class, () -> uncheckedCrossDao.batchInsertAccountsWildcard(Arrays.asList(null, null)));
+
+        assertNull(checkedAccount.getId());
+        assertNull(uncheckedAccount.getId());
+        assertEquals(rowsBefore, countUserAccounts(), "neither a real row nor an all-null row was inserted");
+
+        // The same methods still write the generated keys back onto a batch without null rows.
+        final UserAccount checkedSecond = newUser("LeadingNull", "Checked2", 63);
+        final UserAccount uncheckedSecond = newUser("LeadingNull", "Unchecked2", 64);
+        crossDao.batchInsertFirstNames(List.of(checkedAccount, checkedSecond));
+        uncheckedCrossDao.batchInsertFirstNamesTyped(List.of(uncheckedAccount, uncheckedSecond));
+
+        for (final UserAccount account : List.of(checkedAccount, checkedSecond, uncheckedAccount, uncheckedSecond)) {
+            assertNotNull(account.getId(), account.getLastName());
+            assertEquals("LeadingNull", dao.getOrNull(account.getId()).getFirstName());
+        }
+
+        assertEquals(rowsBefore + 4, countUserAccounts());
+    }
+
+    // A non-entity batch (Map rows) with a leading null row keeps its behaviour: the null row is bound as a single NULL
+    // parameter (one-parameter SQL) and inserted, not rejected.
+    // An element type bound to an interface the entity class does not implement (Collection<? extends Serializable>) was taken
+    // as excluding the entity, so a void batch INSERT requested no generated keys and entity SUBCLASS rows implementing the
+    // interface committed with null IDs. A subclass of a non-final entity class may implement any interface: the keys are
+    // requested and written back. (A bare interface parameter of a named query is rejected at DAO creation, so only the batch
+    // form can carry such rows.)
+    @Test
+    public void testCustomInsert_InterfaceBoundSatisfiedByAnEntitySubclass_WritesTheGeneratedIdBack() throws SQLException {
+        final CrossTableInsertDao crossDao = JdbcUtil.createDao(CrossTableInsertDao.class, ds);
+        final UncheckedCrossTableInsertDao uncheckedCrossDao = JdbcUtil.createDao(UncheckedCrossTableInsertDao.class, ds);
+        final SerializableUserAccount first = newSerializableUser("IfaceBound", "One", 63);
+        final SerializableUserAccount second = newSerializableUser("IfaceBound", "Two", 64);
+        final SerializableUserAccount uncheckedFirst = newSerializableUser("IfaceBound", "UOne", 65);
+        final SerializableUserAccount uncheckedSecond = newSerializableUser("IfaceBound", "UTwo", 66);
+
+        crossDao.batchInsertSerializableAccounts(List.of(first, second));
+        uncheckedCrossDao.batchInsertSerializableAccounts(List.of(uncheckedFirst, uncheckedSecond));
+
+        for (final UserAccount account : List.of(first, second, uncheckedFirst, uncheckedSecond)) {
+            assertNotNull(account.getId(), "the row was committed, so the generated ID must be written back: " + account.getLastName());
+            assertEquals(account.getLastName(), dao.getOrNull(account.getId()).getLastName());
+        }
+
+        assertEquals(4, dao.count(Filters.eq("firstName", "IfaceBound")));
+        // A null row of such a batch is still rejected before anything runs.
+        assertThrows(IllegalArgumentException.class, () -> crossDao.batchInsertSerializableAccounts(Arrays.asList(first, null)));
+        assertThrows(IllegalArgumentException.class, () -> uncheckedCrossDao.batchInsertSerializableAccounts(Arrays.asList(null, uncheckedFirst)));
+        assertEquals(4, dao.count(Filters.eq("firstName", "IfaceBound")));
+    }
+
+    // Map rows are bound as maps and never written back to, so a Map parameter or a Map-bounded element type is a non-entity
+    // argument: counting Map as "an interface an entity subclass may implement" made these void INSERTs into a table without
+    // the entity's id column request that column as a generated key ("Column id not found" on H2).
+    @Test
+    public void testCustomVoidInsert_MapRowsIntoAnotherTableRequestNoGeneratedKeys() throws SQLException {
+        final CrossTableInsertDao crossDao = JdbcUtil.createDao(CrossTableInsertDao.class, ds);
+        final UncheckedCrossTableInsertDao uncheckedCrossDao = JdbcUtil.createDao(UncheckedCrossTableInsertDao.class, ds);
+        final List<Map<String, Object>> rows = List.of(Map.of("note", "map-batch-1"), Map.of("note", "map-batch-2"));
+
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS dao_it_audit_note (note VARCHAR(64))");
+            st.execute("DELETE FROM dao_it_audit_note");
+        }
+
+        try {
+            crossDao.insertAuditNoteMap(Map.of("note", "map-single"));
+            uncheckedCrossDao.insertAuditNoteMap(Map.of("note", "map-usingle"));
+            crossDao.batchInsertAuditNoteMaps(rows);
+            uncheckedCrossDao.batchInsertAuditNoteMaps(rows);
+
+            assertEquals(6, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM dao_it_audit_note").queryForInt().orElseThrow());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS dao_it_audit_note");
+            }
+        }
+    }
+
+    private static SerializableUserAccount newSerializableUser(final String firstName, final String lastName, final int age) {
+        final SerializableUserAccount account = new SerializableUserAccount();
+        account.setFirstName(firstName);
+        account.setLastName(lastName);
+        account.setAge(age);
+        account.setActive(true);
+        return account;
+    }
+
+    // A null or empty batch collection executes no statement (@Query#batch()): classifying the batch iterated it before that
+    // branch, so a null collection threw a NullPointerException for typed and wildcard entity batches alike.
+    @Test
+    public void testCustomBatchInsert_NullOrEmptyBatchIsANoOp() throws SQLException {
+        final CrossTableInsertDao crossDao = JdbcUtil.createDao(CrossTableInsertDao.class, ds);
+        final UncheckedCrossTableInsertDao uncheckedCrossDao = JdbcUtil.createDao(UncheckedCrossTableInsertDao.class, ds);
+        final long before = dao.count(Filters.expr("1 = 1"));
+
+        crossDao.batchInsertFirstNames(null);
+        crossDao.batchInsertFirstNames(List.of());
+        crossDao.batchInsertFirstNamesTyped(null);
+        crossDao.batchInsertFirstNamesTyped(List.of());
+        crossDao.batchInsertAccountsWildcard(null);
+        uncheckedCrossDao.batchInsertFirstNames(null);
+        uncheckedCrossDao.batchInsertFirstNames(List.of());
+        uncheckedCrossDao.batchInsertFirstNamesTyped(null);
+        uncheckedCrossDao.batchInsertAccountsWildcard(List.of());
+
+        assertEquals(before, dao.count(Filters.expr("1 = 1")));
+    }
+
+    @Test
+    public void testCustomBatchInsert_NonEntityBatchWithLeadingNullRowIsStillInserted() throws SQLException {
+        final CrossTableInsertDao crossDao = JdbcUtil.createDao(CrossTableInsertDao.class, ds);
+
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS dao_it_audit_note (note VARCHAR(64))");
+            st.execute("DELETE FROM dao_it_audit_note");
+        }
+
+        try {
+            crossDao.batchInsertAuditNotes(Arrays.asList(null, Map.of("note", "after-null")));
+
+            assertEquals(2, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM dao_it_audit_note").queryForInt().orElseThrow());
+            assertEquals(1, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM dao_it_audit_note WHERE note IS NULL").queryForInt().orElseThrow());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS dao_it_audit_note");
+            }
+        }
+    }
+
+    private int countUserAccounts() throws SQLException {
+        return JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM user_account").queryForInt().orElseThrow();
+    }
+
+    // A DataSource whose connections commit and then fail (IllegalStateException) when auto-commit is restored afterwards,
+    // which is how SqlTransaction.commit() throws after the commit went through.
+    private DataSource newCleanupFailingAfterCommitDataSource() throws SQLException {
+        final java.util.concurrent.atomic.AtomicBoolean failNextAutoCommitReset = new java.util.concurrent.atomic.AtomicBoolean();
+        final DataSource cleanupFailingDs = org.mockito.Mockito.mock(DataSource.class, org.mockito.AdditionalAnswers.delegatesTo(ds));
+
+        org.mockito.Mockito.doAnswer(dsInvocation -> {
+            final Connection conn = ds.getConnection();
+            final Connection failingConn = org.mockito.Mockito.mock(Connection.class, org.mockito.AdditionalAnswers.delegatesTo(conn));
+
+            org.mockito.Mockito.doAnswer(invocation -> {
+                conn.commit();
+                failNextAutoCommitReset.set(true);
+                return null;
+            }).when(failingConn).commit();
+
+            org.mockito.Mockito.doAnswer(invocation -> {
+                final boolean autoCommit = invocation.getArgument(0);
+
+                if (autoCommit && failNextAutoCommitReset.getAndSet(false)) {
+                    throw new IllegalStateException("connection cleanup failed after commit");
+                }
+
+                conn.setAutoCommit(autoCommit);
+                return null;
+            }).when(failingConn).setAutoCommit(org.mockito.ArgumentMatchers.anyBoolean());
+
+            return failingConn;
+        }).when(cleanupFailingDs).getConnection();
+
+        return cleanupFailingDs;
     }
 
     // getOrNull with an unknown id returns null and exists is false (no-row branch).
@@ -1819,6 +2531,46 @@ public class DaoImplIntegrationTest extends TestBase {
         assertEquals(List.of("Imm2", "Imm1"), merged.stream().map(UserAccount::getFirstName).toList());
     }
 
+    // An Iterable (or SequencedCollection) return type fell through to the single-value dispatch, and the abstract
+    // ImmutableCollection failed creating its result collection: every call failed. They are served as a List/ImmutableList.
+    public interface IterableReturnDao extends CrudDao<UserAccount, Long, IterableReturnDao> {
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        Iterable<UserAccount> iterableByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query(value = "SELECT first_name FROM user_account WHERE last_name = :ln ORDER BY id", op = QueryOperation.list)
+        Iterable<String> firstNamesByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        java.util.SequencedCollection<UserAccount> sequencedByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        com.landawn.abacus.util.ImmutableCollection<UserAccount> immutableCollectionByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln)
+                throws SQLException;
+
+        @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MergedById
+        Iterable<UserAccount> mergedIterableByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+    }
+
+    @Test
+    public void testCustomSelect_IterableAndImmutableCollectionReturnTypes() throws SQLException {
+        final IterableReturnDao iterableDao = JdbcUtil.createDao(IterableReturnDao.class, ds);
+        dao.insert(newUser("It2", "It", 20));
+        dao.insert(newUser("It1", "It", 10));
+
+        final List<String> expected = List.of("It2", "It1");
+
+        assertEquals(expected, Stream.of(iterableDao.iterableByLastName("It")).map(UserAccount::getFirstName).toList());
+        assertEquals(expected, Stream.of(iterableDao.firstNamesByLastName("It")).toList());
+        assertEquals(expected, Stream.of(iterableDao.sequencedByLastName("It")).map(UserAccount::getFirstName).toList());
+        assertEquals(expected, Stream.of(iterableDao.mergedIterableByLastName("It")).map(UserAccount::getFirstName).toList());
+
+        final com.landawn.abacus.util.ImmutableCollection<UserAccount> immutable = iterableDao.immutableCollectionByLastName("It");
+        assertTrue(immutable instanceof ImmutableList);
+        assertEquals(expected, immutable.stream().map(UserAccount::getFirstName).toList());
+        assertTrue(Stream.of(iterableDao.iterableByLastName("None")).toList().isEmpty());
+    }
+
     @Test
     public void testCustomSelect_StreamReturn() throws SQLException {
         final AnnotatedQueryDao aqDao = JdbcUtil.createDao(AnnotatedQueryDao.class, ds);
@@ -2100,6 +2852,22 @@ public class DaoImplIntegrationTest extends TestBase {
         @SuppressWarnings("rawtypes")
         @Query(value = "INSERT INTO user_account (first_name, last_name, age, active) VALUES (:firstName, :lastName, :age, :active)", batch = true)
         void batchInsertAccountsRaw(Collection accounts, int batchSize) throws SQLException;
+
+        // One-parameter SQL: NamedQuery binds a null row as a single NULL, so a null row that escapes the entity-batch check is inserted.
+        @Query(value = "INSERT INTO user_account (first_name) VALUES (:firstName)", batch = true)
+        void batchInsertFirstNames(Collection<? extends UserAccount> accounts) throws SQLException;
+
+        @Query(value = "INSERT INTO user_account (first_name) VALUES (:firstName)", batch = true)
+        void batchInsertFirstNamesTyped(List<UserAccount> accounts) throws SQLException;
+
+        @Query(value = "INSERT INTO user_account (first_name, last_name, age, active) VALUES (:firstName, :lastName, :age, :active)", batch = true)
+        void batchInsertSerializableAccounts(Collection<? extends java.io.Serializable> accounts) throws SQLException;
+
+        @Query("INSERT INTO dao_it_audit_note (note) VALUES (:note)")
+        void insertAuditNoteMap(Map<String, Object> note) throws SQLException;
+
+        @Query(value = "INSERT INTO dao_it_audit_note (note) VALUES (:note)", batch = true)
+        void batchInsertAuditNoteMaps(Collection<? extends Map<String, Object>> notes) throws SQLException;
     }
 
     @Table("composite_gen_key")

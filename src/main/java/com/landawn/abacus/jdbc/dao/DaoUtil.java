@@ -37,6 +37,7 @@ import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.EntityId;
@@ -395,53 +396,11 @@ public final class DaoUtil {
     }
 
     /**
-     * Captures the current ID property values of the specified entities and returns an action that puts them back.
-     * <p>
-     * An insert writes generated IDs onto its entities as soon as its statements run. When it runs inside a
-     * transaction that is later rolled back, those rows no longer exist, so the returned action is used to undo
-     * the assignment instead of leaving the entities with the IDs of rolled-back rows.
-     * </p>
-     *
-     * @param entities the entities whose ID values are captured
-     * @param idPropNameList the ID property names of the entity class
-     * @param entityInfo the bean information for the entity class
-     * @return an action that writes back every captured ID value that has changed since the capture
-     */
-    static Runnable captureIdValues(final Collection<?> entities, final List<String> idPropNameList, final BeanInfo entityInfo) {
-        final List<PropInfo> idPropInfos = N.map(idPropNameList, entityInfo::getPropInfo);
-        final List<Object> entityList = new ArrayList<>(entities);
-        final List<Object[]> idValueList = new ArrayList<>(entityList.size());
-
-        for (final Object entity : entityList) {
-            final Object[] idValues = new Object[idPropInfos.size()];
-
-            for (int i = 0; i < idValues.length; i++) {
-                idValues[i] = idPropInfos.get(i).getPropValue(entity);
-            }
-
-            idValueList.add(idValues);
-        }
-
-        return () -> {
-            for (int i = 0, size = entityList.size(); i < size; i++) {
-                final Object entity = entityList.get(i);
-                final Object[] idValues = idValueList.get(i);
-
-                for (int j = 0; j < idValues.length; j++) {
-                    final PropInfo idPropInfo = idPropInfos.get(j);
-
-                    if (!N.equals(idPropInfo.getPropValue(entity), idValues[j])) {
-                        idPropInfo.setPropValue(entity, idValues[j]);
-                    }
-                }
-            }
-        };
-    }
-
-    /**
      * Builds the {@code WHERE} condition selecting the rows whose IDs are contained in the given (sub-)collection,
-     * dispatching on the shape of the IDs: {@link EntityId}s, {@link Map}s, a single-column id (rendered as an
-     * {@code IN} clause with an {@code IS NULL} branch when needed), or multi-column ids. Shared by
+     * dispatching on the shape of the IDs: a single-column id (rendered as an {@code IN} clause with an {@code IS NULL}
+     * branch when needed), or composite ids given as {@link EntityId}s, {@link Map}s or id beans/records (each matched
+     * on every declared id property, see {@link #entityIdToCondition(EntityId, List)} and
+     * {@link #compositeIdToCondition(Object, List)}). Shared by
      * {@link CrudReadOps#batchGet(Collection, Collection, int)} and
      * {@link CrudReadOps#count(Collection)}.
      *
@@ -449,27 +408,226 @@ public final class DaoUtil {
      * @param idPropNameList the id property names of the entity
      * @param isEntityId whether the IDs are {@link EntityId} instances
      * @param isMap whether the IDs are {@link Map} instances
-     * @return a condition matching any row whose id is in {@code ids}
-     * @throws IllegalArgumentException if {@code ids} is empty; if {@code isEntityId} and an element is {@code null} or is an
-     *                                  {@link EntityId} with no keys; if {@code isMap} and the non-null elements are not all
-     *                                  {@link Map}s, or one of them is empty or has a key that is not a non-blank {@link String};
-     *                                  or if {@code idPropNameList} holds more than one name and either it names a property that
-     *                                  is not readable from the ids, a non-null element of {@code ids} is a {@link Map}, or every
+     * @return a condition matching any row whose id is in {@code ids}, or {@code null} if no row can match because, for
+     *         composite ids, no element holds a non-null value for every name of {@code idPropNameList} (the callers skip
+     *         such a batch without querying)
+     * @throws IllegalArgumentException if {@code ids} or {@code idPropNameList} is empty; if {@code isEntityId} and an element
+     *                                  is {@code null}, is not an {@link EntityId} or is an {@link EntityId} with no keys; if
+     *                                  {@code isMap} and a non-null element is not a {@link Map}; if {@code idPropNameList}
+     *                                  holds more than one name and a non-null element is a {@link Map} while {@code isMap} is
+     *                                  {@code false}, is not a bean or record, or lacks a declared id property, or every
      *                                  element of {@code ids} is {@code null}
-     * @throws ClassCastException if {@code isEntityId} and a non-null element of {@code ids} is not an {@link EntityId}
      */
-    @SuppressWarnings("unchecked")
     static Condition idsToCondition(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap)
-            throws IllegalArgumentException, ClassCastException {
-        if (isEntityId) {
-            return Filters.idToCond((Collection<? extends EntityId>) ids);
-        } else if (isMap) {
-            return Filters.anyOfAllEqual(ids);
-        } else if (idPropNameList.size() == 1) {
+            throws IllegalArgumentException {
+        N.checkArgNotEmpty(ids, cs.ids);
+
+        if (!isEntityId && !isMap && idPropNameList.size() == 1) {
             return singlePropValuesToCondition(idPropNameList.get(0), ids);
-        } else {
-            return Filters.anyOfAllEqual(ids, idPropNameList);
         }
+
+        // WHY: Filters.idToCond(Collection) matched each EntityId on the keys it CONTAINS, so an id lacking a declared id
+        // property matched every row agreeing on the present ones (batchGet returned, count counted, foreign rows), and
+        // Filters.anyOfAllEqual matched a Map on the keys it contains and rendered a null id property of a Map or bean id as
+        // IS NULL, which matches every row holding NULL in a nullable key column, while getOrNull/exists/deleteById bind
+        // NULL for it and match none. Each id is now matched on every declared id property; one that can match no row is
+        // left out, and a batch of only such ids yields null, which the callers skip without a query (Filters.alwaysFalse()
+        // is deprecated in abacus-query).
+        N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
+
+        final List<Condition> conditions = new ArrayList<>(ids.size());
+        boolean hasNonNullId = isEntityId; // a null EntityId element is rejected by entityIdToCondition, not skipped.
+
+        for (final Object id : ids) {
+            final Condition idCond;
+
+            if (isEntityId) {
+                // WHY: a Map or bean among EntityIds was rejected with a ClassCastException by the cast below, while the reverse
+                // order (an EntityId among Maps/beans) is an IllegalArgumentException; every mixed batch is now an IAE.
+                N.checkArgNotNull(id, cs.id);
+                N.checkArgument(id instanceof EntityId, "All elements of 'ids' must be EntityIds when the first non-null one is, but found: %s", id.getClass());
+
+                idCond = entityIdToCondition((EntityId) id, idPropNameList);
+            } else if (id == null) {
+                // batchGet/count drop null Map/bean ids before chunking (Filters.anyOfAllEqual skipped them as well).
+                continue;
+            } else {
+                N.checkArgument(id instanceof Map == isMap,
+                        isMap ? "All non-null elements of 'ids' must be Maps when the first non-null one is a Map, but found: %s"
+                                : "All non-null elements of 'ids' must be beans or records when the first non-null one is, but found: %s",
+                        id.getClass());
+
+                idCond = compositeIdToCondition(id, idPropNameList);
+                hasNonNullId = true;
+            }
+
+            if (idCond != null) {
+                conditions.add(idCond);
+            }
+        }
+
+        N.checkArgument(hasNonNullId, "All specified ids are null");
+
+        return conditions.isEmpty() ? null : Filters.or(conditions);
+    }
+
+    /**
+     * Validates composite ids before {@link CrudReadOps#batchGet(Collection, Collection, int)} and
+     * {@link CrudReadOps#count(Collection)} de-duplicate them, with the rules {@link #idsToCondition(Collection, List, boolean, boolean)}
+     * applies per chunk. WHY: an invalid id (an empty {@link EntityId}, a bean whose class lacks a declared id property) can
+     * share its de-duplication key with a valid one and was then dropped silently, so whether it was rejected depended on
+     * the order of {@code ids}.
+     *
+     * @param ids the ids to validate
+     * @param idPropNameList the declared id property names of the entity (more than one)
+     * @param isEntityId whether the IDs are {@link EntityId} instances
+     * @param isMap whether the IDs are {@link Map} instances
+     * @throws IllegalArgumentException if {@code ids} or {@code idPropNameList} is empty; if {@code isEntityId} and an element
+     *                                  is {@code null}, is not an {@link EntityId} or is an {@link EntityId} with no keys; if
+     *                                  {@code isMap} and a non-null element is not a {@link Map}; if neither and a non-null
+     *                                  element is a {@link Map}, is not a bean or record, or its class lacks a declared id
+     *                                  property; or if not {@code isEntityId} and every element is {@code null}
+     */
+    static void checkCompositeIds(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap)
+            throws IllegalArgumentException {
+        N.checkArgNotEmpty(ids, cs.ids);
+        N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
+
+        boolean hasNonNullId = false;
+        Class<?> checkedIdClass = null;
+
+        for (final Object id : ids) {
+            if (isEntityId) {
+                // The element of 'ids' is named 'id' (cs.id), like the element checks of the Map/bean branches below.
+                N.checkArgNotNull(id, cs.id);
+                // WHY: a Map or bean among EntityIds was rejected with a ClassCastException by the cast below, while the reverse
+                // order (an EntityId among Maps/beans) is an IllegalArgumentException; every mixed batch is now an IAE.
+                N.checkArgument(id instanceof EntityId, "All elements of 'ids' must be EntityIds when the first non-null one is, but found: %s", id.getClass());
+                N.checkArgument(!((EntityId) id).isEmpty(), "An element of 'ids' is an EntityId with no keys");
+            } else if (id == null) {
+                continue;
+            } else if (isMap) {
+                N.checkArgument(id instanceof Map, "All non-null elements of 'ids' must be Maps when the first non-null one is a Map, but found: %s",
+                        id.getClass());
+            } else {
+                final Class<?> idClass = id.getClass();
+
+                if (idClass != checkedIdClass) {
+                    N.checkArgument(!(id instanceof Map),
+                            "All non-null elements of 'ids' must be beans or records when the first non-null one is, but found: %s", idClass);
+                    N.checkArgument(Beans.isBeanClass(idClass) || Beans.isRecordClass(idClass), "Composite id %s is not a Map, bean or record", idClass);
+
+                    final BeanInfo idBeanInfo = ParserUtil.getBeanInfo(idClass);
+
+                    for (final String idPropName : idPropNameList) {
+                        N.checkArgument(idBeanInfo.getPropInfo(idPropName) != null, "Id property '%s' is not readable from composite id class %s", idPropName,
+                                idClass);
+                    }
+
+                    checkedIdClass = idClass;
+                }
+            }
+
+            hasNonNullId = true;
+        }
+
+        N.checkArgument(isEntityId || hasNonNullId, "All specified ids are null");
+    }
+
+    /**
+     * Builds the condition matching the row a composite id given as a {@link Map} (keyed by id property name) or as an id
+     * bean/record identifies, under the rule of {@link #entityIdToCondition(EntityId, List)}: every DECLARED id property
+     * is compared ({@code name = ?}), an id that holds {@code null} for one, or a {@code Map} that lacks one, matches no
+     * row ({@code null} is returned), and {@code Map} keys or bean properties beyond the declared id properties are
+     * ignored, as the single-id lookups ignore them.
+     *
+     * <p>WHY: {@code Filters.anyOfAllEqual} rendered a {@code null} id property as {@code IS NULL}, which matches every
+     * row holding {@code NULL} in a nullable key column, and matched a {@code Map} on the keys it contains, so
+     * {@code batchGet}/{@code count(ids)} returned or counted rows that {@code getOrNull}/{@code exists} (binding
+     * {@code NULL}, which {@code =} never matches) do not find.</p>
+     *
+     * @param id the composite id: a {@link Map} or a bean/record exposing the declared id properties
+     * @param idPropNameList the declared id property names of the entity
+     * @return the condition, or {@code null} if {@code id} matches no row
+     * @throws IllegalArgumentException if {@code id} is {@code null}, or is neither a {@link Map} nor a bean or record, or
+     *                                  is a bean or record that does not expose a declared id property; or if
+     *                                  {@code idPropNameList} is {@code null} or empty
+     */
+    static Condition compositeIdToCondition(final Object id, final List<String> idPropNameList) throws IllegalArgumentException {
+        N.checkArgNotNull(id, cs.id);
+        N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
+
+        final List<Condition> conditions = new ArrayList<>(idPropNameList.size());
+
+        if (id instanceof final Map<?, ?> map) {
+            for (final String idPropName : idPropNameList) {
+                final Object idPropValue = map.get(idPropName);
+
+                if (idPropValue == null) {
+                    return null;
+                }
+
+                conditions.add(Filters.eq(idPropName, idPropValue));
+            }
+        } else {
+            final Class<?> idClass = id.getClass();
+            N.checkArgument(Beans.isBeanClass(idClass) || Beans.isRecordClass(idClass), "Composite id %s is not a Map, bean or record", idClass);
+            final BeanInfo idBeanInfo = ParserUtil.getBeanInfo(idClass);
+
+            for (final String idPropName : idPropNameList) {
+                final PropInfo idPropInfo = idBeanInfo.getPropInfo(idPropName);
+                N.checkArgument(idPropInfo != null, "Id property '%s' is not readable from composite id class %s", idPropName, idClass);
+
+                final Object idPropValue = idPropInfo.getPropValue(id);
+
+                if (idPropValue == null) {
+                    return null;
+                }
+
+                conditions.add(Filters.eq(idPropName, idPropValue));
+            }
+        }
+
+        return Filters.and(conditions);
+    }
+
+    /**
+     * Builds the condition matching the row an {@link EntityId} composite id identifies, comparing every DECLARED id
+     * property of the entity ({@code name = ?} for each name of {@code idPropNameList}, with the id's value for it), as the
+     * single-id lookups ({@code getOrNull}, {@code exists}, {@code deleteById}, {@code update(Map, id)}) bind it. An id that
+     * lacks a declared id property, or holds {@code null} for one, matches no row: those lookups bind SQL {@code NULL} for
+     * it, which {@code =} never matches, so {@code null} is returned instead of a condition ({@code eq(name, null)} would
+     * render {@code IS NULL}, which does match a nullable key column). Keys the id carries beyond the declared id
+     * properties are ignored, as those lookups ignore them.
+     *
+     * <p>WHY: {@code Filters.idToCond(EntityId)} builds one equality per key the id CONTAINS, so an incomplete id matched
+     * every row agreeing on the present components: {@code batchGet}/{@code count(ids)} returned or counted foreign rows
+     * and {@code refresh} raised {@code DuplicateResultException}, while the single-id lookups matched nothing.</p>
+     *
+     * @param entityId the composite id
+     * @param idPropNameList the declared id property names of the entity
+     * @return the condition, or {@code null} if {@code entityId} matches no row
+     * @throws IllegalArgumentException if {@code entityId} is {@code null} or has no keys, or {@code idPropNameList} is
+     *                                  {@code null} or empty
+     */
+    static Condition entityIdToCondition(final EntityId entityId, final List<String> idPropNameList) throws IllegalArgumentException {
+        N.checkArgNotNull(entityId, cs.entityId);
+        N.checkArgument(!entityId.isEmpty(), "The specified 'entityId' has no keys");
+        N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
+
+        final List<Condition> conditions = new ArrayList<>(idPropNameList.size());
+
+        for (final String idPropName : idPropNameList) {
+            final Object idPropValue = entityId.get(idPropName);
+
+            if (idPropValue == null) {
+                return null;
+            }
+
+            conditions.add(Filters.eq(idPropName, idPropValue));
+        }
+
+        return Filters.and(conditions);
     }
 
     /**
@@ -968,7 +1126,9 @@ public final class DaoUtil {
     /**
      * Completes all futures in the list and propagates the first failure as an unchecked exception.
      * <p>
-     * This method waits for all futures to complete and checks for failures. SQL-related failures
+     * This method waits for all futures to complete and checks for failures. The wait is not cut short by an interrupt
+     * of the calling thread: the interruption is collected as a failure and the interrupt status is restored once every
+     * future has completed. SQL-related failures
      * are translated to {@link UncheckedSQLException}; other failures retain their runtime exception
      * semantics. Later failures are attached as suppressed exceptions to the first failure.
      * </p>
@@ -993,15 +1153,7 @@ public final class DaoUtil {
      */
     static void uncheckedComplete(final List<ContinuableFuture<Void>> futures)
             throws NullPointerException, UncheckedSQLException, UncheckedInterruptedException {
-        Exception firstException = null;
-
-        for (final ContinuableFuture<Void> f : futures) {
-            final Result<Void, Exception> ret = f.getAsResult();
-
-            if (ret.isFailure()) {
-                firstException = collectFailure(firstException, ret.getException());
-            }
-        }
+        final Exception firstException = awaitAll(futures, null);
 
         if (firstException != null) {
             throwUncheckedSQLException.accept(firstException);
@@ -1011,7 +1163,9 @@ public final class DaoUtil {
     /**
      * Completes all futures in the list, sums their integer results, and propagates the first failure as an unchecked exception.
      * <p>
-     * This method waits for all futures to complete, collecting their integer results and summing them.
+     * This method waits for all futures to complete, collecting their integer results and summing them. The wait is
+     * not cut short by an interrupt of the calling thread: the interruption is collected as a failure and the interrupt
+     * status is restored once every future has completed.
      * SQL-related failures are translated to {@link UncheckedSQLException}; other failures retain their
      * runtime exception semantics. Later failures are attached as suppressed exceptions to the first failure.
      * This is typically used for batch update/insert/delete operations where the return value indicates
@@ -1034,38 +1188,30 @@ public final class DaoUtil {
      *
      * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}.
      * @return the sum of all integer results from the futures
-     * @throws NullPointerException if {@code futures} is {@code null}, contains a {@code null} future, or a successful future returns {@code null}
+     * @throws NullPointerException if {@code futures} is {@code null} or contains a {@code null} future, or if no future failed and a successful
+     *                              future returns {@code null}
      * @throws UncheckedSQLException if the first failed future has a SQL-related exception
      * @throws UncheckedInterruptedException if the first collected failure is an interruption while waiting for a future or executing its action
      * @throws ArithmeticException if no future failed and the sum overflows an {@code int}.
      */
     static int uncheckedCompleteSum(final List<ContinuableFuture<Integer>> futures)
             throws NullPointerException, UncheckedSQLException, UncheckedInterruptedException, ArithmeticException {
-        long result = 0;
-        Result<Integer, Exception> ret = null;
-        Exception firstException = null;
-
-        for (final ContinuableFuture<Integer> f : futures) {
-            ret = f.getAsResult();
-
-            if (ret.isFailure()) {
-                firstException = collectFailure(firstException, ret.getException());
-            } else {
-                result += ret.orElseIfFailure(0);
-            }
-        }
+        final List<Integer> results = new ArrayList<>(futures.size());
+        final Exception firstException = awaitAll(futures, results);
 
         if (firstException != null) {
             throwUncheckedSQLException.accept(firstException);
         }
 
-        return Math.toIntExact(result);
+        return sum(results);
     }
 
     /**
      * Completes all futures in the list and propagates the first failure.
      * <p>
-     * This method waits for all futures to complete and checks for failures. SQL-related failures
+     * This method waits for all futures to complete and checks for failures. The wait is not cut short by an interrupt
+     * of the calling thread: the interruption is collected as a failure and the interrupt status is restored once every
+     * future has completed. SQL-related failures
      * are propagated as a checked {@link SQLException}; other failures retain their runtime exception
      * semantics. Later failures are attached as suppressed exceptions to the first failure.
      * This is the checked exception variant of {@link #uncheckedComplete(List)}.
@@ -1090,15 +1236,7 @@ public final class DaoUtil {
      * @throws UncheckedInterruptedException if the first collected failure is an interruption while waiting for a future or executing its action
      */
     static void complete(final List<ContinuableFuture<Void>> futures) throws NullPointerException, SQLException, UncheckedInterruptedException {
-        Exception firstException = null;
-
-        for (final ContinuableFuture<Void> f : futures) {
-            final Result<Void, Exception> ret = f.getAsResult();
-
-            if (ret.isFailure()) {
-                firstException = collectFailure(firstException, ret.getException());
-            }
-        }
+        final Exception firstException = awaitAll(futures, null);
 
         if (firstException != null) {
             throwSQLExceptionAction.accept(firstException);
@@ -1108,7 +1246,9 @@ public final class DaoUtil {
     /**
      * Completes all futures in the list, sums their integer results, and propagates the first failure.
      * <p>
-     * This method waits for all futures to complete, collecting their integer results and summing them.
+     * This method waits for all futures to complete, collecting their integer results and summing them. The wait is
+     * not cut short by an interrupt of the calling thread: the interruption is collected as a failure and the interrupt
+     * status is restored once every future has completed.
      * SQL-related failures are propagated as a checked {@link SQLException}; other failures retain their
      * runtime exception semantics. Later failures are attached as suppressed exceptions to the first failure.
      * This is the checked exception variant of {@link #uncheckedCompleteSum(List)}, typically used for batch operations
@@ -1131,29 +1271,89 @@ public final class DaoUtil {
      *
      * @param futures the list of futures returning integer values to complete and sum. Must not be {@code null}.
      * @return the sum of all integer results from the futures
-     * @throws NullPointerException if {@code futures} is {@code null}, contains a {@code null} future, or a successful future returns {@code null}
+     * @throws NullPointerException if {@code futures} is {@code null} or contains a {@code null} future, or if no future failed and a successful
+     *                              future returns {@code null}
      * @throws SQLException if the first failed future has a SQL-related exception
      * @throws UncheckedInterruptedException if the first collected failure is an interruption while waiting for a future or executing its action
      * @throws ArithmeticException if no future failed and the sum overflows an {@code int}.
      */
     static int completeSum(final List<ContinuableFuture<Integer>> futures)
             throws NullPointerException, SQLException, UncheckedInterruptedException, ArithmeticException {
-        long result = 0;
-        Result<Integer, Exception> ret = null;
-        Exception firstException = null;
-
-        for (final ContinuableFuture<Integer> f : futures) {
-            ret = f.getAsResult();
-
-            if (ret.isFailure()) {
-                firstException = collectFailure(firstException, ret.getException());
-            } else {
-                result += ret.orElseIfFailure(0);
-            }
-        }
+        final List<Integer> results = new ArrayList<>(futures.size());
+        final Exception firstException = awaitAll(futures, results);
 
         if (firstException != null) {
             throwSQLExceptionAction.accept(firstException);
+        }
+
+        return sum(results);
+    }
+
+    /**
+     * Waits for every future to complete and collects the failures: the first one is returned, and later, distinct
+     * ones are attached to it as suppressed exceptions.
+     * <p>
+     * The wait is not cut short by an interrupt of the calling thread. {@link ContinuableFuture#getAsResult()} returns at
+     * once when the thread is interrupted (and restores its interrupt status, so every later wait would return at once as
+     * well); surfacing the failure then would let a join task that is still running keep writing the caller's entities
+     * (or deleting rows) after the caller has seen it, as {@code JoinEntityReadOps.submitJoinTasks} also guards against.
+     * The interruption is therefore collected as an {@link InterruptedException} failure of the future being awaited when
+     * it happened, the interrupt status is cleared to keep waiting, and it is restored once every future has completed.
+     * </p>
+     *
+     * @param <R> the result type of the futures
+     * @param futures the futures to wait for
+     * @param results receives the result of each successful future, in order; may be {@code null}
+     * @return the first collected failure, or {@code null} if no future failed and the thread was not interrupted
+     * @throws NullPointerException if {@code futures} is {@code null} or contains a {@code null} future
+     */
+    private static <R> Exception awaitAll(final List<ContinuableFuture<R>> futures, final List<? super R> results) throws NullPointerException {
+        Exception firstException = null;
+        boolean interrupted = false;
+
+        try {
+            for (final ContinuableFuture<R> f : futures) {
+                Result<R, Exception> ret = f.getAsResult();
+
+                // Thread.interrupted() tells a wait interrupted on this thread (getAsResult() restored the flag) from an
+                // InterruptedException the task itself failed with, and clears the flag so that the future is awaited again.
+                while (ret.isFailure() && ret.getException() instanceof InterruptedException && Thread.interrupted()) {
+                    if (!interrupted) {
+                        interrupted = true;
+                        firstException = collectFailure(firstException, ret.getException());
+                    }
+
+                    ret = f.getAsResult();
+                }
+
+                if (ret.isFailure()) {
+                    firstException = collectFailure(firstException, ret.getException());
+                } else if (results != null) {
+                    results.add(ret.orElseIfFailure(null));
+                }
+            }
+        } finally {
+            if (interrupted) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        return firstException;
+    }
+
+    /**
+     * Sums the results of the completed futures.
+     *
+     * @param results the future results
+     * @return the sum of {@code results}
+     * @throws NullPointerException if a result is {@code null}
+     * @throws ArithmeticException if the sum overflows an {@code int}
+     */
+    private static int sum(final List<Integer> results) throws NullPointerException, ArithmeticException {
+        long result = 0;
+
+        for (final Integer value : results) {
+            result += value;
         }
 
         return Math.toIntExact(result);

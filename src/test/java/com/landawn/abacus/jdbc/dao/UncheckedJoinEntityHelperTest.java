@@ -1146,6 +1146,153 @@ public class UncheckedJoinEntityHelperTest extends TestBase {
         }
     }
 
+    // ---- success paths of the four transactional multi-prop delete overloads (mirror JoinEntityHelperTest) ----
+
+    // deleteJoinEntities(T, Class<?>) - multi propName transaction path
+    @Test
+    public void testDeleteJoinEntities_Entity_Class_MultiProp() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+
+        when(dao.targetDaoInterface()).thenReturn(TestUncheckedJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
+        when(dao.targetTableName()).thenReturn("test");
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class);
+             MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+                    .thenReturn(List.of("orders", "addresses"));
+            daoUtil.when(() -> DaoUtil.getReadOps(dao)).thenReturn(dao);
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+            doReturn(3).when(dao).deleteJoinEntities(entity, "orders");
+            doReturn(4).when(dao).deleteJoinEntities(entity, "addresses");
+
+            int result = dao.deleteJoinEntities(entity, String.class);
+
+            assertEquals(7, result);
+            verify(dao).deleteJoinEntities(entity, "orders");
+            verify(dao).deleteJoinEntities(entity, "addresses");
+            verify(tran).commit();
+            verify(tran).rollbackIfNotCommitted();
+        }
+    }
+
+    // deleteJoinEntities(Collection<T>, Class<?>) - multi propName transaction path
+    @Test
+    public void testDeleteJoinEntities_CollectionEntity_Class_MultiProp() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+
+        when(dao.targetDaoInterface()).thenReturn(TestUncheckedJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
+        when(dao.targetTableName()).thenReturn("test");
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class);
+             MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+                    .thenReturn(List.of("orders", "addresses"));
+            daoUtil.when(() -> DaoUtil.getReadOps(dao)).thenReturn(dao);
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+            doReturn(2).when(dao).deleteJoinEntities(entities, "orders");
+            doReturn(3).when(dao).deleteJoinEntities(entities, "addresses");
+
+            int result = dao.deleteJoinEntities(entities, String.class);
+
+            assertEquals(5, result);
+            verify(dao).deleteJoinEntities(entities, "orders");
+            verify(dao).deleteJoinEntities(entities, "addresses");
+            verify(tran).commit();
+            verify(tran).rollbackIfNotCommitted();
+        }
+    }
+
+    @Test
+    public void testDeleteJoinEntities_CollectionEntity_Class_MultiProp_ThrowsOnOverflow() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+
+        when(dao.targetDaoInterface()).thenReturn(TestUncheckedJoinDao.class);
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
+        when(dao.targetTableName()).thenReturn("test");
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<DaoUtil> daoUtil = Mockito.mockStatic(DaoUtil.class);
+             MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            daoUtil.when(
+                    () -> DaoUtil.getJoinEntityPropNamesByType(ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any(), ArgumentMatchers.any()))
+                    .thenReturn(List.of("orders", "addresses"));
+            daoUtil.when(() -> DaoUtil.getReadOps(dao)).thenReturn(dao);
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+            doReturn(Integer.MAX_VALUE).when(dao).deleteJoinEntities(entities, "orders");
+            doReturn(1).when(dao).deleteJoinEntities(entities, "addresses");
+
+            assertThrows(ArithmeticException.class, () -> dao.deleteJoinEntities(entities, String.class));
+
+            verify(tran, Mockito.never()).commit();
+            verify(tran).rollbackIfNotCommitted();
+        }
+    }
+
+    // deleteJoinEntities(T, Collection<String>) - multi propName transaction path
+    @Test
+    public void testDeleteJoinEntities_Entity_PropNames_MultiProp() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        TestEntity entity = new TestEntity();
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+            doReturn(3).when(dao).deleteJoinEntities(entity, "orders");
+            doReturn(4).when(dao).deleteJoinEntities(entity, "addresses");
+
+            int result = dao.deleteJoinEntities(entity, List.of("orders", "addresses"));
+
+            assertEquals(7, result);
+            verify(dao).deleteJoinEntities(entity, "orders");
+            verify(dao).deleteJoinEntities(entity, "addresses");
+            verify(tran).commit();
+            verify(tran).rollbackIfNotCommitted();
+        }
+    }
+
+    // deleteJoinEntities(Collection<T>, Collection<String>) - multi propName transaction path
+    @Test
+    public void testDeleteJoinEntities_Entities_PropNames_MultiProp() {
+        TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);
+        List<TestEntity> entities = List.of(new TestEntity());
+        DataSource dataSource = Mockito.mock(DataSource.class);
+        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+
+        when(dao.dataSource()).thenReturn(dataSource);
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+            doReturn(2).when(dao).deleteJoinEntities(entities, "orders");
+            doReturn(3).when(dao).deleteJoinEntities(entities, "addresses");
+
+            int result = dao.deleteJoinEntities(entities, List.of("orders", "addresses"));
+
+            assertEquals(5, result);
+            verify(dao).deleteJoinEntities(entities, "orders");
+            verify(dao).deleteJoinEntities(entities, "addresses");
+            verify(tran).commit();
+            verify(tran).rollbackIfNotCommitted();
+        }
+    }
+
     @Test
     public void testDeleteJoinEntities_EntitiesByClass_EmptyShortCircuitsBeforePropLookup() {
         TestUncheckedJoinDao dao = Mockito.mock(TestUncheckedJoinDao.class, Mockito.CALLS_REAL_METHODS);

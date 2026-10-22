@@ -1744,6 +1744,78 @@ public class JoinInfoTest extends TestBase {
         assertTrue(user.getOrders().isEmpty());
     }
 
+    // Regression: a joined entity whose single-column join key is null (an unassigned row of a nullable foreign key,
+    // e.g. when assigning all loaded orders to their users) made the grouping throw
+    // NullPointerException("element cannot be mapped to a null key"). Such a row matches no source entity, just as
+    // "user_id = ?" never matches NULL in the generated SQL, so it is skipped.
+    @Test
+    public void testSetJoinPropEntities_NullReferencedJoinKeyMatchesNoSourceEntity() {
+        final NullableFkOrderEntity assigned = new NullableFkOrderEntity();
+        assigned.setUserId(1L);
+        final NullableFkOrderEntity unassigned = new NullableFkOrderEntity();
+
+        final JoinInfo strict = new JoinInfo(NullableFkUserEntity.class, "nullable_fk_user", "orders", false);
+        final NullableFkUserEntity user = new NullableFkUserEntity();
+        user.setUserId(1L);
+
+        strict.setJoinPropEntities(List.of(user), Arrays.asList(unassigned, assigned));
+
+        assertEquals(List.of(assigned), user.getOrders());
+
+        // A source entity whose own key is null (allowed here) is not matched with the null-keyed row either.
+        final JoinInfo lenient = new JoinInfo(NullableFkUserEntity.class, "nullable_fk_user", "orders", true);
+        final NullableFkUserEntity userWithoutId = new NullableFkUserEntity();
+
+        lenient.setJoinPropEntities(List.of(userWithoutId), Arrays.asList(unassigned, assigned));
+
+        assertNotNull(userWithoutId.getOrders());
+        assertTrue(userWithoutId.getOrders().isEmpty());
+    }
+
+    public static final class NullableFkUserEntity {
+        private Long userId;
+
+        @JoinedBy("userId")
+        private List<NullableFkOrderEntity> orders;
+
+        public Long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(final Long userId) {
+            this.userId = userId;
+        }
+
+        public List<NullableFkOrderEntity> getOrders() {
+            return orders;
+        }
+
+        public void setOrders(final List<NullableFkOrderEntity> orders) {
+            this.orders = orders;
+        }
+    }
+
+    public static final class NullableFkOrderEntity {
+        private long id;
+        private Long userId;
+
+        public long getId() {
+            return id;
+        }
+
+        public void setId(final long id) {
+            this.id = id;
+        }
+
+        public Long getUserId() {
+            return userId;
+        }
+
+        public void setUserId(final Long userId) {
+            this.userId = userId;
+        }
+    }
+
     // setJoinPropEntities with Collection (non-List) prop type (L967 assignableFrom branch)
     @Test
     public void testSetJoinPropEntities_CollectionProp_NotList() {

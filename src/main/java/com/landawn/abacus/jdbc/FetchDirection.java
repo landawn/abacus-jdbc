@@ -93,9 +93,8 @@ public enum FetchDirection {
     /**
      * Indicates that the expected traversal direction of a {@link ResultSet} is unknown.
      *
-     * <p>This constant is typically used when the fetch direction has not been explicitly set,
-     * or when the JDBC driver does not provide specific fetch direction hints. In such scenarios,
-     * the driver uses its default fetching behavior.</p>
+     * <p>Use this constant when the application cannot predict its row-access pattern; the driver
+     * then uses its default fetching behavior.</p>
      *
      * <p>Corresponds to the JDBC constant {@link ResultSet#FETCH_UNKNOWN}.</p>
      */

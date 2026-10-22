@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,7 +15,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -25,10 +28,14 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.query.SqlParser;
+import com.landawn.abacus.query.condition.And;
+import com.landawn.abacus.query.condition.Condition;
+import com.landawn.abacus.query.condition.Equal;
 import com.landawn.abacus.query.condition.In;
 import com.landawn.abacus.query.condition.IsNull;
 import com.landawn.abacus.query.condition.Or;
 import com.landawn.abacus.util.ContinuableFuture;
+import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Result;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.function.Function;
@@ -276,36 +283,6 @@ public class DaoUtilTest extends TestBase {
         assertEquals(5L, (Long) id.get("orderId"));
     }
 
-    record CompositeKeyRecord(long orderId, int lineNum) {
-    }
-
-    // captureIdValues backs CrudDao.batchUpsert's restore of the IDs that a rolled-back insert wrote onto its entities: every
-    // changed part of a composite ID is put back, and an unchanged ID is not written (so immutable entities don't fail).
-    @Test
-    public void testCaptureIdValues_RestoresOnlyChangedCompositeIdParts() {
-        final CompositeKeyEntity changed = new CompositeKeyEntity();
-        changed.setOrderId(10L);
-        final CompositeKeyEntity unchanged = new CompositeKeyEntity();
-        unchanged.setOrderId(20L);
-        unchanged.setLineNum(2);
-
-        final Runnable restorer = DaoUtil.captureIdValues(List.of(changed, unchanged), Arrays.asList("orderId", "lineNum"),
-                ParserUtil.getBeanInfo(CompositeKeyEntity.class));
-        changed.setOrderId(11L);
-        changed.setLineNum(7);
-        restorer.run();
-
-        assertEquals(10L, changed.getOrderId());
-        assertEquals(0, changed.getLineNum());
-        assertEquals(20L, unchanged.getOrderId());
-        assertEquals(2, unchanged.getLineNum());
-
-        final BeanInfo recordInfo = ParserUtil.getBeanInfo(CompositeKeyRecord.class);
-        final CompositeKeyRecord immutable = new CompositeKeyRecord(30L, 3);
-        assertThrows(RuntimeException.class, () -> recordInfo.getPropInfo("orderId").setPropValue(immutable, 30L));
-        assertDoesNotThrow(() -> DaoUtil.captureIdValues(List.of(immutable), Arrays.asList("orderId", "lineNum"), recordInfo).run());
-    }
-
     @Test
     public void testIdExtractionRejectsEmptyIdPropertyList() {
         final BeanInfo beanInfo = ParserUtil.getBeanInfo(SimpleEntity.class);
@@ -341,6 +318,305 @@ public class DaoUtilTest extends TestBase {
 
         assertThrows(IllegalArgumentException.class, () -> DaoUtil.singlePropValuesToCondition("", List.of("Alice")));
         assertThrows(IllegalArgumentException.class, () -> DaoUtil.singlePropValuesToCondition("name", List.of()));
+    }
+
+    // Filters.idToCond(EntityId) rendered one equality per key the id CONTAINS, so an EntityId lacking a declared id property
+    // matched every row agreeing on the present ones. Every declared id property is rendered now; an id lacking one, or
+    // holding null for one, matches no row (not IS NULL), and keys beyond the declared properties are ignored.
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testIdsToCondition_EntityIdRendersEveryDeclaredIdProperty() {
+        final List<String> idPropNames = List.of("tenantId", "rowId");
+        final EntityId complete = EntityId.of("tenantId", 1L, "rowId", 2L);
+        final EntityId lackingRowId = EntityId.of("tenantId", 1L);
+        final EntityId nullRowId = EntityId.of("tenantId", 1L, "rowId", null);
+        final EntityId extraKey = EntityId.of("tenantId", 3L, "rowId", 4L, "name", "ignored");
+
+        final Condition cond = DaoUtil.idsToCondition(List.of(complete, lackingRowId, nullRowId, extraKey), idPropNames, true, false);
+        assertTrue(cond instanceof Or);
+        final List<Condition> branches = ((Or) cond).conditions();
+        assertEquals(2, branches.size(), "the ids that can match a row, one AND branch each");
+        assertEquals(idPropNames, equalPropNames(branches.get(0)));
+        assertEquals(List.of(1L, 2L), branches.get(0).parameters());
+        assertEquals(idPropNames, equalPropNames(branches.get(1)));
+        assertEquals(List.of(3L, 4L), branches.get(1).parameters());
+
+        // Only ids that can match no row: null (the callers skip the batch without a query), nothing is rendered as IS NULL.
+        assertNull(DaoUtil.idsToCondition(List.of(lackingRowId, nullRowId), idPropNames, true, false));
+
+        // The documented rejections are kept: an empty batch, a null element, an EntityId with no keys, no declared id property.
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), idPropNames, true, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(Arrays.asList(complete, null), idPropNames, true, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(Seid.of("Row")), idPropNames, true, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(complete), List.of(), true, false));
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testEntityIdToCondition_LackingOrNullComponentMatchesNoRow() {
+        final List<String> idPropNames = List.of("tenantId", "rowId");
+
+        final Condition cond = DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L, "rowId", 2L, "name", "ignored"), idPropNames);
+        assertEquals(idPropNames, equalPropNames(cond));
+        assertEquals(List.of(1L, 2L), cond.parameters());
+
+        assertNull(DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L), idPropNames));
+        assertNull(DaoUtil.entityIdToCondition(EntityId.of("rowId", 2L), idPropNames));
+        assertNull(DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L, "rowId", null), idPropNames));
+        assertNull(DaoUtil.entityIdToCondition(EntityId.of("tenantId", null, "rowId", 2L), idPropNames));
+
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(null, idPropNames));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(Seid.of("Row"), idPropNames));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L), null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L), List.of()));
+    }
+
+    public static class RowKey {
+        private Long tenantId;
+        private Long rowId;
+
+        public RowKey() {
+        }
+
+        public RowKey(final Long tenantId, final Long rowId) {
+            this.tenantId = tenantId;
+            this.rowId = rowId;
+        }
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public Long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final Long rowId) {
+            this.rowId = rowId;
+        }
+    }
+
+    public record RowKeyRecord(Long tenantId, Long rowId, String name) {
+    }
+
+    public static class TenantOnlyKey {
+        private Long tenantId;
+
+        public TenantOnlyKey() {
+        }
+
+        public TenantOnlyKey(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+    }
+
+    private static Map<String, Object> mapId(final Object... keyValues) {
+        final Map<String, Object> map = new HashMap<>();
+
+        for (int i = 0; i < keyValues.length; i += 2) {
+            map.put((String) keyValues[i], keyValues[i + 1]);
+        }
+
+        return map;
+    }
+
+    // Filters.anyOfAllEqual matched a Map id on the keys it CONTAINS and rendered a null id property of a Map or bean id as
+    // IS NULL (matching every row holding NULL in a nullable key column), while getOrNull/exists bind NULL and match
+    // nothing. Map and bean/record ids follow the EntityId rule now: every declared id property is rendered, an id lacking
+    // one or holding null for one matches no row, and keys/properties beyond the declared ones are ignored.
+    @Test
+    public void testIdsToCondition_MapAndBeanIdsRenderEveryDeclaredIdProperty() {
+        final List<String> idPropNames = List.of("tenantId", "rowId");
+
+        final Map<String, Object> completeMap = mapId("tenantId", 1L, "rowId", 2L);
+        final Map<String, Object> lackingRowIdMap = mapId("tenantId", 1L);
+        final Map<String, Object> nullRowIdMap = mapId("tenantId", 1L, "rowId", null);
+        final Map<String, Object> extraKeyMap = mapId("tenantId", 3L, "rowId", 4L, "name", "ignored");
+
+        final Condition mapCond = DaoUtil.idsToCondition(Arrays.asList(completeMap, null, lackingRowIdMap, nullRowIdMap, extraKeyMap), idPropNames, false,
+                true);
+        assertTrue(mapCond instanceof Or);
+        List<Condition> branches = ((Or) mapCond).conditions();
+        assertEquals(2, branches.size(), "the ids that can match a row, one AND branch each; the null id is skipped");
+        assertEquals(idPropNames, equalPropNames(branches.get(0)));
+        assertEquals(List.of(1L, 2L), branches.get(0).parameters());
+        assertEquals(idPropNames, equalPropNames(branches.get(1)));
+        assertEquals(List.of(3L, 4L), branches.get(1).parameters());
+
+        assertNull(DaoUtil.idsToCondition(List.of(lackingRowIdMap, nullRowIdMap), idPropNames, false, true));
+
+        final RowKey completeKey = new RowKey(1L, 2L);
+        final RowKey nullRowIdKey = new RowKey(1L, null);
+        final RowKeyRecord nullTenantIdRecord = new RowKeyRecord(null, 2L, "ignored");
+        final RowKeyRecord extraPropRecord = new RowKeyRecord(3L, 4L, "ignored");
+
+        final Condition beanCond = DaoUtil.idsToCondition(Arrays.asList(completeKey, null, nullRowIdKey, nullTenantIdRecord, extraPropRecord), idPropNames,
+                false, false);
+        assertTrue(beanCond instanceof Or);
+        branches = ((Or) beanCond).conditions();
+        assertEquals(2, branches.size());
+        assertEquals(idPropNames, equalPropNames(branches.get(0)));
+        assertEquals(List.of(1L, 2L), branches.get(0).parameters());
+        assertEquals(idPropNames, equalPropNames(branches.get(1)));
+        assertEquals(List.of(3L, 4L), branches.get(1).parameters());
+
+        assertNull(DaoUtil.idsToCondition(List.of(nullRowIdKey, nullTenantIdRecord), idPropNames, false, false));
+
+        // The documented rejections are kept: an empty batch, every element null, Maps and beans mixed, a bean lacking a
+        // declared id property, a non-bean id, no declared id property.
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), idPropNames, false, true));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), List.of("id"), false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(Arrays.asList(null, null), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(Arrays.asList(null, null), idPropNames, false, true));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeKey, completeMap), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeMap, completeKey), idPropNames, false, true));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(new TenantOnlyKey(1L)), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of("1-2"), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeKey), List.of(), false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeMap), List.of(), false, true));
+    }
+
+    @Test
+    public void testCompositeIdToCondition_LackingOrNullComponentMatchesNoRow() {
+        final List<String> idPropNames = List.of("tenantId", "rowId");
+
+        Condition cond = DaoUtil.compositeIdToCondition(mapId("tenantId", 1L, "rowId", 2L, "name", "ignored"), idPropNames);
+        assertEquals(idPropNames, equalPropNames(cond));
+        assertEquals(List.of(1L, 2L), cond.parameters());
+        cond = DaoUtil.compositeIdToCondition(new RowKey(3L, 4L), idPropNames);
+        assertEquals(idPropNames, equalPropNames(cond));
+        assertEquals(List.of(3L, 4L), cond.parameters());
+        cond = DaoUtil.compositeIdToCondition(new RowKeyRecord(5L, 6L, "ignored"), idPropNames);
+        assertEquals(idPropNames, equalPropNames(cond));
+        assertEquals(List.of(5L, 6L), cond.parameters());
+
+        assertNull(DaoUtil.compositeIdToCondition(mapId("tenantId", 1L), idPropNames));
+        assertNull(DaoUtil.compositeIdToCondition(mapId("rowId", 2L), idPropNames));
+        assertNull(DaoUtil.compositeIdToCondition(mapId("tenantId", 1L, "rowId", null), idPropNames));
+        assertNull(DaoUtil.compositeIdToCondition(mapId(), idPropNames));
+        assertNull(DaoUtil.compositeIdToCondition(new RowKey(1L, null), idPropNames));
+        assertNull(DaoUtil.compositeIdToCondition(new RowKey(null, 2L), idPropNames));
+        assertNull(DaoUtil.compositeIdToCondition(new RowKeyRecord(null, 2L, "ignored"), idPropNames));
+
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(null, idPropNames));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition("1-2", idPropNames));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(new TenantOnlyKey(1L), idPropNames));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(new RowKey(1L, 2L), null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(new RowKey(1L, 2L), List.of()));
+    }
+
+    // checkCompositeIds validates every id BEFORE batchGet/count de-duplicate them. An invalid id (an empty EntityId, a bean
+    // whose class lacks a declared id property, a Map among beans) could share its de-duplication key with a valid one and
+    // was then dropped silently, so whether it was rejected depended on its position in 'ids'.
+    @Test
+    public void testCheckCompositeIds_RejectsInvalidIdsRegardlessOfOrder() {
+        final List<String> idPropNames = List.of("tenantId", "rowId");
+        final RowKey validKey = new RowKey(1L, 2L);
+        final RowKeyRecord validRecord = new RowKeyRecord(3L, 4L, "ignored");
+        final Map<String, Object> validMap = mapId("tenantId", 1L, "rowId", 2L);
+        final EntityId validEntityId = EntityId.of("tenantId", 1L, "rowId", 2L);
+
+        // (e) valid ids pass in any order; null Map/bean elements are skipped and an incomplete id (lacking a declared id
+        // property or holding null for one) is not invalid: it matches no row.
+        assertDoesNotThrow(() -> DaoUtil.checkCompositeIds(List.of(validKey, validRecord, validKey), idPropNames, false, false));
+        assertDoesNotThrow(() -> DaoUtil.checkCompositeIds(Arrays.asList(null, validRecord, validKey, null), idPropNames, false, false));
+        assertDoesNotThrow(() -> DaoUtil.checkCompositeIds(List.of(new RowKey(1L, null), new RowKeyRecord(null, 4L, "x")), idPropNames, false, false));
+        assertDoesNotThrow(() -> DaoUtil.checkCompositeIds(Arrays.asList(null, validMap, mapId("tenantId", 1L), mapId()), idPropNames, false, true));
+        assertDoesNotThrow(() -> DaoUtil.checkCompositeIds(List.of(validEntityId, EntityId.of("tenantId", 1L)), idPropNames, true, false));
+
+        // (a) a bean whose class lacks a declared id property is rejected after a valid id of another class, as it is alone
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(new TenantOnlyKey(1L)), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(validKey, new TenantOnlyKey(1L)), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class,
+                () -> DaoUtil.checkCompositeIds(Arrays.asList(validRecord, null, validKey, new TenantOnlyKey(1L)), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(validKey, "1-2"), idPropNames, false, false));
+
+        // (b) a Map after a valid bean, a bean after a valid Map
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(validKey, validMap), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(validRecord, validKey, validMap), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(validMap, validKey), idPropNames, false, true));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(Arrays.asList(null, validMap, validRecord), idPropNames, false, true));
+
+        // (c) an empty or null EntityId is rejected whatever its position
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(validEntityId, Seid.of("Row")), idPropNames, true, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(Seid.of("Row"), validEntityId), idPropNames, true, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(Arrays.asList(validEntityId, null), idPropNames, true, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(Arrays.asList(null, validEntityId), idPropNames, true, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(validEntityId, validKey), idPropNames, true, false));
+
+        // (d) all-null Map/bean ids, no ids, no id property names
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(Arrays.asList(null, null), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(Arrays.asList(null, null), idPropNames, false, true));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(), idPropNames, false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(), idPropNames, true, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(validKey), List.of(), false, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(validEntityId), null, true, false));
+    }
+
+    // BUG FIX: a Map or bean among EntityIds was rejected with a ClassCastException (the cast to EntityId), while an EntityId
+    // among Maps/beans was an IllegalArgumentException, so the exception type depended on which element came first. Both
+    // helpers now reject every mixed batch with an IllegalArgumentException, and the element of 'ids' is named 'id'.
+    @Test
+    public void testCheckCompositeIdsAndIdsToCondition_EntityIdMixedWithMapOrBean_IllegalArgumentInEitherOrder() {
+        final List<String> idPropNames = List.of("tenantId", "rowId");
+        final EntityId entityId = EntityId.of("tenantId", 1L, "rowId", 2L);
+        final RowKey bean = new RowKey(3L, 4L);
+        final RowKeyRecord record = new RowKeyRecord(5L, 6L, "ignored");
+        final Map<String, Object> map = mapId("tenantId", 7L, "rowId", 8L);
+
+        // EntityId first (isEntityId): used to be a ClassCastException.
+        for (final Object other : List.of(bean, record, map)) {
+            final boolean isMap = other instanceof Map;
+
+            assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(entityId, other), idPropNames, true, false));
+            assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(Arrays.asList(null, entityId, other), idPropNames, true, false));
+            assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(entityId, other), idPropNames, true, false));
+
+            // Map/bean first: an IllegalArgumentException already, and still one.
+            assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(other, entityId), idPropNames, false, isMap));
+            assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(other, entityId), idPropNames, false, isMap));
+        }
+
+        // The messages name the element of 'ids' ('id'), not a parameter 'entityId' that neither helper has.
+        final IllegalArgumentException nullId = assertThrows(IllegalArgumentException.class,
+                () -> DaoUtil.checkCompositeIds(Arrays.asList(entityId, null), idPropNames, true, false));
+        assertTrue(nullId.getMessage().contains("'id'"), nullId.getMessage());
+        assertFalse(nullId.getMessage().contains("entityId"), nullId.getMessage());
+
+        final IllegalArgumentException emptyId = assertThrows(IllegalArgumentException.class,
+                () -> DaoUtil.checkCompositeIds(List.of(entityId, Seid.of("Row")), idPropNames, true, false));
+        assertTrue(emptyId.getMessage().contains("'ids'"), emptyId.getMessage());
+        assertFalse(emptyId.getMessage().contains("'entityId'"), emptyId.getMessage());
+
+        final IllegalArgumentException mixed = assertThrows(IllegalArgumentException.class,
+                () -> DaoUtil.checkCompositeIds(List.of(entityId, bean), idPropNames, true, false));
+        assertTrue(mixed.getMessage().contains("EntityId"), mixed.getMessage());
+        assertTrue(mixed.getMessage().contains(RowKey.class.getName()), mixed.getMessage());
+    }
+
+    private static List<String> equalPropNames(final Condition and) {
+        assertTrue(and instanceof And, String.valueOf(and));
+        final List<String> propNames = new java.util.ArrayList<>();
+
+        for (final Condition c : ((And) and).conditions()) {
+            assertTrue(c instanceof Equal, String.valueOf(c));
+            propNames.add(((Equal) c).propName());
+        }
+
+        return propNames;
     }
 
     @Test
@@ -555,6 +831,145 @@ public class DaoUtilTest extends TestBase {
             assertEquals(1, sumThrown.getSuppressed().length);
             assertSame(laterSum, sumThrown.getSuppressed()[0]);
         }
+    }
+
+    // BUG FIX: an interrupt of the waiting thread made getAsResult() return at once for every remaining future, so the
+    // completion methods threw while a parallel join task was still running and writing the caller's entities (or
+    // deleting rows). They now wait for every task, then report the interruption and restore the interrupt status.
+    @Test
+    public void testCompletionMethodsAwaitRunningTasksWhenCallerIsInterrupted() {
+        final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+
+        try {
+            for (int variant = 0; variant < 4; variant++) {
+                final int v = variant;
+                final java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean();
+                final List<ContinuableFuture<Void>> runs = v < 2 ? List.of(ContinuableFuture.run(() -> {
+                    Thread.sleep(300);
+                    finished.set(true);
+                }, executor)) : null;
+                final List<ContinuableFuture<Integer>> calls = v < 2 ? null : List.of(ContinuableFuture.call(() -> {
+                    Thread.sleep(300);
+                    finished.set(true);
+                    return 1;
+                }, executor));
+
+                Thread.currentThread().interrupt();
+
+                try {
+                    assertThrows(com.landawn.abacus.exception.UncheckedInterruptedException.class, () -> {
+                        switch (v) {
+                            case 0 -> DaoUtil.complete(runs);
+                            case 1 -> DaoUtil.uncheckedComplete(runs);
+                            case 2 -> DaoUtil.completeSum(calls);
+                            default -> DaoUtil.uncheckedCompleteSum(calls);
+                        }
+                    });
+                    assertTrue(finished.get(), "variant " + v + " returned while its task was still running");
+                    assertTrue(Thread.currentThread().isInterrupted(), "variant " + v + " must restore the interrupt status");
+                } finally {
+                    Thread.interrupted();
+                }
+            }
+
+            // A task that itself failed with an InterruptedException while the caller is interrupted ends the wait.
+            final InterruptedException taskFailure = new InterruptedException("task");
+            final List<ContinuableFuture<Void>> failed = List.of(ContinuableFuture.run(() -> {
+                throw taskFailure;
+            }, Runnable::run));
+            Thread.currentThread().interrupt();
+
+            try {
+                assertThrows(com.landawn.abacus.exception.UncheckedInterruptedException.class, () -> DaoUtil.complete(failed));
+            } finally {
+                Thread.interrupted();
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    // The interruption is collected as the failure of the future awaited when it happened, so the first failure in list
+    // order stays primary, and the futures after the interrupted wait are still awaited.
+    @Test
+    public void testCompletionMethodsAfterInterruptedWait_KeepListOrderAndAwaitLaterTasks() {
+        final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+
+        try {
+            for (final boolean unchecked : new boolean[] { false, true }) {
+                // An earlier failure stays primary; the interruption while awaiting the later, running task is suppressed.
+                final SQLException earlier = new SQLException("earlier task");
+                final java.util.concurrent.atomic.AtomicBoolean finished = new java.util.concurrent.atomic.AtomicBoolean();
+                final List<ContinuableFuture<Integer>> counts = List.of(ContinuableFuture.call(() -> {
+                    throw earlier;
+                }, Runnable::run), ContinuableFuture.call(() -> {
+                    Thread.sleep(300);
+                    finished.set(true);
+                    return 1;
+                }, executor));
+
+                Thread.currentThread().interrupt();
+
+                try {
+                    final Throwable thrown = unchecked ? assertThrows(UncheckedSQLException.class, () -> DaoUtil.uncheckedCompleteSum(counts)).getCause()
+                            : assertThrows(SQLException.class, () -> DaoUtil.completeSum(counts));
+                    assertSame(earlier, thrown);
+                    assertEquals(1, earlier.getSuppressed().length);
+                    assertTrue(earlier.getSuppressed()[0] instanceof InterruptedException);
+                    assertTrue(finished.get(), "returned while a later task was still running");
+                    assertTrue(Thread.currentThread().isInterrupted(), "must restore the interrupt status");
+                } finally {
+                    Thread.interrupted();
+                }
+
+                // Interrupted while awaiting the first, still running, task: the interruption comes first and that task's
+                // own failure, reported once it has completed, is attached to it.
+                final SQLException laterFailure = new SQLException("running task");
+                final List<ContinuableFuture<Void>> runs = List.of(ContinuableFuture.run(() -> {
+                    Thread.sleep(300);
+                    throw laterFailure;
+                }, executor));
+
+                Thread.currentThread().interrupt();
+
+                try {
+                    final com.landawn.abacus.exception.UncheckedInterruptedException thrown = assertThrows(
+                            com.landawn.abacus.exception.UncheckedInterruptedException.class, () -> {
+                                if (unchecked) {
+                                    DaoUtil.uncheckedComplete(runs);
+                                } else {
+                                    DaoUtil.complete(runs);
+                                }
+                            });
+                    assertTrue(thrown.getCause() instanceof InterruptedException);
+                    assertEquals(1, thrown.getCause().getSuppressed().length);
+                    assertSame(laterFailure, thrown.getCause().getSuppressed()[0]);
+                    assertTrue(Thread.currentThread().isInterrupted(), "must restore the interrupt status");
+                } finally {
+                    Thread.interrupted();
+                }
+            }
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    // The sum is computed only after every future has completed, so a failed future takes priority over a successful
+    // one that returned null (even an earlier one); the NullPointerException is thrown only when no future failed.
+    @Test
+    public void testCompleteSum_NullResultFailsOnlyWhenNoFutureFailed() {
+        final SQLException later = new SQLException("later task");
+        final List<ContinuableFuture<Integer>> withFailure = List.of(ContinuableFuture.<Integer> completed(null), ContinuableFuture.<Integer> call(() -> {
+            throw later;
+        }, Runnable::run));
+
+        assertSame(later, assertThrows(SQLException.class, () -> DaoUtil.completeSum(withFailure)));
+        assertSame(later, assertThrows(UncheckedSQLException.class, () -> DaoUtil.uncheckedCompleteSum(withFailure)).getCause());
+
+        final List<ContinuableFuture<Integer>> withoutFailure = List.of(ContinuableFuture.completed(2), ContinuableFuture.<Integer> completed(null));
+
+        assertThrows(NullPointerException.class, () -> DaoUtil.completeSum(withoutFailure));
+        assertThrows(NullPointerException.class, () -> DaoUtil.uncheckedCompleteSum(withoutFailure));
     }
 
     @Test

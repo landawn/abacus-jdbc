@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Arrays;
@@ -28,12 +29,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.mockito.ArgumentMatchers;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
 
@@ -868,6 +872,135 @@ public class UncheckedCrudDaoTest extends TestBase {
 
         assertSame(sentinel, thrown);
         verify(dao).dataSource();
+    }
+
+    // Unchecked twin of CrudDaoTest.testBatchUpsert_FullSig_PreservesPrimaryFailureWhenRollbackFails: the SQLException of the
+    // mixed insert+update path (thrown by CrudDao.super.batchUpsert with the rollback failure attached as suppressed) is
+    // wrapped into UncheckedSQLException, so the primary failure is the cause, its suppressed list is kept intact (and copied
+    // onto the wrapper by UncheckedException).
+    @Test
+    public void testBatchUpsert_FullSig_PreservesPrimaryFailureWhenRollbackFails() throws SQLException {
+        final IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+
+        final IdAnnotatedEntity toUpdate = new IdAnnotatedEntity();
+        toUpdate.setId(1L);
+        toUpdate.setName("existing");
+        final IdAnnotatedEntity toInsert = new IdAnnotatedEntity();
+        toInsert.setId(2L);
+        toInsert.setName("brandNew");
+        final List<IdAnnotatedEntity> entities = List.of(toUpdate, toInsert);
+
+        final IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("existing");
+
+        // The classification query finds only the "existing" row -> one update + one insert -> transactional path.
+        Mockito.doReturn(List.of(dbEntity)).when(dao).list(ArgumentMatchers.any(Condition.class));
+
+        final DataSource ds = Mockito.mock(DataSource.class);
+        final Connection conn = Mockito.mock(Connection.class);
+        final DatabaseMetaData metadata = Mockito.mock(DatabaseMetaData.class);
+        when(ds.getConnection()).thenReturn(conn);
+        when(conn.getMetaData()).thenReturn(metadata);
+        when(metadata.getDatabaseProductName()).thenReturn("H2");
+        when(metadata.getDatabaseProductVersion()).thenReturn("2");
+        when(conn.getAutoCommit()).thenReturn(true);
+        when(conn.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        Mockito.doThrow(new SQLException("rollback failed")).when(conn).rollback();
+        Mockito.doReturn(ds).when(dao).dataSource();
+
+        // The unchecked batchInsert declares no SQLException, so a (sneaky) SQLException stands in for one escaping the
+        // checked body that CrudDao.super.batchUpsert runs.
+        final SQLException primary = new SQLException("primary batch-insert failure");
+        Mockito.doAnswer(invocation -> {
+            throw primary;
+        }).when(dao).batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyInt());
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> dao.batchUpsert(entities, List.of("name"), 10));
+
+        assertSame(primary, thrown.getCause(), "the primary batch failure must be the cause of the unchecked wrapper");
+        assertEquals(1, primary.getSuppressed().length, "the rollback failure should stay attached to the primary failure as suppressed");
+        assertEquals("rollback failed", primary.getSuppressed()[0].getCause().getMessage());
+        // UncheckedException(Throwable) copies the suppressed list of its cause, so the rollback failure is also visible on the wrapper.
+        assertEquals(1, thrown.getSuppressed().length);
+        assertSame(primary.getSuppressed()[0], thrown.getSuppressed()[0]);
+    }
+
+    @Test
+    public void testBatchUpsert_FullSig_IgnoresSelfSuppressionFromRollback() {
+        final IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final IdAnnotatedEntity toUpdate = new IdAnnotatedEntity();
+        toUpdate.setId(1L);
+        toUpdate.setName("existing");
+        final IdAnnotatedEntity toInsert = new IdAnnotatedEntity();
+        toInsert.setId(2L);
+        toInsert.setName("new");
+        final IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("existing");
+
+        Mockito.doReturn(List.of(dbEntity)).when(dao).list(ArgumentMatchers.any(Condition.class));
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        Mockito.doReturn(dataSource).when(dao).dataSource();
+
+        final IllegalStateException primary = new IllegalStateException("same operation and rollback failure");
+        Mockito.doThrow(primary).when(dao).batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyInt());
+        Mockito.doThrow(primary).when(tran).rollbackIfNotCommitted();
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                    () -> dao.batchUpsert(List.of(toUpdate, toInsert), List.of("name"), 10));
+
+            assertSame(primary, thrown);
+            assertEquals(0, thrown.getSuppressed().length);
+        }
+    }
+
+    // Inserts and updates together run in one transaction scope (which participates in a Spring-managed transaction when there
+    // is one): a failure is thrown as is (a SQLException wrapped into UncheckedSQLException) after the scope is completed. The IDs
+    // batchInsert wrote are put back by batchInsert itself (registered with the transaction it runs in), not by batchUpsert.
+    @Test
+    public void testBatchUpsert_FullSig_FailureCompletesItsScopeAndLeavesIdRestoreToBatchInsert() {
+        final IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final IdAnnotatedEntity toUpdate = new IdAnnotatedEntity();
+        toUpdate.setId(1L);
+        toUpdate.setName("existing");
+        final IdAnnotatedEntity toInsert = new IdAnnotatedEntity();
+        toInsert.setId(2L);
+        toInsert.setName("new");
+        final IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("existing");
+
+        Mockito.doReturn(List.of(dbEntity)).when(dao).list(ArgumentMatchers.any(Condition.class));
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        Mockito.doReturn(dataSource).when(dao).dataSource();
+
+        final SQLException primary = new SQLException("update failed after insert");
+        Mockito.doAnswer(invocation -> {
+            toInsert.setId(99L);
+            return List.of(99L);
+        }).when(dao).batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyInt());
+        Mockito.doAnswer(invocation -> {
+            throw primary;
+        }).when(dao).batchUpdate(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyInt());
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+
+            final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class,
+                    () -> dao.batchUpsert(List.of(toUpdate, toInsert), List.of("name"), 10));
+
+            assertSame(primary, thrown.getCause());
+            assertEquals(0, primary.getSuppressed().length, "the mocked rollback did not fail, so nothing is suppressed");
+            assertEquals(99L, toInsert.getId(), "the mocked batchInsert registered no restore");
+            verify(tran, Mockito.never()).commit();
+            verify(tran).rollbackIfNotCommitted();
+        }
     }
 
     // ----- H2-backed entity/DAO for the real batchUpsert transaction-commit path -----

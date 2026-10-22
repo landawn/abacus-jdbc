@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -17,8 +18,13 @@ import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.List;
+import java.util.UUID;
 
+import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -92,6 +98,123 @@ class JdbcUtilTransactionTest extends JdbcUtilTestSupport {
             assertNull(JdbcUtil.getTransaction(mockDataSource, "SELECT into_date, 'copy into' AS \"into\" FROM account /* into */", by));
         } finally {
             tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // BUG FIX: SQL with several statements was classified by its first statement only, so the UPDATE of
+    // "SELECT 1; UPDATE ..." ran outside the for-update-only transaction on drivers that accept several statements. Every
+    // statement is classified now, and the SQL joins when any of them is not a plain read.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyJoinsMultiStatementSqlWithAnyNonRead() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+
+            for (final String sql : new String[] { "SELECT 1; UPDATE account SET active = 0", "SELECT id FROM account;\nDELETE FROM account WHERE id = 1;",
+                    "SELECT 1;INSERT INTO account (id) VALUES (1)", "SELECT 1; CREATE TABLE account_copy (id INT)", "SELECT 1; SELECT id INTO @x FROM account",
+                    "SELECT 1; WITH u AS (UPDATE account SET active = 0 RETURNING id) SELECT id FROM u", "SELECT 1; SELECT id FROM account FOR UPDATE",
+                    "SELECT 1 ; ; /* note */ UPDATE account SET active = 0", "SELECT 1; SELECT 2; MERGE INTO account a USING s ON (a.id = s.id)",
+                    "SELECT (1; UPDATE account SET active = 0)" }) {
+                assertSame(tran, JdbcUtil.getTransaction(mockDataSource, sql, by), sql);
+            }
+
+            // Guards (pass before and after the fix): a trailing ';', only comments or empty statements after it, a ';' in
+            // quoted text or a comment, and several plain reads still run outside the transaction.
+            for (final String sql : new String[] { "SELECT * FROM account;", "SELECT * FROM account; -- trailing note", "SELECT * FROM account;; ;\n",
+                    "SELECT * FROM account WHERE id = :id;", "SELECT 1; SELECT 2", "SELECT 'a; UPDATE account SET active = 0' FROM account",
+                    "SELECT \"a; UPDATE account SET active = 0\", `b; DELETE FROM account` FROM account", "SELECT 1 /* ; UPDATE account SET active = 0 */",
+                    "SELECT 1 -- ; UPDATE account SET active = 0\n;", "SELECT 1 FROM account WHERE note = #{note;x} OR id = ${id}" }) {
+                assertNull(JdbcUtil.getTransaction(mockDataSource, sql, by), sql);
+            }
+
+            // DaoImpl's op = update check counts a later write, but not a locking read, which does not write.
+            assertTrue(JdbcUtil.mayWriteUnderAnyDialect("SELECT 1; UPDATE account SET active = 0"));
+            assertFalse(JdbcUtil.mayWriteUnderAnyDialect("SELECT 1; SELECT 2;"));
+            assertFalse(JdbcUtil.mayWriteUnderAnyDialect("SELECT id FROM account WHERE id = ? FOR UPDATE"));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // Same fix: statements are separated under the database's own comment, quote and bracket rules, so a ';' that only one
+    // dialect reads as code separates statements only there; with an unreadable product name, any reading that sees a
+    // further write joins.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyMultiStatementSplitFollowsTheDialectRules() throws SQLException {
+        final String hashComment = "SELECT 1 # ; UPDATE account SET active = 0";
+        final String dashArithmetic = "SELECT 5--3; UPDATE account SET active = 0";
+        final String nestedLookingComment = "SELECT 1 /* a /* b */ ; UPDATE account SET active = 0 -- */";
+        final String dollarQuoted = "SELECT $tag$; UPDATE account SET active = 0; $tag$ AS body";
+        final String bracketName = "SELECT [a;b] FROM account";
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        assertFalse(joinsNewForUpdateOnlyTransaction(hashComment));
+        assertTrue(joinsNewForUpdateOnlyTransaction(dashArithmetic));
+        assertTrue(joinsNewForUpdateOnlyTransaction(nestedLookingComment));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT 1 /*! ; UPDATE account SET active = 0 */"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT 1 -- ; UPDATE account SET active = 0"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT 1;\n# then the accounts\nSELECT id FROM account /* flat /* comment */;"));
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        assertTrue(joinsNewForUpdateOnlyTransaction(hashComment));
+        assertFalse(joinsNewForUpdateOnlyTransaction(dashArithmetic));
+        assertFalse(joinsNewForUpdateOnlyTransaction(nestedLookingComment));
+        assertFalse(joinsNewForUpdateOnlyTransaction(dollarQuoted));
+        assertTrue(joinsNewForUpdateOnlyTransaction("SELECT $tag$;$tag$; UPDATE account SET active = 0"));
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("Microsoft SQL Server");
+        assertFalse(joinsNewForUpdateOnlyTransaction(bracketName));
+        assertFalse(joinsNewForUpdateOnlyTransaction(bracketName + "; SELECT [c;d] FROM account;"));
+        assertTrue(joinsNewForUpdateOnlyTransaction(bracketName + "; UPDATE account SET active = 0"));
+        assertTrue(joinsNewForUpdateOnlyTransaction(bracketName + "; SELECT id FROM account WITH (UPDLOCK)"));
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenThrow(new SQLException("metadata unavailable"));
+        assertTrue(joinsNewForUpdateOnlyTransaction(hashComment));
+        assertTrue(joinsNewForUpdateOnlyTransaction(dashArithmetic));
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT 1 /* ; UPDATE account SET active = 0 */ ; -- ; DELETE FROM account"));
+    }
+
+    // BUG FIX: a locking read ran outside the for-update-only transaction, on an auto-commit connection that released its row
+    // locks as soon as it completed. A row-locking clause, at any nesting level, now makes the SELECT join.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyJoinsLockingReads() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            final SqlTransaction.CreatedBy by = SqlTransaction.CreatedBy.JDBC_UTIL;
+
+            for (final String sql : new String[] { "SELECT * FROM account WHERE id = ? FOR UPDATE",
+                    "select * from account where id = ? for update of account nowait", "SELECT * FROM account FOR NO KEY UPDATE SKIP LOCKED",
+                    "SELECT * FROM account FOR SHARE", "SELECT * FROM account FOR KEY SHARE NOWAIT", "SELECT * FROM account WHERE id = ? LOCK IN SHARE MODE",
+                    "SELECT * FROM account WITH RS USE AND KEEP UPDATE LOCKS", "SELECT * FROM account FOR\n  UPDATE",
+                    "SELECT * FROM account FOR /* note */ UPDATE", "SELECT * FROM (SELECT * FROM account FOR UPDATE) t",
+                    "WITH c AS (SELECT id FROM account FOR UPDATE) SELECT id FROM c", "SELECT * FROM account a WITH (UPDLOCK, ROWLOCK) WHERE a.id = ?",
+                    "SELECT * FROM account WITH(READPAST, XLOCK)", "SELECT * FROM a JOIN b WITH (INDEX(ix_b), HOLDLOCK) ON a.id = b.id",
+                    "SELECT * FROM account WITH (TABLOCKX)", "SELECT * FROM account WITH (SERIALIZABLE)" }) {
+                assertSame(tran, JdbcUtil.getTransaction(mockDataSource, sql, by), sql);
+            }
+
+            // Guards: the clause words in quoted text, comments, names, parameters or other clauses are not a locking clause.
+            for (final String sql : new String[] { "SELECT 'FOR UPDATE' FROM account", "SELECT \"for update\", `lock in share mode` FROM account",
+                    "SELECT for_update, update_count FROM account", "SELECT * FROM account WHERE a = :for AND b = :update",
+                    "SELECT a.for, a.update FROM account a", "SELECT SUBSTRING(name FROM 1 FOR 3) FROM account", "SELECT * FROM account WITH (NOLOCK)",
+                    "SELECT * FROM account WITH (INDEX(updlock))", "SELECT * FROM account -- for update", "SELECT * FROM account FOR READ ONLY",
+                    "SELECT * FROM account WHERE lock IN (1, 2)", "SELECT * FROM account FOR SYSTEM_TIME AS OF '2024-01-01'",
+                    "SELECT updlock, rowlock FROM account", "SELECT * FROM account WHERE id = #{for} AND note = ${update}" }) {
+                assertNull(JdbcUtil.getTransaction(mockDataSource, sql, by), sql);
+            }
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        // Guard (passes before and after the fix): a transaction that is not for-update-only is always used.
+        final SqlTransaction regular = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, false);
+
+        try {
+            assertSame(regular, JdbcUtil.getTransaction(mockDataSource, "SELECT * FROM account FOR UPDATE", SqlTransaction.CreatedBy.JDBC_UTIL));
+        } finally {
+            regular.rollbackIfNotCommitted();
         }
     }
 
@@ -350,6 +473,67 @@ class JdbcUtilTransactionTest extends JdbcUtilTestSupport {
         assertFalse(joinsNewForUpdateOnlyTransaction(mariaDbExecutableInto));
     }
 
+    // BUG FIX: the statement was classified with the standard comment rules only, so on MySQL/MariaDB the words of a '#'
+    // comment read as code: in "WITH ... # select ...\nUPDATE ..." the CTE scanner took the commented "select" for the
+    // statement after the WITH clause, and the UPDATE/DELETE ran outside the for-update-only transaction. The dialect-aware
+    // scan now finds that statement, and the statement's own leading keyword (here after a flat block comment), again.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyMySqlCommentDoesNotHideTheStatementAfterWith() throws SQLException {
+        final String updateAfterComment = "WITH stale AS (SELECT id FROM account WHERE active = 0) # select the stale rows\n"
+                + "UPDATE account SET archived = 1 WHERE id IN (SELECT id FROM stale)";
+        final String deleteAfterComment = "WITH stale AS (SELECT id FROM account) # select stale ids\nDELETE FROM account WHERE id IN (SELECT id FROM stale)";
+        final String updateAfterFlatComment = "/* a /* b */ UPDATE account SET archived = 1 -- */ SELECT 1";
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        assertTrue(joinsNewForUpdateOnlyTransaction(updateAfterComment));
+        assertTrue(joinsNewForUpdateOnlyTransaction(deleteAfterComment));
+        assertTrue(joinsNewForUpdateOnlyTransaction(
+                "WITH a AS (SELECT 1 AS id)\n# Select the stale rows, then delete them\nUPDATE account SET archived = 1 WHERE id IN (SELECT id FROM a)"));
+        assertTrue(joinsNewForUpdateOnlyTransaction(updateAfterFlatComment));
+        // Guard (passes before and after the fix): a SELECT after the WITH clause still runs separately.
+        assertFalse(joinsNewForUpdateOnlyTransaction("WITH stale AS (SELECT id FROM account) # note\nSELECT * FROM stale"));
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MariaDB");
+        assertTrue(joinsNewForUpdateOnlyTransaction(updateAfterComment));
+
+        // Guards (pass before and after the fix): with the standard rules, block comments nest and '#' is an operator.
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        assertFalse(joinsNewForUpdateOnlyTransaction(updateAfterFlatComment));
+        assertFalse(joinsNewForUpdateOnlyTransaction("WITH stale AS (SELECT id FROM account) SELECT id # 1 FROM stale"));
+
+        // With an unreadable product name, the MySQL reading is one of those checked.
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenThrow(new SQLException("metadata unavailable"));
+        assertTrue(joinsNewForUpdateOnlyTransaction(updateAfterComment));
+        assertTrue(joinsNewForUpdateOnlyTransaction(deleteAfterComment));
+    }
+
+    // Same fix: the statement after the WITH clause is found past every CTE form (RECURSIVE, column lists, several CTEs,
+    // a flat block comment), and only a top-level WITH at the statement start is tracked, up to its main statement.
+    @Test
+    public void testGetTransaction_ForUpdateOnlyMySqlStatementAfterWithIsFoundPastEveryCteForm() throws SQLException {
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        assertTrue(joinsNewForUpdateOnlyTransaction("WITH RECURSIVE seq (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 3) # select the ids\n"
+                + "DELETE FROM account WHERE id IN (SELECT n FROM seq)"));
+        assertTrue(joinsNewForUpdateOnlyTransaction("WITH a AS (SELECT 1 AS id),\n# select a, then b\nb AS (SELECT id FROM a)\n"
+                + "UPDATE account SET archived = 1 WHERE id IN (SELECT id FROM b)"));
+        // MySQL block comments don't nest, so the UPDATE follows the comment; nested, the comment ends after "-- */".
+        assertTrue(joinsNewForUpdateOnlyTransaction(
+                "WITH c AS (SELECT id FROM account) /* a /* b */ UPDATE account SET archived = 1 WHERE id IN (SELECT id FROM c) -- */ SELECT 1"));
+        // INSERT without INTO (MySQL accepts both), so the INTO check does not catch it.
+        assertTrue(joinsNewForUpdateOnlyTransaction("WITH c AS (SELECT 1 AS id) # select\nINSERT archive SELECT id FROM c"));
+
+        // Guards (pass before and after the fix): a WITH inside a derived table is not tracked, a CTE name is not the
+        // statement, and nothing after the main SELECT is.
+        assertFalse(joinsNewForUpdateOnlyTransaction("SELECT merge.id FROM (WITH c AS (SELECT 1 AS id) SELECT id FROM c) merge # note"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("WITH merge AS (SELECT 1 AS id) # note\nSELECT id FROM merge"));
+        assertFalse(joinsNewForUpdateOnlyTransaction("WITH RECURSIVE seq (n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 3) # numbers\n"
+                + "SELECT n FROM seq UNION ALL SELECT id FROM account"));
+
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        assertFalse(joinsNewForUpdateOnlyTransaction("WITH RECURSIVE t (n) AS MATERIALIZED (SELECT 1 UNION ALL SELECT n + 1 FROM t WHERE n < 3)"
+                + " SEARCH DEPTH FIRST BY n SET ord -- note\nSELECT * FROM t ORDER BY ord"));
+    }
+
     // BUG FIX: an executable comment the server ignores is a plain comment. MySQL ignores MariaDB-only "/*M! ... */", and
     // "/*!NNNNN ... */" runs only on servers of at least version NNNNN; scanning ignored content made plain reads join. Only a
     // certain "ignored" counts: an unknown vendor or an unparseable version keeps the content as code, so no write is missed.
@@ -463,17 +647,19 @@ class JdbcUtilTransactionTest extends JdbcUtilTestSupport {
         verify(mockConnection, never()).rollback(savepoint);
     }
 
-    // A driver without savepoint support: the probe still runs (without a savepoint), as before the fix.
+    // A driver without savepoint support: the probe still runs (without a savepoint). A present table is reported; a missing
+    // one is no longer answered with false, since the failed probe has left the open PostgreSQL transaction aborted (25P02):
+    // the "table not found" failure is propagated instead (see JdbcUtilMetadataTest for the auto-commit case).
     @Test
     public void testTableExists_FallbackProbeInTransaction_SavepointsUnsupported_ProbesWithoutSavepoint() throws SQLException {
+        final SQLException notFound = new SQLException("relation \"missing_tbl\" does not exist", "42P01");
         when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
         when(mockConnection.getAutoCommit()).thenReturn(false);
         when(mockConnection.setSavepoint()).thenThrow(new java.sql.SQLFeatureNotSupportedException("savepoints"));
-        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2"))
-                .thenThrow(new SQLException("relation \"missing_tbl\" does not exist", "42P01"));
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2")).thenThrow(notFound);
 
-        assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"));
         assertTrue(JdbcUtil.tableExists(mockConnection, "present_tbl"));
+        assertSame(notFound, assertThrows(UncheckedSQLException.class, () -> JdbcUtil.tableExists(mockConnection, "missing_tbl")).getCause());
 
         verify(mockConnection, never()).rollback(org.mockito.ArgumentMatchers.any(java.sql.Savepoint.class));
         verify(mockConnection, never()).releaseSavepoint(org.mockito.ArgumentMatchers.any(java.sql.Savepoint.class));
@@ -566,26 +752,21 @@ class JdbcUtilTransactionTest extends JdbcUtilTestSupport {
     @Test
     @DisplayName("isInTransaction should not propagate LinkageError when Spring is on classpath but mismatched")
     public void testIsInTransactionToleratesLinkageError() throws Exception {
-        // The Spring DataSourceUtils.isConnectionTransactional fallback should catch any LinkageError
-        // subtype (NoClassDefFoundError, NoSuchMethodError, etc.) — not just NoClassDefFoundError —
-        // so that an absent/mismatched Spring on the classpath does not crash callers.
-        // We can only test the public-API contract here: with no active transaction the call must
-        // simply return without throwing, regardless of whether Spring participation is enabled.
+        // The Spring transaction check should catch any LinkageError subtype (NoClassDefFoundError, NoSuchMethodError, etc.) —
+        // not just NoClassDefFoundError — so that an absent/mismatched Spring on the classpath does not crash callers. The check
+        // reads Spring's thread-bound transaction state only: it acquires no connection.
         final Field isInSpringField = JdbcUtil.class.getDeclaredField("isInSpring");
         isInSpringField.setAccessible(true);
         final boolean originalIsInSpring = (boolean) isInSpringField.get(null);
-        final Connection springConnection = mock(Connection.class);
 
-        try (org.mockito.MockedStatic<org.springframework.jdbc.datasource.DataSourceUtils> dataSourceUtils = org.mockito.Mockito
-                .mockStatic(org.springframework.jdbc.datasource.DataSourceUtils.class)) {
+        try (org.mockito.MockedStatic<org.springframework.transaction.support.TransactionSynchronizationManager> synchronizationManager = org.mockito.Mockito
+                .mockStatic(org.springframework.transaction.support.TransactionSynchronizationManager.class)) {
             isInSpringField.set(null, true);
-            dataSourceUtils.when(() -> org.springframework.jdbc.datasource.DataSourceUtils.getConnection(mockDataSource)).thenReturn(springConnection);
-            dataSourceUtils.when(() -> org.springframework.jdbc.datasource.DataSourceUtils.isConnectionTransactional(springConnection, mockDataSource))
+            synchronizationManager.when(org.springframework.transaction.support.TransactionSynchronizationManager::isActualTransactionActive)
                     .thenThrow(new NoSuchMethodError("incompatible Spring API"));
 
             assertFalse(JdbcUtil.isInTransaction(mockDataSource));
-            dataSourceUtils.verify(() -> org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(springConnection, mockDataSource));
-            verify(springConnection, never()).close();
+            verify(mockDataSource, never()).getConnection();
         } finally {
             isInSpringField.set(null, originalIsInSpring);
         }
@@ -822,6 +1003,77 @@ class JdbcUtilTransactionTest extends JdbcUtilTestSupport {
         assertEquals("test", result);
     }
 
+    // Regression: a plain read with several parameter sets, which a for-update-only transaction does not accept, ran in the
+    // transaction that executeBatchUpdate begins for several parameter sets - a nested scope of the for-update-only transaction,
+    // on its connection. When H2 rejected the query as a batch update, that nested scope's rollback marked the caller's
+    // transaction rollback-only and ran its rollback actions. The read now runs on a separate connection whatever its size.
+    @ParameterizedTest(name = "large={0}")
+    @ValueSource(booleans = { false, true })
+    public void testExecuteBatchUpdate_PlainReadUnderForUpdateOnlyTransactionFailsOutsideIt(final boolean large) throws SQLException {
+        final JdbcDataSource ds = new JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:for_update_only_batch_" + UUID.randomUUID());
+
+        try (Connection keeper = ds.getConnection()) {
+            try (Statement stmt = keeper.createStatement()) {
+                stmt.execute("CREATE TABLE account (id INT PRIMARY KEY)");
+            }
+
+            final List<Object[]> rows = List.of(new Object[] { 1 }, new Object[] { 2 });
+            final boolean[] undone = { false };
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.READ_COMMITTED, true);
+
+            try {
+                JdbcUtil.executeUpdate(ds, "INSERT INTO account (id) VALUES (7)");
+                tran.addRollbackAction(() -> undone[0] = true);
+
+                // H2 rejects a query as a batch update; the failure must not reach the for-update-only transaction.
+                assertThrows(SQLException.class, () -> {
+                    if (large) {
+                        JdbcUtil.executeLargeBatchUpdate(ds, "SELECT id FROM account WHERE id = ?", rows);
+                    } else {
+                        JdbcUtil.executeBatchUpdate(ds, "SELECT id FROM account WHERE id = ?", rows);
+                    }
+                });
+
+                assertTrue(tran.isActive(), "the for-update-only transaction is not marked rollback-only: " + tran.status());
+                assertFalse(undone[0], "its rollback actions are untouched");
+                tran.commit();
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+
+            assertFalse(undone[0]);
+            assertEquals(1, JdbcUtil.prepareQuery(keeper, "SELECT COUNT(*) FROM account").queryForInt().orElse(-1), "the transaction's own work committed");
+        }
+    }
+
+    // The same read, succeeding: it runs on a connection of its own, not on the for-update-only transaction's.
+    @ParameterizedTest(name = "large={0}")
+    @ValueSource(booleans = { false, true })
+    public void testExecuteBatchUpdate_PlainReadUnderForUpdateOnlyTransactionUsesASeparateConnection(final boolean large) throws SQLException {
+        final Connection readConnection = mock(Connection.class);
+        final PreparedStatement readStatement = mock(PreparedStatement.class);
+        when(mockDataSource.getConnection()).thenReturn(mockConnection, readConnection);
+        when(readConnection.prepareStatement("SELECT id FROM account WHERE id = ?")).thenReturn(readStatement);
+        when(readStatement.executeBatch()).thenReturn(new int[] { 1, 1 });
+        when(readStatement.executeLargeBatch()).thenReturn(new long[] { 1, 1 });
+        final List<Object[]> rows = List.of(new Object[] { 1 }, new Object[] { 2 });
+        final SqlTransaction tran = JdbcUtil.beginTransaction(mockDataSource, IsolationLevel.READ_COMMITTED, true);
+
+        try {
+            assertSame(mockConnection, tran.connection());
+            assertEquals(2, large ? JdbcUtil.executeLargeBatchUpdate(mockDataSource, "SELECT id FROM account WHERE id = ?", rows)
+                    : JdbcUtil.executeBatchUpdate(mockDataSource, "SELECT id FROM account WHERE id = ?", rows));
+
+            assertTrue(tran.isActive());
+            verify(mockConnection, never()).prepareStatement(anyString());
+            verify(readStatement, org.mockito.Mockito.times(2)).addBatch();
+            verify(readConnection).close();
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
     /**
      * Routes {@code sql} through a new for-update-only transaction and returns whether it joined it. The database dialect is
      * read once per transaction, so a test that changes the mocked product between checks uses a new transaction for each.
@@ -836,5 +1088,26 @@ class JdbcUtilTransactionTest extends JdbcUtilTestSupport {
         } finally {
             tran.rollbackIfNotCommitted();
         }
+    }
+
+    // JU-C-5: markSpringTransactionRollbackOnly catches a LinkageError out of the Spring adapter (Spring's transaction classes
+    // failing to load or link), logs it and rethrows it. Swallowed, the error made a rollback that marked nothing look complete:
+    // the generated IDs were put back although Spring may commit the rows; propagated, SqlTransaction leaves the undo to
+    // Spring's outcome. The adapter is a private nested class: mocked as a static through its reflected method.
+    @Test
+    public void testMarkSpringTransactionRollbackOnly_PropagatesALinkageErrorOutOfTheSpringAdapter() throws Exception {
+        final Class<?> springRollbackActions = Class.forName("com.landawn.abacus.jdbc.JdbcUtil$SpringRollbackActions");
+        final java.lang.reflect.Method markRollbackOnly = springRollbackActions.getDeclaredMethod("markRollbackOnly", Object.class);
+        markRollbackOnly.setAccessible(true);
+        final NoClassDefFoundError failure = new NoClassDefFoundError("org/springframework/transaction/support/TransactionSynchronizationManager");
+
+        try (org.mockito.MockedStatic<?> adapter = org.mockito.Mockito.mockStatic(springRollbackActions)) {
+            adapter.when(() -> markRollbackOnly.invoke(null, mockDataSource)).thenThrow(failure);
+
+            assertSame(failure, assertThrows(NoClassDefFoundError.class, () -> JdbcUtil.markSpringTransactionRollbackOnly(mockDataSource)));
+            adapter.verify(() -> markRollbackOnly.invoke(null, mockDataSource));
+        }
+
+        verifyNoInteractions(mockDataSource);
     }
 }

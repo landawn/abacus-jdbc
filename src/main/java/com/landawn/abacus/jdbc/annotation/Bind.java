@@ -36,8 +36,11 @@ import java.lang.annotation.Target;
  * named parameter whose token matches {@link #value()} <i>verbatim</i>. It does not traverse or
  * prefix-bind properties of the annotated argument: {@code @Bind("a.b")} supplies the value for
  * that entire token, while {@code @Bind("a")} does not expand a bean into {@code :a.b}.
- * Nested properties can instead be read automatically from a single <b>unannotated</b> bean
- * parameter (see below). A binding name absent from static SQL fails DAO initialization with
+ * Properties, including nested property paths such as {@code :address.street}, can instead be read
+ * automatically from a single <b>unannotated</b> bean parameter (see below). If an intermediate value on
+ * such a path is {@code null}, the parameter is bound to SQL {@code NULL}; a token that does not resolve to
+ * a property path of the bean fails the call with {@code IllegalArgumentException} when the parameters
+ * are bound. A binding name absent from static SQL fails DAO initialization with
  * {@code IllegalArgumentException} unless
  * {@link Query#fragmentsContainNamedParameters()} is enabled, in which case the name may be
  * supplied by an SQL fragment and is checked when binding the expanded query.</p>

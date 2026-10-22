@@ -31,16 +31,21 @@ import com.landawn.abacus.annotation.Beta;
  *
  * <p>The DAO proxy ({@code DaoImpl}) collects {@code @RefreshCache} annotations at build time. At
  * runtime, after a matching method finishes (success or failure), the proxy invokes the
- * {@code Jdbc.DaoCache.update(...)} invalidation hook. The built-in caches invalidate entries for
- * the affected table (or clear the cache when no table can be determined); a custom cache controls
- * its own invalidation policy. A method-level {@code @RefreshCache} can override the
+ * {@code Jdbc.DaoCache.update(...)} invalidation hook. The built-in caches invalidate the entries of
+ * the DAO's own table, the table name embedded in the cache keys (or clear the cache when no table
+ * can be determined); the table a custom {@code INSERT} actually writes to is not inspected. A custom
+ * cache controls its own invalidation policy. A method-level {@code @RefreshCache} can override the
  * type-level one — most importantly, {@code @RefreshCache(enabled = false)} <em>opts a single
  * method back out</em> of the cache-invalidation set declared at the type level.</p>
  *
  * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when the
  * method name starts with that entry (case-insensitive), or when the entry matches the full method name
  * as a regular expression. The filter is ignored entirely for method-level usage. The default value
- * already covers the common write-method names emitted by the Abacus DAO base interfaces.</p>
+ * already covers the common write-method names emitted by the Abacus DAO base interfaces. When several
+ * interfaces of the DAO (the DAO interface itself first, then its super-interfaces) declare a type-level
+ * {@code @RefreshCache}, a method uses the first one whose filter matches its name, as for
+ * {@link CacheResult @CacheResult} and {@link PerfLog @PerfLog}; if that one is disabled, the method does not
+ * invalidate the cache.</p>
  *
  * <p><strong>Note:</strong> Marked {@link Beta} along with {@link Cache} and {@link CacheResult}.</p>
  *

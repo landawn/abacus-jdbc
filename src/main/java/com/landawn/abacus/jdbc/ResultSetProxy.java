@@ -868,9 +868,11 @@ final class ResultSetProxy implements ResultSet {
      *   <li>Materializes {@link Blob} values to {@code byte[]} and {@link Clob} values to {@code String}</li>
      * </ul>
      *
-     * <p>When no getter has been cached for a label, the label is resolved to a column index via the
-     * underlying {@link ResultSet#findColumn(String)}. Like the index form, the getter strategy is
-     * cached only after the first non-null read for that label.</p>
+     * <p>The first access of a label resolves it to a column index via the underlying
+     * {@link ResultSet#findColumn(String)} and caches that index, even when the value read is SQL NULL;
+     * a failed resolution is not cached, so the next call resolves the label again. The cache is keyed
+     * by the exact label string, so labels that differ only in case are resolved and cached separately.
+     * Like the index form, the getter strategy is cached only after the first non-null read for that label.</p>
      *
      * <p>A {@code null} {@code columnLabel} is not rejected here: the label cache tolerates a
      * {@code null} key and the label is handed to {@link ResultSet#findColumn(String)}, so the

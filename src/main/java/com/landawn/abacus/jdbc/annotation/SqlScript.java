@@ -33,13 +33,14 @@ import java.lang.annotation.Target;
  *
  * <p><b>Constraints (enforced at DAO initialization, otherwise {@code IllegalArgumentException}):</b></p>
  * <ul>
- *   <li>The annotated field must be declared {@code static final String} on the DAO interface
- *       (or a nested class within it).</li>
+ *   <li>The annotated field must be declared {@code static final String} on the DAO interface or one of
+ *       its super-interfaces (or in a class nested directly within one of them).</li>
  *   <li>The resolved id (either {@link #id()} when non-empty, or the field name) must be
  *       non-empty and must be a valid Java identifier (all registered query ids are validated
  *       against Java-identifier syntax, so punctuated ids like {@code soft-delete.byId} are rejected).</li>
  *   <li>No two annotated fields may resolve to the same id.</li>
- *   <li>The id must not collide with any entry already loaded by {@link SqlSource}.</li>
+ *   <li>The id must not collide with any entry already loaded by {@link SqlSource} or defined by the SQL
+ *       mapper supplied when the DAO is created.</li>
  * </ul>
  *
  * <p><b>Usage Examples:</b></p>
@@ -85,7 +86,8 @@ public @interface SqlScript {
      *
      * <p>When supplied, the id must be a non-empty, valid Java identifier, unique among all
      * {@link SqlScript} fields on the DAO, and must not collide with any id loaded via
-     * {@link SqlSource}; otherwise DAO initialization fails with {@code IllegalArgumentException}.</p>
+     * {@link SqlSource} or defined by the SQL mapper supplied when the DAO is created; otherwise DAO
+     * initialization fails with {@code IllegalArgumentException}.</p>
      *
      * @return the identifier used by {@link Query#id()}; empty means the annotated field name is used
      */

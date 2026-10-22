@@ -49,6 +49,13 @@ import com.landawn.abacus.util.N;
  * not automatically part of the caller's thread-bound transaction. Partial database deletion is
  * therefore possible unless the application supplies stronger coordination.</p>
  *
+ * <p><b>Connection acquisition failures:</b> join entities are deleted through a DAO extending {@link Dao} created for the
+ * join entity class on the same data source, or through this DAO if there is none. As described for
+ * {@link UncheckedJoinEntityReadOps}, an unchecked DAO translates a Spring {@code CannotGetJdbcConnectionException} caused by
+ * an {@link SQLException} into {@link UncheckedSQLException}, but a checked DAO doesn't. Nor is it translated when a
+ * sequential operation opens a transaction, which it does to delete the join entities of more than one join property, or
+ * of more than one entity, together. The {@link Executor} overloads translate it whichever DAO runs their tasks.</p>
+ *
  * @param <T> the entity type that this helper manages
  * @param <TD> the companion {@link UncheckedDao} type that owns this helper
  * @see JoinEntityDeleteOps
@@ -77,8 +84,14 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or if no join property of the specified type is found in the entity class,
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if it opens a transaction or deletes through a checked DAO (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -86,7 +99,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @SuppressWarnings("deprecation")
     @Override
     default int deleteJoinEntities(final T entity, final Class<?> joinEntityClass)
-            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
@@ -148,8 +161,14 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if it opens a transaction or deletes through a checked DAO (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -157,7 +176,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @SuppressWarnings("deprecation")
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Class<?> joinEntityClass)
-            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(joinEntityClass, cs.joinEntityClass);
 
         if (N.isEmpty(entities)) {
@@ -245,16 +264,18 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code joinEntityPropName} is {@code null} or empty,
      *                                  or does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing a DELETE statement fails
-     * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
+     * @throws IllegalStateException not thrown by the current implementation, which executes a single DELETE statement
+     *         and starts no transaction of its own
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if a checked DAO deletes the join entities (see {@link UncheckedJoinEntityDeleteOps})
+     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing the DELETE statement fails
+     * @throws ArithmeticException not thrown by the current implementation, which returns the update count of its single
+     *         DELETE statement
      */
     @Override
     int deleteJoinEntities(final T entity, final String joinEntityPropName)
-            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException;
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
 
     /**
      * Deletes join entities for a collection of entities by property name.
@@ -263,7 +284,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * <p>It efficiently deletes all related entities for multiple parent entities in a batch operation.
      * The implementation typically uses an IN clause to delete all related records in one or more SQL
      * statements, avoiding the N+1 delete problem. For large collections, the deletion may be
-     * automatically batched to prevent SQL statement size limits from being exceeded.</p>
+     * automatically batched to prevent SQL statement size limits from being exceeded. When more than one
+     * entity is given, all of these DELETE statements are executed within a single transaction.</p>
      *
      * <p>Unlike the checked version in {@link JoinEntityDeleteOps}, this method throws {@link UncheckedSQLException}
      * instead of {@link SQLException}, making it suitable for use in functional programming contexts
@@ -311,15 +333,21 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if it opens a transaction or deletes through a checked DAO (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
     int deleteJoinEntities(final Collection<T> entities, final String joinEntityPropName)
-            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException;
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException;
 
     /**
      * Deletes join entities for multiple property names of a single entity.
@@ -342,15 +370,21 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if it opens a transaction or deletes through a checked DAO (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
     default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames)
-            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(entity, cs.entity);
 
         if (N.isEmpty(joinEntityPropNames)) {
@@ -417,14 +451,14 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any property name in
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
+     * @throws IllegalStateException not thrown by the current implementation: each delete task executes a single DELETE
+     *         statement and no transaction is started
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
      *         {@code null} or throws an {@code IllegalStateException}
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing a DELETE statement fails
+     * @throws UncheckedSQLException if acquiring a connection, or preparing, binding, or executing a DELETE statement, fails in a
+     *         delete task
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteJoinEntities(Object, Collection)} for transactional behavior
@@ -432,9 +466,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws IllegalArgumentException, IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, CannotGetJdbcConnectionException,
-            UncheckedSQLException, ArithmeticException {
+    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final Executor executor) throws IllegalArgumentException,
+            IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
@@ -471,10 +504,17 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or any property name in {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if it opens a transaction or deletes through a checked DAO
+     *         (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -484,9 +524,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Beta
     @Deprecated
     @Override
-    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws IllegalArgumentException, IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, CannotGetJdbcConnectionException,
-            UncheckedSQLException, ArithmeticException {
+    default int deleteJoinEntities(final T entity, final Collection<String> joinEntityPropNames, final boolean inParallel) throws IllegalArgumentException,
+            IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         if (inParallel) {
             return deleteJoinEntities(entity, joinEntityPropNames, executor());
         } else {
@@ -515,15 +554,21 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if it opens a transaction or deletes through a checked DAO (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames)
-            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
             return 0;
         }
@@ -582,10 +627,17 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if it opens a transaction or deletes through a checked DAO
+     *         (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -596,8 +648,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final boolean inParallel)
-            throws IllegalArgumentException, IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, CannotGetJdbcConnectionException,
-            UncheckedSQLException, ArithmeticException {
+            throws IllegalArgumentException, IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException,
+            ArithmeticException {
         if (inParallel) {
             return deleteJoinEntities(entities, joinEntityPropNames, executor());
         } else {
@@ -634,7 +686,11 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
@@ -649,8 +705,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteJoinEntities(final Collection<T> entities, final Collection<String> joinEntityPropNames, final Executor executor)
-            throws IllegalArgumentException, IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, CannotGetJdbcConnectionException,
-            UncheckedSQLException, ArithmeticException {
+            throws IllegalArgumentException, IllegalStateException, RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException,
+            ArithmeticException {
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(entities) || N.isEmpty(joinEntityPropNames)) {
@@ -667,6 +723,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * Deletes all join entities for a single entity.
      * This deletes the rows referenced by every property annotated with {@code @JoinedBy};
      * the in-memory join properties of {@code entity} are left unchanged.
+     * All of these deletions are performed within a single transaction.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -680,16 +737,21 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if it opens a transaction or deletes through a checked DAO (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
     @SuppressWarnings("deprecation")
     @Override
-    default int deleteAllJoinEntities(final T entity)
-            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+    default int deleteAllJoinEntities(final T entity) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(entity, cs.entity);
 
         return deleteJoinEntities(entity, DaoUtil.getEntityJoinInfo(targetDaoInterface(), targetEntityClass(), targetTableName()).keySet());
@@ -712,10 +774,17 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if it opens a transaction or deletes through a checked DAO
+     *         (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -726,7 +795,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final T entity, final boolean inParallel) throws IllegalArgumentException, IllegalStateException,
-            RejectedExecutionException, UncheckedInterruptedException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+            RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         if (inParallel) {
             return deleteAllJoinEntities(entity, executor());
         } else {
@@ -755,14 +824,14 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total number of deleted records
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
+     * @throws IllegalStateException not thrown by the current implementation: each delete task executes a single DELETE
+     *         statement and no transaction is started
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
      *         {@code null} or throws an {@code IllegalStateException}
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing a DELETE statement fails
+     * @throws UncheckedSQLException if acquiring a connection, or preparing, binding, or executing a DELETE statement, fails in a
+     *         delete task
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      * @deprecated parallel deletion cannot be performed within a single transaction; prefer
      *             {@link #deleteAllJoinEntities(Object)} for transactional behavior
@@ -771,7 +840,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final T entity, final Executor executor) throws IllegalArgumentException, IllegalStateException,
-            RejectedExecutionException, UncheckedInterruptedException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+            RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(executor, cs.executor);
 
@@ -782,6 +851,8 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * Deletes all join entities for multiple entities.
      * This deletes the rows referenced by every property annotated with {@code @JoinedBy} for each entity;
      * the in-memory join properties of the entities are left unchanged.
+     * All of these deletions are performed within a single transaction.
+     * If {@code entities} is {@code null} or empty, this method returns 0 without executing a DELETE statement.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -795,8 +866,14 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or for any acquisition failure if it opens a transaction or deletes through a checked DAO (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -804,7 +881,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @SuppressWarnings("deprecation")
     @Override
     default int deleteAllJoinEntities(final Collection<T> entities)
-            throws IllegalArgumentException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, ArithmeticException {
         if (N.isEmpty(entities)) {
             return 0;
         }
@@ -829,10 +906,17 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
+     *         {@code null} or throws an {@code IllegalStateException},
+     *         or, unless {@code inParallel}, for any acquisition failure if it opens a transaction or deletes through a checked DAO
+     *         (see {@link UncheckedJoinEntityDeleteOps})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
      *         or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -843,7 +927,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final Collection<T> entities, final boolean inParallel) throws IllegalArgumentException, IllegalStateException,
-            RejectedExecutionException, UncheckedInterruptedException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+            RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         if (inParallel) {
             return deleteAllJoinEntities(entities, executor());
         } else {
@@ -874,7 +958,11 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      *                                  or a join being deleted has a disallowed null/default key,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
      * @throws IllegalStateException if an existing transaction on the current thread
-     *         is no longer active and cannot accept the internally required transaction scope
+     *         is no longer active and cannot accept the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and the data source returns
@@ -889,7 +977,7 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
     @Deprecated
     @Override
     default int deleteAllJoinEntities(final Collection<T> entities, final Executor executor) throws IllegalArgumentException, IllegalStateException,
-            RejectedExecutionException, UncheckedInterruptedException, CannotGetJdbcConnectionException, UncheckedSQLException, ArithmeticException {
+            RejectedExecutionException, UncheckedInterruptedException, UncheckedSQLException, ArithmeticException {
         N.checkArgNotNull(executor, cs.executor);
 
         if (N.isEmpty(entities)) {

@@ -73,9 +73,13 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     javax.sql.DataSource dataSource();
 
     /**
-     * Retrieves the {@code SqlMapper} instance configured for this DAO.
+     * Retrieves the {@code SqlMapper} instance of this DAO.
      * The SqlMapper provides SQL query templates that can be referenced by name.
-     * If no SqlMapper is configured, an empty SqlMapper instance will be returned.
+     * It is this DAO's own copy of the SqlMapper supplied when the DAO was created (a new, empty one if none was
+     * supplied), with the SQL loaded from any {@link com.landawn.abacus.jdbc.annotation.SqlSource @SqlSource} on the
+     * DAO interface or its super-interfaces, and the SQL of the
+     * {@link com.landawn.abacus.jdbc.annotation.SqlScript @SqlScript} fields of those interfaces and of their directly
+     * nested classes, added; later changes to the supplied SqlMapper are not seen by this DAO.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -147,8 +151,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final String sql)
-            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+    default PreparedQuery prepareQuery(final String sql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQuery(dataSource(), sql);
     }
 
@@ -174,8 +177,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQuery(final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+    default PreparedQuery prepareQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareQuery(null, cond);
     }
 
@@ -204,7 +206,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Creates a PreparedQuery optimized for queries that return large result sets.
@@ -223,7 +225,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQueryForLargeResult(final String sql)
-            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareQueryForLargeResult(dataSource(), sql);
     }
 
@@ -242,8 +244,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default PreparedQuery prepareQueryForLargeResult(final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+    default PreparedQuery prepareQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareQueryForLargeResult(null, cond);
     }
 
@@ -263,7 +264,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     default PreparedQuery prepareQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult);
     }
 
@@ -294,7 +295,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final String namedSql)
-            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql);
     }
 
@@ -315,7 +316,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQuery(final ParsedSql namedSql)
-            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQuery(dataSource(), namedSql);
     }
 
@@ -333,8 +334,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQuery(final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+    default NamedQuery prepareNamedQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareNamedQuery(null, cond);
     }
 
@@ -354,7 +354,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException;
+            throws IllegalArgumentException, UncheckedSQLException, SQLException;
 
     /**
      * Creates a NamedQuery optimized for large result sets.
@@ -373,7 +373,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQueryForLargeResult(final String namedSql)
-            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedSql);
     }
 
@@ -393,7 +393,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedSql)
-            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException {
         return JdbcUtil.prepareNamedQueryForLargeResult(dataSource(), namedSql);
     }
 
@@ -411,8 +411,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      */
     @Beta
     @NonDBOperation
-    default NamedQuery prepareNamedQueryForLargeResult(final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+    default NamedQuery prepareNamedQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareNamedQueryForLargeResult(null, cond);
     }
 
@@ -432,7 +431,7 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
     @Beta
     @NonDBOperation
     default NamedQuery prepareNamedQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond)
-            throws IllegalArgumentException, CannotGetJdbcConnectionException, UncheckedSQLException, SQLException {
+            throws IllegalArgumentException, UncheckedSQLException, SQLException {
         return prepareNamedQuery(selectPropNames, cond).configureStatement(DaoUtil.stmtSetterForBigQueryResult);
     }
 

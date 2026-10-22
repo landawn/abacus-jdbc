@@ -248,6 +248,71 @@ public class DaoImplTest extends TestBase {
         java.util.LinkedList<Long> batchInsertReturningLinkedList(Collection<IdOnlyEntity> entities) throws SQLException;
     }
 
+    // Non-CRUD DAOs declare no ID type; IdOnlyEntity's generated id is a long, TenantRow's composite id an EntityId.
+    interface NarrowNonCrudInsertReturnDao extends Dao<IdOnlyEntity, NarrowNonCrudInsertReturnDao> {
+        @Query("INSERT INTO id_only_entity (id) VALUES (:id)")
+        int insertReturningInt(IdOnlyEntity entity) throws SQLException;
+    }
+
+    interface NarrowNonCrudOptionalInsertReturnDao extends Dao<IdOnlyEntity, NarrowNonCrudOptionalInsertReturnDao> {
+        @Query("INSERT INTO id_only_entity (id) VALUES (:id)")
+        Optional<Integer> insertReturningOptionalInteger(IdOnlyEntity entity) throws SQLException;
+    }
+
+    interface NarrowNonCrudBatchInsertReturnDao extends Dao<IdOnlyEntity, NarrowNonCrudBatchInsertReturnDao> {
+        @Query(value = "INSERT INTO id_only_entity (id) VALUES (:id)", batch = true)
+        List<String> batchInsertReturningStrings(Collection<IdOnlyEntity> entities) throws SQLException;
+    }
+
+    interface NarrowNonCrudCompositeInsertReturnDao extends Dao<TenantRow, NarrowNonCrudCompositeInsertReturnDao> {
+        @Query("INSERT INTO tenant_row (tenant_id, name) VALUES (:tenantId, :name)")
+        long insertReturningLong(TenantRow row) throws SQLException;
+    }
+
+    interface WideNonCrudInsertReturnDao extends Dao<IdOnlyEntity, WideNonCrudInsertReturnDao> {
+        @Query("INSERT INTO id_only_entity (id) VALUES (:id)")
+        long insertReturningLong(IdOnlyEntity entity) throws SQLException;
+
+        @Query("INSERT INTO id_only_entity (id) VALUES (:id)")
+        Optional<Number> insertReturningOptionalNumber(IdOnlyEntity entity) throws SQLException;
+
+        @Query(value = "INSERT INTO id_only_entity (id) VALUES (:id)", batch = true)
+        List<Long> batchInsertReturningLongs(Collection<IdOnlyEntity> entities) throws SQLException;
+    }
+
+    interface WideNonCrudCompositeInsertReturnDao extends Dao<TenantRow, WideNonCrudCompositeInsertReturnDao> {
+        @Query("INSERT INTO tenant_row (tenant_id, name) VALUES (:tenantId, :name)")
+        com.landawn.abacus.util.EntityId insertReturningEntityId(TenantRow row) throws SQLException;
+    }
+
+    // An INSERT into another table returns that table's key, not the DAO entity's id, so its return type is not checked
+    // against the id type (with or without a declared ID type); a method whose argument may be the entity still is.
+    interface OtherTableInsertDao extends Dao<IdOnlyEntity, OtherTableInsertDao> {
+        @Query("INSERT INTO audit_log (msg) VALUES (?)")
+        int log(String msg) throws SQLException;
+
+        @Query("INSERT INTO audit_log (msg) VALUES (?)")
+        Optional<Integer> logReturningOptional(String msg) throws SQLException;
+
+        @Query(value = "INSERT INTO audit_log (msg) VALUES (?)", batch = true, collectionAsSingleParameter = true)
+        List<Integer> logAll(List<String> msgs) throws SQLException;
+    }
+
+    interface OtherTableInsertCrudDao extends CrudDao<IdOnlyEntity, Long, OtherTableInsertCrudDao> {
+        @Query("INSERT INTO audit_log (msg) VALUES (?)")
+        int log(String msg) throws SQLException;
+    }
+
+    interface MaybeEntityInsertDao extends Dao<IdOnlyEntity, MaybeEntityInsertDao> {
+        @Query("INSERT INTO id_only_entity (id) VALUES (?)")
+        int insertReturningInt(Object entity) throws SQLException;
+    }
+
+    interface OtherTableBatchInsertWithoutListDao extends Dao<IdOnlyEntity, OtherTableBatchInsertWithoutListDao> {
+        @Query(value = "INSERT INTO audit_log (msg) VALUES (?)", batch = true, collectionAsSingleParameter = true)
+        int logAll(List<String> msgs) throws SQLException;
+    }
+
     interface MergedDao {
         @Query("select * from test")
         @MergedById("id")
@@ -622,6 +687,34 @@ public class DaoImplTest extends TestBase {
         @Transactional
         @Query(value = "select * from test", op = QueryOperation.stream)
         java.util.stream.Stream<TestEntity> streamAll();
+    }
+
+    interface TransactionalSeqDao extends Dao<TestEntity, TransactionalSeqDao> {
+        @Transactional
+        default com.landawn.abacus.util.Seq<TestEntity, SQLException> seqAll() throws SQLException {
+            return com.landawn.abacus.util.Seq.of(list(Filters.alwaysTrue()));
+        }
+    }
+
+    interface TransactionalIteratorDao extends Dao<TestEntity, TransactionalIteratorDao> {
+        @Transactional(propagation = Propagation.REQUIRES_NEW)
+        default java.util.Iterator<TestEntity> iterateAll() throws SQLException {
+            return list(Filters.alwaysTrue()).iterator();
+        }
+    }
+
+    interface NeverTransactionalIteratorDao extends Dao<TestEntity, NeverTransactionalIteratorDao> {
+        @Transactional(propagation = Propagation.NEVER)
+        default com.landawn.abacus.util.ObjIterator<TestEntity> iterateAll() throws SQLException {
+            return com.landawn.abacus.util.ObjIterator.of(list(Filters.alwaysTrue()));
+        }
+    }
+
+    interface SupportsTransactionalSeqDao extends Dao<TestEntity, SupportsTransactionalSeqDao> {
+        @Transactional(propagation = Propagation.SUPPORTS)
+        default com.landawn.abacus.util.Seq<TestEntity, SQLException> seqAll() throws SQLException {
+            return com.landawn.abacus.util.Seq.of(list(Filters.alwaysTrue()));
+        }
     }
 
     interface UpdateOpDao {
@@ -1011,6 +1104,39 @@ public class DaoImplTest extends TestBase {
         assertTrue(defaultThrown.getMessage().contains("procedure=true"));
     }
 
+    // Regression: the procedure path produces a Tuple2 only for list/query/DEFAULT/listAll/queryAll. With
+    // findFirst/findOnlyOne/queryForSingle/queryForUnique a procedure's Tuple2 return passed DAO creation and fell through
+    // to the single-value dispatch (queryForSingleValue(Tuple2.class)), failing only at execution.
+    @Test
+    void testProcedureTuple2ReturnRejectedAtCreationForSingleResultOperations() throws SQLException {
+        for (final Class<? extends Dao> daoClass : List.of(ProcedureTuple2FindFirstDao.class, ProcedureTuple2FindOnlyOneDao.class,
+                ProcedureTuple2QueryForSingleDao.class, ProcedureTuple2QueryForUniqueDao.class)) {
+            final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                    () -> DaoImpl.createDao(daoClass, null, mockDataSourceForDaoCreation(), PSC, null, null, null), daoClass.getSimpleName());
+            assertTrue(thrown.getMessage().contains("not supported by the specified queryOperation"), thrown.getMessage());
+        }
+    }
+
+    interface ProcedureTuple2FindFirstDao extends Dao<TestEntity, ProcedureTuple2FindFirstDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.findFirst)
+        com.landawn.abacus.util.Tuple.Tuple2<TestEntity, Jdbc.OutParamResult> callProc() throws SQLException;
+    }
+
+    interface ProcedureTuple2FindOnlyOneDao extends Dao<TestEntity, ProcedureTuple2FindOnlyOneDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.findOnlyOne)
+        com.landawn.abacus.util.Tuple.Tuple2<TestEntity, Jdbc.OutParamResult> callProc() throws SQLException;
+    }
+
+    interface ProcedureTuple2QueryForSingleDao extends Dao<TestEntity, ProcedureTuple2QueryForSingleDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.queryForSingle)
+        com.landawn.abacus.util.Tuple.Tuple2<Long, Jdbc.OutParamResult> callProc() throws SQLException;
+    }
+
+    interface ProcedureTuple2QueryForUniqueDao extends Dao<TestEntity, ProcedureTuple2QueryForUniqueDao> {
+        @Query(value = "call test_proc()", procedure = true, op = QueryOperation.queryForUnique)
+        com.landawn.abacus.util.Tuple.Tuple2<Long, Jdbc.OutParamResult> callProc() throws SQLException;
+    }
+
     @Test
     void testResultExtractorPrimitiveReturnTypeCompatibility() throws Exception {
         Method daoMethod = PrimitiveExtractorDao.class.getMethod("count", Jdbc.ResultExtractor.class);
@@ -1046,12 +1172,29 @@ public class DaoImplTest extends TestBase {
         assertFalse(dao.getClass().equals(ReorderedGenericDao.class), "Should be a proxy, not the interface itself");
     }
 
+    interface IdOnlyUncheckedCrudDao extends com.landawn.abacus.jdbc.dao.UncheckedCrudDao<IdOnlyEntity, Long, IdOnlyUncheckedCrudDao> {
+    }
+
+    // update(entity) and batchUpdate(entities[, batchSize]) of an entity class without an updatable non-ID property return 0
+    // without executing any statement (the batch twins with more than one element would otherwise open a transaction too).
     @Test
     void testCreateDaoWithIdOnlyEntityDoesNotBuildEmptyUpdateSql() throws Exception {
-        IdOnlyCrudDao dao = DaoImpl.createDao(IdOnlyCrudDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
+        final DataSource ds = mockDataSourceForDaoCreation();
+        IdOnlyCrudDao dao = DaoImpl.createDao(IdOnlyCrudDao.class, null, ds, PSC, null, null, null);
+        IdOnlyUncheckedCrudDao uncheckedDao = DaoImpl.createDao(IdOnlyUncheckedCrudDao.class, null, ds, PSC, null, null, null);
 
         assertNotNull(dao);
+        assertNotNull(uncheckedDao);
+        Mockito.clearInvocations(ds);
+
         assertEquals(0, dao.update(new IdOnlyEntity()));
+        assertEquals(0, dao.batchUpdate(List.of(new IdOnlyEntity(), new IdOnlyEntity())));
+        assertEquals(0, dao.batchUpdate(List.of(new IdOnlyEntity(), new IdOnlyEntity()), 1));
+        assertEquals(0, uncheckedDao.update(new IdOnlyEntity()));
+        assertEquals(0, uncheckedDao.batchUpdate(List.of(new IdOnlyEntity(), new IdOnlyEntity())));
+        assertEquals(0, uncheckedDao.batchUpdate(List.of(new IdOnlyEntity(), new IdOnlyEntity()), 1));
+
+        Mockito.verify(ds, Mockito.never()).getConnection();
     }
 
     interface NoCacheAnnotationNonUpdateDao extends com.landawn.abacus.jdbc.dao.UncheckedNonUpdateDao<TestEntity, NoCacheAnnotationNonUpdateDao> {
@@ -1112,6 +1255,42 @@ public class DaoImplTest extends TestBase {
         assertTrue(thrown.getMessage().contains("batch insert operations"));
     }
 
+    // A non-CRUD DAO has no declared ID type, so the INSERT return type used to be accepted unchecked: an int method
+    // for a long id inserted the row and then failed with ClassCastException. It is now checked against the id
+    // property's type (EntityId for a composite id) at DAO creation, like a CRUD DAO's declared ID type.
+    @Test
+    void testNonCrudInsertReturnTypeIsCheckedAgainstIdPropertyType() throws Exception {
+        assertTrue(assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(NarrowNonCrudInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)).getMessage()
+                        .contains("return type of insert operations"));
+        assertTrue(assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(NarrowNonCrudOptionalInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)).getMessage()
+                        .contains("return type of insert operations"));
+        assertTrue(assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(NarrowNonCrudBatchInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)).getMessage()
+                        .contains("return type of batch insert operations"));
+        assertTrue(assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(NarrowNonCrudCompositeInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)).getMessage()
+                        .contains("return type of insert operations"));
+
+        assertNotNull(DaoImpl.createDao(WideNonCrudInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertNotNull(DaoImpl.createDao(WideNonCrudCompositeInsertReturnDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+    }
+
+    @Test
+    void testInsertIntoAnotherTableReturnTypeIsNotCheckedAgainstIdPropertyType() throws Exception {
+        assertNotNull(DaoImpl.createDao(OtherTableInsertDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+        assertNotNull(DaoImpl.createDao(OtherTableInsertCrudDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null));
+
+        // Guards: an argument that may hold the entity keeps the check; a batch insert still needs a List return type.
+        assertTrue(assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(MaybeEntityInsertDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)).getMessage()
+                        .contains("return type of insert operations"));
+        assertTrue(assertThrows(UnsupportedOperationException.class,
+                () -> DaoImpl.createDao(OtherTableBatchInsertWithoutListDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null)).getMessage()
+                        .contains("return type of batch insert operations"));
+    }
+
     @Test
     void testDaoPoolUsesCollisionSafeCompositeKeys() throws Exception {
         final DataSource dataSource = mockDataSourceForDaoCreation();
@@ -1119,10 +1298,21 @@ public class DaoImplTest extends TestBase {
         final java.lang.reflect.Field poolField = DaoImpl.class.getDeclaredField("daoPool");
         poolField.setAccessible(true);
         final Map<?, ?> pool = (Map<?, ?>) poolField.get(null);
-        final Object key = pool.entrySet().stream().filter(entry -> entry.getValue() == dao).map(Map.Entry::getKey).findFirst().orElse(null);
+        final Object key = pool.entrySet().stream().filter(entry -> pooledDao(entry.getValue()) == dao).map(Map.Entry::getKey).findFirst().orElse(null);
 
         assertNotNull(key);
         assertFalse(key instanceof String, "DAO pool correctness must not depend on a concatenated identity-hash string");
+    }
+
+    // Returns the DAO proxy of a DAO pool entry.
+    private static Object pooledDao(final Object pooledDaoEntry) {
+        try {
+            final java.lang.reflect.Field daoField = pooledDaoEntry.getClass().getDeclaredField("dao");
+            daoField.setAccessible(true);
+            return daoField.get(pooledDaoEntry);
+        } catch (final ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
     }
 
     @Test
@@ -1621,14 +1811,19 @@ public class DaoImplTest extends TestBase {
                 null);
 
         try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class, Mockito.CALLS_REAL_METHODS)) {
-            jdbcUtil.when(() -> JdbcUtil.createCacheKey(ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.<Object[]> any(),
-                    ArgumentMatchers.any(com.landawn.abacus.logging.Logger.class))).thenReturn(null);
+            jdbcUtil.when(() -> JdbcUtil.createCacheKey(ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.anyString(),
+                    ArgumentMatchers.<Object[]> any(), ArgumentMatchers.any(com.landawn.abacus.logging.Logger.class))).thenReturn(null);
 
             assertEquals("refresh-result", dao.updateWithUnkeyableArgument(new Object()));
         }
 
         assertNotNull(updatedKey.get(), "refresh must receive a table-bearing fallback key when argument serialization fails");
         assertTrue(updatedKey.get().contains(JdbcUtil.CACHE_KEY_SEPARATOR));
+        // The fallback key keeps the DAO identity segment after the table: method#table#daoId#
+        assertTrue(updatedKey.get()
+                .endsWith(JdbcUtil.CACHE_KEY_SEPARATOR + CacheDisabledOverrideDao.class.getSimpleName() + "@" + updatedKey.get().replaceAll(".*@(\\d+)#$", "$1")
+                        + JdbcUtil.CACHE_KEY_SEPARATOR),
+                updatedKey.get());
     }
 
     @Test
@@ -1857,6 +2052,23 @@ public class DaoImplTest extends TestBase {
         assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao(NotSupportedTransactionalStreamDao.class, dataSource));
         assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao(NeverTransactionalStreamDao.class, dataSource));
         assertThrows(UnsupportedOperationException.class, () -> JdbcUtil.createDao(JavaTransactionalStreamDao.class, dataSource));
+    }
+
+    // A Seq or Iterator returned by a @Transactional default method is just as lazy as a stream: it escaped the
+    // transaction (or the non-transactional context) the proxy managed only for the invocation.
+    @Test
+    void testTransactionalSeqAndIteratorDefaultMethodsRejectedAtCreation() throws SQLException {
+        final DataSource dataSource = mockDataSourceForDaoCreation();
+
+        for (final Class<? extends Dao> daoClass : List.<Class<? extends Dao>> of(TransactionalSeqDao.class, TransactionalIteratorDao.class,
+                NeverTransactionalIteratorDao.class)) {
+            final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                    () -> JdbcUtil.createDao((Class) daoClass, dataSource));
+            assertTrue(thrown.getMessage().contains("Seq/Iterator-returning"), thrown.getMessage());
+        }
+
+        // Guard: SUPPORTS neither owns nor suspends a context.
+        assertNotNull(JdbcUtil.createDao(SupportsTransactionalSeqDao.class, dataSource));
     }
 
     // isListQuery: non-DEFAULT non-list QueryOperation returns false (line 441)
@@ -2297,6 +2509,197 @@ public class DaoImplTest extends TestBase {
         assertEquals(9L, ((Number) ids.get(1).get("rowId")).longValue());
     }
 
+    public static class TenantRowKey {
+        private long tenantId;
+        private long rowId;
+
+        public long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final long rowId) {
+            this.rowId = rowId;
+        }
+    }
+
+    public record TenantRowRecordKey(long tenantId, long rowId) {
+    }
+
+    public interface TenantRowBeanIdDao extends CrudDao<TenantRow, TenantRowKey, TenantRowBeanIdDao> {
+        @Query("INSERT INTO TenantRow (tenantId, name) VALUES (:tenantId, :name)")
+        TenantRowKey insertRow(TenantRow row) throws SQLException;
+
+        @Query(value = "INSERT INTO TenantRow (tenantId, name) VALUES (:tenantId, :name)", batch = true)
+        List<TenantRowKey> insertRows(List<TenantRow> rows) throws SQLException;
+    }
+
+    public interface TenantRowRecordIdDao extends CrudDao<TenantRow, TenantRowRecordKey, TenantRowRecordIdDao> {
+    }
+
+    public static class UndeclaredTenantRow {
+        @Id
+        private long tenantId;
+        @Id
+        private long rowId;
+
+        public long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final long rowId) {
+            this.rowId = rowId;
+        }
+    }
+
+    public interface UndeclaredTenantRowDao extends CrudDao<UndeclaredTenantRow, TenantRowKey, UndeclaredTenantRowDao> {
+    }
+
+    private static PreparedStatement mockGeneratedKeyStatement(final Connection conn) throws SQLException {
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+
+        Mockito.when(conn.prepareStatement(ArgumentMatchers.anyString(), ArgumentMatchers.any(String[].class))).thenReturn(stmt);
+        Mockito.when(conn.prepareStatement(ArgumentMatchers.anyString(), ArgumentMatchers.anyInt())).thenReturn(stmt);
+        Mockito.when(conn.prepareStatement(ArgumentMatchers.anyString())).thenReturn(stmt);
+        Mockito.when(stmt.executeUpdate()).thenReturn(1);
+        Mockito.when(stmt.executeBatch()).thenReturn(new int[] { 1, 1 });
+
+        return stmt;
+    }
+
+    // A composite bean id class with a single unlabeled generated key (MySQL GENERATED_KEY): the key was extracted as the bare
+    // value, not assigned, and returned as the id, failing with ClassCastException at the call site. It is now assigned to the
+    // declared database-generated id property, and insert/batchInsert/@Query insert return the entity's full composite id.
+    @Test
+    public void testCompositeBeanIdWithSingleUnlabeledGeneratedKeyReturnsTheFullId() throws SQLException {
+        final DataSource ds = mockDataSourceForDaoCreation();
+        final PreparedStatement stmt = mockGeneratedKeyStatement(ds.getConnection());
+        Mockito.when(stmt.getGeneratedKeys())
+                .thenAnswer(inv -> generatedKeyResultSet(7L))
+                .thenAnswer(inv -> generatedKeyResultSet(8L, 9L))
+                .thenAnswer(inv -> generatedKeyResultSet(10L))
+                .thenAnswer(inv -> generatedKeyResultSet(11L, 12L));
+
+        final TenantRowBeanIdDao dao = DaoImpl.createDao(TenantRowBeanIdDao.class, null, ds, PSC, null, null, null);
+
+        final TenantRow row = new TenantRow();
+        row.setTenantId(5L);
+        final TenantRowKey id = dao.insert(row);
+        assertEquals(5L, id.getTenantId());
+        assertEquals(7L, id.getRowId());
+        assertEquals(7L, row.getRowId());
+
+        final TenantRow first = new TenantRow();
+        first.setTenantId(5L);
+        final TenantRow second = new TenantRow();
+        second.setTenantId(6L);
+        final List<TenantRowKey> ids = dao.batchInsert(List.of(first, second));
+        assertEquals(List.of(5L, 6L), ids.stream().map(TenantRowKey::getTenantId).toList());
+        assertEquals(List.of(8L, 9L), ids.stream().map(TenantRowKey::getRowId).toList());
+        assertEquals(9L, second.getRowId());
+
+        final TenantRow queried = new TenantRow();
+        queried.setTenantId(4L);
+        final TenantRowKey queryId = dao.insertRow(queried);
+        assertEquals(4L, queryId.getTenantId());
+        assertEquals(10L, queryId.getRowId());
+
+        final TenantRow third = new TenantRow();
+        third.setTenantId(3L);
+        final TenantRow fourth = new TenantRow();
+        fourth.setTenantId(2L);
+        final List<TenantRowKey> queryIds = dao.insertRows(List.of(third, fourth));
+        assertEquals(List.of(11L, 12L), queryIds.stream().map(TenantRowKey::getRowId).toList());
+        assertEquals(2L, queryIds.get(1).getTenantId());
+    }
+
+    @Test
+    public void testCompositeRecordIdWithSingleUnlabeledGeneratedKeyReturnsTheFullId() throws SQLException {
+        final DataSource ds = mockDataSourceForDaoCreation();
+        final PreparedStatement stmt = mockGeneratedKeyStatement(ds.getConnection());
+        Mockito.when(stmt.getGeneratedKeys()).thenAnswer(inv -> generatedKeyResultSet(7L)).thenAnswer(inv -> generatedKeyResultSet(8L, 9L));
+
+        final TenantRowRecordIdDao dao = DaoImpl.createDao(TenantRowRecordIdDao.class, null, ds, PSC, null, null, null);
+
+        final TenantRow row = new TenantRow();
+        row.setTenantId(5L);
+        assertEquals(new TenantRowRecordKey(5L, 7L), dao.insert(row));
+
+        final TenantRow first = new TenantRow();
+        first.setTenantId(5L);
+        final TenantRow second = new TenantRow();
+        second.setTenantId(6L);
+        assertEquals(List.of(new TenantRowRecordKey(5L, 8L), new TenantRowRecordKey(6L, 9L)), dao.batchInsert(List.of(first, second)));
+    }
+
+    // Without exactly one declared database-generated id property, the unlabeled key is not assigned (a warning is logged) and
+    // the entity's id is returned, without ClassCastException.
+    @Test
+    public void testCompositeBeanIdWithUndeclaredGeneratedPropertyReturnsTheEntityId() throws SQLException {
+        final DataSource ds = mockDataSourceForDaoCreation();
+        final PreparedStatement stmt = mockGeneratedKeyStatement(ds.getConnection());
+        Mockito.when(stmt.getGeneratedKeys()).thenAnswer(inv -> generatedKeyResultSet(7L)).thenAnswer(inv -> generatedKeyResultSet(8L, 9L));
+
+        final UndeclaredTenantRowDao dao = DaoImpl.createDao(UndeclaredTenantRowDao.class, null, ds, PSC, null, null, null);
+
+        final UndeclaredTenantRow row = new UndeclaredTenantRow();
+        row.setTenantId(5L);
+        row.setRowId(1L);
+        final TenantRowKey id = dao.insert(row);
+        assertEquals(5L, id.getTenantId());
+        assertEquals(1L, id.getRowId());
+        assertEquals(1L, row.getRowId());
+
+        final UndeclaredTenantRow first = new UndeclaredTenantRow();
+        first.setTenantId(5L);
+        first.setRowId(2L);
+        final UndeclaredTenantRow second = new UndeclaredTenantRow();
+        second.setTenantId(6L);
+        second.setRowId(3L);
+        final List<TenantRowKey> ids = dao.batchInsert(List.of(first, second));
+        assertEquals(List.of(2L, 3L), ids.stream().map(TenantRowKey::getRowId).toList());
+    }
+
+    public interface SingleIdInsertDao extends CrudDao<TestEntity, Long, SingleIdInsertDao> {
+        @Query(value = "INSERT INTO test_entity (id, name) VALUES (:id, :name)", batch = true)
+        List<Long> insertAll(List<TestEntity> entities) throws SQLException;
+    }
+
+    // When the driver returns keys that don't pair up with the entities, nothing is written back (as before), and batchInsert
+    // returns the entities' current ids in input order instead of the unpaired keys.
+    @Test
+    public void testBatchInsertWithKeyCountMismatchReturnsTheEntitiesIds() throws SQLException {
+        final DataSource ds = mockDataSourceForDaoCreation();
+        final PreparedStatement stmt = mockGeneratedKeyStatement(ds.getConnection());
+        Mockito.when(stmt.getGeneratedKeys()).thenAnswer(inv -> generatedKeyResultSet(7L)).thenAnswer(inv -> generatedKeyResultSet(8L));
+
+        final SingleIdInsertDao dao = DaoImpl.createDao(SingleIdInsertDao.class, null, ds, PSC, null, null, null);
+        final TestEntity first = new TestEntity();
+        first.setId(100L);
+        final TestEntity second = new TestEntity();
+        second.setId(200L);
+
+        assertEquals(List.of(100L, 200L), dao.batchInsert(List.of(first, second), 10));
+        assertEquals(List.of(100L, 200L), dao.insertAll(List.of(first, second)));
+        assertEquals(100L, first.getId());
+        assertEquals(200L, second.getId());
+    }
+
     interface ProcedureWriteCacheDao extends Dao<TestEntity, ProcedureWriteCacheDao> {
         // "get" is a query-method name prefix, but op DEFAULT with an int return executes the procedure as an update.
         @Query(value = "call bump_counter(?)", procedure = true)
@@ -2512,6 +2915,52 @@ public class DaoImplTest extends TestBase {
         // A top-level limit clause spelled out in the literal is still preserved.
         final SqlExpression ownLimit = Filters.expr("id IN (SELECT id FROM other_table) ORDER BY id LIMIT 10");
         assertSame(ownLimit, invokeHandleLimit(ownLimit, 5));
+    }
+
+    // An element of the property names to update is a raw SET expression only with an '=' outside quoted text, parentheses and
+    // brackets, as the query builder renders it; an '=' in the assignment target leaves it a (possibly unknown) property name.
+    @Test
+    public void testIsRawSetExpression_RequiresTopLevelEquals() {
+        for (final String raw : List.of("score = score + 5", "name=CONCAT(name, '=x')", "a = (b = c)", "x = 'it''s = ok'", "notes['k'] = 'v'")) {
+            assertTrue(DaoImpl.isRawSetExpression(raw), raw);
+        }
+
+        for (final String target : List.of("name", "notes['a=b']", "\"a=b\"", "`a=b`", "score[(1 = 1)]", "f(a = b)", "'unterminated = x", "'a\\' = b'")) {
+            assertFalse(DaoImpl.isRawSetExpression(target), target);
+        }
+    }
+
+    // count(Condition) drops an outer ORDER BY/LIMIT/OFFSET/FETCH trailing a literal condition (they used to be applied to the
+    // single COUNT(*) row): only a clause outside subqueries, quotes and comments is cut, and an uncertain literal is kept.
+    @Test
+    public void testStripTrailingRowClauses_CutsOnlyOuterClauses() throws Exception {
+        final Method strip = DaoImpl.class.getDeclaredMethod("stripTrailingRowClauses", SqlExpression.class);
+        strip.setAccessible(true);
+
+        final String[][] cut = { { "id > 0 ORDER BY id", "id > 0" }, { "id > 0 LIMIT 1 OFFSET 1", "id > 0" }, { "id > 0 limit 10, 20", "id > 0" },
+                { "id > 0 OFFSET 5 ROWS FETCH NEXT 5 ROWS ONLY", "id > 0" }, { "id > 0 FETCH FIRST 1 ROWS ONLY", "id > 0" }, { "id > 0 LIMIT ?", "id > 0" },
+                { "id > 0 LIMIT :limit", "id > 0" }, { "id > 0 LIMIT #{limit}", "id > 0" }, { "(a = 1 OR b = 2) ORDER BY id DESC LIMIT 5", "(a = 1 OR b = 2)" },
+                { "id > 0 /* note */ ORDER /* x */ BY id", "id > 0" }, { "id > 0 -- note\n ORDER BY id", "id > 0" },
+                { "name = 'it''s' ORDER BY id", "name = 'it''s'" },
+                { "id IN (SELECT id FROM t ORDER BY id LIMIT 3) ORDER BY id", "id IN (SELECT id FROM t ORDER BY id LIMIT 3)" },
+                { "ROW_NUMBER() OVER (ORDER BY id) = 1 ORDER BY id", "ROW_NUMBER() OVER (ORDER BY id) = 1" },
+                { "name = $$a ORDER BY b$$ ORDER BY id", "name = $$a ORDER BY b$$" }, { "\"order\" = 1 ORDER BY id", "\"order\" = 1" } };
+
+        for (final String[] c : cut) {
+            final SqlExpression stripped = (SqlExpression) strip.invoke(null, Filters.expr(c[0]));
+            assertEquals(c[1], stripped.literal(), c[0]);
+        }
+
+        // Nothing is left: the condition is dropped.
+        assertEquals(null, strip.invoke(null, Filters.expr("ORDER BY id")));
+
+        for (final String literal : List.of("id > 0", "id IN (SELECT id FROM t ORDER BY id LIMIT 3)", "name = 'x ORDER BY y LIMIT 1'",
+                "id > 0 /* ORDER BY id */", "id > 0 -- LIMIT 1", "offset > 0 AND t.limit = 2", "a = 1 GROUP BY a ORDER BY a LIMIT 1",
+                "a = 1 UNION SELECT 1 ORDER BY 1", "name = 'a\\' AND b = 'c' ORDER BY id", "id > 0 # ORDER BY id", "(id > 0 ORDER BY id",
+                "name = 'unterminated ORDER BY id", "id > 0 LIMIT", "id > 0 ORDER SIBLINGS BY id")) {
+            final SqlExpression expr = Filters.expr(literal);
+            assertSame(expr, strip.invoke(null, expr), literal);
+        }
     }
 
     // skipLimitWithoutOrderBy marks a best-effort limit on a dialect (SQL Server) whose LIMIT renders

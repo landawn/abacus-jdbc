@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,6 +23,8 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -35,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatchers;
 import org.mockito.InOrder;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
@@ -89,6 +93,7 @@ public class SqlTransactionTest extends TestBase {
         final AtomicBoolean outsideCommandExecuted = new AtomicBoolean();
         final Runnable[] operations = { transaction::connection, transaction::commit, transaction::rollback, transaction::rollbackIfNotCommitted,
                 transaction::close, () -> transaction.incrementAndGetRef(IsolationLevel.READ_COMMITTED, false), transaction::decrementAndGetRef,
+                () -> transaction.addRollbackAction(() -> outsideCommandExecuted.set(true)),
                 () -> transaction.runOutsideTransaction(() -> outsideCommandExecuted.set(true)), () -> transaction.callOutsideTransaction(() -> {
                     outsideCommandExecuted.set(true);
                     return null;
@@ -393,6 +398,201 @@ public class SqlTransactionTest extends TestBase {
         assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
     }
 
+    // TX-3: addRollbackAction(Runnable) mutates the transaction's rollback-action log, which is not thread-safe and whose
+    // actions run on the owner thread, so like every other mutator it is bound to the owner thread.
+    @Test
+    public void testAddRollbackActionRejectsNonOwnerThread() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final AtomicBoolean foreignActionRan = new AtomicBoolean();
+        final AtomicBoolean ownerActionRan = new AtomicBoolean();
+        final AtomicReference<Throwable> failure = new AtomicReference<>();
+
+        try {
+            final Thread thread = new Thread(() -> {
+                try {
+                    transaction.addRollbackAction(() -> foreignActionRan.set(true));
+                } catch (final Throwable e) {
+                    failure.set(e);
+                }
+            }, "foreign-transaction-thread-addRollbackAction");
+            thread.start();
+            thread.join();
+
+            assertTrue(failure.get() instanceof IllegalStateException, "addRollbackAction must reject the foreign thread: " + failure.get());
+            assertTrue(failure.get().getMessage().contains("cannot be used from thread 'foreign-transaction-thread-addRollbackAction'"));
+            assertNull(rollbackActions(transaction));
+
+            transaction.addRollbackAction(() -> ownerActionRan.set(true));
+        } finally {
+            transaction.rollbackIfNotCommitted();
+        }
+
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertTrue(ownerActionRan.get());
+        assertFalse(foreignActionRan.get());
+    }
+
+    // TX-4 (c): a null action is ignored, without even creating the log.
+    @Test
+    public void testAddRollbackActionIgnoresNull() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+
+        assertDoesNotThrow(() -> transaction.addRollbackAction(null));
+        assertNull(rollbackActions(transaction));
+
+        transaction.rollback();
+
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        verify(connection).rollback();
+    }
+
+    // TX-4 (d): the actions are an undo log - they run newest first, each at most once, when the outermost scope rolls back.
+    @Test
+    public void testRollbackActionsRunNewestFirstOnRollback() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final List<String> order = new ArrayList<>();
+        transaction.addRollbackAction(() -> order.add("first"));
+        transaction.addRollbackAction(() -> order.add("second"));
+
+        transaction.rollback();
+
+        assertEquals(List.of("second", "first"), order);
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertNull(rollbackActions(transaction));
+        verify(connection).rollback();
+        verify(connection).close();
+    }
+
+    // A successful commit discards the actions: there is nothing to undo.
+    @Test
+    public void testRollbackActionsAreDiscardedOnCommit() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final AtomicInteger runs = new AtomicInteger();
+        transaction.addRollbackAction(runs::incrementAndGet);
+
+        transaction.commit();
+
+        assertEquals(0, runs.get());
+        assertNull(rollbackActions(transaction));
+        verify(connection).commit();
+    }
+
+    // A nested rollback marks the transaction rollback-only, which can only end rolled back: the whole log (the enclosing
+    // scope's actions included) runs right away, and not again when the outermost scope completes.
+    @Test
+    public void testNestedRollbackRunsTheActionsOnceImmediately() throws Exception {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final AtomicInteger outerRuns = new AtomicInteger();
+        outer.addRollbackAction(outerRuns::incrementAndGet);
+        final SqlTransaction nested = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        assertSame(outer, nested);
+        final AtomicInteger nestedRuns = new AtomicInteger();
+        nested.addRollbackAction(nestedRuns::incrementAndGet);
+
+        nested.rollback();
+
+        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(1, nestedRuns.get());
+        assertEquals(1, outerRuns.get());
+        assertNull(rollbackActions(outer));
+        verify(connection, never()).rollback();
+
+        nested.rollbackIfNotCommitted(); // the cleanup paired with the nested scope's explicit rollback(): a no-op
+        outer.rollbackIfNotCommitted();
+
+        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(1, nestedRuns.get());
+        assertEquals(1, outerRuns.get());
+        verify(connection).rollback();
+        verify(connection).close();
+    }
+
+    // TX-4 (a): a throwing action is logged and does not stop the remaining (older) actions or the completion of the
+    // transaction. The rollback itself succeeded, so there is no primary failure to attach it to: rollback() returns normally.
+    @Test
+    public void testFailingRollbackActionDoesNotStopTheOthersOrTheCompletion() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final List<String> order = new ArrayList<>();
+        transaction.addRollbackAction(() -> order.add("oldest"));
+        transaction.addRollbackAction(() -> {
+            order.add("failing");
+            throw new IllegalStateException("undo failed");
+        });
+        transaction.addRollbackAction(() -> order.add("newest"));
+
+        assertDoesNotThrow(() -> transaction.rollback());
+
+        assertEquals(List.of("newest", "failing", "oldest"), order);
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertNull(rollbackActions(transaction));
+        assertFalse(JdbcUtil.isInTransaction(dataSource));
+        final InOrder inOrder = inOrder(connection);
+        inOrder.verify(connection).rollback();
+        inOrder.verify(connection).setAutoCommit(true);
+        inOrder.verify(connection).close();
+    }
+
+    // TX-4 (a)+(b): when Connection.rollback() fails, the work was still never committed, so the actions run anyway (status
+    // FAILED_ROLLBACK); a failing action is attached as suppressed to the propagating rollback failure, the remaining actions
+    // still run and the connection is still released (without restoring its state, which could commit the pending work).
+    @Test
+    public void testRollbackActionsRunAfterFailedRollbackAndTheirFailuresAreSuppressedOnIt() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final List<String> order = new ArrayList<>();
+        final IllegalStateException actionFailure = new IllegalStateException("undo failed");
+        transaction.addRollbackAction(() -> order.add("oldest"));
+        transaction.addRollbackAction(() -> {
+            order.add("failing");
+            throw actionFailure;
+        });
+        final SQLException rollbackFailure = new SQLException("rollback failed");
+        doThrow(rollbackFailure).when(connection).rollback();
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, transaction::rollback);
+
+        assertSame(rollbackFailure, thrown.getCause());
+        assertArrayEquals(new Throwable[] { actionFailure }, thrown.getSuppressed());
+        assertEquals(List.of("failing", "oldest"), order);
+        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+        assertNull(rollbackActions(transaction));
+        assertFalse(JdbcUtil.isInTransaction(dataSource));
+        verify(connection).close();
+        verify(connection, never()).setAutoCommit(true);
+    }
+
+    // TX-4 (b): a failed commit rolls the transaction back automatically, and the actions run as for any other rollback. The
+    // automatic rollback itself succeeded, so a failing action is only logged: the commit failure propagates unchanged.
+    @Test
+    public void testRollbackActionsRunAfterTheAutomaticRollbackOfAFailedCommit() throws Exception {
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final List<String> order = new ArrayList<>();
+        transaction.addRollbackAction(() -> order.add("oldest"));
+        transaction.addRollbackAction(() -> {
+            order.add("failing");
+            throw new IllegalStateException("undo failed");
+        });
+        final SQLException commitFailure = new SQLException("commit failed");
+        doThrow(commitFailure).when(connection).commit();
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, transaction::commit);
+
+        assertSame(commitFailure, thrown.getCause());
+        assertEquals(0, thrown.getSuppressed().length);
+        assertEquals(List.of("failing", "oldest"), order);
+        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertNull(rollbackActions(transaction));
+        final InOrder inOrder = inOrder(connection);
+        inOrder.verify(connection).commit();
+        inOrder.verify(connection).rollback();
+        inOrder.verify(connection).close();
+    }
+
+    private static RollbackActionLog rollbackActions(final SqlTransaction transaction) throws Exception {
+        final Field field = SqlTransaction.class.getDeclaredField("_rollbackActions");
+        field.setAccessible(true);
+        return (RollbackActionLog) field.get(transaction);
+    }
+
     @Test
     public void testRollback() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
@@ -640,6 +840,120 @@ public class SqlTransactionTest extends TestBase {
 
         assertEquals(1, transaction.decrementAndGetRef());
         assertEquals(IsolationLevel.READ_COMMITTED, transaction.isolationLevel());
+    }
+
+    // PostgreSQL rejects setTransactionIsolation once the transaction has started, so restoring the enclosing scope's level on a
+    // nested exit fails every time. commit() stays retry-safe, but the paired cleanup re-armed the scope too, so the scope never
+    // exited: the outermost commit()/rollbackIfNotCommitted() only ever retried the nested exit, and the transaction, its registry
+    // entry and its connection leaked. The cleanup now exits anyway and marks the transaction rollback-only; the outermost
+    // completion rolls back, restores the original isolation level and releases the connection.
+    @Test
+    public void testNestedCleanupExitsAndMarksRollbackOnlyWhenIsolationRestoreKeepsFailing() throws SQLException {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final SqlTransaction nested = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE);
+        assertSame(outer, nested);
+
+        final AtomicBoolean rolledBack = new AtomicBoolean();
+        Mockito.doAnswer(invocation -> {
+            rolledBack.set(true);
+            return null;
+        }).when(connection).rollback();
+        Mockito.doAnswer(invocation -> {
+            if (!rolledBack.get()) {
+                throw new SQLException("cannot change transaction isolation level in the middle of a transaction");
+            }
+            return null;
+        }).when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        try {
+            assertThrows(UncheckedSQLException.class, nested::commit);
+        } finally {
+            assertDoesNotThrow(nested::rollbackIfNotCommitted);
+        }
+
+        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertTrue(JdbcUtil.isInTransaction(dataSource));
+
+        try {
+            outer.commit();
+        } finally {
+            outer.rollbackIfNotCommitted();
+        }
+
+        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertFalse(JdbcUtil.isInTransaction(dataSource));
+        final org.mockito.InOrder inOrder = Mockito.inOrder(connection);
+        inOrder.verify(connection).rollback();
+        inOrder.verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        inOrder.verify(connection).close();
+        verify(connection, never()).commit();
+    }
+
+    // TX-2: the forced (cleanup) exit of a nested scope must not reduce an unchecked driver failure to a WARN. An SQLException
+    // from Connection.setTransactionIsolation is a cleanup failure to log (previous test), but a RuntimeException or an Error
+    // (a LinkageError, an OutOfMemoryError) propagates - as from resetAndCloseConnection() - after the scope has been exited,
+    // the transaction marked rollback-only and the nested scope's rollback actions run, so that the outermost completion
+    // still rolls back and releases the connection. Before the fix both were discarded (rollbackIfNotCommitted() returned).
+    @Test
+    public void testNestedCleanupPropagatesErrorAfterExitingTheScopeAndMarkingRollbackOnly() throws SQLException {
+        assertForcedNestedExitPropagatesUncheckedFailure(new LinkageError("driver class unloaded"));
+    }
+
+    @Test
+    public void testNestedCleanupPropagatesRuntimeExceptionAfterExitingTheScopeAndMarkingRollbackOnly() throws SQLException {
+        assertForcedNestedExitPropagatesUncheckedFailure(new IllegalStateException("connection state is unusable"));
+    }
+
+    private void assertForcedNestedExitPropagatesUncheckedFailure(final Throwable restoreFailure) throws SQLException {
+        final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final SqlTransaction nested = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE);
+        assertSame(outer, nested);
+
+        final AtomicInteger nestedActionRuns = new AtomicInteger();
+        nested.addRollbackAction(nestedActionRuns::incrementAndGet);
+
+        final AtomicBoolean rolledBack = new AtomicBoolean();
+        Mockito.doAnswer(invocation -> {
+            rolledBack.set(true);
+            return null;
+        }).when(connection).rollback();
+        Mockito.doAnswer(invocation -> {
+            if (!rolledBack.get()) {
+                throw restoreFailure;
+            }
+            return null;
+        }).when(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+
+        try {
+            // The retryable exit keeps the nested scope current and rethrows the failure.
+            assertSame(restoreFailure, assertThrows(restoreFailure.getClass(), nested::commit));
+            assertEquals(IsolationLevel.SERIALIZABLE, nested.isolationLevel());
+            assertEquals(0, nestedActionRuns.get());
+        } finally {
+            // The paired cleanup exits the scope anyway, marks the transaction rollback-only, runs the rollback actions and
+            // then propagates the failure instead of discarding it.
+            assertSame(restoreFailure, assertThrows(restoreFailure.getClass(), nested::rollbackIfNotCommitted));
+        }
+
+        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(IsolationLevel.READ_COMMITTED, outer.isolationLevel());
+        assertEquals(1, nestedActionRuns.get());
+        assertTrue(JdbcUtil.isInTransaction(dataSource));
+
+        try {
+            outer.commit();
+        } finally {
+            outer.rollbackIfNotCommitted();
+        }
+
+        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(1, nestedActionRuns.get());
+        assertFalse(JdbcUtil.isInTransaction(dataSource));
+        final InOrder inOrder = inOrder(connection);
+        inOrder.verify(connection).rollback();
+        inOrder.verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+        inOrder.verify(connection).close();
+        verify(connection, never()).commit();
     }
 
     @Test
@@ -1170,6 +1484,99 @@ public class SqlTransactionTest extends TestBase {
         verify(connection).setAutoCommit(true);
         verify(connection).setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
         verify(connection).close();
+    }
+
+    // A participating transaction whose rollback can't mark the Spring transaction rollback-only: Spring may still commit the
+    // work, so the status is FAILED_ROLLBACK (it used to be ROLLED_BACK) and the locally recorded rollback actions are not run
+    // (they used to be, losing e.g. generated IDs of rows Spring then committed). The scope is still completed: the connection
+    // reference goes back to Spring, the registry entry is gone, the after-rollback action runs, and later cleanup calls are
+    // no-ops that don't try again.
+    @Test
+    public void testParticipatingRollbackIfNotCommittedLeavesTheOutcomeToSpringWhenItCannotBeMarkedRollbackOnly() throws SQLException {
+        assertParticipatingRollbackLeavesTheOutcomeToSpringWhenTheMarkFails(false);
+    }
+
+    @Test
+    public void testParticipatingRollbackLeavesTheOutcomeToSpringWhenItCannotBeMarkedRollbackOnly() throws SQLException {
+        assertParticipatingRollbackLeavesTheOutcomeToSpringWhenTheMarkFails(true);
+    }
+
+    private void assertParticipatingRollbackLeavesTheOutcomeToSpringWhenTheMarkFails(final boolean explicitRollback) throws SQLException {
+        final SqlTransaction transaction = new SqlTransaction(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true, true);
+        transaction.incrementAndGetRef(IsolationLevel.DEFAULT, false);
+        SqlTransaction.putTransaction(transaction);
+
+        final AtomicInteger undone = new AtomicInteger();
+        final AtomicInteger afterRollback = new AtomicInteger();
+        final IllegalStateException markFailure = new IllegalStateException("cannot mark");
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            // Spring's synchronization is not active: the action is recorded in the transaction's own log.
+            jdbcUtil.when(() -> JdbcUtil.registerSpringRollbackAction(ArgumentMatchers.same(dataSource), ArgumentMatchers.any())).thenReturn(false);
+            jdbcUtil.when(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource)).thenThrow(markFailure);
+
+            transaction.addRollbackAction(undone::incrementAndGet);
+            assertSame(transaction, SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> {
+                if (explicitRollback) {
+                    transaction.rollback(afterRollback::incrementAndGet);
+                } else {
+                    transaction.rollbackIfNotCommitted();
+                }
+            });
+            assertSame(markFailure, thrown);
+
+            assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+            assertEquals(0, undone.get(), "the in-memory changes are left to the Spring transaction's outcome");
+            assertEquals(explicitRollback ? 1 : 0, afterRollback.get());
+            assertNull(SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+            jdbcUtil.verify(() -> JdbcUtil.releaseSpringManagedConnection(connection, dataSource));
+            jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource));
+
+            // The paired cleanup of the finally idiom, and close(): no retry, no second completion.
+            assertDoesNotThrow(transaction::rollbackIfNotCommitted);
+            assertDoesNotThrow(transaction::close);
+            assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+            assertEquals(0, undone.get());
+            jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource), times(1));
+            jdbcUtil.verify(() -> JdbcUtil.releaseSpringManagedConnection(connection, dataSource), times(1));
+            jdbcUtil.verify(() -> JdbcUtil.releaseConnection(ArgumentMatchers.any(), ArgumentMatchers.any()), never());
+        }
+
+        // Spring owns the connection's state: nothing on it was touched.
+        verify(connection, never()).rollback();
+        verify(connection, never()).commit();
+        verify(connection, never()).close();
+        verify(connection, never()).setAutoCommit(ArgumentMatchers.anyBoolean());
+        verify(connection, never()).setTransactionIsolation(ArgumentMatchers.anyInt());
+    }
+
+    // The success path, unchanged: a participating rollback that marks the Spring transaction ends ROLLED_BACK and runs the
+    // locally recorded rollback actions right away.
+    @Test
+    public void testParticipatingRollbackRunsTheRollbackActionsOnceTheSpringTransactionIsMarked() throws SQLException {
+        final SqlTransaction transaction = new SqlTransaction(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true, true);
+        transaction.incrementAndGetRef(IsolationLevel.DEFAULT, false);
+        SqlTransaction.putTransaction(transaction);
+
+        final AtomicInteger undone = new AtomicInteger();
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.registerSpringRollbackAction(ArgumentMatchers.same(dataSource), ArgumentMatchers.any())).thenReturn(false);
+
+            transaction.addRollbackAction(undone::incrementAndGet);
+            transaction.rollbackIfNotCommitted();
+
+            assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+            assertEquals(1, undone.get());
+            assertNull(SqlTransaction.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+            jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource));
+            jdbcUtil.verify(() -> JdbcUtil.releaseSpringManagedConnection(connection, dataSource));
+        }
+
+        verify(connection, never()).rollback();
+        verify(connection, never()).close();
     }
 
     @Test

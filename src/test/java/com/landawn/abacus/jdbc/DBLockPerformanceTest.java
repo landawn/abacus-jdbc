@@ -54,13 +54,17 @@ class DBLockPerformanceTest {
             assertEquals(2, fixture.connections.get());
             assertEquals(2, fixture.prepares.get());
             assertEquals(20, fixture.updates.get());
-            assertEquals(19, JdbcUtil.prepareQuery(fixture.observer,
-                    "SELECT COUNT(*) FROM maintenance_locks WHERE expiry_time > CURRENT_TIMESTAMP").queryForInt().orElse(-1));
+            assertEquals(19,
+                    JdbcUtil.prepareQuery(fixture.observer, "SELECT COUNT(*) FROM maintenance_locks WHERE expiry_time > CURRENT_TIMESTAMP")
+                            .queryForInt()
+                            .orElse(-1));
 
             // The failed entry remains locally owned and can be renewed on the next cycle.
             fixture.lock.refreshLocks();
-            assertEquals(20, JdbcUtil.prepareQuery(fixture.observer,
-                    "SELECT COUNT(*) FROM maintenance_locks WHERE expiry_time > CURRENT_TIMESTAMP").queryForInt().orElse(-1));
+            assertEquals(20,
+                    JdbcUtil.prepareQuery(fixture.observer, "SELECT COUNT(*) FROM maintenance_locks WHERE expiry_time > CURRENT_TIMESTAMP")
+                            .queryForInt()
+                            .orElse(-1));
         }
     }
 

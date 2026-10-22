@@ -16,6 +16,9 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalDouble;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,8 @@ import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
+import com.landawn.abacus.util.u.Nullable;
+import com.landawn.abacus.util.u.Optional;
 
 class JdbcUtilTest extends JdbcUtilTestSupport {
 
@@ -363,6 +368,27 @@ class JdbcUtilTest extends JdbcUtilTestSupport {
         assertFalse(JdbcUtil.isNullOrDefault(""));
         assertFalse(JdbcUtil.isNullOrDefault("test"));
         assertFalse(JdbcUtil.isNullOrDefault(true));
+    }
+
+    // Documented: a type whose default value is an empty instance (java.util.Optional and its primitive siblings, abacus
+    // Optional/Nullable) is default when empty, and only then.
+    @Test
+    public void testIsNullOrDefault_EmptyOptionalsAreDefault() {
+        assertTrue(JdbcUtil.isNullOrDefault(java.util.Optional.empty()));
+        assertTrue(JdbcUtil.isNullOrDefault(OptionalInt.empty()));
+        assertTrue(JdbcUtil.isNullOrDefault(OptionalLong.empty()));
+        assertTrue(JdbcUtil.isNullOrDefault(OptionalDouble.empty()));
+        assertTrue(JdbcUtil.isNullOrDefault(Optional.empty()));
+        assertTrue(JdbcUtil.isNullOrDefault(Nullable.empty()));
+
+        assertFalse(JdbcUtil.isNullOrDefault(java.util.Optional.of(1)));
+        assertFalse(JdbcUtil.isNullOrDefault(java.util.Optional.of(0)));
+        assertFalse(JdbcUtil.isNullOrDefault(OptionalInt.of(0)));
+        assertFalse(JdbcUtil.isNullOrDefault(OptionalLong.of(1L)));
+        assertFalse(JdbcUtil.isNullOrDefault(OptionalDouble.of(0D)));
+        assertFalse(JdbcUtil.isNullOrDefault(Optional.of(1)));
+        assertFalse(JdbcUtil.isNullOrDefault(Nullable.of("x")));
+        assertFalse(JdbcUtil.isNullOrDefault(Nullable.of(null)));
     }
 
     // isNullOrDefault additional edge cases

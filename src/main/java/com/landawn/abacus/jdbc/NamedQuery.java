@@ -35,6 +35,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -55,8 +56,8 @@ import com.landawn.abacus.util.N;
 /**
  * A JDBC wrapper class that provides named parameter support for SQL queries, similar to Spring's
  * {@code NamedParameterJdbcTemplate}. This class wraps a {@link PreparedStatement} and lets you bind
- * values using named parameters (e.g. {@code :name}, {@code :age}) instead of positional placeholders
- * ({@code ?}). The same named parameter may appear multiple times in the SQL; every occurrence is
+ * values using named parameters (e.g. {@code :name}, {@code :age}, or the MyBatis-style {@code #{name}})
+ * instead of positional placeholders ({@code ?}). The same named parameter may appear multiple times in the SQL; every occurrence is
  * bound to the same value. For stream and {@code Reader} values (the {@code setXxxStream},
  * {@code setBlob(String, InputStream...)}, {@code setClob(String, Reader...)} and
  * {@code setNClob(String, Reader...)} setters), repeated occurrences are buffered in memory once and
@@ -77,6 +78,17 @@ import com.landawn.abacus.util.N;
  * in the SQL, the backing {@code PreparedStatement} is closed and an {@link IllegalArgumentException}
  * is thrown. This differs from {@link #setParameters(Map)}, which silently ignores map entries whose
  * keys are not named parameters.
+ *
+ * <p>When a bean or record supplies the values ({@link #setParameters(Object)},
+ * {@link #setParameters(Object, Collection)} and bean rows of {@link #addBatchParameters(Iterator)}), a
+ * parameter name may be a nested property path such as {@code :address.street}, read as
+ * {@code bean.getAddress().getStreet()}. A name that is itself a property of the bean takes precedence. If an
+ * intermediate value on the path is {@code null}, the parameter is bound to SQL {@code NULL} through the type of
+ * the last property on the path. A segment that is not a property of its bean, or that follows a collection-valued
+ * property, makes the name unresolvable. {@link #setParameters(Object)} and the bean rows of
+ * {@link #addBatchParameters(Iterator)} read each distinct name's value once per bean, so a getter that is not
+ * idempotent still binds the same value to every occurrence of the name; {@link #setParameters(Object, Collection)}
+ * reads a value once per listed name, so a name listed twice is read twice.
  *
  * <p>The backing {@code PreparedStatement} is closed by default
  * after materializing execution methods (such as {@code query}, {@code queryForInt}, {@code queryForLong},
@@ -149,6 +161,17 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     private Map<String, IntList> paramNameIndexMap;
 
     /**
+     * Lazily computed by {@link #firstIndexesOfRepeatedNames()}: for each placeholder, the index of the first placeholder
+     * with the same name, or {@code null} if no name repeats.
+     */
+    private int[] firstIndexesOfRepeatedNames;
+
+    /**
+     * Whether {@link #firstIndexesOfRepeatedNames} has been computed.
+     */
+    private boolean firstIndexesOfRepeatedNamesResolved;
+
+    /**
      * Creates a named query from an already-prepared positional statement and its parsed SQL.
      *
      * @param stmt the prepared statement to own; must not be {@code null}
@@ -197,8 +220,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @return a new {@link IllegalArgumentException} to be thrown by the caller
      */
     private IllegalArgumentException namedParameterNotFound(final String parameterName) {
-        return new IllegalArgumentException(
-                "Named parameter not found: " + parameterName + ". Available named parameters: " + parameterNames + ". SQL: " + namedSql.originalSql());
+        // List each name once (in first-occurrence order) even when the SQL repeats it.
+        return new IllegalArgumentException("Named parameter not found: " + parameterName + ". Available named parameters: "
+                + new LinkedHashSet<>(parameterNames) + ". SQL: " + namedSql.originalSql());
     }
 
     /**
@@ -310,17 +334,98 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         return repeatedValues;
     }
 
-    private Map<String, Supplier<?>> setBeanParameter(final int parameterIndex, final String parameterName, final Object bean, final PropInfo propInfo,
-            final Map<String, Supplier<?>> repeatedValues) throws SQLException {
-        final Supplier<?> supplier = repeatedValues == null ? null : repeatedValues.get(parameterName);
-        if (supplier != null) {
-            // A getter may open a new stream. Once buffered, reuse the value without opening
-            // another caller-owned resource that would never be bound or closed.
-            propInfo.dbType.set(stmt, parameterIndex, supplier.get());
-            return repeatedValues;
+    /**
+     * Returns, for each placeholder, the index of the first placeholder with the same name, or {@code null} if no name
+     * repeats; computed once per query.
+     */
+    private int[] firstIndexesOfRepeatedNames() {
+        if (!firstIndexesOfRepeatedNamesResolved) {
+            firstIndexesOfRepeatedNames = JdbcUtil.firstIndexesOfRepeatedNames(parameterNames);
+            firstIndexesOfRepeatedNamesResolved = true;
         }
 
-        return setParameter(parameterIndex, parameterName, propInfo.getPropValue(bean), propInfo.dbType, repeatedValues);
+        return firstIndexesOfRepeatedNames;
+    }
+
+    /**
+     * Resolves the bean property that supplies each placeholder of this query.
+     *
+     * @param cls the bean class
+     * @param propInfos receives, per placeholder, the property whose value and type are bound (the leaf of a nested
+     *        path), or {@code null} for a reserved system date/time name without a matching property
+     * @return per placeholder, the nested property path to read (see {@link JdbcUtil#getNestedParameterPropPath}); or
+     *         {@code null} if every name is a property of the bean itself
+     * @throws IllegalArgumentException if a name other than a reserved system date/time name resolves to neither a property
+     *         nor a nested property path of the bean
+     */
+    @SuppressWarnings("unchecked")
+    private List<PropInfo>[] resolveBeanParameters(final Class<?> cls, final PropInfo[] propInfos) throws IllegalArgumentException {
+        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
+        List<PropInfo>[] propPaths = null;
+
+        for (int i = 0; i < parameterCount; i++) {
+            final String parameterName = parameterNames.get(i);
+            PropInfo propInfo = entityInfo.getPropInfo(parameterName);
+
+            if (propInfo == null) {
+                final List<PropInfo> propPath = JdbcUtil.getNestedParameterPropPath(entityInfo, parameterName);
+
+                if (propPath != null) {
+                    if (propPaths == null) {
+                        propPaths = new List[parameterCount];
+                    }
+
+                    propPaths[i] = propPath;
+                    propInfo = propPath.get(propPath.size() - 1);
+                } else if (!JdbcUtil.SYS_DATE_TIME_NAME_SET.contains(parameterName)) {
+                    throw new IllegalArgumentException("No property found with name: " + parameterName + " in class: " + ClassUtil.getCanonicalClassName(cls));
+                }
+            }
+
+            propInfos[i] = propInfo;
+        }
+
+        return propPaths;
+    }
+
+    /**
+     * Binds one bean's values to the placeholders resolved by {@link #resolveBeanParameters(Class, PropInfo[])}.
+     *
+     * @param bean the bean supplying the values
+     * @param propInfos the resolved properties
+     * @param propPaths the resolved nested property paths, or {@code null}
+     * @param firstIndexes the result of {@link #firstIndexesOfRepeatedNames()}
+     * @param values scratch space of {@code parameterCount} elements, required only when {@code firstIndexes} is not {@code null}
+     * @throws SQLException if buffering a repeated stream or reader, or binding a value, fails
+     */
+    private void setBeanParameters(final Object bean, final PropInfo[] propInfos, final List<PropInfo>[] propPaths, final int[] firstIndexes,
+            final Object[] values) throws SQLException {
+        // A buffered replay of a repeated stream belongs to this bean only; a later batch row may supply a new stream.
+        Map<String, Supplier<?>> repeatedValues = null;
+
+        for (int i = 0; i < parameterCount; i++) {
+            final PropInfo propInfo = propInfos[i];
+
+            if (propInfo == null) {
+                continue;
+            }
+
+            final Object value;
+
+            if (firstIndexes != null && firstIndexes[i] != i) {
+                // Every occurrence of a name binds the value read for its first occurrence: a getter need not be
+                // idempotent, and it may open a stream that would never be bound or closed.
+                value = values[firstIndexes[i]];
+            } else {
+                value = JdbcUtil.getBeanParameterValue(bean, propInfo, propPaths == null ? null : propPaths[i]);
+
+                if (firstIndexes != null) {
+                    values[i] = value;
+                }
+            }
+
+            repeatedValues = setParameter(i + 1, parameterNames.get(i), value, propInfo.dbType, repeatedValues);
+        }
     }
 
     /**
@@ -990,7 +1095,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws ArithmeticException if the BigInteger {@code value} will not fit in a {@code long}; when this is thrown the underlying statement
      *         is also closed
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
-     *         is closed or the driver rejects the {@code value}
+     *         is closed or the driver rejects the {@code value}; for a non-{@code null} {@code value} the underlying statement is also closed
      */
     public NamedQuery setLong(final String parameterName, final BigInteger value) throws IllegalArgumentException, ArithmeticException, SQLException {
         checkParameterName(parameterName);
@@ -998,15 +1103,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         if (value == null) {
             setNull(parameterName, java.sql.Types.BIGINT);
         } else {
-            final long longValue;
             try {
-                longValue = value.longValueExact();
-            } catch (final ArithmeticException e) {
+                setLong(parameterName, value.longValueExact());
+            } catch (final SQLException | RuntimeException | Error e) {
+                // Close on any failure, as the positional AbstractQuery and the CallableQuery overloads do.
                 closeSuppressingFailure(e);
                 throw e;
             }
-
-            setLong(parameterName, longValue);
         }
 
         return this;
@@ -1259,7 +1362,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
     /**
      * Sets the specified named parameter to the value of the given {@link BigInteger}, stored as a {@link BigDecimal}.
      *
-     * <p>This method wraps the BigInteger into a BigDecimal (with scale 0) and binds it as a SQL {@code DECIMAL}.
+     * <p>This method wraps the BigInteger into a BigDecimal (with scale 0) and binds it with
+     * {@link PreparedStatement#setBigDecimal(int, BigDecimal)}.
      * If {@code value} is {@code null}, the parameter is set to SQL {@code NULL} with type {@link Types#DECIMAL}.
      *
      * <p><b>Usage Examples:</b></p>
@@ -3717,6 +3821,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li>byte[] → BINARY/VARBINARY</li>
      * </ul>
      *
+     * <p>A bean/entity value is bound as one value (its JSON string), not expanded into its properties; use
+     * {@link #setParameters(Object)} to bind a bean's properties to the named parameters.
+     *
      * <p>If the parameter name appears multiple times in the query, all occurrences will be set to the same value.
      *
      * <p><b>Usage Examples:</b></p>
@@ -4184,7 +4291,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>For each named parameter declared in the SQL, this method looks the name up in the map;
      * if the map contains a matching key, its value is bound to that parameter using the default
-     * SQL type mapping (as if by {@code setObject}). Map entries whose keys do not correspond to
+     * SQL type mapping (as if by {@code setObject}). Keys are matched with {@code containsKey}, so they
+     * must equal the parameter names exactly; unlike bean binding, no case or underscore normalization is
+     * applied. Map entries whose keys do not correspond to
      * named parameters in the SQL are ignored. Named parameters that are absent from the map are
      * left untouched — they keep any previously bound value or remain unbound — so several calls
      * can bind disjoint subsets; every parameter must be bound before the query is executed.
@@ -4269,9 +4378,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>This flexible method accepts different parameter sources:
      * <ul>
-     * <li><b>Bean/Entity objects</b>: Properties matching parameter names will be used</li>
+     * <li><b>Bean/Entity objects</b>: Properties matching parameter names will be used; a name may be a nested
+     *     property path such as {@code address.street} (see the class documentation)</li>
      * <li><b>Map</b>: Entries with keys matching parameter names will be used</li>
-     * <li><b>Collection/Object[]</b>: Elements will be assigned to parameters in positional order</li>
+     * <li><b>Collection/Object[]</b>: Elements will be assigned to parameter placeholders in positional order, one element
+     *     per placeholder, so a name that occurs twice in the SQL consumes two elements</li>
      * <li><b>EntityId</b>: Values with keys matching parameter names will be used</li>
      * <li><b>Single value</b>: Used only if the query has exactly one parameter placeholder
      *     (a single named parameter appearing exactly once). With one placeholder, an object whose class looks like
@@ -4301,8 +4412,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * @param parameters an object containing the parameters (bean, map, collection, reference array, or single value)
      * @return this NamedQuery instance for method chaining
-     * @throws IllegalArgumentException if {@code parameters} is {@code null}; if it is a bean that lacks a property matching one of the named
-     *         parameters in the SQL (except the reserved system date/time parameter names {@code now}, {@code sysTime} and {@code
+     * @throws IllegalArgumentException if {@code parameters} is {@code null}; if it is a bean that lacks a property (or nested property path)
+     *         matching one of the named parameters in the SQL (except the reserved system date/time parameter names {@code now}, {@code sysTime} and {@code
      *         sysDate}, which are skipped when no matching property exists, so they keep any value already bound to them or otherwise stay
      *         unbound — bind them separately); or if it is none of a bean,
      *         {@code Map}, {@code Collection}, reference array or {@code EntityId} and the SQL does not have exactly one parameter placeholder
@@ -4318,30 +4429,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         final Class<?> cls = parameters.getClass();
 
         if (isBeanParameters(parameters)) {
-            final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
             final PropInfo[] propInfos = new PropInfo[parameterCount];
 
             try {
-                for (int i = 0; i < parameterCount; i++) {
-                    propInfos[i] = entityInfo.getPropInfo(parameterNames.get(i));
+                final List<PropInfo>[] propPaths = resolveBeanParameters(cls, propInfos);
+                final int[] firstIndexes = firstIndexesOfRepeatedNames();
 
-                    if (propInfos[i] == null) {
-                        if (!JdbcUtil.SYS_DATE_TIME_NAME_SET.contains(parameterNames.get(i))) {
-                            throw new IllegalArgumentException(
-                                    "No property found with name: " + parameterNames.get(i) + " in class: " + ClassUtil.getCanonicalClassName(cls));
-                        }
-                    }
-                }
-
-                Map<String, Supplier<?>> repeatedValues = null;
-
-                for (int i = 0; i < parameterCount; i++) {
-                    final PropInfo propInfo = propInfos[i];
-
-                    if (propInfo != null) {
-                        repeatedValues = setBeanParameter(i + 1, parameterNames.get(i), parameters, propInfo, repeatedValues);
-                    }
-                }
+                setBeanParameters(parameters, propInfos, propPaths, firstIndexes, firstIndexes == null ? null : new Object[parameterCount]);
             } catch (final SQLException | RuntimeException | Error e) {
                 closeSuppressingFailure(e);
                 throw e;
@@ -4387,7 +4481,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *
      * <p>For each name in {@code parameterNamesToSet}, the entity must expose a property that resolves
      * to that name — by exact property name, {@code @Column} name, or the usual case/underscore-insensitive
-     * matching (so {@code :user_name} resolves to a {@code userName} property) — otherwise an
+     * matching (so {@code :user_name} resolves to a {@code userName} property), or a nested property path
+     * such as {@code address.street} (see the class documentation) — otherwise an
      * {@link IllegalArgumentException} is thrown. The value of that property is bound
      * to every occurrence of the named parameter in the SQL. Named parameters in the SQL that are
      * not listed in {@code parameterNamesToSet} are left unchanged: previously bound values are
@@ -4412,7 +4507,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param parameterNamesToSet the names of the parameters (and matching property names) to bind
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if {@code entity} is {@code null} or is not a bean/record class, if {@code parameterNamesToSet} is {@code
-     *         null} or contains a {@code null} element, if a listed property does not exist on the {@code entity}, or if a listed name is not a
+     *         null} or contains a {@code null} element, if a listed property (or nested property path) does not exist on the {@code entity}, or if a listed name is not a
      *         parameter in the SQL query; all listed names are checked before any property value is read or bound
      * @throws IllegalStateException if this query is closed and a repeated non-null stream or reader needs buffering
      * @throws SQLException if buffering a repeated stream or reader, or binding one of the property values to the underlying
@@ -4421,6 +4516,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @see Beans#getPropNames(Class, Collection)
      * @see JdbcUtil#getNamedParameters(String)
      */
+    @SuppressWarnings("unchecked")
     public NamedQuery setParameters(final Object entity, final Collection<String> parameterNamesToSet) throws IllegalArgumentException, SQLException {
         checkArgNotNull(entity, cs.entity);
         final Class<?> cls = entity.getClass();
@@ -4436,6 +4532,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
         final List<String> names = new ArrayList<>(parameterNamesToSet);
         final PropInfo[] propInfos = new PropInfo[names.size()];
         final IntList[] parameterIndexes = new IntList[names.size()];
+        List<PropInfo>[] propPaths = null;
 
         try {
             for (int i = 0; i < names.size(); i++) {
@@ -4443,7 +4540,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 propInfos[i] = entityInfo.getPropInfo(parameterName);
 
                 if (propInfos[i] == null) {
-                    throw new IllegalArgumentException("No property found with name: " + parameterName + " in class: " + ClassUtil.getCanonicalClassName(cls));
+                    final List<PropInfo> propPath = JdbcUtil.getNestedParameterPropPath(entityInfo, parameterName);
+
+                    if (propPath == null) {
+                        throw new IllegalArgumentException(
+                                "No property found with name: " + parameterName + " in class: " + ClassUtil.getCanonicalClassName(cls));
+                    }
+
+                    if (propPaths == null) {
+                        propPaths = new List[names.size()];
+                    }
+
+                    propPaths[i] = propPath;
+                    propInfos[i] = propPath.get(propPath.size() - 1);
                 }
 
                 parameterIndexes[i] = paramNameIndexMap.get(parameterName);
@@ -4465,7 +4574,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 }
 
                 final PropInfo propInfo = propInfos[parameter];
-                final Object propValue = propInfo.getPropValue(entity);
+                final Object propValue = JdbcUtil.getBeanParameterValue(entity, propInfo, propPaths == null ? null : propPaths[parameter]);
                 final Type<Object> dbType = propInfo.dbType;
                 final IntList indexes = parameterIndexes[parameter];
 
@@ -4559,8 +4668,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * </ul>
      *
      * <p>For a non-null first element, later non-null elements use the same parameter shape (see
-     * {@link #addBatchParameters(Iterator)}). If the first element is {@code null}, later elements are
-     * dispatched individually through {@link #setParameters(Object)}.
+     * {@link #addBatchParameters(Iterator)}). If the first element is {@code null}, later non-null elements are
+     * dispatched individually through {@link #setParameters(Object)}. A {@code null} element is bound as SQL
+     * {@code NULL}, which is only supported when the SQL has exactly one parameter placeholder.
      * If {@code batchParameters} is empty, this is a no-op and no batch is added. If a row is rejected or binding
      * or queuing a row fails, this query is closed because its batch may have been only partially queued.
      *
@@ -4598,7 +4708,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if {@code batchParameters} is {@code null}; if a row is {@code null}, or
      *         the first row is none of a bean, {@code Map}, {@code Collection}, reference array or
      *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
-     *         lacks a property matching one of the named parameters, other than the reserved {@code now},
+     *         lacks a property (or nested property path) matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
      * @throws SQLException if buffering a repeated stream or reader, clearing or binding parameters on the underlying
      *         {@code PreparedStatement}, or adding a row to its batch, fails
@@ -4645,6 +4755,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * {@code NULL}); otherwise an {@link IllegalArgumentException} is thrown.
      * When the first element is {@code null}, each later non-null element is interpreted through
      * {@link #setParameters(Object)} rather than being forced to a scalar value.
+     * Bean elements resolve names, including nested property paths, as described in the class documentation.
      * For bean elements, a named parameter without a matching property is only tolerated for the reserved
      * system date/time names ({@code now}, {@code sysTime}, {@code sysDate}) — such parameters keep whatever
      * value was previously bound (or stay unbound); any other missing property causes an
@@ -4686,7 +4797,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @throws IllegalArgumentException if {@code batchParameters} is {@code null}; if a row is {@code null}, or
      *         the first row is none of a bean, {@code Map}, {@code Collection}, reference array or
      *         {@code EntityId}, while the SQL does not have exactly one parameter placeholder; or if a bean row
-     *         lacks a property matching one of the named parameters, other than the reserved {@code now},
+     *         lacks a property (or nested property path) matching one of the named parameters, other than the reserved {@code now},
      *         {@code sysTime} and {@code sysDate} names
      * @throws SQLException if buffering a repeated stream or reader, clearing or binding parameters on the underlying
      *         {@code PreparedStatement}, or adding a row to its batch, fails
@@ -4731,29 +4842,13 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                 final Class<?> cls = first.getClass();
 
                 if (isBeanParameters(first)) {
-                    final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
                     final PropInfo[] propInfos = new PropInfo[parameterCount];
+                    final List<PropInfo>[] propPaths = resolveBeanParameters(cls, propInfos);
+                    final int[] firstIndexes = firstIndexesOfRepeatedNames();
+                    // Reused by every row: each row overwrites a name's slot before its later occurrences read it.
+                    final Object[] values = firstIndexes == null ? null : new Object[parameterCount];
 
-                    for (int i = 0; i < parameterCount; i++) {
-                        propInfos[i] = entityInfo.getPropInfo(parameterNames.get(i));
-
-                        if (propInfos[i] == null && !JdbcUtil.SYS_DATE_TIME_NAME_SET.contains(parameterNames.get(i))) {
-                            throw new IllegalArgumentException(
-                                    "No property found with name: " + parameterNames.get(i) + " in class: " + ClassUtil.getCanonicalClassName(cls));
-                        }
-                    }
-
-                    PropInfo propInfo = null;
-                    Map<String, Supplier<?>> repeatedValues = null;
-
-                    for (int i = 0; i < parameterCount; i++) {
-                        propInfo = propInfos[i];
-
-                        if (propInfo != null) {
-                            repeatedValues = setBeanParameter(i + 1, parameterNames.get(i), first, propInfo, repeatedValues);
-                        }
-                    }
-
+                    setBeanParameters(first, propInfos, propPaths, firstIndexes, values);
                     addBatch();
 
                     Object params = null;
@@ -4765,17 +4860,7 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                             continue;
                         }
 
-                        // A replay buffer belongs to one batch row; a later row may supply a new stream.
-                        repeatedValues = null;
-
-                        for (int i = 0; i < parameterCount; i++) {
-                            propInfo = propInfos[i];
-
-                            if (propInfo != null) {
-                                repeatedValues = setBeanParameter(i + 1, parameterNames.get(i), params, propInfo, repeatedValues);
-                            }
-                        }
-
+                        setBeanParameters(params, propInfos, propPaths, firstIndexes, values);
                         addBatch();
                     }
                 } else if (Map.class.isAssignableFrom(cls)) {

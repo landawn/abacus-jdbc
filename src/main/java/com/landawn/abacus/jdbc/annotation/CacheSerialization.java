@@ -22,7 +22,7 @@ package com.landawn.abacus.jdbc.annotation;
  * {@link com.landawn.abacus.util.Immutable}, except collections, maps and populated optional/nullable
  * wrappers whose contents may need copying. Other {@code Immutable} values are shared as-is; their contents
  * must be deeply immutable to avoid sharing mutable state. Values without this marker are copied even if
- * their Java types are immutable.</p>
+ * their Java types are immutable, except that {@link #JSON} shares {@code java.time} values as-is.</p>
  *
  * @see CacheResult#serialization()
  */
@@ -78,6 +78,26 @@ public enum CacheSerialization {
      * are read back with the JSON parser's default types (for example, a {@code Long} id may come back as an
      * {@code Integer}) unless the runtime-class fallback above applies to them. Use {@link #KRYO} or {@link #NONE}
      * when such values must keep their exact Java types.</p>
+     *
+     * <p>A {@code java.util.Date} keeps its milliseconds. One that is a map key inside a bean property, or a map
+     * key whose key type does not resolve to a date type (for example in a nested, unsorted {@code Map<Object, V>}:
+     * only the top-level map and sorted maps fall back to the keys' common runtime class), is still copied through
+     * its string form, which has whole seconds only (an untyped key comes back as that {@code String}).</p>
+     *
+     * <p>A {@code java.sql.Timestamp}, a {@code Calendar} or a {@code java.time} value ({@code Instant},
+     * {@code LocalDate}/{@code LocalTime}/{@code LocalDateTime}, {@code ZonedDateTime}, {@code OffsetDateTime},
+     * {@code Duration}, ...) is copied exactly, keeping its nanos, time zone or offset and its runtime class, as the
+     * result itself, as the value held by an optional/nullable wrapper, and as an element, map key or map value
+     * anywhere in the result's array, collection, map or optional/nullable container tree, whatever the declared type
+     * at that position (even {@code Object}): a {@code Timestamp} or {@code Calendar} is cloned, and a
+     * {@code java.time} value, being immutable, is shared as-is. Values the JSON parser copies itself keep its date/time
+     * handling: in a bean property (also inside a bean nested in that container tree) or among the values of a
+     * {@code Dataset}, a {@code Calendar}, {@code ZonedDateTime}, {@code OffsetDateTime} or {@code Instant} is written
+     * as epoch milliseconds, so it loses any sub-millisecond part, and a {@code Calendar}, {@code ZonedDateTime} or
+     * {@code OffsetDateTime} comes back in the JVM default time zone; a {@code Timestamp} loses its sub-millisecond
+     * nanos; and a {@code java.time} type the parser cannot write (for example {@code OffsetTime}, {@code Period} or
+     * {@code YearMonth}) fails the copy. Use {@link #KRYO} or {@link #NONE} when such bean properties must be copied
+     * exactly.</p>
      *
      * <p>Supported standard and library sorted sets and maps reached through the result's array, collection,
      * map or optional/nullable container tree retain their comparator instance while their contents are copied.

@@ -32,6 +32,7 @@ import com.landawn.abacus.jdbc.annotation.CacheResult;
 import com.landawn.abacus.jdbc.annotation.MappedByKey;
 import com.landawn.abacus.jdbc.annotation.MergedById;
 import com.landawn.abacus.jdbc.annotation.OutParameter;
+import com.landawn.abacus.jdbc.annotation.PrefixFieldMapping;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.RefreshCache;
 import com.landawn.abacus.jdbc.annotation.SqlFragment;
@@ -77,6 +78,12 @@ class DaoImplQueryValidationTest extends TestBase {
                 Arguments.of(MissingSqlIdDao.class, IllegalArgumentException.class, "No predefined SQL found"),
                 Arguments.of(MissingQueryDao.class, UnsupportedOperationException.class, "No SQL annotation found"),
                 Arguments.of(JavaOptionalDao.class, UnsupportedOperationException.class, "Please use the OptionalXXX"),
+                // These used to be created and then read the first column as the "stream"/"iterator", failing every call.
+                Arguments.of(JdkStreamDao.class, UnsupportedOperationException.class, "Please use com.landawn.abacus.util.stream.Stream"),
+                Arguments.of(JdkIntStreamDao.class, UnsupportedOperationException.class, "Please use com.landawn.abacus.util.stream.Stream"),
+                Arguments.of(IteratorDao.class, UnsupportedOperationException.class, "Please use com.landawn.abacus.util.stream.Stream"),
+                Arguments.of(AbacusIntStreamDao.class, UnsupportedOperationException.class, "Please use com.landawn.abacus.util.stream.Stream"),
+                Arguments.of(SeqDao.class, UnsupportedOperationException.class, "Please use com.landawn.abacus.util.stream.Stream"),
                 Arguments.of(StreamThrowsSqlDao.class, UnsupportedOperationException.class, "lazily evaluated"),
                 Arguments.of(PositionalBindDao.class, UnsupportedOperationException.class, "@Bind parameters are defined for non-named query"),
                 Arguments.of(MapperNotLastDao.class, UnsupportedOperationException.class, "RowMapper/ResultExtractor must be the last parameter"),
@@ -97,15 +104,25 @@ class DaoImplQueryValidationTest extends TestBase {
                 Arguments.of(MultipleResultsWithoutProcedureDao.class, UnsupportedOperationException.class,
                         "only supported by @Query methods with procedure=true"),
                 Arguments.of(BatchScalarDao.class, UnsupportedOperationException.class, "the first parameter must be Collection"),
+                // A batch query bound no parameters: every call failed with an unset parameter (or ignored the batch rows).
+                Arguments.of(BatchSelectDao.class, UnsupportedOperationException.class, "Batch execution is only supported for INSERT/UPDATE/DELETE"),
+                Arguments.of(BatchProcedureQueryDao.class, UnsupportedOperationException.class, "Batch execution is only supported for INSERT/UPDATE/DELETE"),
                 Arguments.of(MappedUnknownKeyDao.class, IllegalArgumentException.class, "No method found by mapped key"),
                 Arguments.of(MappedWrongOperationDao.class, IllegalArgumentException.class, "QueryOperation for method annotated by @MappedByKey"),
                 Arguments.of(MappedWrongReturnDao.class, IllegalArgumentException.class, "annotated by @MappedByKey must be"),
                 Arguments.of(MappedWrongKeyTypeDao.class, IllegalArgumentException.class, "annotated by @MappedByKey must be"),
                 Arguments.of(MappedWrongValueTypeDao.class, IllegalArgumentException.class, "annotated by @MappedByKey must be"),
+                // A declared wildcard type argument cannot be resolved, so the message asks for concrete type arguments.
+                Arguments.of(MappedWildcardValueTypeDao.class, IllegalArgumentException.class,
+                        "annotated by @MappedByKey must be: Map<K, V> with concrete (non-wildcard) type arguments, K being Long or a supertype and V being Record or a supertype"),
                 Arguments.of(ConflictingMergeKeyDao.class, IllegalArgumentException.class, "must be same"),
                 Arguments.of(MergedUnknownKeyDao.class, IllegalArgumentException.class, "No method found by merged id"),
                 Arguments.of(MergedWrongOperationDao.class, IllegalArgumentException.class, "QueryOperation for method annotated by @MergedById"),
                 Arguments.of(MergedWrongReturnDao.class, IllegalArgumentException.class, "annotated by @MergedById must be"),
+                Arguments.of(MergedWildcardReturnDao.class, IllegalArgumentException.class,
+                        "annotated by @MergedById must be: Optional/List/Collection with a concrete (non-wildcard) element type that is Record or a supertype"),
+                Arguments.of(PrefixWildcardReturnDao.class, IllegalArgumentException.class,
+                        "annotated by @PrefixFieldMapping must be: Optional/List/Collection/Stream with a concrete (non-wildcard) element type that is Record or a supertype"),
                 Arguments.of(NullableFindFirstDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
                 Arguments.of(StreamWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
                 Arguments.of(DatasetWrongOperationDao.class, UnsupportedOperationException.class, "not supported by the specified queryOperation"),
@@ -267,6 +284,31 @@ class DaoImplQueryValidationTest extends TestBase {
         java.util.Optional<Long> read() throws SQLException;
     }
 
+    interface JdkStreamDao extends CrudDao<Record, Long, JdkStreamDao> {
+        @Query("SELECT id FROM validation_record")
+        java.util.stream.Stream<Long> read() throws SQLException;
+    }
+
+    interface JdkIntStreamDao extends CrudDao<Record, Long, JdkIntStreamDao> {
+        @Query("SELECT id FROM validation_record")
+        java.util.stream.IntStream read() throws SQLException;
+    }
+
+    interface IteratorDao extends CrudDao<Record, Long, IteratorDao> {
+        @Query("SELECT id FROM validation_record")
+        java.util.Iterator<Long> read() throws SQLException;
+    }
+
+    interface AbacusIntStreamDao extends CrudDao<Record, Long, AbacusIntStreamDao> {
+        @Query("SELECT id FROM validation_record")
+        com.landawn.abacus.util.stream.IntStream read() throws SQLException;
+    }
+
+    interface SeqDao extends CrudDao<Record, Long, SeqDao> {
+        @Query("SELECT id FROM validation_record")
+        com.landawn.abacus.util.Seq<Long, SQLException> read() throws SQLException;
+    }
+
     interface StreamThrowsSqlDao extends CrudDao<Record, Long, StreamThrowsSqlDao> {
         @Query("SELECT id FROM validation_record")
         com.landawn.abacus.util.stream.Stream<Long> read() throws SQLException;
@@ -365,6 +407,16 @@ class DaoImplQueryValidationTest extends TestBase {
         int updateName(String name) throws SQLException;
     }
 
+    interface BatchSelectDao extends CrudDao<Record, Long, BatchSelectDao> {
+        @Query(value = "SELECT name FROM validation_record WHERE id = ?", batch = true)
+        List<String> namesOf(List<Long> ids) throws SQLException;
+    }
+
+    interface BatchProcedureQueryDao extends CrudDao<Record, Long, BatchProcedureQueryDao> {
+        @Query(value = "{call find_names(?)}", procedure = true, batch = true, op = QueryOperation.list)
+        List<String> namesOf(List<Long> ids) throws SQLException;
+    }
+
     interface MappedUnknownKeyDao extends CrudDao<Record, Long, MappedUnknownKeyDao> {
         @Query("SELECT * FROM validation_record")
         @MappedByKey("missing")
@@ -395,6 +447,12 @@ class DaoImplQueryValidationTest extends TestBase {
         Map<Long, String> read() throws SQLException;
     }
 
+    interface MappedWildcardValueTypeDao extends CrudDao<Record, Long, MappedWildcardValueTypeDao> {
+        @Query("SELECT * FROM validation_record")
+        @MappedByKey("id")
+        Map<Long, ? super Record> read() throws SQLException;
+    }
+
     interface ConflictingMergeKeyDao extends CrudDao<Record, Long, ConflictingMergeKeyDao> {
         @Query("SELECT * FROM validation_record")
         @MappedByKey("id")
@@ -418,6 +476,18 @@ class DaoImplQueryValidationTest extends TestBase {
         @Query("SELECT * FROM validation_record")
         @MergedById("id")
         List<String> read() throws SQLException;
+    }
+
+    interface MergedWildcardReturnDao extends CrudDao<Record, Long, MergedWildcardReturnDao> {
+        @Query("SELECT * FROM validation_record")
+        @MergedById("id")
+        List<? extends Record> read() throws SQLException;
+    }
+
+    interface PrefixWildcardReturnDao extends CrudDao<Record, Long, PrefixWildcardReturnDao> {
+        @Query("SELECT * FROM validation_record")
+        @PrefixFieldMapping("r=record")
+        List<? extends Record> read() throws SQLException;
     }
 
     interface NullableFindFirstDao extends CrudDao<Record, Long, NullableFindFirstDao> {

@@ -35,11 +35,12 @@ import com.landawn.abacus.annotation.JoinedBy;
  * <p>The merging is performed based on the entity's ID field(s). Rows with the
  * same ID are combined into one entity, with collection properties populated from the multiple rows.</p>
  *
- * <p>Per its {@code @Target}, this annotation is placed on a DAO query method whose return type is an
- * {@code Optional}, {@code List}, or other {@code Collection} of the entity type produced by a
- * one-to-many join &mdash; a bare entity return type is rejected &mdash; and whose {@code QueryOperation} is
- * {@code DEFAULT}, {@code list}, {@code findFirst}, or {@code findOnlyOne}; anything else fails DAO
- * initialization with {@code IllegalArgumentException}. Contrast with
+ * <p>Per its {@code @Target}, this annotation is placed on a DAO query method returning the entity type
+ * produced by a one-to-many join (or a supertype, declared as a concrete type argument rather than a
+ * wildcard) wrapped in a {@code List} or other {@code Collection},
+ * with {@code QueryOperation} {@code DEFAULT} or {@code list}, or in an {@code Optional}, with
+ * {@code DEFAULT}, {@code findFirst} or {@code findOnlyOne} &mdash; a bare entity return type is rejected;
+ * anything else fails DAO initialization with {@code IllegalArgumentException}. Contrast with
  * {@link MappedByKey}, which returns the merged entities keyed in a {@code Map}; when the two are
  * combined on the same method, the method returns that {@code Map} and {@code @MappedByKey}'s
  * return-type and {@code QueryOperation} rules apply instead of the ones above.</p>

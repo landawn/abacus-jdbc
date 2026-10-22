@@ -43,7 +43,9 @@ public enum QueryOperation {
      *
      * <p>The supplied query is executed as-is and {@code true} is returned as soon as it yields at least one
      * row (the result set is not fully read). The framework does not add a {@code LIMIT} or {@code EXISTS}
-     * clause, so write the SQL to be efficient for existence checks (e.g. {@code SELECT 1 ... LIMIT 1}).</p>
+     * clause, so write the SQL to be efficient for existence checks (e.g. {@code SELECT 1 ... LIMIT 1}).
+     * The DAO method must return {@code boolean} or {@code Boolean}; any other return type fails DAO creation
+     * with {@link UnsupportedOperationException}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -347,8 +349,12 @@ public enum QueryOperation {
      * <p>When {@code DEFAULT} is used, the framework analyzes the SQL statement, method return type,
      * and, for some single-result conventions, the method name. A {@code SELECT} can therefore become
      * a list, dataset, stream, existence check, first/unique-row lookup, or scalar lookup. An
-     * {@code UPDATE}/{@code DELETE} becomes an update operation; an {@code INSERT} is dispatched to
-     * the dedicated generated-key path.</p>
+     * {@code UPDATE}/{@code DELETE} (or other non-{@code SELECT}, non-{@code INSERT} statement) becomes an
+     * update operation only when the method returns {@code int}, {@code long}, {@code boolean}, {@code void}
+     * or one of their wrappers ({@code long}/{@code Long} selects {@link #largeUpdate}); any other return type
+     * fails DAO creation with {@link UnsupportedOperationException}. An {@code INSERT} is dispatched to
+     * the dedicated generated-key path. A stored procedure call ({@code procedure = true}) is executed as an
+     * update for those update-count return types and as a query otherwise.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

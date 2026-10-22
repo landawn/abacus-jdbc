@@ -140,6 +140,27 @@ class HandlerFactorySpringLifecycleTest {
         assertNull(Jdbc.HandlerFactory.get(qualifier));
     }
 
+    @Test
+    void closingAChildWithItsOwnBridgeKeepsItsRunningParentsContext() {
+        final String qualifier = getClass().getName() + ".parentWithChildBridge";
+        final String childQualifier = getClass().getName() + ".childWithOwnBridge";
+        final NamedHandler parentHandler = new NamedHandler();
+        final NamedHandler childHandler = new NamedHandler();
+        try (AnnotationConfigApplicationContext parent = context(qualifier, NamedHandler.class, parentHandler)) {
+            try (AnnotationConfigApplicationContext child = new AnnotationConfigApplicationContext()) {
+                child.setParent(parent);
+                child.registerBean(SpringApplicationContext.class);
+                child.registerBean(childQualifier, NamedHandler.class, () -> childHandler);
+                child.refresh();
+                assertSame(childHandler, Jdbc.HandlerFactory.get(childQualifier));
+                assertSame(parentHandler, Jdbc.HandlerFactory.get(qualifier));
+            }
+            assertSame(parentHandler, Jdbc.HandlerFactory.get(qualifier));
+            assertNull(Jdbc.HandlerFactory.get(childQualifier));
+        }
+        assertNull(Jdbc.HandlerFactory.get(qualifier));
+    }
+
     private static <T extends Jdbc.Handler<?>> AnnotationConfigApplicationContext context(final String qualifier, final Class<T> type, final T handler) {
         final AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
         context.registerBean(SpringApplicationContext.class);

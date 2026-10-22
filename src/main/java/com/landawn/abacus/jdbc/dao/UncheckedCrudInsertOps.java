@@ -29,6 +29,14 @@ import com.landawn.abacus.jdbc.annotation.NonDBOperation;
  * Unchecked-exception insert capability of {@link UncheckedCrudDao}: the {@link CrudInsertOps}
  * operations re-declared to throw {@link UncheckedSQLException}.
  *
+ * <p><b>Batches, transactions and ID restore:</b> the semantics are those of {@link CrudInsertOps} (see its <i>Batches and
+ * transactions</i> and <i>Rollback of an enclosing transaction</i> paragraphs): a {@code batchInsert} of more than one
+ * entity runs in one transaction, which participates in an active Spring-managed transaction owning the data source's
+ * connection, and the ID values the entities had before an insert are put back if a transaction enclosing the insert
+ * rolls back, or if the own transaction of a multi-row {@code batchInsert} does not commit (a participating rollback inside
+ * a savepoint scope puts back right away only the IDs of the inserts since the newest open savepoint, and leaves the
+ * earlier ones to the enclosing transaction's outcome).</p>
+ *
  * @param <T> entity type
  * @param <ID> id type
  * @param <TD> self DAO type
@@ -60,7 +68,8 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
 
     /**
      * Inserts the specified entity into the database and returns its ID.
-     * All insertable properties of the entity will be included in the INSERT statement.
+     * All insertable properties of the entity are included in the INSERT statement; the ID property is included only when
+     * it has been set (i.e., is not the default value), allowing the database to generate it otherwise.
      *
      * <p>If the database generates the ID (for example via an auto-increment column), the generated
      * ID is retrieved, written back to the entity's ID property (where applicable) and returned. If the
@@ -79,12 +88,15 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
      *         and the entity's ID is not set, but {@link #generateId()} has not been overridden
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
-     *         keys fails
+     * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
+     *         insert registers the put-back of the entity's ID with a transaction enclosing it)
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
+     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
+     * @throws UncheckedSQLException if acquiring a connection fails, if the auto-commit mode of the connection a Spring-managed transaction bound to
+     *         the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
-    ID insert(final T entity) throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException;
+    ID insert(final T entity) throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
     /**
      * Inserts the specified entity with only the specified properties.
@@ -106,13 +118,16 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToInsert} is {@code null} or empty
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
      *         {@code propNamesToInsert} includes an ID property and the entity's ID is not set, but {@link #generateId()} has not been overridden
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
-     *         keys fails
+     * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
+     *         insert registers the put-back of the entity's ID with a transaction enclosing it)
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
+     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
+     * @throws UncheckedSQLException if acquiring a connection fails, if the auto-commit mode of the connection a Spring-managed transaction bound to
+     *         the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
     ID insert(final T entity, final Collection<String> propNamesToInsert)
-            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException;
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
     /**
      * Inserts an entity using a custom named SQL insert statement.
@@ -135,18 +150,22 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *                                  other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
      *         enabled and the entity's ID is not set, but {@link #generateId()} has not been overridden
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing, binding, or executing an INSERT statement, or reading its generated
-     *         keys fails
+     * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
+     *         insert registers the put-back of the entity's ID with a transaction enclosing it)
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
+     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
+     * @throws UncheckedSQLException if acquiring a connection fails, if the auto-commit mode of the connection a Spring-managed transaction bound to
+     *         the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     @Override
     ID insert(final String namedInsertSql, final T entity)
-            throws IllegalArgumentException, UnsupportedOperationException, CannotGetJdbcConnectionException, UncheckedSQLException;
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
     /**
      * Performs batch insert of multiple entities using the default batch size
      * ({@link JdbcUtil#DEFAULT_BATCH_SIZE}).
      * This method is more efficient than inserting entities one by one.
+     * As with {@link #insert(Object)}, the ID column is included for an entity only when its ID is set.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -160,27 +179,38 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entities the collection of entities to insert
-     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
-     * @throws IllegalArgumentException if a batch row is {@code null} and the SQL has other than one parameter,
-     *         or a batch entity lacks a property required by the named SQL parameters,
-     *         or if a {@code null} entity is encountered while reading or assigning an ID
+     * @return the IDs of the inserted entities, in the same order as the input entities (database-generated keys, which are
+     *         also written back to the entities, or the IDs the entities already hold); an empty list if {@code entities} is
+     *         {@code null} or empty. If the driver returns generated keys (not all {@code null}/default) whose count differs
+     *         from the number of entities, a warning is logged, no key is written back and the entities' current IDs are returned,
+     *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
+     *         (a driver may return only the database-generated column)
+     * @throws IllegalArgumentException if an element of {@code entities} is {@code null},
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
      *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing an INSERT statement, or reading its generated keys fails
+     *         the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
+     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
+     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
+     *         INSERT statement, or reading its generated keys fails
      */
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities)
-            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException {
         return batchInsert(entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
     /**
      * Performs batch insert of multiple entities with a specified batch size.
      * Large collections will be processed in batches of the specified size.
+     * As with {@link #insert(Object)}, the ID column is included for an entity only when its ID is set.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -191,22 +221,33 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities to insert
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     *                     With more than one element, all of them run in one transaction, even if they fit in one batch.
+     * @return the IDs of the inserted entities, in the same order as the input entities (database-generated keys, which are
+     *         also written back to the entities, or the IDs the entities already hold); an empty list if {@code entities} is
+     *         {@code null} or empty. If the driver returns generated keys (not all {@code null}/default) whose count differs
+     *         from the number of entities, a warning is logged, no key is written back and the entities' current IDs are returned,
+     *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
+     *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
-     *         if a batch row is {@code null} and the SQL has other than one parameter,
-     *         or a batch entity lacks a property required by the named SQL parameters,
-     *         or if a {@code null} entity is encountered while reading or assigning an ID
+     *         if an element of {@code entities} is {@code null},
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
      *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing an INSERT statement, or reading its generated keys fails
+     *         the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
+     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
+     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
+     *         INSERT statement, or reading its generated keys fails
      */
     @Override
     List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException;
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
     /**
      * Performs batch insert with only the specified properties for all entities.
@@ -221,22 +262,32 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities to insert
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
-     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @return the IDs of the inserted entities, in the same order as the input entities (database-generated keys, which are
+     *         also written back to the entities, or the IDs the entities already hold); an empty list if {@code entities} is
+     *         {@code null} or empty. If the driver returns generated keys (not all {@code null}/default) whose count differs
+     *         from the number of entities, a warning is logged, no key is written back and the entities' current IDs are returned,
+     *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
+     *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty,
-     *         if a batch row is {@code null} and the SQL has other than one parameter,
-     *         or a batch entity lacks a property required by the named SQL parameters,
-     *         or if a {@code null} entity is encountered while reading or assigning an ID
+     *         if an element of {@code entities} is {@code null},
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
      *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing an INSERT statement, or reading its generated keys fails
+     *         the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
+     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
+     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
+     *         INSERT statement, or reading its generated keys fails
      */
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert)
-            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException {
         return batchInsert(entities, propNamesToInsert, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -248,22 +299,33 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param propNamesToInsert the property names to include in the INSERT statement (must not be {@code null} or empty)
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     *                     With more than one element, all of them run in one transaction, even if they fit in one batch.
+     * @return the IDs of the inserted entities, in the same order as the input entities (database-generated keys, which are
+     *         also written back to the entities, or the IDs the entities already hold); an empty list if {@code entities} is
+     *         {@code null} or empty. If the driver returns generated keys (not all {@code null}/default) whose count differs
+     *         from the number of entities, a warning is logged, no key is written back and the entities' current IDs are returned,
+     *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
+     *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty, or if {@code batchSize} is not positive,
-     *         if a batch row is {@code null} and the SQL has other than one parameter,
-     *         or a batch entity lacks a property required by the named SQL parameters,
-     *         or if a {@code null} entity is encountered while reading or assigning an ID
+     *         if an element of {@code entities} is {@code null},
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
      *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing an INSERT statement, or reading its generated keys fails
+     *         the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
+     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
+     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
+     *         INSERT statement, or reading its generated keys fails
      */
     @Override
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
-            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException;
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
     /**
      * Performs batch insert using a custom named SQL statement with the default batch size
@@ -279,26 +341,36 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *
      * @param namedInsertSql the named parameter SQL insert statement
      * @param entities the collection of entities whose properties will be bound to the named parameters
-     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     * @return the IDs of the inserted entities, in the same order as the input entities (database-generated keys, which are
+     *         also written back to the entities, or the IDs the entities already hold); an empty list if {@code entities} is
+     *         {@code null} or empty. If the driver returns generated keys (not all {@code null}/default) whose count differs
+     *         from the number of entities, a warning is logged, no key is written back and the entities' current IDs are returned,
+     *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
+     *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty,
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if an element of {@code entities} has no property for a named parameter in
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
-     *         if a batch row is {@code null} and the SQL has other than one parameter,
-     *         or a batch entity lacks a property required by the named SQL parameters,
-     *         or if a {@code null} entity is encountered while reading or assigning an ID
+     *         if an element of {@code entities} is {@code null},
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
      *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing an INSERT statement, or reading its generated keys fails
+     *         the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
+     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
+     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
+     *         INSERT statement, or reading its generated keys fails
      */
     @Beta
     @Override
     default List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities)
-            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException {
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException {
         return batchInsert(namedInsertSql, entities, JdbcUtil.DEFAULT_BATCH_SIZE);
     }
 
@@ -310,25 +382,36 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      * @param entities the collection of entities whose properties will be bound to the named parameters
      * @param batchSize the number of entities to process in each batch. The operation will split
      *                     large collections into chunks of this size for optimal performance.
-     * @return a list of the IDs of the inserted entities (either database-generated or entity-provided), in the same order as the input entities; an empty list if {@code entities} is {@code null} or empty
+     *                     With more than one element, all of them run in one transaction, even if they fit in one batch.
+     * @return the IDs of the inserted entities, in the same order as the input entities (database-generated keys, which are
+     *         also written back to the entities, or the IDs the entities already hold); an empty list if {@code entities} is
+     *         {@code null} or empty. If the driver returns generated keys (not all {@code null}/default) whose count differs
+     *         from the number of entities, a warning is logged, no key is written back and the entities' current IDs are returned,
+     *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
+     *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code namedInsertSql} is {@code null} or empty, or if {@code batchSize} is not positive,
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if an element of {@code entities} has no property for a named parameter in
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
-     *         if a batch row is {@code null} and the SQL has other than one parameter,
-     *         or a batch entity lacks a property required by the named SQL parameters,
-     *         or if a {@code null} entity is encountered while reading or assigning an ID
+     *         if an element of {@code entities} is {@code null},
+     *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
      *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope
-     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and cannot obtain a required database connection
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing an INSERT statement, or reading its generated keys fails
+     *         the internally required transaction scope,
+     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
+     *         own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
+     * @throws CannotGetJdbcConnectionException if Spring connection acquisition is enabled and a connection cannot be obtained, whatever the cause: unlike most
+     *         unchecked operations, this one does not translate a failure caused by an {@code SQLException}
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
+     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
+     *         INSERT statement, or reading its generated keys fails
      */
     @Beta
     @Override
     List<ID> batchInsert(final String namedInsertSql, final Collection<? extends T> entities, final int batchSize)
-            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, CannotGetJdbcConnectionException, UncheckedSQLException;
+            throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
 
 }

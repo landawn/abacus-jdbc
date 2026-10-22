@@ -51,7 +51,8 @@ import com.landawn.abacus.util.Strings;
  *   <li>{@code host_name}: Identifies the host that currently holds the lock.</li>
  *   <li>{@code target}: The unique identifier of the resource being locked (enforced by a unique constraint).</li>
  *   <li>{@code code}: A unique, randomly generated code for the specific lock acquisition instance.</li>
- *   <li>{@code status}: The current state of the lock (e.g., 'locked', 'unlocked').</li>
+ *   <li>{@code status}: The state of the lock; always {@link #LOCKED} for an existing row, because a lock
+ *       is released by deleting its row.</li>
  *   <li>{@code expiry_time}: The timestamp when the lock is scheduled to automatically expire.</li>
  *   <li>{@code update_time}: The last time the lock was refreshed or updated.</li>
  *   <li>{@code create_time}: The timestamp when the lock was initially acquired.</li>
@@ -63,8 +64,9 @@ import com.landawn.abacus.util.Strings;
  *       mitigating permanent deadlocks if an application instance crashes.</li>
  *   <li><b>Liveness Assurance:</b> Active locks are periodically refreshed by a background scheduler
  *       to extend their {@code expiry_time} for long-running critical sections.</li>
- *   <li><b>Automatic Cleanup:</b> Expired and "dead" locks (e.g., from crashed hosts) are automatically
- *       removed to maintain a clean and efficient lock table.</li>
+ *   <li><b>Automatic Cleanup:</b> An expired or stale row (e.g., left by a crashed host) is deleted when a
+ *       caller next tries to lock the same target, and rows left on this host by an earlier process and not
+ *       refreshed within the last minute are deleted when a {@code DBLock} is created.</li>
  *   <li><b>Configurable Behavior:</b> Offers flexible control over lock {@code liveTime}, acquisition
  *       {@code timeout}, and {@code retryInterval} for diverse use cases.</li>
  *   <li><b>Optimistic Locking:</b> Utilizes optimistic locking principles to handle concurrent lock
@@ -90,7 +92,9 @@ import com.landawn.abacus.util.Strings;
  * Hosts using the same lock table must keep their clocks synchronized; significant skew can make
  * one host consider another host's actively refreshed lease expired.</p>
  *
- * <p>A row can also be reclaimed after one minute without a successful refresh, even when
+ * <p>A failed refresh, whether it throws an exception or an {@link Error}, is logged (an {@code Error}
+ * at ERROR level) and retried on the next cycle; the background task keeps running.
+ * A row can also be reclaimed after one minute without a successful refresh, even when
  * {@code liveTime} is longer. A stalled holder receives no notification when its lease is lost;
  * after expiry or stale-row cleanup, another caller can acquire the target while the original
  * caller is still running. Critical operations that must reject a former holder need an
@@ -309,6 +313,9 @@ public final class DBLock implements AutoCloseable {
     /**
      * Refreshes every lock currently held by this instance. Kept package-private so the refresh
      * cycle can be exercised deterministically without waiting for the shared scheduler.
+     *
+     * <p>This method never throws: a failure, including an {@link Error}, is logged and the next
+     * scheduled cycle retries every lock that is still held.</p>
      */
     void refreshLocks() {
         if (targetCodePool.isEmpty()) {
@@ -327,8 +334,9 @@ public final class DBLock implements AutoCloseable {
                 final LockInfo info = entry.getValue();
 
                 // Guard each entry individually: a JDBC driver or DataSource may report a transient
-                // failure as either SQLException or RuntimeException. Neither form may abort the
-                // batch and leave all later locks un-refreshed.
+                // failure as SQLException, RuntimeException or even an Error (e.g. a LinkageError or
+                // AssertionError from the driver). None may abort the batch and leave all later locks
+                // un-refreshed.
                 try {
                     final Timestamp now = Dates.currentTimestamp();
                     final Timestamp expiry = expiryTimestamp(now, info.liveTime());
@@ -347,10 +355,12 @@ public final class DBLock implements AutoCloseable {
                     } else {
                         refreshed++;
                     }
-                } catch (final Exception e) {
+                } catch (final Throwable e) { // NOSONAR
                     failed++;
 
-                    if (logger.isWarnEnabled()) {
+                    if (!(e instanceof Exception)) {
+                        logger.error(e, "Failed to refresh DB lock(target={})", entry.getKey());
+                    } else if (logger.isWarnEnabled()) {
                         logger.warn(e, "Failed to refresh DB lock(target={})", entry.getKey());
                     }
 
@@ -365,9 +375,18 @@ public final class DBLock implements AutoCloseable {
             if (logger.isDebugEnabled() && (refreshed > 0 || staleRemoved > 0 || failed > 0)) {
                 logger.debug("Refreshed DB locks(refreshed={}, staleRemoved={}, failed={}, active={})", refreshed, staleRemoved, failed, targetCodePool.size());
             }
-        } catch (final Exception e) {
-            if (logger.isWarnEnabled()) {
-                logger.warn(e, "Error occurred in DB lock refresh task(active={})", targetCodePool.size());
+        } catch (final Throwable e) { // NOSONAR
+            // Nothing may escape this scheduleWithFixedDelay task: a thrown exception or error cancels every later run,
+            // after which all locks of this instance silently expire after their liveTime while their holders still
+            // believe they own them. The next cycle retries every held lock.
+            try {
+                if (!(e instanceof Exception)) {
+                    logger.error(e, "Error occurred in DB lock refresh task(active={})", targetCodePool.size());
+                } else if (logger.isWarnEnabled()) {
+                    logger.warn(e, "Error occurred in DB lock refresh task(active={})", targetCodePool.size());
+                }
+            } catch (final Throwable logFailure) { // NOSONAR
+                // Even logging failed (e.g. out of memory); keeping the refresh schedule alive matters more.
             }
         }
     }
@@ -878,7 +897,8 @@ public final class DBLock implements AutoCloseable {
                     // one per held lock while this synchronized method blocks.
                     if (unlockStatement.connectionAcquisitionFailed) {
                         if (attempted < heldLocks && logger.isWarnEnabled()) {
-                            logger.warn("Stopped releasing DB locks during close: no connection could be obtained(skipped={}); they stay held until their leases expire",
+                            logger.warn(
+                                    "Stopped releasing DB locks during close: no connection could be obtained(skipped={}); they stay held until their leases expire",
                                     heldLocks - attempted);
                         }
 
@@ -980,7 +1000,9 @@ public final class DBLock implements AutoCloseable {
                 if (statement == null) {
                     try {
                         connection = openLockConnection();
-                    } catch (final SQLException | RuntimeException e) {
+                    } catch (final SQLException | RuntimeException | Error e) {
+                        // An Error from the DataSource (e.g. a missing driver class) is as unlikely to
+                        // clear up for the next lock of the same cycle as an unavailable pool.
                         connectionAcquisitionFailed = true;
                         throw e;
                     }

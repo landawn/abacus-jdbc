@@ -652,6 +652,44 @@ public class CrudDaoTest extends TestBase {
         }
     }
 
+    // Inserts and updates together run in one transaction scope (which participates in a Spring-managed transaction when there
+    // is one): a failure is thrown as is after the scope is completed. The IDs batchInsert wrote are put back by batchInsert itself
+    // (registered with the transaction it runs in), not by batchUpsert.
+    @Test
+    public void testBatchUpsert_FullSig_FailureCompletesItsScopeAndLeavesIdRestoreToBatchInsert() throws SQLException {
+        final IdAnnotatedCrudDao dao = Mockito.mock(IdAnnotatedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        final IdAnnotatedEntity toUpdate = new IdAnnotatedEntity();
+        toUpdate.setId(1L);
+        toUpdate.setName("existing");
+        final IdAnnotatedEntity toInsert = new IdAnnotatedEntity();
+        toInsert.setId(2L);
+        toInsert.setName("new");
+        final IdAnnotatedEntity dbEntity = new IdAnnotatedEntity();
+        dbEntity.setId(1L);
+        dbEntity.setName("existing");
+
+        Mockito.doReturn(List.of(dbEntity)).when(dao).list(ArgumentMatchers.any(Condition.class));
+        final DataSource dataSource = Mockito.mock(DataSource.class);
+        final SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        Mockito.doReturn(dataSource).when(dao).dataSource();
+
+        final SQLException primary = new SQLException("update failed after insert");
+        Mockito.doAnswer(invocation -> {
+            toInsert.setId(99L);
+            return List.of(99L);
+        }).when(dao).batchInsert(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyInt());
+        Mockito.doThrow(primary).when(dao).batchUpdate(ArgumentMatchers.anyCollection(), ArgumentMatchers.anyInt());
+
+        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+
+            assertSame(primary, assertThrows(SQLException.class, () -> dao.batchUpsert(List.of(toUpdate, toInsert), List.of("name"), 10)));
+            assertEquals(99L, toInsert.getId(), "the mocked batchInsert registered no restore");
+            Mockito.verify(tran, Mockito.never()).commit();
+            Mockito.verify(tran).rollbackIfNotCommitted();
+        }
+    }
+
     // refresh variants validate input and short-circuit empty collections.
     @Test
     public void testRefresh_NullEntity() {

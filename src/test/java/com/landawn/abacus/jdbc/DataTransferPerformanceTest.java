@@ -69,8 +69,7 @@ class DataTransferPerformanceTest {
 
     @Test
     void projectionPreservesDuplicatesOrderingAndFullRowCallbacks() throws Exception {
-        final Dataset dataset = Dataset.rows(List.of("id", "label", "rank"),
-                new Object[][] { { 1, "first", 10 }, { 2, "second", 20 } });
+        final Dataset dataset = Dataset.rows(List.of("id", "label", "rank"), new Object[][] { { 1, "first", 10 }, { 2, "second", 20 } });
         try (Connection connection = DriverManager.getConnection("jdbc:h2:mem:transfer_projection_" + System.nanoTime());
              Statement schema = connection.createStatement()) {
             schema.execute("CREATE TABLE copied_rows (first_value INT, second_value INT, third_value INT)");
@@ -113,11 +112,13 @@ class DataTransferPerformanceTest {
             source.setURL("jdbc:h2:mem:copy_source_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
             final JdbcDataSource target = new JdbcDataSource();
             target.setURL("jdbc:h2:mem:copy_target_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
-            try (Connection connection = source.getConnection(); Statement statement = connection.createStatement()) {
+            try (Connection connection = source.getConnection();
+                 Statement statement = connection.createStatement()) {
                 statement.execute("CREATE TABLE source_rows (id INT, note VARCHAR(20))");
                 statement.execute("INSERT INTO source_rows VALUES (1, 'one'), (2, 'two')");
             }
-            try (Connection connection = target.getConnection(); Statement statement = connection.createStatement()) {
+            try (Connection connection = target.getConnection();
+                 Statement statement = connection.createStatement()) {
                 statement.execute("CREATE TABLE target_rows (note VARCHAR(20), id INT)");
             }
 
@@ -131,7 +132,8 @@ class DataTransferPerformanceTest {
             verify(countingSource).getConnection();
             verify(countingTarget).getConnection();
 
-            try (Connection connection = target.getConnection(); Statement statement = connection.createStatement();
+            try (Connection connection = target.getConnection();
+                 Statement statement = connection.createStatement();
                  ResultSet rows = statement.executeQuery("SELECT id, note FROM target_rows ORDER BY id")) {
                 assertTrue(rows.next());
                 assertEquals(1, rows.getInt(1));

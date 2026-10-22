@@ -24,7 +24,9 @@ import com.landawn.abacus.annotation.Beta;
  * <p>It is a pure capability composite of {@link ReadOps} (reads only). It does <b>not</b> mix in
  * {@code InsertOps}/{@code UpdateOps}/{@code DeleteOps},
  * so {@code save}/{@code insert}/{@code update}/{@code upsert}/{@code delete}/{@code batchXxx} (and
- * {@code prepareCallableQuery}) are simply <b>absent from the type</b> — calling them is a compile
+ * {@code prepareCallableQuery}, plus the {@code prepareQuery}/{@code prepareNamedQuery} overloads that take a
+ * generated-keys argument or a custom {@code stmtCreator}, which are full-{@link Dao}-only) are simply
+ * <b>absent from the type</b> — calling them is a compile
  * error rather than a runtime {@link UnsupportedOperationException}. Note that {@code ReadOnlyDao}
  * is intentionally not a subtype of {@link NonUpdateDao}: a read-only DAO cannot substitute for a
  * non-update one (which permits inserts), so such a subtype edge would violate the Liskov

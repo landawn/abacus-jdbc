@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
+import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.EntityId;
@@ -911,6 +913,323 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
         verify(mockPreparedStatement).setString(2, "value");
     }
 
+    // A non-idempotent getter must still bind one value to every occurrence of its name. Both name-index strategies
+    // (short list scan, long list map) are covered.
+    @Test
+    void setParameters_beanReadsEachRepeatedNameOnce() throws SQLException {
+        final List<String> shortNames = List.of("p", "q", "p", "p");
+        final List<String> longNames = new ArrayList<>();
+        for (int i = 0; i < 40; i++) {
+            longNames.add(i % 3 == 0 ? "p" : "q");
+        }
+
+        for (final List<String> names : List.of(shortNames, longNames)) {
+            final PreparedStatement stmt = mock(PreparedStatement.class);
+            when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.copyOf(names));
+            when(mockParsedSql.parameterCount()).thenReturn(names.size());
+            final CountingBean bean = new CountingBean();
+
+            new NamedQuery(stmt, mockParsedSql).setParameters(bean);
+
+            assertEquals(1, bean.pReads);
+            assertEquals(1, bean.qReads);
+            for (int i = 0; i < names.size(); i++) {
+                if (names.get(i).equals("p")) {
+                    verify(stmt).setString(i + 1, "p1");
+                } else if (names.get(i).equals("q")) {
+                    verify(stmt).setString(i + 1, "q1");
+                }
+            }
+            verify(stmt, never()).setString(anyInt(), eq("p2"));
+            verify(stmt, never()).close();
+        }
+    }
+
+    @Test
+    void addBatchParameters_beanRowsReadEachRepeatedNameOncePerRow() throws SQLException {
+        final NamedQuery query = createQueryWithParameters(ImmutableList.of("p", "q", "p"));
+        final CountingBean first = new CountingBean();
+        final CountingBean second = new CountingBean();
+        second.prefix = "r";
+
+        query.addBatchParameters(List.of(first, second));
+
+        assertEquals(1, first.pReads);
+        assertEquals(1, second.pReads);
+        verify(mockPreparedStatement).setString(1, "p1");
+        verify(mockPreparedStatement).setString(3, "p1");
+        verify(mockPreparedStatement).setString(1, "r1");
+        verify(mockPreparedStatement).setString(3, "r1");
+        verify(mockPreparedStatement, never()).setString(anyInt(), eq("p2"));
+        verify(mockPreparedStatement, never()).setString(anyInt(), eq("r2"));
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    @Test
+    void setParameters_beanBindsNestedPropertyPaths() throws SQLException {
+        final NamedQuery query = new NamedQuery(mockPreparedStatement,
+                ParsedSql.parse("UPDATE users SET street = :address.street, zip = :address.zip WHERE id = :id OR street = :address.street"));
+
+        query.setParameters(NestedUser.of(7L, "Main", 12345));
+
+        verify(mockPreparedStatement).setString(1, "Main");
+        verify(mockPreparedStatement).setInt(2, 12345);
+        verify(mockPreparedStatement).setLong(3, 7L);
+        verify(mockPreparedStatement).setString(4, "Main");
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    @Test
+    void setParameters_nullIntermediateBindsSqlNullOfLeafType() throws SQLException {
+        final NamedQuery query = new NamedQuery(mockPreparedStatement,
+                ParsedSql.parse("UPDATE users SET street = :address.street, zip = :address.zip WHERE id = :id"));
+        final NestedUser user = NestedUser.of(7L, "Main", 12345);
+        user.setAddress(null);
+
+        query.setParameters(user);
+
+        verify(mockPreparedStatement).setString(1, null);
+        verify(mockPreparedStatement).setNull(2, Types.INTEGER);
+        verify(mockPreparedStatement).setLong(3, 7L);
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    @Test
+    void setParameters_unresolvableNestedPathIsRejectedAndClosesQuery() throws SQLException {
+        for (final String name : List.of("address.country", "nothing.street", "addresses.street")) {
+            final PreparedStatement stmt = mock(PreparedStatement.class);
+            final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse("SELECT * FROM users WHERE id = :id AND street = :" + name));
+
+            final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class, () -> query.setParameters(NestedUser.of(7L, "Main", 1)));
+
+            assertTrue(failure.getMessage().contains("No property found with name: " + name), failure.getMessage());
+            verify(stmt).close();
+            verify(stmt, never()).setLong(anyInt(), anyLong());
+        }
+    }
+
+    @Test
+    void setParametersWithNames_bindsNestedPropertyPath() throws SQLException {
+        final NamedQuery query = new NamedQuery(mockPreparedStatement,
+                ParsedSql.parse("UPDATE users SET street = :address.street WHERE id = :id AND street <> :address.street"));
+
+        query.setParameters(NestedUser.of(7L, "Main", 1), List.of("address.street")).setLong("id", 7L);
+
+        verify(mockPreparedStatement).setString(1, "Main");
+        verify(mockPreparedStatement).setString(3, "Main");
+        verify(mockPreparedStatement).setLong(2, 7L);
+
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        final NamedQuery rejecting = new NamedQuery(stmt, ParsedSql.parse("UPDATE users SET street = :address.street WHERE id = :id"));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> rejecting.setParameters(NestedUser.of(7L, "Main", 1), List.of("address.country")))
+                .getMessage()
+                .contains("No property found with name: address.country"));
+        verify(stmt).close();
+    }
+
+    @Test
+    void addBatchParameters_beanRowsBindNestedPropertyPaths() throws SQLException {
+        final NamedQuery query = new NamedQuery(mockPreparedStatement, ParsedSql.parse("UPDATE users SET street = :address.street WHERE id = :id"));
+        final NestedUser withoutAddress = NestedUser.of(8L, "ignored", 1);
+        withoutAddress.setAddress(null);
+
+        query.addBatchParameters(List.of(NestedUser.of(7L, "Main", 1), withoutAddress));
+
+        verify(mockPreparedStatement).setString(1, "Main");
+        verify(mockPreparedStatement).setLong(2, 7L);
+        verify(mockPreparedStatement).setString(1, null);
+        verify(mockPreparedStatement).setLong(2, 8L);
+        verify(mockPreparedStatement, times(2)).addBatch();
+    }
+
+    // A record root resolves nested paths like a bean: its components are its properties.
+    @Test
+    void setParameters_recordRootBindsNestedPropertyPaths() throws SQLException {
+        final NamedQuery query = new NamedQuery(mockPreparedStatement,
+                ParsedSql.parse("UPDATE users SET street = :address.street, zip = :address.zip WHERE id = :id OR street = :address.street"));
+        final NestedAddress address = new NestedAddress();
+        address.setStreet("Main");
+        address.setZip(12345);
+
+        query.setParameters(new RecordUser(7L, address));
+
+        verify(mockPreparedStatement).setString(1, "Main");
+        verify(mockPreparedStatement).setInt(2, 12345);
+        verify(mockPreparedStatement).setLong(3, 7L);
+        verify(mockPreparedStatement).setString(4, "Main");
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    // A record intermediate (a record-typed property of a bean, or a record component of a record) is read through its
+    // accessors; a null record intermediate binds SQL NULL through the leaf's type.
+    @Test
+    void setParameters_recordIntermediateBindsNestedPropertyPaths() throws SQLException {
+        final NamedQuery query = new NamedQuery(mockPreparedStatement, ParsedSql.parse("UPDATE users SET city = :home.city, zip = :home.zip WHERE id = :id"));
+        final BeanWithRecordAddress bean = new BeanWithRecordAddress();
+        bean.setId(7L);
+        bean.setHome(new RecordAddress("Berlin", 10115));
+
+        query.setParameters(bean);
+
+        verify(mockPreparedStatement).setString(1, "Berlin");
+        verify(mockPreparedStatement).setInt(2, 10115);
+        verify(mockPreparedStatement).setLong(3, 7L);
+
+        final PreparedStatement recordStmt = mock(PreparedStatement.class);
+        final NamedQuery recordQuery = new NamedQuery(recordStmt, ParsedSql.parse("UPDATE users SET city = :home.city, zip = :home.zip WHERE id = :id"));
+
+        recordQuery.setParameters(new RecordUserWithRecordAddress(8L, new RecordAddress("Paris", 75001)));
+
+        verify(recordStmt).setString(1, "Paris");
+        verify(recordStmt).setInt(2, 75001);
+        verify(recordStmt).setLong(3, 8L);
+
+        final PreparedStatement nullStmt = mock(PreparedStatement.class);
+        final NamedQuery nullQuery = new NamedQuery(nullStmt, ParsedSql.parse("UPDATE users SET city = :home.city, zip = :home.zip WHERE id = :id"));
+
+        nullQuery.setParameters(new RecordUserWithRecordAddress(9L, null));
+
+        verify(nullStmt).setString(1, null);
+        verify(nullStmt).setNull(2, Types.INTEGER);
+        verify(nullStmt).setLong(3, 9L);
+        verify(nullStmt, never()).close();
+
+        // A missing component of the record intermediate is unresolvable, like a missing bean property.
+        final PreparedStatement rejecting = mock(PreparedStatement.class);
+        final NamedQuery rejectingQuery = new NamedQuery(rejecting, ParsedSql.parse("UPDATE users SET c = :home.country WHERE id = :id"));
+        assertTrue(assertThrows(IllegalArgumentException.class,
+                () -> rejectingQuery.setParameters(new RecordUserWithRecordAddress(8L, new RecordAddress("Paris", 1)))).getMessage()
+                        .contains("No property found with name: home.country"));
+        verify(rejecting).close();
+    }
+
+    // Documented precedence: "A name that is itself a property of the bean takes precedence" over reading it as a nested
+    // path. Here the dotted name resolves both ways: as the column name of the bean's own 'street' property and as the
+    // path address -> street; the bean's own property wins at every occurrence.
+    @Test
+    void setParameters_nameThatIsAPropertyOfTheBeanTakesPrecedenceOverTheNestedPath() throws SQLException {
+        final NamedQuery query = new NamedQuery(mockPreparedStatement,
+                ParsedSql.parse("UPDATE users SET street = :address.street WHERE id = :id OR street = :address.street"));
+        final UserWithStreetColumn user = new UserWithStreetColumn();
+        user.setId(7L);
+        user.setStreet("Direct");
+        final NestedAddress address = new NestedAddress();
+        address.setStreet("Nested");
+        user.setAddress(address);
+
+        query.setParameters(user);
+
+        verify(mockPreparedStatement).setString(1, "Direct");
+        verify(mockPreparedStatement).setLong(2, 7L);
+        verify(mockPreparedStatement).setString(3, "Direct");
+        verify(mockPreparedStatement, never()).setString(anyInt(), eq("Nested"));
+
+        // The same rule for setParameters(entity, names) and batch rows.
+        final PreparedStatement namesStmt = mock(PreparedStatement.class);
+        new NamedQuery(namesStmt, ParsedSql.parse("UPDATE users SET street = :address.street WHERE id = :id")).setParameters(user, List.of("address.street"))
+                .setLong("id", 7L);
+        verify(namesStmt).setString(1, "Direct");
+
+        final PreparedStatement batchStmt = mock(PreparedStatement.class);
+        new NamedQuery(batchStmt, ParsedSql.parse("UPDATE users SET street = :address.street WHERE id = :id")).addBatchParameters(List.of(user));
+        verify(batchStmt).setString(1, "Direct");
+        verify(batchStmt).setLong(2, 7L);
+        verify(batchStmt).addBatch();
+
+        // Without a property of its own for the name, the same SQL reads the nested path.
+        final PreparedStatement nestedStmt = mock(PreparedStatement.class);
+        new NamedQuery(nestedStmt, ParsedSql.parse("UPDATE users SET street = :address.street WHERE id = :id")).setParameters(NestedUser.of(7L, "Nested", 1));
+        verify(nestedStmt).setString(1, "Nested");
+    }
+
+    // 32 placeholders or more are indexed with a map (JdbcUtil.firstIndexesOfRepeatedNames): each distinct name is still
+    // read once per bean and every occurrence binds that value.
+    @Test
+    void setParameters_beanWithManyPlaceholdersReadsEachRepeatedNameOnce() throws SQLException {
+        final StringBuilder sql = new StringBuilder("SELECT * FROM t WHERE a = :p");
+        for (int i = 1; i < 40; i++) {
+            sql.append(i % 9 == 0 ? " AND a = :p" : " AND b = :q");
+        }
+        final NamedQuery query = new NamedQuery(mockPreparedStatement, ParsedSql.parse(sql.toString()));
+        final CountingBean bean = new CountingBean();
+
+        query.setParameters(bean);
+
+        assertEquals(1, bean.pReads);
+        assertEquals(1, bean.qReads);
+        for (int i = 0; i < 40; i++) {
+            verify(mockPreparedStatement).setString(i + 1, i % 9 == 0 ? "p1" : "q1");
+        }
+
+        // A second bean (a batch row) reads its own values once more.
+        query.addBatchParameters(List.of(new CountingBean()));
+        verify(mockPreparedStatement, times(2)).setString(1, "p1");
+        verify(mockPreparedStatement, times(2)).setString(2, "q1");
+        verify(mockPreparedStatement).addBatch();
+    }
+
+    public record RecordUser(long id, NestedAddress address) {
+    }
+
+    public record RecordAddress(String city, int zip) {
+    }
+
+    public record RecordUserWithRecordAddress(long id, RecordAddress home) {
+    }
+
+    public static class BeanWithRecordAddress {
+        private long id;
+        private RecordAddress home;
+
+        public long getId() {
+            return id;
+        }
+
+        public void setId(final long id) {
+            this.id = id;
+        }
+
+        public RecordAddress getHome() {
+            return home;
+        }
+
+        public void setHome(final RecordAddress home) {
+            this.home = home;
+        }
+    }
+
+    /** Its own 'street' property is also reachable as "address.street" (its column name), like the nested path. */
+    public static class UserWithStreetColumn {
+        private long id;
+        private NestedAddress address;
+        @Column("address.street")
+        private String street;
+
+        public long getId() {
+            return id;
+        }
+
+        public void setId(final long id) {
+            this.id = id;
+        }
+
+        public NestedAddress getAddress() {
+            return address;
+        }
+
+        public void setAddress(final NestedAddress address) {
+            this.address = address;
+        }
+
+        public String getStreet() {
+            return street;
+        }
+
+        public void setStreet(final String street) {
+            this.street = street;
+        }
+    }
+
     private static class BeanWithP {
         private String p;
 
@@ -977,6 +1296,91 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
 
         public void setCurrency(final String currency) {
             this.currency = currency;
+        }
+    }
+
+    /** Each getter call returns a new value, so a second read of a name would be visible. */
+    public static class CountingBean {
+        private String prefix = "p";
+        private int pReads;
+        private int qReads;
+
+        public String getP() {
+            return prefix + (++pReads);
+        }
+
+        public void setP(final String p) {
+            // read-only for the test
+        }
+
+        public String getQ() {
+            return "q" + (++qReads);
+        }
+
+        public void setQ(final String q) {
+            // read-only for the test
+        }
+    }
+
+    public static class NestedAddress {
+        private String street;
+        private int zip;
+
+        public String getStreet() {
+            return street;
+        }
+
+        public void setStreet(final String street) {
+            this.street = street;
+        }
+
+        public int getZip() {
+            return zip;
+        }
+
+        public void setZip(final int zip) {
+            this.zip = zip;
+        }
+    }
+
+    public static class NestedUser {
+        private long id;
+        private NestedAddress address;
+        private List<NestedAddress> addresses;
+
+        static NestedUser of(final long id, final String street, final int zip) {
+            final NestedAddress address = new NestedAddress();
+            address.setStreet(street);
+            address.setZip(zip);
+            final NestedUser user = new NestedUser();
+            user.setId(id);
+            user.setAddress(address);
+            user.setAddresses(List.of(address));
+            return user;
+        }
+
+        public long getId() {
+            return id;
+        }
+
+        public void setId(final long id) {
+            this.id = id;
+        }
+
+        public NestedAddress getAddress() {
+            return address;
+        }
+
+        public void setAddress(final NestedAddress address) {
+            this.address = address;
+        }
+
+        public List<NestedAddress> getAddresses() {
+            return addresses;
+        }
+
+        public void setAddresses(final List<NestedAddress> addresses) {
+            this.addresses = addresses;
         }
     }
 }

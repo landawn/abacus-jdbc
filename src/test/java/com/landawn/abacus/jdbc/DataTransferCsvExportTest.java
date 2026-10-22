@@ -1,6 +1,8 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -20,6 +22,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 class DataTransferCsvExportTest extends DataTransferUtilTestSupport {
 
@@ -358,6 +361,58 @@ class DataTransferCsvExportTest extends DataTransferUtilTestSupport {
         assertTrue(csv.contains("age"));
     }
 
+    // Statements and result sets opened by an export are closed as by try-with-resources, as the File overloads already
+    // did: a close failure after an otherwise successful export propagates instead of being logged and dropped.
+    @Test
+    public void testExportCsv_OwnedStatementCloseFailurePropagatesForWriterTargets() throws Exception {
+        final SQLException closeFailure = new SQLException("statement close failed");
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSet.next()).thenReturn(false);
+        Mockito.doThrow(closeFailure).when(mockPreparedStatement).close();
+
+        assertSame(closeFailure, assertThrows(SQLException.class, () -> DataTransferUtil.exportCsv(mockConnection, "SELECT id FROM t", new StringWriter())));
+        assertSame(closeFailure,
+                assertThrows(SQLException.class, () -> DataTransferUtil.exportCsvFrom(mockConnection, "SELECT id FROM t").to(new StringWriter())));
+        assertSame(closeFailure,
+                assertThrows(SQLException.class, () -> DataTransferUtil.exportCsvFrom(mockDataSource, "SELECT id FROM t").to(new StringWriter())));
+    }
+
+    @Test
+    public void testExportCsv_OwnedStatementCloseFailureIsSuppressedOnPrimaryFailure() throws Exception {
+        final SQLException readFailure = new SQLException("read failed");
+        final SQLException closeFailure = new SQLException("statement close failed");
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSet.next()).thenThrow(readFailure);
+        Mockito.doThrow(closeFailure).when(mockPreparedStatement).close();
+
+        final SQLException e = assertThrows(SQLException.class, () -> DataTransferUtil.exportCsv(mockConnection, "SELECT id FROM t", new StringWriter()));
+
+        assertSame(readFailure, e);
+        assertTrue(Arrays.asList(e.getSuppressed()).contains(closeFailure));
+    }
+
+    @Test
+    public void testExportCsv_ResultSetOpenedFromCallerStatementCloseFailurePropagates() throws Exception {
+        final SQLException closeFailure = new SQLException("result set close failed");
+        final File tempFile = File.createTempFile("export_rs_close", ".csv");
+        tempFile.deleteOnExit();
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("id");
+        when(mockResultSet.next()).thenReturn(false);
+        Mockito.doThrow(closeFailure).when(mockResultSet).close();
+
+        assertSame(closeFailure, assertThrows(SQLException.class, () -> DataTransferUtil.exportCsv(mockPreparedStatement, tempFile)));
+        assertSame(closeFailure, assertThrows(SQLException.class, () -> DataTransferUtil.exportCsvFrom(mockPreparedStatement).to(new StringWriter())));
+        verify(mockPreparedStatement, never()).close();
+        // The File path through a Connection closes its own statement normally; the result-set failure still surfaces.
+        assertSame(closeFailure, assertThrows(SQLException.class, () -> DataTransferUtil.exportCsv(mockConnection, "SELECT id FROM t", tempFile)));
+    }
+
     @Test
     @Tag("2025")
     public void testExportCsvFromResultSet_NullOutputIsRejectedBeforeReadingMetadata() throws SQLException {
@@ -376,6 +431,61 @@ class DataTransferCsvExportTest extends DataTransferUtilTestSupport {
         assertThrows(IllegalArgumentException.class, () -> DataTransferUtil.exportCsvFrom(mockDataSource, "   ").to(new StringWriter()));
 
         verify(mockDataSource, never()).getConnection();
+    }
+
+    // Class doc: a caller-supplied Writer is never closed, and is flushed before a successful export returns (the export
+    // writes through a pooled buffer, so without that flush the tail of the output would only reach the Writer later).
+    @Test
+    public void testExportCsv_CallerSuppliedWriterIsFlushedBeforeReturnAndNotClosed() throws SQLException {
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("col1");
+        when(mockResultSet.getObject(1)).thenReturn("val1", "val2", "val1", "val2", "val1", "val2");
+
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        final RecordingWriter fromResultSet = new RecordingWriter();
+        assertEquals(2, DataTransferUtil.exportCsv(mockResultSet, fromResultSet));
+        fromResultSet.assertFlushedCompletelyAndOpen();
+
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        final RecordingWriter fromConnection = new RecordingWriter();
+        assertEquals(2, DataTransferUtil.exportCsv(mockConnection, "SELECT col1 FROM t", fromConnection));
+        fromConnection.assertFlushedCompletelyAndOpen();
+
+        when(mockResultSet.next()).thenReturn(true, true, false);
+        final RecordingWriter fromBuilder = new RecordingWriter();
+        assertEquals(2, DataTransferUtil.exportCsvFrom(mockDataSource, "SELECT col1 FROM t").to(fromBuilder));
+        fromBuilder.assertFlushedCompletelyAndOpen();
+    }
+
+    /**
+     * A Writer that records what had been written to it when it was last flushed, and whether it was closed.
+     */
+    private static final class RecordingWriter extends Writer {
+        private final StringBuilder content = new StringBuilder();
+        private String contentAtLastFlush = null;
+        private boolean closed = false;
+
+        @Override
+        public void write(final char[] cbuf, final int off, final int len) {
+            content.append(cbuf, off, len);
+        }
+
+        @Override
+        public void flush() {
+            contentAtLastFlush = content.toString();
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+        }
+
+        void assertFlushedCompletelyAndOpen() {
+            final String csv = content.toString();
+            assertTrue(csv.contains("col1") && csv.contains("val1") && csv.contains("val2"), csv);
+            assertEquals(csv, contentAtLastFlush, "the Writer must have been flushed after the last write");
+            assertFalse(closed, "the caller-supplied Writer must not be closed");
+        }
     }
 
     /**

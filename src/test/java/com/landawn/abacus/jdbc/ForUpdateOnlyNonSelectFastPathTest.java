@@ -105,6 +105,39 @@ public class ForUpdateOnlyNonSelectFastPathTest extends TestBase {
         }
     }
 
+    // Statement separators and locking clauses in SQL without dialect-dependent text are found without a metadata lookup;
+    // a ';' that a comment may hide is split under the resolved dialect's rules.
+    @Test
+    void multiStatementAndLockingSelectsAreClassifiedAfterTheFastPath() throws SQLException {
+        final String[][] cases = { { "SELECT a FROM t; UPDATE t SET a = 1", "join", "no lookup" }, { "SELECT a FROM t;", "skip", "no lookup" },
+                { "SELECT a FROM t; SELECT b FROM u", "skip", "no lookup" }, { "SELECT a FROM t WHERE id = ? FOR UPDATE", "join", "no lookup" },
+                { "SELECT a FROM t # ; UPDATE t SET a = 1", "skip", "lookup" }, { "SELECT a FROM t # note\n; UPDATE t SET a = 1", "join", "lookup" },
+                { "SELECT a FROM t -- for update", "skip", "lookup" } };
+
+        for (final String[] c : cases) {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED, true);
+
+            try {
+                clearInvocations(metadata);
+                final SqlTransaction joined = JdbcUtil.getTransaction(dataSource, c[0], SqlTransaction.CreatedBy.JDBC_UTIL);
+
+                if ("join".equals(c[1])) {
+                    assertSame(tran, joined, c[0]);
+                } else {
+                    assertNull(joined, c[0]);
+                }
+
+                if ("lookup".equals(c[2])) {
+                    verify(metadata, atLeastOnce()).getDatabaseProductName();
+                } else {
+                    verify(metadata, never()).getDatabaseProductName();
+                }
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+        }
+    }
+
     @Test
     void unreadableMetadataStillJoinsNonSelectStatements() throws SQLException {
         when(metadata.getDatabaseProductName()).thenThrow(new SQLException("metadata unavailable"));

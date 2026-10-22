@@ -7,10 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -34,9 +37,11 @@ import com.landawn.abacus.query.SqlDialect.ProductInfo;
 
 class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
 
+    // An unqualified name is looked up in the current schema only (case variants included). The former all-schemas rows
+    // ("MIXED," / "mixed,") were removed: see unqualifiedTableOnlyInAnotherSchemaIsLeftToTheProbe.
     @ParameterizedTest(name = "table={0}, schema={1}")
-    @CsvSource({ "MIXED, current", "mixed, current", "MIXED,", "mixed," })
-    void tableLookupRetriesCaseAndSchemaWithoutExecutingSql(final String spelling, final String schema) throws SQLException {
+    @CsvSource({ "MIXED, current", "mixed, current" })
+    void tableLookupRetriesCaseInCurrentSchemaWithoutExecutingSql(final String spelling, final String schema) throws SQLException {
         when(mockConnection.getSchema()).thenReturn("current");
         when(mockDatabaseMetaData.getTables(null, schema, spelling, null)).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(true, true, false);
@@ -50,8 +55,8 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
     }
 
     @ParameterizedTest(name = "columns={0}, schema={1}")
-    @CsvSource({ "MIXED, current", "mixed, current", "MIXED,", "mixed," })
-    void columnLookupRetriesCaseAndSchemaWithoutMixingTables(final String spelling, final String schema) throws SQLException {
+    @CsvSource({ "MIXED, current", "mixed, current" })
+    void columnLookupRetriesCaseInCurrentSchemaWithoutMixingTables(final String spelling, final String schema) throws SQLException {
         when(mockConnection.getSchema()).thenReturn("current");
         when(mockDatabaseMetaData.getColumns(null, schema, spelling, null)).thenReturn(mockResultSet);
         when(mockResultSet.next()).thenReturn(true, true, true, false);
@@ -341,6 +346,53 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
         assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "ghost_table"));
     }
 
+    // Like tableExists, the getColumnNames fallback probe must not abort the caller's open PostgreSQL transaction (25P02):
+    // a failed probe is rolled back to a savepoint (a rollback failure is attached as suppressed) before propagating.
+    @ParameterizedTest(name = "rollbackFails={0}")
+    @ValueSource(booleans = { false, true })
+    void columnNameProbeOnPostgreSqlRollsBackToSavepointWhenItFails(final boolean rollbackFails) throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        final SQLException notFound = new SQLException("relation \"missing_tbl\" does not exist", "42P01");
+        final SQLException connectionLost = new java.sql.SQLNonTransientConnectionException("connection lost", "08006");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockConnection.prepareStatement("SELECT * FROM missing_tbl WHERE 1 > 2")).thenThrow(notFound);
+
+        if (rollbackFails) {
+            doThrow(connectionLost).when(mockConnection).rollback(savepoint);
+        }
+
+        assertSame(notFound, assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "missing_tbl")));
+
+        verify(mockConnection).rollback(savepoint);
+        verify(mockConnection).releaseSavepoint(savepoint);
+        assertArrayEquals(rollbackFails ? new Throwable[] { connectionLost } : new Throwable[0], notFound.getSuppressed());
+    }
+
+    @Test
+    void columnNameProbeReleasesItsSavepointOnSuccessAndNeedsNoneOutsideAPostgreSqlTransaction() throws SQLException {
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnName(1)).thenReturn("id");
+
+        assertEquals(List.of("id"), JdbcUtil.getColumnNames(mockConnection, "orders"));
+        verify(mockConnection).releaseSavepoint(savepoint);
+        verify(mockConnection, never()).rollback(savepoint);
+
+        // Auto-commit mode, or a database that rolls back only the failed statement: no savepoint.
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+        assertEquals(List.of("id"), JdbcUtil.getColumnNames(mockConnection, "orders"));
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("MySQL");
+        assertEquals(List.of("id"), JdbcUtil.getColumnNames(mockConnection, "orders"));
+
+        verify(mockConnection).setSavepoint();
+    }
+
     // getColumnLabels
     @Test
     public void testGetColumnLabels() throws SQLException {
@@ -406,6 +458,15 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
     }
 
     @Test
+    void tableExistsDataSourceRejectsMalformedNameBeforeAcquiringConnection() throws SQLException {
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.tableExists(mockDataSource, "a..b"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.tableExists(mockDataSource, "a.b.c.d"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.tableExists(mockDataSource, "\"unclosed"));
+
+        verify(mockDataSource, never()).getConnection();
+    }
+
+    @Test
     public void testDoesTableExist() throws SQLException {
         when(mockPreparedStatement.execute()).thenReturn(true);
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
@@ -450,6 +511,261 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
 
         assertTrue(JdbcUtil.tableExists(mockConnection, "users"));
         verify(tables).close();
+    }
+
+    // An unqualified name must not match a table that exists only in another schema (e.g. one outside the PostgreSQL search
+    // path): createTableIfNotExists would then skip creating it. Metadata is consulted in the current schema only and the
+    // answer is left to the probe, which follows the database's own name resolution.
+    @Test
+    void unqualifiedTableOnlyInAnotherSchemaIsLeftToTheProbe() throws SQLException {
+        final ResultSet otherSchemaRows = mock(ResultSet.class);
+        when(mockConnection.getSchema()).thenReturn("current");
+        when(mockDatabaseMetaData.getTables(isNull(), isNull(), anyString(), isNull())).thenReturn(otherSchemaRows);
+        when(mockDatabaseMetaData.getColumns(isNull(), isNull(), anyString(), isNull())).thenReturn(otherSchemaRows);
+        when(otherSchemaRows.next()).thenReturn(true, false);
+        when(otherSchemaRows.getString("TABLE_NAME")).thenReturn("orders");
+        when(otherSchemaRows.getString("TABLE_SCHEM")).thenReturn("other");
+        when(otherSchemaRows.getString("COLUMN_NAME")).thenReturn("other_id");
+        final SQLException tableMissing = new SQLException("Table 'orders' doesn't exist", "42S02");
+        when(mockConnection.prepareStatement("SELECT 1 FROM orders WHERE 1 > 2")).thenThrow(tableMissing);
+        when(mockConnection.prepareStatement("SELECT * FROM orders WHERE 1 > 2")).thenThrow(tableMissing);
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "orders"));
+        assertSame(tableMissing, assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "orders")));
+
+        verify(mockDatabaseMetaData, org.mockito.Mockito.atLeastOnce()).getTables(null, "current", "orders", null);
+        verify(mockDatabaseMetaData, org.mockito.Mockito.atLeastOnce()).getColumns(null, "current", "orders", null);
+        verify(mockDatabaseMetaData, never()).getTables(isNull(), isNull(), anyString(), isNull());
+        verify(mockDatabaseMetaData, never()).getColumns(isNull(), isNull(), anyString(), isNull());
+    }
+
+    // On PostgreSQL the search path comes from current_schemas(true): a delimited name missing from the current schema is
+    // looked up in the other schemas in that order (the query runs under a savepoint inside a transaction).
+    @Test
+    void delimitedNameIsLookedUpAlongThePostgreSqlSearchPath() throws SQLException {
+        when(mockConnection.getSchema()).thenReturn("current");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        final java.sql.Statement searchPathStatement = mock(java.sql.Statement.class);
+        final ResultSet searchPathRows = mock(ResultSet.class);
+        final java.sql.Array searchPath = mock(java.sql.Array.class);
+        when(mockConnection.createStatement()).thenReturn(searchPathStatement);
+        when(searchPathStatement.executeQuery("SELECT current_schemas(true)")).thenReturn(searchPathRows);
+        when(searchPathRows.next()).thenReturn(true, false);
+        when(searchPathRows.getArray(1)).thenReturn(searchPath);
+        when(searchPath.getArray()).thenReturn(new String[] { "pg_catalog", "current", "other" });
+        final ResultSet otherRows = mock(ResultSet.class);
+        when(mockDatabaseMetaData.getTables(null, "other", "Some Table", null)).thenReturn(otherRows);
+        when(otherRows.next()).thenReturn(true, false);
+        when(otherRows.getString("TABLE_NAME")).thenReturn("Some Table");
+        when(otherRows.getString("TABLE_SCHEM")).thenReturn("other");
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "\"Some Table\""));
+
+        final org.mockito.InOrder order = org.mockito.Mockito.inOrder(mockDatabaseMetaData);
+        order.verify(mockDatabaseMetaData).getTables(null, "current", "Some Table", null);
+        order.verify(mockDatabaseMetaData).getTables(null, "pg_catalog", "Some Table", null);
+        order.verify(mockDatabaseMetaData).getTables(null, "other", "Some Table", null);
+        verify(mockConnection, never()).prepareStatement(anyString());
+    }
+
+    // The column lookup follows the same search path, in the same order (current schema, then current_schemas(true) as
+    // reported, here pg_catalog before other), and never falls back to the SQL probe for a delimited name.
+    @Test
+    void delimitedNameColumnsAreLookedUpAlongThePostgreSqlSearchPath() throws SQLException {
+        when(mockConnection.getSchema()).thenReturn("current");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        final java.sql.Statement searchPathStatement = mock(java.sql.Statement.class);
+        final ResultSet searchPathRows = mock(ResultSet.class);
+        final java.sql.Array searchPath = mock(java.sql.Array.class);
+        when(mockConnection.createStatement()).thenReturn(searchPathStatement);
+        when(searchPathStatement.executeQuery("SELECT current_schemas(true)")).thenReturn(searchPathRows);
+        when(searchPathRows.next()).thenReturn(true, false);
+        when(searchPathRows.getArray(1)).thenReturn(searchPath);
+        when(searchPath.getArray()).thenReturn(new String[] { "pg_catalog", "current", "other" });
+        final ResultSet otherColumns = mock(ResultSet.class);
+        when(mockDatabaseMetaData.getColumns(null, "other", "Some Table", null)).thenReturn(otherColumns);
+        when(otherColumns.next()).thenReturn(true, true, false);
+        when(otherColumns.getString("TABLE_NAME")).thenReturn("Some Table");
+        when(otherColumns.getString("TABLE_SCHEM")).thenReturn("other");
+        when(otherColumns.getString("COLUMN_NAME")).thenReturn("id", "name");
+
+        assertEquals(List.of("id", "name"), JdbcUtil.getColumnNames(mockConnection, "\"Some Table\""));
+
+        final org.mockito.InOrder order = org.mockito.Mockito.inOrder(mockDatabaseMetaData);
+        order.verify(mockDatabaseMetaData).getColumns(null, "current", "Some Table", null);
+        order.verify(mockDatabaseMetaData).getColumns(null, "pg_catalog", "Some Table", null);
+        order.verify(mockDatabaseMetaData).getColumns(null, "other", "Some Table", null);
+        verify(mockDatabaseMetaData, never()).getColumns(isNull(), isNull(), anyString(), isNull());
+        verify(mockConnection, never()).prepareStatement(anyString());
+        verify(otherColumns).close();
+        verify(searchPath).free();
+    }
+
+    // tableExists and getColumnNames take the same probe decision for the same name: both skip the probe for a case-folded
+    // keyword (its unquoted spelling can't be used in SQL) and both probe the same canonical spelling otherwise. getColumnNames
+    // now gates on the same quote-aware probe name as tableExists (behaviorally equivalent while quoting is disabled; the
+    // unification keeps the two decisions textually identical once quoting is enabled).
+    @Test
+    public void testGetColumnNames_ProbeDecisionMatchesTableExists() throws SQLException {
+        when(mockDatabaseMetaData.storesLowerCaseIdentifiers()).thenReturn(true);
+        when(mockDatabaseMetaData.getIdentifierQuoteString()).thenReturn("\"");
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnName(1)).thenReturn("id");
+
+        for (final String keyword : List.of("User", "public.user", "Order")) {
+            assertFalse(JdbcUtil.tableExists(mockConnection, keyword), keyword);
+            assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, keyword), keyword);
+        }
+
+        verify(mockConnection, never()).prepareStatement(anyString());
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "Orders"));
+        assertEquals(List.of("id"), JdbcUtil.getColumnNames(mockConnection, "Orders"));
+        assertTrue(JdbcUtil.tableExists(mockConnection, "Public.Orders"));
+        assertEquals(List.of("id"), JdbcUtil.getColumnNames(mockConnection, "Public.Orders"));
+
+        verify(mockConnection).prepareStatement("SELECT 1 FROM orders WHERE 1 > 2");
+        verify(mockConnection).prepareStatement("SELECT * FROM orders WHERE 1 > 2");
+        verify(mockConnection).prepareStatement("SELECT 1 FROM public.orders WHERE 1 > 2");
+        verify(mockConnection).prepareStatement("SELECT * FROM public.orders WHERE 1 > 2");
+    }
+
+    // An element of the search path array that isn't a schema name (or array contents that aren't an array) failed the lookup
+    // with a ClassCastException (or NullPointerException) after the query succeeded: the transaction was rolled back to the
+    // savepoint for nothing, and the search path was dropped. Such values are skipped now, and the array is freed.
+    @Test
+    void unexpectedSearchPathValuesAreSkipped_andTheArrayIsFreed() throws SQLException {
+        final java.sql.Array searchPath = postgreSqlSearchPathInTransaction(new Object[] { "pg_catalog", 42, null, "other" });
+        final ResultSet otherRows = mock(ResultSet.class);
+        when(mockDatabaseMetaData.getTables(null, "other", "Some Table", null)).thenReturn(otherRows);
+        when(otherRows.next()).thenReturn(true, false);
+        when(otherRows.getString("TABLE_NAME")).thenReturn("Some Table");
+        when(otherRows.getString("TABLE_SCHEM")).thenReturn("other");
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "\"Some Table\""));
+
+        verify(mockDatabaseMetaData).getTables(null, "pg_catalog", "Some Table", null);
+        verify(searchPath).free();
+        verify(mockConnection, never()).rollback(any(java.sql.Savepoint.class));
+    }
+
+    @Test
+    void searchPathArrayWithoutContents_isAnEmptySearchPath() throws SQLException {
+        final java.sql.Array searchPath = postgreSqlSearchPathInTransaction(null);
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "\"Some Table\""));
+
+        verify(searchPath).free();
+        verify(mockConnection, never()).rollback(any(java.sql.Savepoint.class));
+    }
+
+    private java.sql.Array postgreSqlSearchPathInTransaction(final Object contents) throws SQLException {
+        when(mockConnection.getSchema()).thenReturn("current");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenReturn(mock(java.sql.Savepoint.class));
+        final java.sql.Statement searchPathStatement = mock(java.sql.Statement.class);
+        final ResultSet searchPathRows = mock(ResultSet.class);
+        final java.sql.Array searchPath = mock(java.sql.Array.class);
+        when(mockConnection.createStatement()).thenReturn(searchPathStatement);
+        when(searchPathStatement.executeQuery("SELECT current_schemas(true)")).thenReturn(searchPathRows);
+        when(searchPathRows.next()).thenReturn(true, false);
+        when(searchPathRows.getArray(1)).thenReturn(searchPath);
+        when(searchPath.getArray()).thenReturn(contents);
+        return searchPath;
+    }
+
+    // On PostgreSQL a failed query aborts the open transaction until it is rolled back. When rolling back to the savepoint fails
+    // too, the lookup reports the failure instead of an answer ("no such table") read from an unusable transaction.
+    @Test
+    void failedSearchPathQueryIsReportedWhenTheTransactionCannotBeRestored() throws SQLException {
+        final SQLException queryFailure = new SQLException("search path unavailable");
+        final SQLException rollbackFailure = new SQLException("rollback failed");
+        final java.sql.Savepoint savepoint = failingPostgreSqlSearchPath(queryFailure);
+        doThrow(rollbackFailure).when(mockConnection).rollback(savepoint);
+
+        assertSame(queryFailure, assertThrows(UncheckedSQLException.class, () -> JdbcUtil.tableExists(mockConnection, "\"Some Table\"")).getCause());
+        assertTrue(Arrays.asList(queryFailure.getSuppressed()).contains(rollbackFailure));
+        assertSame(queryFailure, assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "\"Some Table\"")));
+    }
+
+    // Restored by the savepoint, the transaction is usable: the lookup falls back to the current schema.
+    @Test
+    void failedSearchPathQueryFallsBackWhenTheSavepointRestoresTheTransaction() throws SQLException {
+        final java.sql.Savepoint savepoint = failingPostgreSqlSearchPath(new SQLException("search path unavailable"));
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "\"Some Table\""));
+        verify(mockConnection).rollback(savepoint);
+        verify(mockConnection).releaseSavepoint(savepoint);
+    }
+
+    private java.sql.Savepoint failingPostgreSqlSearchPath(final SQLException queryFailure) throws SQLException {
+        when(mockConnection.getSchema()).thenReturn("current");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        final java.sql.Savepoint savepoint = mock(java.sql.Savepoint.class);
+        when(mockConnection.setSavepoint()).thenReturn(savepoint);
+        final java.sql.Statement searchPathStatement = mock(java.sql.Statement.class);
+        when(mockConnection.createStatement()).thenReturn(searchPathStatement);
+        when(searchPathStatement.executeQuery("SELECT current_schemas(true)")).thenThrow(queryFailure);
+        return savepoint;
+    }
+
+    @Test
+    void parseH2SchemaSearchPathReadsQuotedAndUnquotedNames() {
+        assertEquals(List.of("PUBLIC", "OTHER", "My \"x\" Schema"),
+                JdbcUtil.parseH2SchemaSearchPath("SET SCHEMA_SEARCH_PATH \"PUBLIC\", \"OTHER\", \"My \"\"x\"\" Schema\""));
+        assertEquals(List.of("PUBLIC", "OTHER"), JdbcUtil.parseH2SchemaSearchPath("SET SCHEMA_SEARCH_PATH public, other"));
+        assertEquals(List.of(), JdbcUtil.parseH2SchemaSearchPath(null));
+        assertEquals(List.of(), JdbcUtil.parseH2SchemaSearchPath("SET SCHEMA PUBLIC"));
+    }
+
+    // H2 writes a name with a character outside printable ASCII in the Unicode-escaped form U&"..." (StringUtils.quoteIdentifier):
+    // \XXXX or \+XXXXXX per code point, \\ for a backslash, "" for a quote. Read as a bare token, it came out as the bogus
+    // upper-cased U&"..." text, so a schema with such a name was never searched.
+    @Test
+    void parseH2SchemaSearchPathDecodesUnicodeEscapedNames() {
+        final String schema = "Sch\u00e9ma";
+        assertEquals(List.of("PUBLIC", schema), JdbcUtil.parseH2SchemaSearchPath("SET SCHEMA_SEARCH_PATH \"PUBLIC\", U&\"Sch\\00e9ma\""));
+
+        // The exact text H2 writes: a backslash, a quote, a supplementary code point and a control character.
+        final String odd = "a\\b\"c \uD83D\uDE00 \u0001";
+        final String quoted = org.h2.util.StringUtils.quoteIdentifier(odd);
+        assertTrue(quoted.startsWith("U&\""), quoted);
+        assertEquals(List.of(odd, "PUBLIC"), JdbcUtil.parseH2SchemaSearchPath("SET SCHEMA_SEARCH_PATH " + quoted + ", PUBLIC"));
+
+        // A lower-case prefix is read too; a malformed or truncated escape is kept as written.
+        assertEquals(List.of("x\u00e9", "\\zz", "\\00", "\\"),
+                JdbcUtil.parseH2SchemaSearchPath("SET SCHEMA_SEARCH_PATH u&\"x\\00E9\", U&\"\\zz\", U&\"\\00\", U&\"\\\""));
+        assertEquals("x\u00e9\\y", JdbcUtil.decodeH2UnicodeEscapes("x\\00e9\\\\y"));
+    }
+
+    // When the current namespace cannot be pinned down (a database with schemas whose driver reports no current schema, or a
+    // catalog database with no current catalog), a null-schema/null-catalog metadata lookup would search everywhere, so it
+    // is skipped: a simple name is answered by the probe, a quote-dependent name (no probe) is reported missing.
+    @ParameterizedTest(name = "schemaDatabase={0}")
+    @ValueSource(booleans = { true, false })
+    void unknownCurrentNamespaceSkipsMetadataForUnqualifiedNames(final boolean schemaDatabase) throws SQLException {
+        if (schemaDatabase) {
+            when(mockDatabaseMetaData.supportsSchemasInTableDefinitions()).thenReturn(true);
+            when(mockConnection.getSchema()).thenThrow(new AbstractMethodError("JDBC 4.0 driver"));
+        } else {
+            when(mockDatabaseMetaData.supportsCatalogsInTableDefinitions()).thenReturn(true);
+            when(mockConnection.getCatalog()).thenReturn(null);
+        }
+
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
+        when(mockResultSetMetaData.getColumnName(1)).thenReturn("id");
+
+        assertTrue(JdbcUtil.tableExists(mockConnection, "orders"));
+        assertEquals(List.of("id"), JdbcUtil.getColumnNames(mockConnection, "orders"));
+        assertFalse(JdbcUtil.tableExists(mockConnection, "\"Order Items\""));
+        assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "\"Order Items\""));
+
+        verify(mockConnection).prepareStatement("SELECT 1 FROM orders WHERE 1 > 2");
+        verify(mockConnection).prepareStatement("SELECT * FROM orders WHERE 1 > 2");
+        verify(mockDatabaseMetaData, never()).getTables(any(), any(), anyString(), any());
+        verify(mockDatabaseMetaData, never()).getColumns(any(), any(), anyString(), any());
     }
 
     @Test
@@ -671,6 +987,66 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
         verify(mockConnection).releaseSavepoint(savepoint);
     }
 
+    // Regression: on PostgreSQL with auto-commit disabled, a probe that could set no savepoint (the driver refused one) and then
+    // failed with "table not found" returned false, leaving the caller's transaction aborted (25P02) behind a clean answer. The
+    // failure is now propagated, as getColumnNames and the search-path query already did. In auto-commit mode there is no
+    // transaction to abort, so the answers are unchanged there.
+    @Test
+    public void testTableProbes_TableNotFoundWithoutASavepointInATransaction_Propagate() throws SQLException {
+        final SQLException notFound = new SQLException("relation \"missing_tbl\" does not exist", "42P01");
+        final SQLException noSavepoint = new java.sql.SQLFeatureNotSupportedException("savepoints are not supported", "0A000");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+        when(mockConnection.getAutoCommit()).thenReturn(false);
+        when(mockConnection.setSavepoint()).thenThrow(noSavepoint);
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2")).thenThrow(notFound);
+        when(mockConnection.prepareStatement("SELECT * FROM missing_tbl WHERE 1 > 2")).thenThrow(notFound);
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+        assertSame(notFound, thrown.getCause());
+        assertSame(notFound, assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "missing_tbl")));
+        assertEquals(0, notFound.getSuppressed().length);
+        verify(mockConnection, never()).rollback(any(java.sql.Savepoint.class));
+        verify(mockConnection, never()).rollback();
+
+        when(mockConnection.getAutoCommit()).thenReturn(true);
+
+        assertFalse(JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+        assertSame(notFound, assertThrows(SQLException.class, () -> JdbcUtil.getColumnNames(mockConnection, "missing_tbl")));
+        assertEquals(0, notFound.getSuppressed().length);
+    }
+
+    // isTransactionUsableAfterFailure without a savepoint: when reading the auto-commit mode itself fails (the connection was
+    // lost with the probe), the transaction cannot be known to be usable, so the probe failure is propagated instead of a
+    // "does not exist" answer, with the auto-commit failure attached as suppressed - the only path that attaches one without a
+    // savepoint - and nothing is rolled back. Whether the auto-commit read already failed before the probe (so no savepoint
+    // was attempted) or only after it (the savepoint was refused) makes no difference.
+    @ParameterizedTest(name = "autoCommitReadFailsBeforeTheProbe={0}")
+    @ValueSource(booleans = { false, true })
+    public void testTableExists_AutoCommitReadFailsAfterAProbeWithoutASavepoint_PropagatesWithTheFailureSuppressed(
+            final boolean autoCommitReadFailsBeforeTheProbe) throws SQLException {
+        final SQLException notFound = new SQLException("relation \"missing_tbl\" does not exist", "42P01");
+        final SQLException connectionLost = new SQLException("connection lost", "08006");
+        when(mockDatabaseMetaData.getDatabaseProductName()).thenReturn("PostgreSQL");
+
+        if (autoCommitReadFailsBeforeTheProbe) {
+            when(mockConnection.getAutoCommit()).thenThrow(connectionLost);
+        } else {
+            when(mockConnection.getAutoCommit()).thenReturn(false).thenThrow(connectionLost);
+            when(mockConnection.setSavepoint()).thenThrow(new java.sql.SQLFeatureNotSupportedException("savepoints are not supported", "0A000"));
+        }
+
+        when(mockConnection.prepareStatement("SELECT 1 FROM missing_tbl WHERE 1 > 2")).thenThrow(notFound);
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, () -> JdbcUtil.tableExists(mockConnection, "missing_tbl"));
+
+        assertSame(notFound, thrown.getCause());
+        assertArrayEquals(new Throwable[] { connectionLost }, notFound.getSuppressed());
+        verify(mockConnection, times(autoCommitReadFailsBeforeTheProbe ? 0 : 1)).setSavepoint();
+        verify(mockConnection, never()).rollback(any(java.sql.Savepoint.class));
+        verify(mockConnection, never()).rollback();
+        verify(mockConnection, never()).releaseSavepoint(any());
+    }
+
     // splitQualifiedSqlIdentifier: 1/2/3 unquoted segments.
     @Test
     public void testSplitQualifiedSqlIdentifier_PlainSegments() {
@@ -774,6 +1150,15 @@ class JdbcUtilMetadataTest extends JdbcUtilTestSupport {
         assertSame(createFailure, ex.getCause(), "the CREATE failure must be reported, not the re-check failure");
         assertEquals(1, createFailure.getSuppressed().length);
         assertSame(transactionAborted, createFailure.getSuppressed()[0].getCause());
+    }
+
+    @Test
+    void createTableIfNotExistsRejectsBlankSchemaBeforeCheckingExistence() throws SQLException {
+        // The default mock probe succeeds, so without up-front validation the table is reported as existing.
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createTableIfNotExists(mockConnection, "users", "   "));
+
+        verify(mockConnection, never()).getMetaData();
+        verify(mockConnection, never()).prepareStatement(anyString());
     }
 
     @ParameterizedTest

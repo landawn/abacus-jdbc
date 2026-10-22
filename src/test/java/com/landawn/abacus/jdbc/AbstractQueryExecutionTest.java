@@ -2,6 +2,7 @@ package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -87,6 +88,76 @@ class AbstractQueryExecutionTest extends AbstractQueryTestSupport {
         List<Long> result = query.batchInsert((Jdbc.BiRowMapper<Long>) (rs, cols) -> rs.getLong(1), isDefault);
 
         assertEquals(List.of(10L, 0L, 20L), result);
+    }
+
+    // The after-execution hook of insert/batchInsert (DaoImpl sets an insert's execution mark with it) must run before the
+    // statement's parameters/batch are cleared and the SQL log handler runs: it ran after JdbcUtil.executeUpdate/executeBatch
+    // returned, so an Error thrown by that cleanup (not swallowed, unlike SQLException/RuntimeException) made the insert look
+    // as if it had never executed, and the application-generated ID of a committed row was put back.
+    @Test
+    public void testInsert_AfterExecutionHookRunsBeforeTheParametersAreCleared() throws SQLException {
+        final boolean[] hookRan = { false };
+        when(preparedStatement.executeUpdate()).thenReturn(1);
+        doThrow(new AssertionError("cleanup failed")).when(preparedStatement).clearParameters();
+
+        final AssertionError e = assertThrows(AssertionError.class,
+                () -> query.insert((Jdbc.BiRowMapper<Long>) (rs, labels) -> rs.getLong(1), id -> id == null, () -> hookRan[0] = true));
+
+        assertEquals("cleanup failed", e.getMessage());
+        assertTrue(hookRan[0], "the hook must have run before the parameter cleanup threw");
+        final org.mockito.InOrder inOrder = Mockito.inOrder(preparedStatement);
+        inOrder.verify(preparedStatement).executeUpdate();
+        inOrder.verify(preparedStatement).clearParameters();
+        verify(preparedStatement).close();
+    }
+
+    @Test
+    public void testBatchInsert_AfterExecutionHookRunsBeforeTheBatchIsCleared() throws SQLException {
+        final boolean[] hookRan = { false };
+        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1 });
+        doThrow(new AssertionError("cleanup failed")).when(preparedStatement).clearBatch();
+
+        final AssertionError e = assertThrows(AssertionError.class,
+                () -> query.batchInsert((Jdbc.BiRowMapper<Long>) (rs, labels) -> rs.getLong(1), id -> id == null, () -> hookRan[0] = true));
+
+        assertEquals("cleanup failed", e.getMessage());
+        assertTrue(hookRan[0], "the hook must have run before the batch cleanup threw");
+        final org.mockito.InOrder inOrder = Mockito.inOrder(preparedStatement);
+        inOrder.verify(preparedStatement).executeBatch();
+        inOrder.verify(preparedStatement).clearBatch();
+        verify(preparedStatement).close();
+    }
+
+    record GenKey(long seq, String code) {
+    }
+
+    private static ResultSet generatedKeyRows(final boolean twoRows) throws SQLException {
+        final ResultSet rs = Mockito.mock(ResultSet.class);
+        final ResultSetMetaData meta = Mockito.mock(ResultSetMetaData.class);
+        when(rs.getMetaData()).thenReturn(meta);
+        when(meta.getColumnCount()).thenReturn(1);
+        when(meta.getColumnLabel(1)).thenReturn("seq");
+        when(rs.next()).thenReturn(true, twoRows, false);
+        when(rs.getLong(1)).thenReturn(7L, 8L);
+        return rs;
+    }
+
+    // A key built by a custom extractor whose type declares no ID property (a record/bean such as GenKey) is a real key,
+    // not a "default id": the public insert/batchInsert overloads used to drop it (Optional.empty() / an empty list).
+    @Test
+    public void testInsertAndBatchInsert_KeyTypeWithoutIdPropertiesIsReturned() throws SQLException {
+        when(preparedStatement.executeBatch()).thenReturn(new int[] { 1, 1 });
+        final ResultSet insertKeys = generatedKeyRows(false);
+        final ResultSet biInsertKeys = generatedKeyRows(false);
+        final ResultSet batchKeys = generatedKeyRows(true);
+        final ResultSet biBatchKeys = generatedKeyRows(true);
+        when(preparedStatement.getGeneratedKeys()).thenReturn(insertKeys, biInsertKeys, batchKeys, biBatchKeys);
+
+        assertEquals(new GenKey(7L, "A"), new TestQuery(preparedStatement).insert(rs -> new GenKey(rs.getLong(1), "A")).get());
+        assertEquals(new GenKey(7L, "A"), new TestQuery(preparedStatement).insert((rs, labels) -> new GenKey(rs.getLong(1), "A")).get());
+        assertEquals(List.of(new GenKey(7L, "A"), new GenKey(8L, "A")), new TestQuery(preparedStatement).batchInsert(rs -> new GenKey(rs.getLong(1), "A")));
+        assertEquals(List.of(new GenKey(7L, "A"), new GenKey(8L, "A")),
+                new TestQuery(preparedStatement).batchInsert((rs, labels) -> new GenKey(rs.getLong(1), "A")));
     }
 
     // batchInsert(RowMapper, Predicate): all IDs are null → returns empty list (L8961)

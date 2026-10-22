@@ -27,8 +27,8 @@ class JdbcUtilReviewFixTest extends JdbcUtilTestSupport {
     // createCacheKey: null args and an empty args array must produce the identical cache key.
     @Test
     public void testCreateCacheKey_NullArgsEqualsEmptyArgs() {
-        final String keyWithNullArgs = JdbcUtil.createCacheKey("user_account", "UserDao.list", null, daoLogger);
-        final String keyWithEmptyArgs = JdbcUtil.createCacheKey("user_account", "UserDao.list", new Object[0], daoLogger);
+        final String keyWithNullArgs = JdbcUtil.createCacheKey("user_account", "UserDao.list", "TestDao@1", null, daoLogger);
+        final String keyWithEmptyArgs = JdbcUtil.createCacheKey("user_account", "UserDao.list", "TestDao@1", new Object[0], daoLogger);
 
         assertNotNull(keyWithNullArgs);
         assertEquals(keyWithEmptyArgs, keyWithNullArgs);
@@ -38,10 +38,10 @@ class JdbcUtilReviewFixTest extends JdbcUtilTestSupport {
     // createCacheKey: distinct argument values must still produce distinct keys after the empty-array sharing change.
     @Test
     public void testCreateCacheKey_DistinctArgsDistinctKeys() {
-        final String keyA = JdbcUtil.createCacheKey("user_account", "UserDao.find", new Object[] { "Alice", 1 }, daoLogger);
-        final String keyB = JdbcUtil.createCacheKey("user_account", "UserDao.find", new Object[] { "Bob", 1 }, daoLogger);
-        final String keyC = JdbcUtil.createCacheKey("user_account", "UserDao.find", new Object[] { "Alice", 2 }, daoLogger);
-        final String keyD = JdbcUtil.createCacheKey("user_account", "UserDao.find", new Object[] { "Alice", 1, List.of(1, 2) }, daoLogger);
+        final String keyA = JdbcUtil.createCacheKey("user_account", "UserDao.find", "TestDao@1", new Object[] { "Alice", 1 }, daoLogger);
+        final String keyB = JdbcUtil.createCacheKey("user_account", "UserDao.find", "TestDao@1", new Object[] { "Bob", 1 }, daoLogger);
+        final String keyC = JdbcUtil.createCacheKey("user_account", "UserDao.find", "TestDao@1", new Object[] { "Alice", 2 }, daoLogger);
+        final String keyD = JdbcUtil.createCacheKey("user_account", "UserDao.find", "TestDao@1", new Object[] { "Alice", 1, List.of(1, 2) }, daoLogger);
 
         assertNotNull(keyA);
         assertNotNull(keyB);
@@ -56,8 +56,8 @@ class JdbcUtilReviewFixTest extends JdbcUtilTestSupport {
     @Test
     public void testCreateCacheKey_Repeatable() {
         final Object[] args = { "Alice", 1, List.of(1, 2) };
-        final String first = JdbcUtil.createCacheKey("user_account", "UserDao.list", args, daoLogger);
-        final String second = JdbcUtil.createCacheKey("user_account", "UserDao.list", args, daoLogger);
+        final String first = JdbcUtil.createCacheKey("user_account", "UserDao.list", "TestDao@1", args, daoLogger);
+        final String second = JdbcUtil.createCacheKey("user_account", "UserDao.list", "TestDao@1", args, daoLogger);
 
         assertNotNull(first);
         assertEquals(first, second);
