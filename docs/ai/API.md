@@ -4377,7 +4377,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code dataset} is {@code null} , or {@code targetDataSource} is {@code null} , or {@code insertSql} is {@code null} or blank
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the target connection
 - **Signature:** `public static int importData(final Dataset dataset, final Connection conn, final String insertSql) throws IllegalArgumentException, SQLException`
 - **Summary:** Imports data from a Dataset to a database table using the provided Connection and insert SQL statement.
 - **Contract:**
@@ -4635,7 +4634,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if any of {@code iter} , {@code targetDataSource} , or {@code parameterSetter} is {@code null} , or {@code insertSql} is {@code null} or blank
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing the insert, binding a row, invoking {@code parameterSetter} , adding or executing a batch, or closing the prepared statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the target connection
 - **See also:** LineIterator#of(File), LineIterator#of(Reader)
 - **Signature:** `@Deprecated public static <T> long importData(final Iterator<? extends T> iter, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super T, SQLException> parameterSetter) throws IllegalArgumentException, SQLException`
 - **Summary:** Imports data from an Iterator to the database using the provided Connection with configurable batch processing.
@@ -4682,7 +4680,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.sql.SQLException` — if preparing the insert, binding a row, invoking {@code parameterSetter} , adding or executing a batch, or closing the prepared statement fails
   - `java.io.UncheckedIOException` — if {@code file} cannot be opened for reading (for example it does not exist) or reading or closing its file reader fails
   - `com.landawn.abacus.exception.ParsingException` — if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an unterminated quoted field
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the target connection
 - **Signature:** `@Deprecated public static long importCsv(final File file, final Connection conn, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws IllegalArgumentException, SQLException, UncheckedIOException, ParsingException`
 - **Summary:** Imports data from a CSV file to the database using the provided Connection with configurable batch processing.
 - **Parameters:**
@@ -4757,7 +4754,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.sql.SQLException` — if preparing the insert, binding a row, invoking {@code parameterSetter} , adding or executing a batch, or closing the prepared statement fails
   - `java.io.UncheckedIOException` — if reading CSV data from {@code reader} fails
   - `com.landawn.abacus.exception.ParsingException` — if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an unterminated quoted field
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the target connection
 - **Signature:** `public static long importCsv(final Reader reader, final PreparedStatement stmt, final Throwables.BiConsumer<? super PreparedQuery, ? super String[], SQLException> parameterSetter) throws IllegalArgumentException, UncheckedIOException, ParsingException, SQLException`
 - **Summary:** Imports data from a CSV Reader to the database using the provided PreparedStatement with default batch settings.
 - **Parameters:**
@@ -4814,7 +4810,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned JDBC resources fails
   - `java.io.UncheckedIOException` — if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source connection
 - **Signature:** `public static long exportCsv(final Connection conn, final String selectSql, final File output) throws IllegalArgumentException, SQLException, UncheckedSQLException, UncheckedIOException`
 - **Summary:** Exports data from the database to a CSV file using the provided Connection and SQL query.
 - **Parameters:**
@@ -4906,7 +4901,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT, reading result-set metadata or rows, configuring fetch settings, or closing owned JDBC resources fails
   - `java.io.UncheckedIOException` — if writing or flushing CSV data to {@code output} fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source connection
 - **Signature:** `public static long exportCsv(final Connection conn, final String selectSql, final Writer output) throws IllegalArgumentException, SQLException, UncheckedSQLException, UncheckedIOException`
 - **Summary:** Exports data from the database to a CSV Writer using the provided Connection and SQL query.
 - **Parameters:**
@@ -4954,7 +4948,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example because the table does not exist in the source database); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for example because the table does not exist in the target database)
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 - **Signature:** `public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Copies all data from a table in the source data source to a table in the target data source.
 - **Contract:**
@@ -4969,7 +4962,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for example because {@code targetTableName} does not exist)
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 - **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Copies all data from a table in the source data source to a table in the target data source with a specified batch size for performance tuning.
 - **Parameters:**
@@ -4983,7 +4975,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata or the source table's columns fails (for example because {@code sourceTableName} does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for example because {@code targetTableName} does not exist)
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 - **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName, final Collection<String> columnNames) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Copies specified columns from a table in the source data source to a table in the target data source.
 - **Contract:**
@@ -4999,7 +4990,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any specified column doesn't exist
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 - **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final javax.sql.DataSource targetDataSource, final String sourceTableName, final String targetTableName, final Collection<String> columnNames, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Copies specified columns from a table in the source data source to a table in the target data source with a custom batch size for performance tuning.
 - **Parameters:**
@@ -5014,7 +5004,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or a table name is {@code null} , blank, or malformed, or a selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 - **Signature:** `public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource, final String insertSql) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Copies data from a source data source to a target data source using custom SQL queries.
 - **Contract:**
@@ -5029,7 +5018,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code selectSql} or {@code insertSql} is {@code null} or blank, or {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or if database metadata reports a {@code null} or blank product name
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails, or SQL statements are invalid
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 - **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize, final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Copies data from a source data source to a target data source using custom SQL queries with specified fetch and batch sizes for performance optimization.
 - **Parameters:**
@@ -5044,7 +5032,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code selectSql} or {@code insertSql} is {@code null} or blank, or {@code sourceDataSource} or {@code targetDataSource} is {@code null} , or {@code batchSize <= 0} , or {@code fetchSize < 0} , or if database metadata reports a {@code null} or blank product name
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 - **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final javax.sql.DataSource targetDataSource, final String insertSql, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Copies data from a source data source to a target data source using custom SQL queries and a custom statement setter for parameter mapping.
 - **Parameters:**
@@ -5058,7 +5045,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code selectSql} or {@code insertSql} is {@code null} or blank, or any of {@code sourceDataSource} , {@code targetDataSource} , or {@code parameterSetter} is {@code null} , or if database metadata reports a {@code null} or blank product name
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 - **Signature:** `@Deprecated public static long copy(final javax.sql.DataSource sourceDataSource, final String selectSql, final int fetchSize, final javax.sql.DataSource targetDataSource, final String insertSql, final int batchSize, final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super ResultSet, SQLException> parameterSetter) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Copies data from a source data source to a target data source with full control over all aspects of the copy operation including SQL queries, performance settings, and parameter mapping.
 - **Parameters:**
@@ -5075,7 +5061,6 @@ Utility class for database import/export operations, CSV processing, and data co
   - `java.lang.IllegalArgumentException` — if {@code selectSql} or {@code insertSql} is {@code null} or blank, or any of {@code sourceDataSource} , {@code targetDataSource} , or {@code parameterSetter} is {@code null} , or {@code batchSize <= 0} , or {@code batchIntervalInMillis < 0} , or {@code fetchSize < 0} , or if database metadata reports a {@code null} or blank product name
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 - **Signature:** `public static long copy(final Connection sourceConn, final Connection targetConn, final String tableName) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Copies all data from a table with the same name between two database connections.
 - **Contract:**
@@ -5426,7 +5411,6 @@ A fluent builder that configures and runs the import of a {@link Dataset} into a
   - `java.lang.IllegalArgumentException` — if more than one value-mapping strategy is configured, {@code batchSize <= 0} , a configured column or column-type key is not a column of the dataset, or a mapped type is {@code null} , or if {@code targetDataSource} is {@code null} , or {@code insertSql} is {@code null} or blank
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the target connection
 - **Signature:** `public int to(final Connection conn, final String insertSql) throws IllegalArgumentException, SQLException`
 - **Summary:** Runs the import against the given Connection.
 - **Parameters:**
@@ -5506,7 +5490,6 @@ A fluent builder that imports rows from an {@link Iterator} or a CSV {@link File
   - `java.sql.SQLException` — if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
   - `java.io.UncheckedIOException` — if the CSV file source cannot be opened for reading, or an I/O error occurs reading the file/reader
   - `com.landawn.abacus.exception.ParsingException` — if, for a CSV source, the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an unterminated quoted field
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the target connection
 - **Signature:** `public long to(final Connection conn, final String insertSql) throws IllegalStateException, IllegalArgumentException, SQLException, UncheckedIOException, ParsingException`
 - **Summary:** Runs the import against the given Connection.
 - **Parameters:**
@@ -5566,7 +5549,6 @@ A fluent builder that exports the rows of a query/result to CSV.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring the source connection or reading database metadata fails when using a DataSource or Connection; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
   - `java.io.UncheckedIOException` — if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source connection
 - **Signature:** `public long to(final Writer output) throws IllegalStateException, IllegalArgumentException, UncheckedSQLException, SQLException, UncheckedIOException`
 - **Summary:** Runs the export and writes the CSV to the given {@link Writer} (flushed, but not closed).
 - **Parameters:**
@@ -5578,7 +5560,6 @@ A fluent builder that exports the rows of a query/result to CSV.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring the source connection or reading database metadata fails when using a DataSource or Connection; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
   - `java.io.UncheckedIOException` — if writing or flushing CSV data to {@code output} fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source connection
 
 ### Class CopyFromDataSource (com.landawn.abacus.jdbc.DataTransferUtil.CopyFromDataSource)
 A fluent builder that copies the rows of a SELECT query from a source {@link javax.sql.DataSource} into a target table.
@@ -5634,7 +5615,6 @@ A fluent builder that copies the rows of a SELECT query from a source {@link jav
   - `java.lang.IllegalArgumentException` — if {@code targetDataSource} is {@code null} , {@code insertSql} is {@code null} or blank, {@code fetchSize < 0} , or {@code batchSize <= 0} , or if database metadata reports a {@code null} or blank product name
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails; connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 
 ### Class CopyFromConnection (com.landawn.abacus.jdbc.DataTransferUtil.CopyFromConnection)
 A fluent builder that copies the rows of a SELECT query between two {@link Connection} s.
@@ -5778,7 +5758,6 @@ A fluent builder that copies a table (or selected columns) between two {@link ja
   - `java.lang.IllegalArgumentException` — if {@code targetDataSource} is {@code null} , {@code batchSize <= 0} , or a table/selected column name is {@code null} , blank, or malformed, or if database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and metadata labels whose exact case would be folded are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if connection acquisition fails, or if reading database metadata fails, or, when no columns are configured, if reading the source table's columns fails (for example because the source table does not exist); connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)} .
   - `java.sql.SQLException` — if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain the source or target connection
 
 ### Class CopyTableFromConnection (com.landawn.abacus.jdbc.DataTransferUtil.CopyTableFromConnection)
 A fluent builder that copies a table (or selected columns) between two {@link Connection} s, generating the SELECT and INSERT SQL from the table schema.
@@ -8575,7 +8554,6 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection from {@code ds} , or reading its database product metadata, fails while resolving the database product info
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
 - **Signature:** `@Beta public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Converts an INSERT SQL statement to an UPDATE SQL statement with an optional WHERE clause.
 - **Contract:**
@@ -8591,7 +8569,6 @@ Utility class for generating JDBC-related code including entity classes and SQL 
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , if the INSERT SQL is null/empty, invalid, or cannot be converted, or if the database metadata reports a {@code null} or blank product name. Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection from {@code ds} , or reading its database product metadata, fails while resolving the database product info
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}
 
 #### Public Instance Methods
 - (none)
@@ -9225,7 +9202,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if the database metadata reports a {@code null} , empty, or blank product name.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection or reading its database metadata fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} .
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getDBProductInfo(Connection), SqlDialect.ProductInfo
 - **Signature:** `public static ProductInfo getDBProductInfo(final Connection conn) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Retrieves the database product information from the given {@link Connection} .
@@ -9339,7 +9315,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection directly from {@code ds} fails outside the Spring acquisition path.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #releaseConnection(Connection, javax.sql.DataSource), org.springframework.jdbc.datasource.DataSourceUtils#getConnection(javax.sql.DataSource)
 ##### releaseConnection(...) -> void
 - **Signature:** `public static void releaseConnection(final Connection conn, final javax.sql.DataSource ds)`
@@ -9684,7 +9659,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code sql} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** PreparedQuery, #prepareQuery(Connection, String), #executeQuery(javax.sql.DataSource, String, Object...)
 - **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final boolean autoGeneratedKeys) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a SQL query with support for retrieving auto-generated keys.
@@ -9702,7 +9676,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code sql} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** Statement#RETURN_GENERATED_KEYS
 - **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a SQL query to make auto-generated keys available from specified column indexes.
@@ -9718,7 +9691,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or {@code sql} or {@code generatedKeyColumnIndexes} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** Connection#prepareStatement(String, int\[\])
 - **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a SQL query to make auto-generated keys available from specified column names.
@@ -9734,7 +9706,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or {@code sql} or {@code generatedKeyColumnNames} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** Connection#prepareStatement(String, String\[\])
 - **Signature:** `public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a SQL query using a custom {@link PreparedStatement} creator.
@@ -9750,7 +9721,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code stmtCreator} is {@code null} , if {@code sql} is {@code null} or empty, or if {@code stmtCreator} returns {@code null} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the supplied statement creator throws while preparing the requested statement.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **Signature:** `public static PreparedQuery prepareQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a SQL query using a provided {@link Connection} .
 - **Contract:**
@@ -9826,7 +9796,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code sql} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; see {@link #getConnection(javax.sql.DataSource)} for Spring integration behavior.
   - `java.sql.SQLException` — if preparing the statement or configuring its fetch direction or fetch size fails.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #prepareQueryForLargeResult(Connection, String)
 - **Signature:** `@Beta public static PreparedQuery prepareQueryForLargeResult(final Connection conn, final String sql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a SQL query optimized for large result sets using a provided {@link Connection} .
@@ -9854,7 +9823,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or {@code namedSql} is {@code null} , empty, or blank, mixes parameter styles, contains a malformed parameter placeholder, or contains positional (unnamed) parameters.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** NamedQuery, #prepareNamedQuery(Connection, String)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final boolean autoGeneratedKeys) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a named SQL query with auto-generated keys support using the provided DataSource.
@@ -9871,7 +9839,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or {@code namedSql} is {@code null} , empty, or blank, mixes parameter styles, contains a malformed parameter placeholder, or contains positional (unnamed) parameters.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource.
@@ -9887,7 +9854,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code namedSql} is {@code null} , empty, or blank, mixes parameter styles, contains a malformed parameter placeholder, or contains positional (unnamed) parameters; or {@code generatedKeyColumnIndexes} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource.
@@ -9903,7 +9869,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code namedSql} is {@code null} , empty, or blank, mixes parameter styles, contains a malformed parameter placeholder, or contains positional (unnamed) parameters; or {@code generatedKeyColumnNames} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a named SQL query using a custom statement creator with the provided DataSource.
@@ -9919,7 +9884,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code namedSql} is {@code null} , empty, or blank, mixes parameter styles, contains a malformed parameter placeholder, or contains positional (unnamed) parameters; or {@code stmtCreator} is {@code null} or returns {@code null} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the supplied statement creator throws while preparing the requested statement.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query using the provided Connection and named SQL string.
@@ -9994,7 +9958,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code namedSql} is {@code null} , or if {@code namedSql} contains positional parameters without names.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final boolean autoGeneratedKeys) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a named SQL query with auto-generated keys support using the provided DataSource and ParsedSql object.
@@ -10010,7 +9973,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code namedSql} is {@code null} , or if {@code namedSql} contains positional parameters without names.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource and ParsedSql object.
@@ -10026,7 +9988,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code namedSql} is {@code null} , if {@code namedSql} contains positional parameters without names, or if {@code generatedKeyColumnIndexes} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource and ParsedSql object.
@@ -10042,7 +10003,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code namedSql} is {@code null} , if {@code namedSql} contains positional parameters without names, or if {@code generatedKeyColumnNames} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a named SQL query using a custom statement creator with the provided DataSource and ParsedSql object.
@@ -10058,7 +10018,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} , {@code namedSql} , or {@code stmtCreator} is {@code null} , if {@code namedSql} contains positional parameters without names, or if {@code stmtCreator} returns {@code null} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the supplied statement creator throws while preparing the requested statement.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query using the provided Connection and ParsedSql object.
@@ -10134,7 +10093,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or {@code namedSql} is {@code null} , empty, or blank, mixes parameter styles, contains a malformed parameter placeholder, or contains positional (unnamed) parameters.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; see {@link #getConnection(javax.sql.DataSource)} for Spring integration behavior.
   - `java.sql.SQLException` — if preparing the statement or configuring its fetch direction or fetch size fails.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **Signature:** `@Beta public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final ParsedSql namedSql) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a named SQL query optimized for large result sets using the provided DataSource and ParsedSql object.
 - **Contract:**
@@ -10149,7 +10107,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code namedSql} is {@code null} , or if {@code namedSql} contains positional parameters without names.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; see {@link #getConnection(javax.sql.DataSource)} for Spring integration behavior.
   - `java.sql.SQLException` — if preparing the statement or configuring its fetch direction or fetch size fails.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **Signature:** `@Beta public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a named SQL query optimized for large result sets using the provided Connection.
 - **Contract:**
@@ -10188,7 +10145,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code sql} is {@code null} or empty.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Prepares a callable SQL query using a custom statement creator with the provided DataSource.
@@ -10204,7 +10160,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null} or returns {@code null} .
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if the supplied statement creator throws while preparing the requested statement.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #prepareCallableQuery(javax.sql.DataSource, String), #getConnection(javax.sql.DataSource), #releaseConnection(Connection, javax.sql.DataSource)
 - **Signature:** `public static CallableQuery prepareCallableQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException`
 - **Summary:** Prepares a callable SQL query (stored procedure) using the provided Connection.
@@ -10245,7 +10200,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} , empty, or blank, mixes parameter styles, or contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if preparing or binding the query, executing it, or reading its rows or metadata fails.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** PreparedStatement#executeQuery(), #prepareQuery(javax.sql.DataSource, String), Dataset
 - **Signature:** `public static Dataset executeQuery(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Executes a SQL SELECT statement on the supplied {@link Connection} and returns all rows as a {@link Dataset} .
@@ -10276,7 +10230,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} , empty, or blank, mixes parameter styles, or contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if preparing or binding the statement, or executing the requested SQL, fails.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** PreparedStatement#executeUpdate(), #prepareQuery(javax.sql.DataSource, String)
 - **Signature:** `public static int executeUpdate(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Executes a SQL update (INSERT, UPDATE, DELETE, or DDL) on the supplied {@link Connection} and returns the number of affected rows.
@@ -10303,7 +10256,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, or the batch transaction cannot be committed because it is not active.
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results).
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** PreparedStatement#executeBatch()
 - **Signature:** `public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, SQLException, ArithmeticException`
 - **Summary:** Executes a batch SQL update using the provided DataSource with specified batch size.
@@ -10322,7 +10274,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, or the batch transaction cannot be committed because it is not active.
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results).
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** PreparedStatement#executeBatch(), #executeBatchUpdate(javax.sql.DataSource, String, List)
 - **Signature:** `public static int executeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters) throws IllegalArgumentException, SQLException, ArithmeticException`
 - **Summary:** Executes a batch SQL update on the supplied {@link Connection} using the default batch size ( {@link #DEFAULT_BATCH_SIZE} ).
@@ -10369,7 +10320,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.UnsupportedOperationException` — if the JDBC driver does not implement {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it); no batch is executed in that case, so use {@link #executeBatchUpdate(javax.sql.DataSource, String, List)} with such a driver.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Long#MAX_VALUE} .
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** PreparedStatement#executeLargeBatch(), #executeLargeBatchUpdate(javax.sql.DataSource, String, List, int)
 - **Signature:** `public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, SQLException, UnsupportedOperationException, ArithmeticException`
 - **Summary:** Executes a large batch SQL update using the provided DataSource with specified batch size.
@@ -10390,7 +10340,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.UnsupportedOperationException` — if the JDBC driver does not implement {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it); no batch is executed in that case, so use {@link #executeBatchUpdate(javax.sql.DataSource, String, List, int)} with such a driver.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Long#MAX_VALUE} .
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** PreparedStatement#executeLargeBatch()
 - **Signature:** `public static long executeLargeBatchUpdate(final Connection conn, final String sql, final List<?> listOfParameters) throws IllegalArgumentException, SQLException, UnsupportedOperationException, ArithmeticException`
 - **Summary:** Executes a large batch SQL update using the provided Connection with default batch size.
@@ -10442,7 +10391,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} , empty, or blank, mixes parameter styles, or contains a malformed parameter placeholder; or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} , including its Spring integration behavior.
   - `java.sql.SQLException` — if preparing or binding the statement, or executing the requested SQL, fails.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** PreparedStatement#execute(), #executeQuery(javax.sql.DataSource, String, Object...), #executeUpdate(javax.sql.DataSource, String, Object...)
 - **Signature:** `public static boolean execute(final Connection conn, final String sql, final Object... parameters) throws IllegalArgumentException, SQLException`
 - **Summary:** Executes a SQL statement of any kind on the supplied {@link Connection} , returning the raw JDBC "first result" indicator of {@link PreparedStatement#execute()} .
@@ -10794,7 +10742,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} , or if {@code tableName} is blank or otherwise invalid.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection or reading table metadata fails, or the fallback table query fails with an SQL error other than "table not found", or, on a database where a failed statement aborts the transaction, with a "table not found" error that may have left the connection's open transaction aborted (no savepoint could be set, or rolling back to it failed).
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #tableExists(Connection, String)
 - **Signature:** `public static boolean tableExists(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Checks whether a table exists on the given {@link Connection} .
@@ -11263,7 +11210,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} .
   - `java.lang.IllegalStateException` — if the ownership of a Spring connection holder bound to {@code ds} has to be determined but its {@code isTransactionActive()} flag is not accessible to this library.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if the auto-commit mode of a connection Spring bound to {@code ds} cannot be read.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — not thrown by the current implementation, which acquires no connection.
 ##### beginTransaction(...) -> SqlTransaction
 - **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource ds) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException`
 - **Summary:** Begins a new database transaction with the default isolation level for the specified DataSource.
@@ -11284,7 +11230,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} .
   - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, if the ownership of a Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #beginTransaction(javax.sql.DataSource, IsolationLevel), #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean), SqlTransaction#commit(), SqlTransaction#rollback(), SqlTransaction#rollbackIfNotCommitted()
 - **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException`
 - **Summary:** Begins a new transaction with the specified isolation level for the given DataSource.
@@ -11299,7 +11244,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code isolationLevel} is {@code null} , or if {@code isolationLevel} is {@link IsolationLevel#NONE} , which is not a usable transaction isolation level.
   - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, if the ownership of a Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
 - **Signature:** `@SuppressWarnings("deprecation") public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException`
 - **Summary:** Starts a thread-bound transaction scope shared by database queries with the same DataSource in the same thread.
@@ -11312,7 +11256,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code isolationLevel} is {@code null} , or if {@code isolationLevel} is {@link IsolationLevel#NONE} , which is not a usable transaction isolation level.
   - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, if the ownership of a Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** JdbcUtil#getConnection(javax.sql.DataSource), JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
 ##### callInTransaction(...) -> R
 - **Signature:** `@Beta public static <R, E extends Throwable> R callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E`
@@ -11331,7 +11274,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalStateException` — if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if beginning, committing, or rolling back the transaction fails. A rollback failure is suppressed when {@code cmd} has already failed.
   - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #runInTransaction(javax.sql.DataSource, Throwables.Runnable), #beginTransaction(javax.sql.DataSource)
 - **Signature:** `@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<Connection, T, E> cmd) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E`
 - **Summary:** Executes the given function within a transaction, passing the transaction's {@link Connection} as an argument, and returns its result.
@@ -11350,7 +11292,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalStateException` — if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if beginning, committing, or rolling back the transaction fails. A rollback failure is suppressed when {@code cmd} has already failed.
   - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #runInTransaction(javax.sql.DataSource, Throwables.Consumer), #callInTransaction(javax.sql.DataSource, Throwables.Callable)
 ##### runInTransaction(...) -> void
 - **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E`
@@ -11368,7 +11309,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalStateException` — if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if beginning, committing, or rolling back the transaction fails. A rollback failure is suppressed when {@code cmd} has already failed.
   - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #callInTransaction(javax.sql.DataSource, Throwables.Callable), #beginTransaction(javax.sql.DataSource)
 - **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<Connection, E> cmd) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E`
 - **Summary:** Executes the given consumer within a transaction, passing the transaction's {@link Connection} as an argument.
@@ -11386,7 +11326,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalStateException` — if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if beginning, committing, or rolling back the transaction fails. A rollback failure is suppressed when {@code cmd} has already failed.
   - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #callInTransaction(javax.sql.DataSource, Throwables.Function), #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
 ##### callOutsideTransaction(...) -> R
 - **Signature:** `@Beta public static <R, E extends Throwable> R callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd) throws IllegalArgumentException, E, IllegalStateException`
@@ -11514,7 +11453,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `com.landawn.abacus.exception.UncheckedIOException` — if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read.
   - `com.landawn.abacus.exception.ParsingException` — if an XML SQL mapper file referenced by {@code @SqlSource} is not well-formed, or its root element is not {@code sqlMapper} .
   - `java.lang.UnsupportedOperationException` — if DAO annotations, method signatures, SQL operations, return types, or cache settings are unsupported.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** Dao, CrudDao, #createDao(Class, javax.sql.DataSource, SqlDialect), #createDao(Class, javax.sql.DataSource, DaoCreationOptions)
 - **Signature:** `@SuppressWarnings("rawtypes") public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final SqlDialect sqlDialect) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, UncheckedIOException, ParsingException, UnsupportedOperationException`
 - **Summary:** Creates a dynamic DAO implementation for the specified interface and {@link javax.sql.DataSource} , generating its CRUD SQL for the given {@link SqlDialect} .
@@ -11533,7 +11471,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `com.landawn.abacus.exception.UncheckedIOException` — if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read.
   - `com.landawn.abacus.exception.ParsingException` — if an XML SQL mapper file referenced by {@code @SqlSource} is not well-formed, or its root element is not {@code sqlMapper} .
   - `java.lang.UnsupportedOperationException` — if DAO annotations, method signatures, SQL operations, return types, or cache settings are unsupported.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #createDao(Class, javax.sql.DataSource), #createDao(Class, javax.sql.DataSource, DaoCreationOptions), Dsl#forDialect(SqlDialect)
 - **Signature:** `@SuppressWarnings("rawtypes") public static <TD extends DaoBase> TD createDao(final Class<TD> daoInterface, final javax.sql.DataSource ds, final DaoCreationOptions daoCreationOptions) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, UncheckedIOException, ParsingException, UnsupportedOperationException`
 - **Summary:** Creates a dynamic DAO implementation for the specified interface and {@link javax.sql.DataSource} , customized by the supplied {@link DaoCreationOptions} .
@@ -11552,7 +11489,6 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `com.landawn.abacus.exception.UncheckedIOException` — if an XML SQL mapper file referenced by {@code @SqlSource} cannot be read.
   - `com.landawn.abacus.exception.ParsingException` — if an XML SQL mapper file referenced by {@code @SqlSource} is not well-formed, or its root element is not {@code sqlMapper} .
   - `java.lang.UnsupportedOperationException` — if DAO annotations, method signatures, SQL operations, return types, or cache settings are unsupported.
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} .
 - **See also:** #createDao(Class, javax.sql.DataSource), #createDao(Class, javax.sql.DataSource, SqlDialect), DaoCreationOptions
 ##### openDaoCacheScope(...) -> DaoCacheScope
 - **Signature:** `public static DaoCacheScope openDaoCacheScope()`
@@ -14118,7 +14054,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
 - **Summary:** Performs an upsert operation, matching existing records by the entity's ID property(ies): inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record with the values from {@code entity} .
 - **Contract:**
   - Performs an upsert operation, matching existing records by the entity's ID property(ies): inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record with the values from {@code entity} .
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User(); user.setId(userId); user.setName("John Doe"); user.setEmail("john@example.com"); User savedUser = userDao.upsert(user); // Insert if new, update if exists } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User(); user.setId(userId); user.setName("John Doe"); user.setEmail("john@example.com"); User savedUser = userDao.upsert(user); // Insert if new, update if exists } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update (must not be {@code null} )
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
@@ -14128,7 +14064,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the entity's ID property(ies)
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Performs an upsert operation: inserts {@code entity} if no record matches the specified condition; otherwise copies the non- {@code null} non-id properties from {@code entity} into the existing record (loaded via {@link #findOnlyOne(Condition)} ) and updates it.
 - **Contract:**
@@ -14143,7 +14078,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified condition
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **See also:** Filters
 ##### batchUpsert(...) -> List<T>
 - **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities) throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException`
@@ -14159,7 +14093,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert of multiple entities with a specified batch size, matching existing records by ID fields.
 - **Parameters:**
@@ -14172,7 +14105,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert based on the specified unique properties for matching.
 - **Parameters:**
@@ -14185,7 +14117,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert based on the specified unique properties with a custom batch size.
 - **Contract:**
@@ -14204,7 +14135,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 
 ### Interface CrudJoinEntityHelper (com.landawn.abacus.jdbc.dao.CrudJoinEntityHelper)
 CRUD-aware join-entity helper: adds id-based reads ( {@code get} , {@code getOrNull} , and {@code batchGet} with join loading) on top of the full {@link JoinEntityHelper} (load + delete).
@@ -14247,7 +14177,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a PreparedQuery that will return specific columns as generated keys.
 - **Contract:**
@@ -14260,7 +14189,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a PreparedQuery that will return specific named columns as generated keys.
 - **Parameters:**
@@ -14271,7 +14199,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a PreparedQuery using a custom statement creator function.
 - **Parameters:**
@@ -14282,7 +14209,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 ##### prepareNamedQuery(...) -> NamedQuery
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final boolean generateKeys) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery with the option to generate keys for INSERT statements.
@@ -14294,7 +14220,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery that will return specific columns as generated keys.
 - **Parameters:**
@@ -14305,7 +14230,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery that will return specific named columns as generated keys.
 - **Parameters:**
@@ -14316,7 +14240,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery from a pre-parsed SQL object with key generation option.
 - **Parameters:**
@@ -14327,7 +14250,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} , or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery from a pre-parsed SQL with specific return columns by index.
 - **Parameters:**
@@ -14338,7 +14260,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} , or if {@code generatedKeyColumnIndexes} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery from a pre-parsed SQL with specific return columns by name.
 - **Parameters:**
@@ -14349,7 +14270,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} , or if {@code generatedKeyColumnNames} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery using a custom statement creator function.
 - **Parameters:**
@@ -14360,7 +14280,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, or if {@code stmtCreator} is {@code null} , or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery from a pre-parsed SQL with custom statement creation.
 - **Parameters:**
@@ -14371,7 +14290,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} , or if {@code stmtCreator} is {@code null} , or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 ##### prepareCallableQuery(...) -> CallableQuery
 - **Signature:** `@Beta @NonDBOperation default CallableQuery prepareCallableQuery(final String sql) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a CallableQuery for executing stored procedures or functions.
@@ -14384,7 +14302,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a CallableQuery using a custom statement creator.
 - **Parameters:**
@@ -14395,13 +14312,12 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 ##### upsert(...) -> T
 - **Signature:** `default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
 - **Contract:**
   - Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User("john@example.com", "John Doe"); User saved = dao.upsert(user, Arrays.asList("email")); // Inserts if email doesn't exist, updates if it does } </pre>
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User("john@example.com", "John Doe"); User saved = dao.upsert(user, Arrays.asList("email")); // Inserts if email doesn't exist, updates if it does } </pre>
 - **Parameters:**
   - `entity` (`T`) — the entity to insert or update
   - `matchPropNames` (`Collection<String>`) — property names that uniquely identify the record (a spelling the entity's property lookup accepts, such as the column name, is resolved to the property name)
@@ -14412,7 +14328,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified {@code matchPropNames}
   - `java.lang.UnsupportedOperationException` — if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **See also:** #upsert(Object, Condition)
 - **Signature:** `default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the condition, otherwise updates the existing record.
@@ -14429,7 +14344,6 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified condition
   - `java.lang.UnsupportedOperationException` — if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 
 ### Interface DaoBase (com.landawn.abacus.jdbc.dao.DaoBase)
 Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@code dataSource()} , {@code sqlMapper()} , {@code targetEntityClass()} , {@code targetTableName()} , {@code executor()} ) and the {@code prepareQuery} / {@code prepareNamedQuery} statement builders that every read and write capability relies on.
@@ -14489,7 +14403,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.UnsupportedOperationException` — if invoked on a read-only DAO with non-SELECT SQL, or on a non-update DAO with SQL other than SELECT/INSERT
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a SELECT query based on the specified condition.
 - **Parameters:**
@@ -14499,7 +14412,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.IllegalArgumentException` — if {@code cond} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **See also:** Filters
 - **Signature:** `@Beta @NonDBOperation PreparedQuery prepareQuery(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a SELECT query for specific columns based on the specified condition.
@@ -14511,7 +14423,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.IllegalArgumentException` — if {@code cond} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 ##### prepareQueryForLargeResult(...) -> PreparedQuery
 - **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQueryForLargeResult(final String sql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a PreparedQuery optimized for queries that return large result sets.
@@ -14523,7 +14434,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.UnsupportedOperationException` — if invoked on a read-only DAO with non-SELECT SQL, or on a non-update DAO with SQL other than SELECT/INSERT
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **See also:** JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
 - **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a SELECT query optimized for large result sets based on the specified condition.
@@ -14534,7 +14444,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.IllegalArgumentException` — if {@code cond} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **See also:** JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
 - **Signature:** `@Beta @NonDBOperation default PreparedQuery prepareQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a SELECT query for specific columns optimized for large result sets.
@@ -14546,7 +14455,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.IllegalArgumentException` — if {@code cond} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 ##### prepareNamedQuery(...) -> NamedQuery
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery for the specified named SQL query string.
@@ -14558,7 +14466,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.UnsupportedOperationException` — if invoked on a read-only DAO with non-SELECT SQL, or on a non-update DAO with SQL other than SELECT/INSERT
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery from a pre-parsed SQL object.
 - **Contract:**
@@ -14571,7 +14478,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.UnsupportedOperationException` — if invoked on a read-only DAO with non-SELECT SQL, or on a non-update DAO with SQL other than SELECT/INSERT
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQuery(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a named SELECT query based on the specified condition.
 - **Parameters:**
@@ -14581,7 +14487,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.IllegalArgumentException` — if {@code cond} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation NamedQuery prepareNamedQuery(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a named SELECT query for specific columns based on the specified condition.
 - **Parameters:**
@@ -14592,7 +14497,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.IllegalArgumentException` — if {@code cond} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 ##### prepareNamedQueryForLargeResult(...) -> NamedQuery
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQueryForLargeResult(final String namedSql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery optimized for large result sets.
@@ -14604,7 +14508,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.UnsupportedOperationException` — if invoked on a read-only DAO with non-SELECT SQL, or on a non-update DAO with SQL other than SELECT/INSERT
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQueryForLargeResult(final ParsedSql namedSql) throws IllegalArgumentException, UnsupportedOperationException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a NamedQuery from pre-parsed SQL optimized for large result sets.
 - **Parameters:**
@@ -14615,7 +14518,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.UnsupportedOperationException` — if invoked on a read-only DAO with non-SELECT SQL, or on a non-update DAO with SQL other than SELECT/INSERT
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQueryForLargeResult(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a named SELECT query optimized for large result sets based on condition.
 - **Parameters:**
@@ -14625,7 +14527,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.IllegalArgumentException` — if {@code cond} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 - **Signature:** `@Beta @NonDBOperation default NamedQuery prepareNamedQueryForLargeResult(final Collection<String> selectPropNames, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException`
 - **Summary:** Creates a named SELECT query for specific columns optimized for large result sets.
 - **Parameters:**
@@ -14636,7 +14537,6 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
   - `java.lang.IllegalArgumentException` — if {@code cond} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and cannot obtain a required database connection
 ##### callAsync(...) -> ContinuableFuture<R>
 - **Signature:** `@SuppressWarnings("deprecation") @Beta @NonDBOperation default <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super TD, ? extends R, SQLException> sqlAction) throws IllegalArgumentException, RejectedExecutionException`
 - **Summary:** Executes an asynchronous database operation using the default executor.
@@ -14951,7 +14851,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the entity's ID property(ies)
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if no row matches and {@code entity} is inserted
 - **Signature:** `@Override default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Performs an upsert operation, matching existing records by the specified unique properties: inserts {@code entity} if no record with the same values exists; otherwise updates the existing record with the values from {@code entity} .
 - **Contract:**
@@ -14965,7 +14864,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified {@code matchPropNames}
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if no row matches and {@code entity} is inserted
 - **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Performs an upsert operation: inserts {@code entity} if no record matches the specified condition; otherwise copies the non- {@code null} non-id properties from {@code entity} into the existing record (loaded via {@link #findOnlyOne(Condition)} ) and updates it.
 - **Contract:**
@@ -14979,7 +14877,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified condition
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if no row matches and {@code entity} is inserted
 - **See also:** Filters
 ##### batchUpsert(...) -> List<T>
 - **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException`
@@ -14994,7 +14891,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
 - **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert of multiple entities with a specified batch size, matching existing records by ID fields.
 - **Parameters:**
@@ -15006,7 +14902,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
 - **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert based on the specified unique properties for matching.
 - **Parameters:**
@@ -15018,7 +14913,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
 - **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert based on the specified unique properties with a custom batch size.
 - **Contract:**
@@ -15036,7 +14930,6 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)
 
 ### Interface UncheckedCrudJoinEntityHelper (com.landawn.abacus.jdbc.dao.UncheckedCrudJoinEntityHelper)
 Unchecked-exception variant of {@link CrudJoinEntityHelper} : id-based reads with join loading (throwing {@link UncheckedSQLException} ) plus the full unchecked join capability (load + delete).
@@ -15078,7 +14971,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a PreparedQuery that will return specific columns as generated keys.
 - **Contract:**
@@ -15090,7 +14982,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a PreparedQuery that will return specific named columns as generated keys.
 - **Parameters:**
@@ -15100,7 +14991,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default PreparedQuery prepareQuery(final String sql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a PreparedQuery with the option to generate keys for INSERT statements.
 - **Contract:**
@@ -15112,7 +15002,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 ##### prepareNamedQuery(...) -> NamedQuery
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final boolean generateKeys) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a NamedQuery with the option to generate keys for INSERT statements.
@@ -15123,7 +15012,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a NamedQuery that will return specific columns as generated keys.
 - **Parameters:**
@@ -15133,7 +15021,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a NamedQuery that will return specific named columns as generated keys.
 - **Parameters:**
@@ -15143,7 +15030,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final boolean generateKeys) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a NamedQuery with the option to generate keys for INSERT statements.
 - **Parameters:**
@@ -15153,7 +15039,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} , or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final int[] generatedKeyColumnIndexes) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a NamedQuery that will return specific columns as generated keys.
 - **Parameters:**
@@ -15163,7 +15048,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} , or if {@code generatedKeyColumnIndexes} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final String[] generatedKeyColumnNames) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a NamedQuery that will return specific named columns as generated keys.
 - **Parameters:**
@@ -15173,7 +15057,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} , or if {@code generatedKeyColumnNames} is {@code null} or empty, or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final String namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a NamedQuery with the option to generate keys for INSERT statements.
 - **Parameters:**
@@ -15183,7 +15066,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} or empty, or {@code stmtCreator} is {@code null} , or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default NamedQuery prepareNamedQuery(final ParsedSql namedSql, final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a NamedQuery with the option to generate keys for INSERT statements.
 - **Parameters:**
@@ -15193,7 +15075,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code namedSql} is {@code null} , or {@code stmtCreator} is {@code null} , or if {@code namedSql} contains positional (unnamed) parameters
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 ##### prepareCallableQuery(...) -> CallableQuery
 - **Signature:** `@Override @Beta @NonDBOperation default CallableQuery prepareCallableQuery(final String sql) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a CallableQuery for executing stored procedures or functions.
@@ -15205,7 +15086,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **Signature:** `@Override @Beta @NonDBOperation default CallableQuery prepareCallableQuery(final String sql, final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Creates a CallableQuery using a custom statement creator.
 - **Parameters:**
@@ -15215,7 +15095,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 ##### upsert(...) -> T
 - **Signature:** `@Override default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
@@ -15230,7 +15109,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified {@code matchPropNames}
   - `java.lang.UnsupportedOperationException` — if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 - **See also:** #upsert(Object, Condition)
 - **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the condition, otherwise updates the existing record.
@@ -15246,7 +15124,6 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified condition
   - `java.lang.UnsupportedOperationException` — if an existing row is updated and the loaded class is an immutable bean
-  - `org.springframework.jdbc.CannotGetJdbcConnectionException` — if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}
 
 ### Interface UncheckedJoinEntityHelper (com.landawn.abacus.jdbc.dao.UncheckedJoinEntityHelper)
 Helper mix-in for loading and deleting join entities with unchecked exceptions.

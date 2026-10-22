@@ -50,6 +50,24 @@ import com.landawn.abacus.util.N;
  * treat the supplied id as a primary-key match: every declared id property is matched, so an {@code EntityId} that lacks
  * one of them, or holds {@code null} for one, matches no row (keys it carries beyond the id properties are ignored).</p>
  *
+ * <p><b>{@code null} key values:</b> the by-id methods and the upsert methods treat a {@code null} key
+ * value differently, because they ask different questions.</p>
+ * <ul>
+ *   <li>The by-id methods ({@code get}, {@code exists}, {@code deleteById}, {@code batchGet}, {@code count(ids)},
+ *       {@code refresh}) look a row up by its identity, binding each id value into {@code key = ?}. A {@code NULL}
+ *       never equals anything in SQL, so an id with a {@code null} component matches no row; {@code batchGet} and
+ *       {@code count(ids)} skip such an id instead of querying for it, so they always agree with {@code get}.</li>
+ *   <li>The upsert methods ({@code upsert(entity)}, {@code upsert(entity, matchPropNames)}, {@code batchUpsert})
+ *       ask whether a row with the entity's values already exists, so a {@code null} value is matched with
+ *       {@code IS NULL}. This keeps an upsert repeatable: if a {@code null} matched nothing, every upsert of
+ *       such an entity would insert again, and since most databases allow several {@code NULL}s in a unique
+ *       column, nothing would stop the duplicate rows. It also lets a match property such as a nullable
+ *       {@code tenantId} use {@code NULL} as a real value.</li>
+ * </ul>
+ * <p>For {@code NOT NULL} key columns, such as primary-key components, the two rules behave the same: no row
+ * matches. They differ only for nullable key columns, where a row whose key holds {@code NULL} can be found
+ * and updated by an upsert but cannot be addressed by the by-id methods.</p>
+ *
  * <p><b>Connection acquisition failures:</b> as described for {@link UncheckedDao}, a Spring
  * connection-acquisition failure caused by an {@link SQLException} is translated into {@link UncheckedSQLException}
  * unless the operation opens a transaction first. The {@code insert} and {@code batchInsert} operations, and the
@@ -89,6 +107,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record
      * with the values from {@code entity}.
      *
+     * <p>A {@code null} id property is matched with {@code IS NULL}, unlike in the by-id lookups (see
+     * <i>{@code null} key values</i> in the {@linkplain UncheckedCrudDao class documentation}).</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
@@ -125,6 +146,10 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * inserts {@code entity} if no record with the same values exists; otherwise updates the existing
      * record with the values from {@code entity}.
      *
+     * <p>A {@code null} match value is matched with {@code IS NULL}, so an existing row holding {@code NULL} in that
+     * column is found and updated; the by-id lookups never match a {@code null} id component (see
+     * <i>{@code null} key values</i> in the {@linkplain UncheckedCrudDao class documentation}).</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
@@ -159,6 +184,10 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
 
         // Filters.allEqual reads values through the lenient bean-info lookup but renders the raw name into SQL, so a spelling
         // such as "FIRSTNAME" would read the right value yet reference a non-existent column.
+        // WHY: a null match value renders IS NULL on purpose, the rule batchUpsert documents as well. An upsert matches by
+        // values and must be repeatable; the by-id rule (DaoUtil.entityIdToCondition: a null component matches no row) would
+        // insert a duplicate on every upsert of an entity holding null for a nullable key column, as most databases allow
+        // several NULLs in a unique column. For NOT NULL key columns both rules match no row.
         final Condition cond = Filters.allEqual(entity, DaoUtil.toCanonicalPropNames(entity, matchPropNames));
 
         return upsert(entity, cond);

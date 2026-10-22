@@ -62,6 +62,24 @@ import com.landawn.abacus.util.stream.Stream;
  * treat the supplied id as a primary-key match: every declared id property is matched, so an {@code EntityId} that lacks
  * one of them, or holds {@code null} for one, matches no row (keys it carries beyond the id properties are ignored).</p>
  *
+ * <p><b>{@code null} key values:</b> the by-id methods and the upsert methods treat a {@code null} key
+ * value differently, because they ask different questions.</p>
+ * <ul>
+ *   <li>The by-id methods ({@code get}, {@code exists}, {@code deleteById}, {@code batchGet}, {@code count(ids)},
+ *       {@code refresh}) look a row up by its identity, binding each id value into {@code key = ?}. A {@code NULL}
+ *       never equals anything in SQL, so an id with a {@code null} component matches no row; {@code batchGet} and
+ *       {@code count(ids)} skip such an id instead of querying for it, so they always agree with {@code get}.</li>
+ *   <li>The upsert methods ({@code upsert(entity)}, {@code upsert(entity, matchPropNames)}, {@code batchUpsert})
+ *       ask whether a row with the entity's values already exists, so a {@code null} value is matched with
+ *       {@code IS NULL}. This keeps an upsert repeatable: if a {@code null} matched nothing, every upsert of
+ *       such an entity would insert again, and since most databases allow several {@code NULL}s in a unique
+ *       column, nothing would stop the duplicate rows. It also lets a match property such as a nullable
+ *       {@code tenantId} use {@code NULL} as a real value.</li>
+ * </ul>
+ * <p>For {@code NOT NULL} key columns, such as primary-key components, the two rules behave the same: no row
+ * matches. They differ only for nullable key columns, where a row whose key holds {@code NULL} can be found
+ * and updated by an upsert but cannot be addressed by the by-id methods.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * public interface UserDao extends CrudDao<User, Long, UserDao> {
@@ -93,6 +111,9 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * Performs an upsert operation, matching existing records by the entity's ID property(ies):
      * inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record
      * with the values from {@code entity}.
+     *
+     * <p>A {@code null} id property is matched with {@code IS NULL}, unlike in the by-id lookups (see
+     * <i>{@code null} key values</i> in the {@linkplain CrudDao class documentation}).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

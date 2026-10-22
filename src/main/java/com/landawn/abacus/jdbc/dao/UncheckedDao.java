@@ -284,6 +284,10 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * Executes an upsert operation: inserts the entity if no record matches the unique properties,
      * otherwise updates the existing record.
      *
+     * <p>A {@code null} match value is matched with {@code IS NULL}, so an existing row holding {@code NULL} in that
+     * column is found and updated; the by-id lookups never match a {@code null} id component (see
+     * <i>{@code null} key values</i> in the {@linkplain UncheckedCrudDao UncheckedCrudDao class documentation}).</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("john@example.com", "John", "Doe");
@@ -314,6 +318,10 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
 
         // Filters.allEqual reads values through the lenient bean-info lookup but renders the raw name into SQL, so a spelling
         // such as "FIRSTNAME" would read the right value yet reference a non-existent column.
+        // WHY: a null match value renders IS NULL on purpose, the rule batchUpsert documents as well. An upsert matches by
+        // values and must be repeatable; the by-id rule (DaoUtil.entityIdToCondition: a null component matches no row) would
+        // insert a duplicate on every upsert of an entity holding null for a nullable key column, as most databases allow
+        // several NULLs in a unique column. For NOT NULL key columns both rules match no row.
         final Condition cond = Filters.allEqual(entity, DaoUtil.toCanonicalPropNames(entity, matchPropNames));
 
         return upsert(entity, cond);

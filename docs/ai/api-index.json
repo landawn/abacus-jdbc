@@ -16868,10 +16868,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing the insert, binding a row, adding or executing a batch, or closing the prepared statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the target connection"
                 }
               ],
               "javadoc_summary": "Imports data from a Dataset to a database table using the provided DataSource and insert SQL statement.",
@@ -18153,10 +18149,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing the insert, binding a row, invoking {@code parameterSetter} , adding or executing a batch, or closing the prepared statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the target connection"
                 }
               ],
               "javadoc_summary": "Imports data from an Iterator to the database using the specified DataSource and SQL insert statement.",
@@ -18379,10 +18371,6 @@
                 {
                   "type": "com.landawn.abacus.exception.ParsingException",
                   "condition": "if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an unterminated quoted field"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the target connection"
                 }
               ],
               "javadoc_summary": "Imports data from a CSV file to the database using the specified DataSource.",
@@ -18728,10 +18716,6 @@
                 {
                   "type": "com.landawn.abacus.exception.ParsingException",
                   "condition": "if the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an unterminated quoted field"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the target connection"
                 }
               ],
               "javadoc_summary": "Imports data from a CSV Reader to the database using the specified DataSource.",
@@ -18992,10 +18976,6 @@
                 {
                   "type": "java.io.UncheckedIOException",
                   "condition": "if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source connection"
                 }
               ],
               "javadoc_summary": "Exports data from the database to a CSV file using the specified DataSource and SQL query.",
@@ -19377,10 +19357,6 @@
                 {
                   "type": "java.io.UncheckedIOException",
                   "condition": "if writing or flushing CSV data to {@code output} fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source connection"
                 }
               ],
               "javadoc_summary": "Exports data from the database to a CSV Writer using the specified DataSource and SQL query.",
@@ -19586,10 +19562,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for example because the table does not exist in the target database)"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "javadoc_summary": "Copies all data from a table in the source data source to a table with the same name in the target data source.",
@@ -19648,10 +19620,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for example because {@code targetTableName} does not exist)"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "javadoc_summary": "Copies all data from a table in the source data source to a table in the target data source.",
@@ -19716,10 +19684,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails (for example because {@code targetTableName} does not exist)"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "deprecated": {
@@ -19787,10 +19751,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any specified column doesn't exist"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "deprecated": {
@@ -19866,10 +19826,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "deprecated": {
@@ -19931,10 +19887,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails, or SQL statements are invalid"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "javadoc_summary": "Copies data from a source data source to a target data source using custom SQL queries.",
@@ -20005,10 +19957,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "deprecated": {
@@ -20076,10 +20024,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "deprecated": {
@@ -20165,10 +20109,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "deprecated": {
@@ -21570,10 +21510,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the target connection"
                 }
               ],
               "javadoc_summary": "Runs the import against a connection obtained from the given DataSource.",
@@ -21841,10 +21777,6 @@
                 {
                   "type": "com.landawn.abacus.exception.ParsingException",
                   "condition": "if, for a CSV source, the current {@link CsvUtil} parser cannot parse the header or a data row, for example because it contains an unterminated quoted field"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the target connection"
                 }
               ],
               "javadoc_summary": "Runs the import against a connection obtained from the given DataSource; the connection is released back to the DataSource when the import completes.",
@@ -22032,10 +21964,6 @@
                 {
                   "type": "java.io.UncheckedIOException",
                   "condition": "if {@code output} cannot be created or opened for writing, or writing, flushing, or closing its file writer fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source connection"
                 }
               ],
               "javadoc_summary": "Runs the export and writes the CSV to the given {@link File} (created if it does not exist; an existing file is truncated).",
@@ -22083,10 +22011,6 @@
                 {
                   "type": "java.io.UncheckedIOException",
                   "condition": "if writing or flushing CSV data to {@code output} fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source connection"
                 }
               ],
               "javadoc_summary": "Runs the export and writes the CSV to the given {@link Writer} (flushed, but not closed).",
@@ -22256,10 +22180,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "javadoc_summary": "Runs the copy into the given target DataSource and insert SQL.",
@@ -22677,10 +22597,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if executing the configured transfer, reading or binding rows, or closing owned JDBC resources fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain the source or target connection"
                 }
               ],
               "javadoc_summary": "Runs the copy into the given target DataSource and table.",
@@ -33893,10 +33809,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection from {@code ds} , or reading its database product metadata, fails while resolving the database product info"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}"
                 }
               ],
               "javadoc_summary": "Converts an INSERT SQL statement to an UPDATE SQL statement without a WHERE clause.",
@@ -33943,10 +33855,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection from {@code ds} , or reading its database product metadata, fails while resolving the database product info"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds}"
                 }
               ],
               "javadoc_summary": "Converts an INSERT SQL statement to an UPDATE SQL statement with an optional WHERE clause.",
@@ -36349,10 +36257,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection or reading its database metadata fails; connection acquisition follows {@link #getConnection(javax.sql.DataSource)} ."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Retrieves the database product information from the given DataSource.",
@@ -36823,10 +36727,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection directly from {@code ds} fails outside the Spring acquisition path."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Retrieves a {@link Connection} from the specified {@link javax.sql.DataSource} .",
@@ -38184,10 +38084,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a SQL query for execution, returning a {@link PreparedQuery} object.",
@@ -38249,10 +38145,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a SQL query with support for retrieving auto-generated keys.",
@@ -38310,10 +38202,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a SQL query to make auto-generated keys available from specified column indexes.",
@@ -38369,10 +38257,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a SQL query to make auto-generated keys available from specified column names.",
@@ -38428,10 +38312,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the supplied statement creator throws while preparing the requested statement."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a SQL query using a custom {@link PreparedStatement} creator.",
@@ -38715,10 +38595,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing the statement or configuring its fetch direction or fetch size fails."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a SQL query optimized for processing large result sets from a {@link javax.sql.DataSource} .",
@@ -38813,10 +38689,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named-parameter SQL query for execution, returning a {@link NamedQuery} object.",
@@ -38873,10 +38745,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query with auto-generated keys support using the provided DataSource.",
@@ -38934,10 +38802,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource.",
@@ -38994,10 +38858,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource.",
@@ -39054,10 +38914,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the supplied statement creator throws while preparing the requested statement."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query using a custom statement creator with the provided DataSource.",
@@ -39342,10 +39198,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query using the provided DataSource and ParsedSql object.",
@@ -39403,10 +39255,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query with auto-generated keys support using the provided DataSource and ParsedSql object.",
@@ -39463,10 +39311,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query with specific column indexes for auto-generated keys using the provided DataSource and ParsedSql object.",
@@ -39523,10 +39367,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query with specific column names for auto-generated keys using the provided DataSource and ParsedSql object.",
@@ -39583,10 +39423,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the supplied statement creator throws while preparing the requested statement."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query using a custom statement creator with the provided DataSource and ParsedSql object.",
@@ -39871,10 +39707,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing the statement or configuring its fetch direction or fetch size fails."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query optimized for large result sets using the provided DataSource.",
@@ -39923,10 +39755,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing the statement or configuring its fetch direction or fetch size fails."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a named SQL query optimized for large result sets using the provided DataSource and ParsedSql object.",
@@ -40061,10 +39889,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the connection is closed or the driver cannot prepare the SQL with the requested statement options."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a callable SQL query (stored procedure) using the provided DataSource.",
@@ -40121,10 +39945,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if the supplied statement creator throws while preparing the requested statement."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Prepares a callable SQL query using a custom statement creator with the provided DataSource.",
@@ -40273,10 +40093,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or binding the query, executing it, or reading its rows or metadata fails."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes a SQL query immediately with the provided parameters and returns all results as a {@link Dataset} .",
@@ -40385,10 +40201,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or binding the statement, or executing the requested SQL, fails."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes a SQL data modification statement (INSERT, UPDATE, DELETE) or DDL statement immediately with the provided parameters and returns the number of affected rows.",
@@ -40503,10 +40315,6 @@
                 {
                   "type": "java.lang.ArithmeticException",
                   "condition": "if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes a batch SQL update using the provided DataSource with default batch size.",
@@ -40573,10 +40381,6 @@
                 {
                   "type": "java.lang.ArithmeticException",
                   "condition": "if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results)."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes a batch SQL update using the provided DataSource with specified batch size.",
@@ -40761,10 +40565,6 @@
                 {
                   "type": "java.lang.ArithmeticException",
                   "condition": "if the total number of affected rows exceeds {@link Long#MAX_VALUE} ."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes a large batch SQL update using the supplied DataSource and the default batch size ( {@link #DEFAULT_BATCH_SIZE} ).",
@@ -40836,10 +40636,6 @@
                 {
                   "type": "java.lang.ArithmeticException",
                   "condition": "if the total number of affected rows exceeds {@link Long#MAX_VALUE} ."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes a large batch SQL update using the provided DataSource with specified batch size.",
@@ -41020,10 +40816,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or binding the statement, or executing the requested SQL, fails."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes a SQL statement of any kind using a connection obtained from the supplied DataSource, returning the raw JDBC \"first result\" indicator of {@link PreparedStatement#execute()} .",
@@ -42478,10 +42270,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection or reading table metadata fails, or the fallback table query fails with an SQL error other than \"table not found\", or, on a database where a failed statement aborts the transaction, with a \"table not found\" error that may have left the connection's open transaction aborted (no savepoint could be set, or rolling back to it failed)."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Checks whether a table exists in the database referenced by the given {@link javax.sql.DataSource} .",
@@ -44393,10 +44181,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if the auto-commit mode of a connection Spring bound to {@code ds} cannot be read."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "not thrown by the current implementation, which acquires no connection."
                 }
               ],
               "javadoc_summary": "Returns whether an active transaction exists for the given {@link javax.sql.DataSource} on the current thread.",
@@ -44439,10 +44223,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Begins a new database transaction with the default isolation level for the specified DataSource.",
@@ -44503,10 +44283,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Begins a new transaction with the specified isolation level for the given DataSource.",
@@ -44562,10 +44338,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Starts a thread-bound transaction scope shared by database queries with the same DataSource in the same thread.",
@@ -44630,10 +44402,6 @@
                 {
                   "type": "E",
                   "condition": "if {@code cmd} throws an exception (the transaction is rolled back before propagating)."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes the given callable within a transaction and returns its result.",
@@ -44703,10 +44471,6 @@
                 {
                   "type": "E",
                   "condition": "if {@code cmd} throws an exception (the transaction is rolled back before propagating)."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes the given function within a transaction, passing the transaction's {@link Connection} as an argument, and returns its result.",
@@ -44771,10 +44535,6 @@
                 {
                   "type": "E",
                   "condition": "if {@code cmd} throws an exception (the transaction is rolled back before propagating)."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes the given runnable within a transaction.",
@@ -44837,10 +44597,6 @@
                 {
                   "type": "E",
                   "condition": "if {@code cmd} throws an exception (the transaction is rolled back before propagating)."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Executes the given consumer within a transaction, passing the transaction's {@link Connection} as an argument.",
@@ -45372,10 +45128,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if DAO annotations, method signatures, SQL operations, return types, or cache settings are unsupported."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Creates a dynamic Data Access Object (DAO) implementation for the specified interface and DataSource.",
@@ -45455,10 +45207,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if DAO annotations, method signatures, SQL operations, return types, or cache settings are unsupported."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Creates a dynamic DAO implementation for the specified interface and {@link javax.sql.DataSource} , generating its CRUD SQL for the given {@link SqlDialect} .",
@@ -45535,10 +45283,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if DAO annotations, method signatures, SQL operations, return types, or cache settings are unsupported."
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a connection from {@code ds} ."
                 }
               ],
               "javadoc_summary": "Creates a dynamic DAO implementation for the specified interface and {@link javax.sql.DataSource} , customized by the supplied {@link DaoCreationOptions} .",
@@ -54941,17 +54685,13 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Performs an upsert operation, matching existing records by the entity's ID property(ies): inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record with the values from {@code entity} .",
               "returns": "the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)",
               "contract": [
                 "Performs an upsert operation, matching existing records by the entity's ID property(ies): inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record with the values from {@code entity} .",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User(); user.setId(userId); user.setName(\"John Doe\"); user.setEmail(\"john@example.com\"); User savedUser = userDao.upsert(user); // Insert if new, update if exists } </pre>"
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User(); user.setId(userId); user.setName(\"John Doe\"); user.setEmail(\"john@example.com\"); User savedUser = userDao.upsert(user); // Insert if new, update if exists } </pre>"
               ],
               "examples": [],
               "see_also": []
@@ -55000,10 +54740,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Performs an upsert operation: inserts {@code entity} if no record matches the specified condition; otherwise copies the non- {@code null} non-id properties from {@code entity} into the existing record (loaded via {@link #findOnlyOne(Condition)} ) and updates it.",
@@ -55054,10 +54790,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Performs batch upsert of multiple entities using the default batch size ( {@link JdbcUtil#DEFAULT_BATCH_SIZE} ).",
@@ -55112,10 +54844,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Performs batch upsert of multiple entities with a specified batch size, matching existing records by ID fields.",
@@ -55168,10 +54896,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Performs batch upsert based on the specified unique properties for matching.",
@@ -55230,10 +54954,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Performs batch upsert based on the specified unique properties with a custom batch size.",
@@ -55346,10 +55066,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery with the option to generate keys for INSERT statements.",
@@ -55396,10 +55112,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery that will return specific columns as generated keys.",
@@ -55446,10 +55158,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery that will return specific named columns as generated keys.",
@@ -55494,10 +55202,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery using a custom statement creator function.",
@@ -55542,10 +55246,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery with the option to generate keys for INSERT statements.",
@@ -55590,10 +55290,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery that will return specific columns as generated keys.",
@@ -55638,10 +55334,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery that will return specific named columns as generated keys.",
@@ -55686,10 +55378,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery from a pre-parsed SQL object with key generation option.",
@@ -55734,10 +55422,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery from a pre-parsed SQL with specific return columns by index.",
@@ -55782,10 +55466,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery from a pre-parsed SQL with specific return columns by name.",
@@ -55830,10 +55510,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery using a custom statement creator function.",
@@ -55878,10 +55554,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery from a pre-parsed SQL with custom statement creation.",
@@ -55920,10 +55592,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a CallableQuery for executing stored procedures or functions.",
@@ -55970,10 +55638,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a CallableQuery using a custom statement creator.",
@@ -56026,17 +55690,13 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.",
               "returns": "the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)",
               "contract": [
                 "Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.",
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User(\"john@example.com\", \"John Doe\"); User saved = dao.upsert(user, Arrays.asList(\"email\")); // Inserts if email doesn't exist, updates if it does } </pre>"
+                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code User user = new User(\"john@example.com\", \"John Doe\"); User saved = dao.upsert(user, Arrays.asList(\"email\")); // Inserts if email doesn't exist, updates if it does } </pre>"
               ],
               "examples": [],
               "see_also": [
@@ -56087,10 +55747,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Executes an upsert operation: inserts the entity if no record matches the condition, otherwise updates the existing record.",
@@ -56269,10 +55925,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery for the specified SQL query string.",
@@ -56311,10 +55963,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a SELECT query based on the specified condition.",
@@ -56360,10 +56008,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a SELECT query for specific columns based on the specified condition.",
@@ -56406,10 +56050,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery optimized for queries that return large result sets.",
@@ -56450,10 +56090,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a SELECT query optimized for large result sets based on the specified condition.",
@@ -56500,10 +56136,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a SELECT query for specific columns optimized for large result sets.",
@@ -56546,10 +56178,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery for the specified named SQL query string.",
@@ -56592,10 +56220,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery from a pre-parsed SQL object.",
@@ -56636,10 +56260,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a named SELECT query based on the specified condition.",
@@ -56683,10 +56303,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a named SELECT query for specific columns based on the specified condition.",
@@ -56729,10 +56345,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery optimized for large result sets.",
@@ -56775,10 +56387,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery from pre-parsed SQL optimized for large result sets.",
@@ -56817,10 +56425,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a named SELECT query optimized for large result sets based on condition.",
@@ -56865,10 +56469,6 @@
                 {
                   "type": "java.sql.SQLException",
                   "condition": "if preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and cannot obtain a required database connection"
                 }
               ],
               "javadoc_summary": "Creates a named SELECT query for specific columns optimized for large result sets.",
@@ -57776,10 +57376,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if no row matches and {@code entity} is inserted"
                 }
               ],
               "javadoc_summary": "Performs an upsert operation, matching existing records by the entity's ID property(ies): inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record with the values from {@code entity} .",
@@ -57830,10 +57426,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if no row matches and {@code entity} is inserted"
                 }
               ],
               "javadoc_summary": "Performs an upsert operation, matching existing records by the specified unique properties: inserts {@code entity} if no record with the same values exists; otherwise updates the existing record with the values from {@code entity} .",
@@ -57884,10 +57476,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if no row matches and {@code entity} is inserted"
                 }
               ],
               "javadoc_summary": "Performs an upsert operation: inserts {@code entity} if no record matches the specified condition; otherwise copies the non- {@code null} non-id properties from {@code entity} into the existing record (loaded via {@link #findOnlyOne(Condition)} ) and updates it.",
@@ -57934,10 +57522,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)"
                 }
               ],
               "javadoc_summary": "Performs batch upsert of multiple entities using the default batch size ( {@link JdbcUtil#DEFAULT_BATCH_SIZE} ).",
@@ -57988,10 +57572,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)"
                 }
               ],
               "javadoc_summary": "Performs batch upsert of multiple entities with a specified batch size, matching existing records by ID fields.",
@@ -58040,10 +57620,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)"
                 }
               ],
               "javadoc_summary": "Performs batch upsert based on the specified unique properties for matching.",
@@ -58098,10 +57674,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException} , or for any acquisition failure if new rows are inserted, or more than one existing row is updated (it then opens a transaction)"
                 }
               ],
               "javadoc_summary": "Performs batch upsert based on the specified unique properties with a custom batch size.",
@@ -58210,10 +57782,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery with the option to generate keys for INSERT statements.",
@@ -58256,10 +57824,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery that will return specific columns as generated keys.",
@@ -58302,10 +57866,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery that will return specific named columns as generated keys.",
@@ -58346,10 +57906,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a PreparedQuery with the option to generate keys for INSERT statements.",
@@ -58392,10 +57948,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery with the option to generate keys for INSERT statements.",
@@ -58436,10 +57988,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery that will return specific columns as generated keys.",
@@ -58480,10 +58028,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery that will return specific named columns as generated keys.",
@@ -58524,10 +58068,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery with the option to generate keys for INSERT statements.",
@@ -58568,10 +58108,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery that will return specific columns as generated keys.",
@@ -58612,10 +58148,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery that will return specific named columns as generated keys.",
@@ -58656,10 +58188,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery with the option to generate keys for INSERT statements.",
@@ -58700,10 +58228,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a NamedQuery with the option to generate keys for INSERT statements.",
@@ -58738,10 +58262,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a CallableQuery for executing stored procedures or functions.",
@@ -58784,10 +58304,6 @@
                 {
                   "type": "com.landawn.abacus.exception.UncheckedSQLException",
                   "condition": "if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Creates a CallableQuery using a custom statement creator.",
@@ -58836,10 +58352,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.",
@@ -58892,10 +58404,6 @@
                 {
                   "type": "java.lang.UnsupportedOperationException",
                   "condition": "if an existing row is updated and the loaded class is an immutable bean"
-                },
-                {
-                  "type": "org.springframework.jdbc.CannotGetJdbcConnectionException",
-                  "condition": "if Spring connection acquisition is enabled and the data source returns {@code null} or throws an {@code IllegalStateException}"
                 }
               ],
               "javadoc_summary": "Executes an upsert operation: inserts the entity if no record matches the condition, otherwise updates the existing record.",
