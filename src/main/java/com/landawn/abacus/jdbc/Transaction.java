@@ -22,10 +22,29 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * <p>A {@code Transaction} exposes an identifier, the effective {@link IsolationLevel},
  * lifecycle state, and explicit commit or rollback operations.</p>
  *
+ * <p>The built-in implementation is {@link SqlTransaction}, obtained from
+ * {@link JdbcUtil#beginTransaction(javax.sql.DataSource)} or one of its overloads. Its class documentation describes how
+ * transactions work in this library: a transaction is bound to the thread that started it and to its data source, and
+ * queries and DAO calls on that data source on that thread enlist in it automatically; beginning a transaction again on the
+ * same thread and data source joins it as a nested scope, and only the outermost scope commits or rolls back the database
+ * transaction; inside a Spring-managed transaction that owns the data source's connection, the transaction participates in
+ * the Spring transaction instead of committing or rolling back its connection.</p>
+ *
  * <p>An implementation may bind a transaction to the thread that started it, in which case the
  * lifecycle methods below throw {@link IllegalStateException} when they are invoked from any other
  * thread — {@link SqlTransaction}, the built-in implementation, does exactly that.</p>
  *
+ * <p><b>Usage Examples:</b></p>
+ * <pre>{@code
+ * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+ *     orderDao.insert(order);
+ *     JdbcUtil.executeUpdate(dataSource, "UPDATE inventory SET quantity = quantity - ? WHERE product_id = ?", quantity, productId);
+ *     tran.commit();
+ * } // rolled back if commit() was not reached
+ * }</pre>
+ *
+ * @see SqlTransaction
+ * @see JdbcUtil#beginTransaction(javax.sql.DataSource)
  * @see IsolationLevel
  * @see Status
  */
@@ -122,7 +141,11 @@ public interface Transaction {
      *
      * <p>If the commit fails, the transaction transitions to {@link Status#FAILED_COMMIT}
      * and an exception is thrown. Implementations may additionally attempt an automatic
-     * rollback after a failed commit.</p>
+     * rollback after a failed commit ({@link SqlTransaction} does). A transaction marked rollback-only
+     * ({@link Status#MARKED_ROLLBACK}) is rolled back instead of committed.</p>
+     *
+     * <p>A {@link SqlTransaction} that participates in a Spring-managed transaction issues no database commit:
+     * the commit completes its scope, and Spring commits the work when its own transaction completes.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -152,6 +175,9 @@ public interface Transaction {
      *
      * <p>If the rollback fails, the transaction status will be set to
      * {@link Status#FAILED_ROLLBACK} and an exception will be thrown.</p>
+     *
+     * <p>A {@link SqlTransaction} that participates in a Spring-managed transaction issues no database rollback:
+     * it marks the Spring transaction rollback-only, so Spring rolls the work back when its transaction completes.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -222,6 +248,12 @@ public interface Transaction {
      *        → FAILED_ROLLBACK (on rollback failure)
      * FAILED_COMMIT → ROLLED_BACK / FAILED_ROLLBACK (on automatic rollback after a failed commit)
      * </pre>
+     *
+     * <p>For a {@link SqlTransaction} with nested scopes, the status changes from {@code ACTIVE} only when a nested scope
+     * rolls back ({@code MARKED_ROLLBACK}) or when the outermost scope completes. For one that participates in a
+     * Spring-managed transaction, {@code COMMITTED} and {@code ROLLED_BACK} describe the completion of its scope (the
+     * Spring transaction decides the outcome of the work), and {@code FAILED_ROLLBACK} means that the Spring transaction
+     * could not be marked rollback-only.</p>
      */
     enum Status {
         /**
@@ -235,8 +267,9 @@ public interface Transaction {
         /**
          * The transaction has been marked for rollback only.
          * This state indicates that the transaction cannot be committed
-         * and must be rolled back. This typically occurs when an error
-         * is detected that requires the transaction to be aborted.
+         * and must be rolled back. For {@link SqlTransaction}, it occurs when a nested
+         * scope rolls back (for example, a nested scope whose work threw an exception): the
+         * outermost scope then rolls back even if it calls {@link Transaction#commit()}.
          */
         MARKED_ROLLBACK,
 
@@ -244,7 +277,9 @@ public interface Transaction {
          * The transaction has been successfully committed.
          * All changes made within the transaction have been permanently
          * saved to the database. The transaction is complete and cannot
-         * be used for further operations.
+         * be used for further operations. For a {@link SqlTransaction} that participates in a
+         * Spring-managed transaction, its scope has completed and Spring commits the work when its
+         * own transaction completes.
          */
         COMMITTED,
 
@@ -252,7 +287,8 @@ public interface Transaction {
          * The transaction commit operation failed.
          * This state indicates that an attempt to commit the transaction
          * encountered an error. The transaction may need to be rolled back
-         * to clean up any partial changes.
+         * to clean up any partial changes; {@link SqlTransaction} rolls it back automatically,
+         * so this state is followed by {@link #ROLLED_BACK} or {@link #FAILED_ROLLBACK}.
          */
         FAILED_COMMIT,
 
@@ -260,6 +296,9 @@ public interface Transaction {
          * The transaction has been successfully rolled back.
          * All changes made within the transaction have been undone.
          * The transaction is complete and cannot be used for further operations.
+         * For a {@link SqlTransaction} that participates in a Spring-managed transaction, the Spring
+         * transaction has been marked rollback-only, and Spring rolls the work back when its
+         * transaction completes.
          */
         ROLLED_BACK,
 
@@ -267,7 +306,9 @@ public interface Transaction {
          * The transaction rollback operation failed.
          * This is a critical state indicating that the attempt to undo
          * the transaction changes was unsuccessful. Manual intervention
-         * may be required to restore database consistency.
+         * may be required to restore database consistency. For a {@link SqlTransaction} that
+         * participates in a Spring-managed transaction, the Spring transaction could not be marked
+         * rollback-only, so Spring may still commit the work.
          */
         FAILED_ROLLBACK
     }

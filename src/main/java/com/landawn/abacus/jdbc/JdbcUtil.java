@@ -14359,6 +14359,7 @@ public final class JdbcUtil {
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to {@code ds} has to be determined
      *         but its {@code isTransactionActive()} flag is not accessible to this library.
      * @throws UncheckedSQLException if the auto-commit mode of a connection Spring bound to {@code ds} cannot be read.
+     * @see SqlTransaction
      */
     public static boolean isInTransaction(final javax.sql.DataSource ds) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
@@ -14374,6 +14375,10 @@ public final class JdbcUtil {
      * Begins a new database transaction with the default isolation level for the specified DataSource.
      * All subsequent JDBC operations in the same thread using this DataSource will participate in this transaction
      * until it is committed or rolled back. This provides ACID guarantees for multi-statement operations.
+     *
+     * <p>See the {@link SqlTransaction} class documentation for how transactions work in this library: thread and data
+     * source binding, which operations enlist, nested scopes, for-update-only transactions, DAO {@code @Transactional}
+     * propagation, Spring-managed transactions, and rollback actions.</p>
      *
      * <p>The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back
      * via {@code rollback()} or {@code rollbackIfNotCommitted()} to discard changes. Always use a try-finally
@@ -14490,6 +14495,7 @@ public final class JdbcUtil {
      *         Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes
      *         the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
      * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
+     * @see SqlTransaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel)
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      * @see SqlTransaction#commit()
@@ -14533,6 +14539,7 @@ public final class JdbcUtil {
      *         Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes
      *         the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
      * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
+     * @see SqlTransaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      */
     public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel)
@@ -14590,6 +14597,7 @@ public final class JdbcUtil {
      *         Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes
      *         the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
      * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
+     * @see SqlTransaction
      * @see JdbcUtil#getConnection(javax.sql.DataSource)
      * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
      */
@@ -15390,6 +15398,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
+     * @see SqlTransaction
      * @see #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
      * @see #beginTransaction(javax.sql.DataSource)
      */
@@ -15465,6 +15474,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
+     * @see SqlTransaction
      * @see #runInTransaction(javax.sql.DataSource, Throwables.Consumer)
      * @see #callInTransaction(javax.sql.DataSource, Throwables.Callable)
      */
@@ -15542,6 +15552,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
+     * @see SqlTransaction
      * @see #callInTransaction(javax.sql.DataSource, Throwables.Callable)
      * @see #beginTransaction(javax.sql.DataSource)
      */
@@ -15611,6 +15622,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
+     * @see SqlTransaction
      * @see #callInTransaction(javax.sql.DataSource, Throwables.Function)
      * @see #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
      */
@@ -15715,6 +15727,7 @@ public final class JdbcUtil {
      * @throws IllegalStateException if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another
      *         transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to
      *         its exception as a suppressed exception instead.
+     * @see SqlTransaction
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
      * @see SqlTransaction#callOutsideTransaction(Throwables.Callable)
      */
@@ -15808,6 +15821,7 @@ public final class JdbcUtil {
      * @throws IllegalStateException if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another
      *         transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to
      *         its exception as a suppressed exception instead.
+     * @see SqlTransaction
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)
      */
@@ -15893,6 +15907,7 @@ public final class JdbcUtil {
      * @throws IllegalStateException if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another
      *         transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to
      *         its exception as a suppressed exception instead.
+     * @see SqlTransaction
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      * @see SqlTransaction#runOutsideTransaction(Throwables.Runnable)
      */
@@ -15973,6 +15988,7 @@ public final class JdbcUtil {
      * @throws IllegalStateException if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another
      *         transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to
      *         its exception as a suppressed exception instead.
+     * @see SqlTransaction
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)
      */
@@ -16055,6 +16071,7 @@ public final class JdbcUtil {
      *                  must not be {@code null}; must not be dispatched to another thread.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      * @throws E if {@code sqlAction} throws an exception.
+     * @see SqlTransaction
      * @see #callIgnoringSpringTransaction(Throwables.Callable)
      * @see #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
      */
@@ -16110,6 +16127,7 @@ public final class JdbcUtil {
      * @return The result returned by {@code sqlAction}.
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}.
      * @throws E if {@code sqlAction} throws an exception.
+     * @see SqlTransaction
      * @see #runIgnoringSpringTransaction(Throwables.Runnable)
      * @see #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
      */
