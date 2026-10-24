@@ -22,6 +22,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.MockedStatic;
 
 import com.landawn.abacus.TestBase;
+import com.landawn.abacus.jdbc.JoinInfo;
 
 class JoinEntityDeleteOpsFailureTest extends TestBase {
 
@@ -50,8 +51,11 @@ class JoinEntityDeleteOpsFailureTest extends TestBase {
             doThrow(primary).when(dao).deleteJoinEntities(parent, "orders");
         }
 
+        // The deletes of several names check every name against the join metadata (JoinInfo) first; this mocked DAO has none,
+        // so the check is stubbed out here.
         try (MockedStatic<DaoUtil> metadata = mockStatic(DaoUtil.class,
-                invocation -> invocation.getMethod().getName().equals("getJoinEntityPropNamesByType") ? properties : CALLS_REAL_METHODS.answer(invocation))) {
+                invocation -> invocation.getMethod().getName().equals("getJoinEntityPropNamesByType") ? properties : CALLS_REAL_METHODS.answer(invocation));
+             MockedStatic<JoinInfo> joinInfo = mockStatic(JoinInfo.class)) {
             final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> {
                 if (collection) {
                     if (byType) {

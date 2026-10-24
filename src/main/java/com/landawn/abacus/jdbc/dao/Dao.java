@@ -34,6 +34,7 @@ import com.landawn.abacus.jdbc.IsolationLevel;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.NamedQuery;
 import com.landawn.abacus.jdbc.PreparedQuery;
+import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.ParsedSql;
@@ -114,7 +115,7 @@ import com.landawn.abacus.util.Throwables;
  * @see JdbcUtil#createDao(Class, DataSource, JdbcUtil.DaoCreationOptions)
  * @see JdbcUtil#prepareQuery(javax.sql.DataSource, String)
  * @see JdbcUtil#prepareNamedQuery(javax.sql.DataSource, String)
- * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
+ * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel)
  * @see CrudDao
  * @see Filters
  */
@@ -420,6 +421,9 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * column is found and updated; the by-id lookups never match a {@code null} id component (see
      * <i>{@code null} key values</i> in the {@linkplain CrudDao CrudDao class documentation}).</p>
      *
+     * <p>Inside a transaction, the lookup and the write run in one transaction scope, as {@link #upsert(Object, Condition)}
+     * describes.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User("john@example.com", "John Doe");
@@ -435,14 +439,18 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
      *                                  or an existing row is updated and {@code entity} has a property the loaded
      *                                  entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing the transaction scope
+     *         (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a
+     *         Spring-bound connection), fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
+     *         {@link #upsert(Object, Condition)})
      * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
      * @see #upsert(Object, Condition)
      */
-    default T upsert(final T entity, final Collection<String> matchPropNames)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException,
+            SQLException, DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
@@ -466,6 +474,17 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * the loaded record before it is updated; a {@code null} property keeps the existing value, so an
      * upsert cannot clear a column to {@code NULL}.</p>
      *
+     * <p>Inside a transaction on the DAO's data source, the lookup and the write run in one transaction scope: a nested scope of
+     * the transaction active on the thread (a failure, also one of the lookup, then marks that transaction rollback-only, so its
+     * outermost {@code commit()} throws {@link com.landawn.abacus.jdbc.RollbackOnlyException}), or one participating in a
+     * Spring-managed transaction that owns the data source's connection (see
+     * {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}; a failure then marks the Spring
+     * transaction rollback-only, so committing it throws {@code UnexpectedRollbackException}). Outside a transaction, the
+     * lookup and the write run as separate statements, the write committed on its own, as any single write is: a transaction
+     * of their own would fail on a connection that a JTA transaction manages, which this library does not detect. This does
+     * not keep a concurrent upsert of the same key out: under the usual isolation levels both may find no row and insert, and
+     * a unique constraint on the matched columns makes one of them fail.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * User user = new User();
@@ -485,36 +504,73 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
      *                                  and {@code entity} has a property the loaded entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing the transaction scope
+     *         (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a
+     *         Spring-bound connection), fails
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UnsupportedOperationException if an existing row is updated and the loaded class is an immutable bean
      */
-    default T upsert(final T entity, final Condition cond)
-            throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException {
+    default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException,
+            DuplicateResultException, UnsupportedOperationException {
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotNull(cond, cs.cond);
 
-        final T dbEntity = findOnlyOne(cond).orElseNull();
+        // Inside a transaction on the data source, the lookup and the write run in a nested scope of it (or one participating in
+        // the Spring-managed transaction that owns its connection), so that a failure of either marks that transaction
+        // rollback-only: a caller that catches it can't commit the lookup's locks without the write (nor can Spring, whose own
+        // rules don't roll back for a checked SQLException). Outside one, they run as the statements of any single write do. WHY not a transaction of its own there: on a connection a JTA transaction manages,
+        // which this library can't tell (see SqlTransaction), its commit failed and aborted the connection, where an upsert
+        // used to work.
+        final SqlTransaction tran = JdbcUtil.isInTransaction(dataSource()) ? JdbcUtil.beginTransaction(dataSource()) : null;
+        Throwable failure = null;
+        T result = null;
 
-        if (dbEntity == null) {
-            save(entity);
-            return entity;
-        } else {
-            final Class<?> cls = entity.getClass();
-            final List<String> idPropNameList = QueryUtil.idPropNames(cls);
+        try {
+            final T dbEntity = findOnlyOne(cond).orElseNull();
 
-            if (N.isEmpty(idPropNameList)) {
-                Beans.mergeInto(entity, dbEntity);
-                update(dbEntity, cond);
+            if (dbEntity == null) {
+                save(entity);
+                result = entity;
             } else {
-                Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
-                final Condition idCond = Filters.allEqual(dbEntity, idPropNameList);
-                update(dbEntity, idCond);
+                final Class<?> cls = entity.getClass();
+                final List<String> idPropNameList = QueryUtil.idPropNames(cls);
+
+                if (N.isEmpty(idPropNameList)) {
+                    Beans.mergeInto(entity, dbEntity);
+                    update(dbEntity, cond);
+                } else {
+                    Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
+                    final Condition idCond = Filters.allEqual(dbEntity, idPropNameList);
+                    update(dbEntity, idCond);
+                }
+
+                result = dbEntity;
             }
 
-            return dbEntity;
+            if (tran != null) {
+                tran.commit();
+            }
+        } catch (final Throwable e) { //NOSONAR
+            failure = e;
+            throw e;
+        } finally {
+            try {
+                if (tran != null) {
+                    tran.rollbackIfNotCommitted();
+                }
+            } catch (final RuntimeException | Error rollbackFailure) {
+                if (failure == null) {
+                    throw rollbackFailure;
+                }
+
+                DaoUtil.addSuppressedIfDifferent(failure, rollbackFailure);
+            }
         }
+
+        return result;
     }
 
 }

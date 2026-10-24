@@ -237,36 +237,89 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         assertNull(item.getId());
     }
 
-    // When the JPA provider fails to mark the identified transaction rollback-only, nothing makes the transaction roll back, and
-    // it commits the work. The marking was reported as done all the same, so the generated ID was put back right away, leaving
-    // the entity of the committed row without its ID. The ID now follows the transaction's outcome.
-    @Test
-    void rollbackInJpaTransactionThatCannotBeMarked_keepsTheIdOfTheRowItCommits() throws SQLException {
+    // When the JPA provider fails to mark the identified transaction rollback-only, nothing makes the transaction roll back. The
+    // participating rollback used to be reported as done all the same (ROLLED_BACK, no exception) while JPA committed the work,
+    // and the generated ID was first put back right away too. The rollback fails now (FAILED_ROLLBACK, with the provider's
+    // failure as the cause), and the ID follows the outcome: a caller that handles the failure lets JPA commit the row, which
+    // keeps its ID; otherwise the failure rolls the JPA transaction back, which puts the ID back.
+    @ParameterizedTest(name = "failureHandled={0}")
+    @ValueSource(booleans = { true, false })
+    void rollbackInJpaTransactionThatCannotBeMarked_failsAndLeavesTheIdToTheOutcome(final boolean failureHandled) throws SQLException {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
         jpa.entityTransaction.refusesRollbackOnly = true;
-        final ItemDao dao = JdbcUtil.createDao(ItemDao.class, dataSource);
         final Item item = item("a");
 
-        new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+        runRollbackThatCannotBeMarked(jpa, item, failureHandled);
+
+        if (failureHandled) {
+            assertTrue(jpa.entityTransaction.committed);
+            assertEquals(1, count());
+            assertNotNull(item.getId());
+        } else {
+            assertTrue(jpa.entityTransaction.rolledBack);
+            assertEquals(0, count());
+            assertNull(item.getId(), "the ID follows the rollback");
+        }
+    }
+
+    // The same without synchronization, where the JdbcUtil transaction records the ID restoration itself: the mark that reached
+    // no JPA owner counted as done, so the ID was put back although the JPA transaction committed the row. The restoration is
+    // discarded now, as Spring's outcome can't be followed without synchronization: the ID is kept, also when the failure then
+    // rolls the JPA transaction back (the limit of that mode, as when the mark throws).
+    @ParameterizedTest(name = "failureHandled={0}")
+    @ValueSource(booleans = { true, false })
+    void rollbackInUnsynchronizedJpaTransactionThatCannotBeMarked_failsAndKeepsTheId(final boolean failureHandled) throws SQLException {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+        jpa.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        jpa.entityTransaction.refusesRollbackOnly = true;
+        final Item item = item("a");
+
+        runRollbackThatCannotBeMarked(jpa, item, failureHandled);
+
+        assertTrue(failureHandled ? jpa.entityTransaction.committed : jpa.entityTransaction.rolledBack);
+        assertEquals(failureHandled ? 1 : 0, count());
+        assertNotNull(item.getId());
+    }
+
+    /**
+     * Runs a JPA transaction in which a participating JdbcUtil transaction inserts {@code item} and then fails to roll back,
+     * because the JPA transaction refuses the rollback-only mark; the failure is handled inside the JPA transaction if
+     * {@code failureHandled}, and otherwise propagates out of it.
+     */
+    private void runRollbackThatCannotBeMarked(final JpaTransaction jpa, final Item item, final boolean failureHandled) {
+        final ItemDao dao = JdbcUtil.createDao(ItemDao.class, dataSource);
+
+        final Runnable jpaTransaction = () -> new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
             final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
 
             try {
                 assertNotNull(dao.insert(item));
             } catch (final SQLException e) {
                 throw new IllegalArgumentException(e);
-            } finally {
-                tran.rollbackIfNotCommitted();
+            }
+
+            final IllegalStateException failure = assertThrows(IllegalStateException.class, tran::rollbackIfNotCommitted);
+            assertTrue(failure.getCause() instanceof jakarta.persistence.PersistenceException, String.valueOf(failure.getCause()));
+            assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+            assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL), "the scope is completed");
+            assertNotNull(item.getId(), "the ID follows the outcome, which the JPA transaction decides");
+
+            if (!failureHandled) {
+                throw failure;
             }
         });
 
-        assertTrue(jpa.entityTransaction.committed);
-        assertEquals(1, count());
-        assertNotNull(item.getId());
+        if (failureHandled) {
+            jpaTransaction.run();
+        } else {
+            assertThrows(IllegalStateException.class, jpaTransaction::run);
+        }
     }
 
     // When one of several identified JPA transactions can't be marked, the unmarked one may still commit the work: a partial mark
-    // used to count as done, so the generated IDs were put back right away although the rows might commit. The participating
-    // rollback now only logs, and the IDs follow the outcome the Spring transaction decides (here a rollback, by the marked one).
+    // used to count as done, so the generated IDs were put back right away although the rows might commit, and the participating
+    // rollback was reported as done. It fails now, and the IDs follow the outcome the Spring transaction decides (here a
+    // rollback, by the marked one, as the caller handles the failure).
     @Test
     void rollbackInJpaTransactionWithASecondOwnerThatCannotBeMarked_leavesTheIdsToTheOutcome() throws SQLException {
         final JpaTransaction jpa = new JpaTransaction(dataSource, true, true);
@@ -294,10 +347,11 @@ class SpringJpaTransactionParticipationTest extends TestBase {
                     assertNotNull(dao.insert(item));
                 } catch (final SQLException e) {
                     throw new IllegalStateException(e);
-                } finally {
-                    tran.rollbackIfNotCommitted();
                 }
 
+                final IllegalStateException failure = assertThrows(IllegalStateException.class, tran::rollbackIfNotCommitted);
+                assertTrue(failure.getCause() instanceof jakarta.persistence.PersistenceException, String.valueOf(failure.getCause()));
+                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
                 assertNotNull(item.getId(), "the ID is not put back before the JPA transaction decides the outcome");
             } finally {
                 TransactionSynchronizationManager.unbindResource(otherFactory);
@@ -307,6 +361,75 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         assertTrue(jpa.entityTransaction.rolledBack, "the transaction that could be marked rolls back on commit");
         assertEquals(0, count());
         assertNull(item.getId(), "the ID follows the rollback");
+    }
+
+    // The JPA transaction identified when the participating transaction began is no longer active when it rolls back: nothing
+    // would make the work roll back. The rollback used to be reported as done (ROLLED_BACK, no exception) while JPA committed
+    // the work; it fails now, and the ID of the committed row is kept.
+    @Test
+    void rollbackAfterTheJpaOwnerIsNoLongerActive_failsAndKeepsTheIdOfTheRowItCommits() throws SQLException {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+        final ItemDao dao = JdbcUtil.createDao(ItemDao.class, dataSource);
+        final Item item = item("a");
+
+        new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                assertNotNull(dao.insert(item));
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            jpa.entityTransaction.active = false;
+
+            try {
+                final IllegalStateException failure = assertThrows(IllegalStateException.class, tran::rollbackIfNotCommitted);
+                assertTrue(failure.getMessage().contains("no active JPA transaction owning the connection"), failure.getMessage());
+                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+                assertNotNull(item.getId(), "the ID follows the outcome, which the JPA transaction decides");
+            } finally {
+                jpa.entityTransaction.active = true;
+            }
+        });
+
+        assertTrue(jpa.entityTransaction.committed);
+        assertEquals(1, count());
+        assertNotNull(item.getId());
+    }
+
+    // External review (tests): while Spring suspends the JPA transaction a SqlTransaction participates in (here for a
+    // NOT_SUPPORTED scope; REQUIRES_NEW suspends it the same way), the JPA transaction decides from its EntityTransaction,
+    // which is suspended with its entity manager, out of reach: the rollback fails with IllegalStateException
+    // (FAILED_ROLLBACK), and the generated ID follows the JPA transaction's outcome (kept: it commits the row).
+    @Test
+    void rollbackWhileTheJpaTransactionIsSuspended_failsAndLeavesTheIdToTheOutcome() throws SQLException {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+        final ItemDao dao = JdbcUtil.createDao(ItemDao.class, dataSource);
+        final Item item = item("a");
+        final TransactionTemplate notSupported = new TransactionTemplate(jpa.transactionManager);
+        notSupported.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
+
+        new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                assertNotNull(dao.insert(item));
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            notSupported.executeWithoutResult(suspended -> {
+                final IllegalStateException failure = assertThrows(IllegalStateException.class, tran::rollbackIfNotCommitted);
+                assertTrue(failure.getMessage().contains("can't be reached while it is suspended"), failure.getMessage());
+                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+                assertNotNull(item.getId(), "the ID follows the outcome, which the JPA transaction decides");
+            });
+        });
+
+        assertTrue(jpa.entityTransaction.committed);
+        assertEquals(1, count());
+        assertNotNull(item.getId());
     }
 
     @Test

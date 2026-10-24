@@ -506,6 +506,27 @@ class DataTransferCopyTest extends DataTransferUtilTestSupport {
         assertFalse(DataTransferUtil.isSameConnection(springConnectionProxy(conn), closedHandle));
     }
 
+    // A LinkageError while a Spring proxy obtained its target connection (through its data source's driver) turned the
+    // unwrapping off for the rest of the JVM's life and answered "different connections", which could let MySQL/MariaDB stream
+    // the source rows on the connection the inserts then use. It propagates now, and the unwrapping stays on.
+    @Test
+    public void testIsSameConnection_ALinkageErrorObtainingATargetConnectionPropagates() {
+        final Connection conn = mock(Connection.class);
+        final UnsatisfiedLinkError driverFailure = new UnsatisfiedLinkError("no native driver library");
+        final Connection failingHandle = (Connection) Proxy.newProxyInstance(ConnectionProxy.class.getClassLoader(), new Class<?>[] { ConnectionProxy.class },
+                (proxy, method, args) -> {
+                    if ("toString".equals(method.getName())) {
+                        return "failing handle";
+                    }
+
+                    throw driverFailure;
+                });
+
+        assertSame(driverFailure, assertThrows(UnsatisfiedLinkError.class, () -> DataTransferUtil.isSameConnection(failingHandle, conn)));
+        assertSame(driverFailure, assertThrows(UnsatisfiedLinkError.class, () -> DataTransferUtil.isSameConnection(conn, failingHandle)));
+        assertTrue(DataTransferUtil.isSameConnection(springConnectionProxy(conn), springConnectionProxy(conn)));
+    }
+
     /**
      * A Spring {@code ConnectionProxy} around {@code target}, as {@code TransactionAwareDataSourceProxy} creates one per acquisition.
      */

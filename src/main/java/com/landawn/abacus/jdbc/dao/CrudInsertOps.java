@@ -64,14 +64,16 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * transaction marks the enclosing transaction rollback-only and puts the IDs back correctly: right away for the inserts of
  * work that can only roll back, at completion for the rest. Inside a savepoint scope ({@code PROPAGATION_NESTED}) that is
  * the IDs of the inserts since the newest open savepoint, whose scope the mark dooms; the IDs of the enclosing
- * transaction's earlier inserts follow its outcome, since Spring's rollback to the savepoint clears the mark and the
- * enclosing transaction may still commit their rows (Spring reports no savepoint release, so the mark of a nested scope
+ * transaction's earlier inserts follow its outcome, since Spring's rollback to the savepoint clears the mark (with
+ * {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}; a {@code JpaTransactionManager}'s JPA transaction
+ * stays marked) and the enclosing transaction may still commit their rows (Spring reports no savepoint release, so the mark of a nested scope
  * that already committed lingers until its savepoint object is garbage collected, which meanwhile only defers the restore
  * of the IDs registered before it to the transaction's completion). A rollback to a savepoint
  * ({@code PROPAGATION_NESTED}, or a programmatic savepoint) puts back the IDs of the inserts since that savepoint and leaves
  * the earlier ones to the enclosing transaction's outcome; this needs Spring 6.2 or later, which reports savepoints to its
  * transaction synchronizations (with an older Spring, the IDs of an insert in a rolled-back nested transaction are kept
- * although its rows are gone). Spring reports a rollback to a savepoint before performing it and does not report its
+ * although its rows are gone, and those a participating rollback would put back right away follow the transaction's outcome
+ * instead). Spring reports a rollback to a savepoint before performing it and does not report its
  * failure: if rolling back to the savepoint fails and the application catches that and commits the transaction, the IDs
  * since the savepoint have been put back although their rows are committed.</p>
  *
@@ -238,9 +240,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
      *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
@@ -279,9 +279,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
      *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
@@ -316,9 +314,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
      *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
@@ -358,9 +354,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
      *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
@@ -399,9 +393,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
      *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
@@ -446,9 +438,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         or a batch entity lacks a property required by the named SQL parameters
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
      *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})

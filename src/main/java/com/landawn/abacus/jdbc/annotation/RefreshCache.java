@@ -38,6 +38,20 @@ import com.landawn.abacus.annotation.Beta;
  * type-level one — most importantly, {@code @RefreshCache(enabled = false)} <em>opts a single
  * method back out</em> of the cache-invalidation set declared at the type level.</p>
  *
+ * <p><b>Transactions:</b> inside a transaction on the DAO's data source (a {@code JdbcUtil} transaction, or a
+ * Spring-managed transaction that owns its connection), the cache is invalidated once the transaction has committed (or its
+ * commit failed, as it may have committed): a built-in cache once per transaction and table. In a {@code JdbcUtil}
+ * transaction of its own, whose commit this library observes exactly, a write that joins it (a built-in method, or a
+ * {@code @Query} one, whose {@code @Transactional} propagation, if any, is {@code REQUIRED}, {@code SUPPORTS} or
+ * {@code MANDATORY}) invalidates then only, as it is not visible to other threads before; a {@code RuntimeException} from a
+ * custom cache's {@code update} is then logged instead of thrown from the write (an {@code Error} propagates from the
+ * commit). Every other write invalidates right away as well: one in a Spring-managed
+ * transaction, whose commit is observed through Spring's transaction synchronization, which reports the completion of the
+ * innermost transaction only (while such a transaction runs, the results of a table it wrote are kept out of the caches,
+ * see {@link CacheResult}), and one that may commit on its own (a {@code default} method of the
+ * application, or one whose propagation leaves the transaction: {@code REQUIRES_NEW}, {@code NOT_SUPPORTED} or
+ * {@code NEVER}).</p>
+ *
  * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when the
  * method name starts with that entry (case-insensitive), or when the entry matches the full method name
  * as a regular expression. The filter is ignored entirely for method-level usage. The default value

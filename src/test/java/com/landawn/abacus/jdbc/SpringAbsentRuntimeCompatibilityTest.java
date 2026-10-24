@@ -34,6 +34,8 @@ import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
@@ -59,6 +61,33 @@ class SpringAbsentRuntimeCompatibilityTest {
 
     @Test
     void jdbcUtilAndDaosWorkWithoutSpringOnTheClasspath() throws Exception {
+        runInChildJvm(springFreeClasspath(), Probe.class, "SPRING-ABSENT RUNTIME PASSED");
+    }
+
+    // A partial Spring installation: spring-jdbc without spring-tx or without spring-core. A LinkageError at run time no longer
+    // turns Spring support off (it propagates), so such an installation must be recognized when JdbcUtil is initialized, as it
+    // is by initializing Spring's DataSourceUtils, which needs both: Spring support is off from the start, and connections are
+    // acquired without Spring instead of failing with NoClassDefFoundError.
+    @ParameterizedTest(name = "without {0}")
+    @CsvSource({ "spring-tx, org.springframework.transaction.support.TransactionSynchronizationManager",
+            "spring-core, org.springframework.core.NamedThreadLocal" })
+    void jdbcUtilWorksWithAPartialSpringInstallation(final String missingJar, final String missingClass) throws Exception {
+        runInChildJvm(classpathWithout(missingJar + "-[^/]+\\.jar"), PartialSpringProbe.class, "PARTIAL-SPRING RUNTIME PASSED", missingClass);
+    }
+
+    // Round 16 review: without spring-beans (spring-jdbc, spring-tx and spring-core present), Spring's transaction support loads,
+    // but a TransactionAwareDataSourceProxy can't: its superclass implements spring-beans' InitializingBean. Looking for such a
+    // proxy after taking a connection from Spring threw NoClassDefFoundError from every getConnection, and leaked the connection.
+    // Round 17 review: the probe runs without an active transaction synchronization, where getConnection watches for no
+    // transaction's completion, so it checks the unconditional unwrap that used to fail; with an active synchronization,
+    // Spring's own DataSourceUtils.getConnection fails without spring-beans (it checks for a DelegatingDataSource, whose
+    // superclass needs InitializingBean), so no transaction manager can run there anyway.
+    @Test
+    void jdbcUtilWorksWithoutSpringBeans() throws Exception {
+        runInChildJvm(classpathWithout("spring-beans-[^/]+\\.jar"), SpringBeansAbsentProbe.class, "SPRING-BEANS-ABSENT RUNTIME PASSED");
+    }
+
+    private void runInChildJvm(final String classpath, final Class<?> mainClass, final String passed, final String... args) throws Exception {
         final String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
         final List<String> command = new ArrayList<>();
         command.add(Path.of(System.getProperty("java.home"), "bin", executable).toString());
@@ -75,15 +104,16 @@ class SpringAbsentRuntimeCompatibilityTest {
             }
         }
 
-        command.addAll(List.of("-cp", springFreeClasspath(), Probe.class.getName()));
-        final Path output = directory.resolve("no-spring.log");
+        command.addAll(List.of("-cp", classpath, mainClass.getName()));
+        command.addAll(List.of(args));
+        final Path output = directory.resolve(mainClass.getSimpleName() + ".log");
         final Process process = new ProcessBuilder(command).redirectErrorStream(true).redirectOutput(output.toFile()).start();
 
         try {
-            assertTrue(process.waitFor(60, TimeUnit.SECONDS), "Spring-absent probe did not finish");
+            assertTrue(process.waitFor(60, TimeUnit.SECONDS), mainClass.getSimpleName() + " did not finish");
             final String details = Files.readString(output);
             assertEquals(0, process.exitValue(), details);
-            assertTrue(details.contains("SPRING-ABSENT RUNTIME PASSED"), details);
+            assertTrue(details.contains(passed), details);
         } finally {
             if (process.isAlive()) {
                 process.destroyForcibly();
@@ -134,9 +164,87 @@ class SpringAbsentRuntimeCompatibilityTest {
     }
 
     private static String springFreeClasspath() {
+        return classpathWithout("spring-[^/]+\\.jar");
+    }
+
+    private static String classpathWithout(final String jarNamePattern) {
         return Arrays.stream(System.getProperty("java.class.path").split(Pattern.quote(File.pathSeparator)))
-                .filter(entry -> !Path.of(entry).getFileName().toString().matches("spring-[^/]+\\.jar"))
+                .filter(entry -> !Path.of(entry).getFileName().toString().matches(jarNamePattern))
                 .collect(Collectors.joining(File.pathSeparator));
+    }
+
+    public static final class PartialSpringProbe {
+        // args[0]: the name of a Spring class that is not on the class path.
+        public static void main(final String[] args) throws Exception {
+            // spring-jdbc is on the class path (loaded only: it cannot be initialized without the missing part).
+            assertNotNull(Class.forName("org.springframework.jdbc.datasource.DataSourceUtils", false, PartialSpringProbe.class.getClassLoader()));
+            assertThrows(ClassNotFoundException.class, () -> Class.forName(args[0]));
+            assertFalse(JdbcUtil.isInSpring, "Spring's transaction support cannot be loaded");
+
+            final JdbcDataSource dataSource = new JdbcDataSource();
+            dataSource.setURL("jdbc:h2:mem:partial_spring_" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1");
+
+            final Connection conn = JdbcUtil.getConnection(dataSource);
+
+            try (Statement statement = conn.createStatement()) {
+                statement.execute("CREATE TABLE partial_spring_item (id BIGINT PRIMARY KEY)");
+            } finally {
+                JdbcUtil.releaseConnection(conn, dataSource);
+            }
+
+            assertTrue(conn.isClosed());
+
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                assertEquals(1, JdbcUtil.executeUpdate(dataSource, "INSERT INTO partial_spring_item (id) VALUES (1)"));
+                assertTrue(JdbcUtil.isInTransaction(dataSource));
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+
+            assertEquals(1, JdbcUtil.executeUpdate(dataSource, "INSERT INTO partial_spring_item (id) VALUES (2)"));
+            assertEquals(2, JdbcUtil.prepareQuery(dataSource, "SELECT MAX(id) FROM partial_spring_item").queryForInt().orElse(-1));
+            assertEquals(1, JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM partial_spring_item").queryForInt().orElse(-1));
+
+            System.out.println("PARTIAL-SPRING RUNTIME PASSED");
+        }
+    }
+
+    public static final class SpringBeansAbsentProbe {
+        public static void main(final String[] args) throws Exception {
+            assertThrows(ClassNotFoundException.class, () -> Class.forName("org.springframework.beans.factory.InitializingBean"));
+            assertTrue(JdbcUtil.isInSpring, "Spring's transaction support loads without spring-beans");
+
+            final JdbcDataSource dataSource = new JdbcDataSource();
+            dataSource.setURL("jdbc:h2:mem:spring_beans_absent_" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1");
+
+            final Connection conn = JdbcUtil.getConnection(dataSource);
+
+            try (Statement statement = conn.createStatement()) {
+                statement.execute("CREATE TABLE beans_absent_item (id BIGINT PRIMARY KEY)");
+            } finally {
+                JdbcUtil.releaseConnection(conn, dataSource);
+            }
+
+            assertTrue(conn.isClosed());
+
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                assertEquals(1, JdbcUtil.executeUpdate(dataSource, "INSERT INTO beans_absent_item (id) VALUES (1)"));
+                assertTrue(JdbcUtil.isInTransaction(dataSource));
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+
+            assertEquals(1, JdbcUtil.executeUpdate(dataSource, "INSERT INTO beans_absent_item (id) VALUES (2)"));
+            assertEquals(1, JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM beans_absent_item").queryForInt().orElse(-1));
+            assertEquals(0, JdbcUtil.callOutsideTransaction(dataSource,
+                    () -> JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM beans_absent_item WHERE id = 1").queryForInt().orElse(-1)));
+
+            System.out.println("SPRING-BEANS-ABSENT RUNTIME PASSED");
+        }
     }
 
     public static final class Probe {

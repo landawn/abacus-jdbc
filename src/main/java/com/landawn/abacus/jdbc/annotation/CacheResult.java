@@ -42,6 +42,23 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * method result is not cached; use an empty {@code Optional}, collection, or other non-null
  * result object when caching an explicit "no result" value is important.</p>
  *
+ * <p><strong>Transactions:</strong> inside a transaction on the DAO's data source (a {@code JdbcUtil} transaction, or a
+ * Spring-managed transaction that owns its connection, read-only ones included), results are neither served from the cache
+ * nor stored in it, nor in the cache of a {@code JdbcUtil.openDaoCacheScope}: they could miss the transaction's own writes,
+ * or hold work it may still roll back. A {@link RefreshCache @RefreshCache} write there invalidates the cache once the
+ * transaction has committed (or its commit failed, as it may have committed), and, unless it joins a {@code JdbcUtil}
+ * transaction of its own (see {@link RefreshCache}), right away as well. While a Spring-managed transaction that wrote a
+ * table runs, results of that table read outside it are neither served from these caches nor stored in them, as long as the
+ * transaction's connection holder records its completion ({@code DataSourceTransactionManager},
+ * {@code JdbcTransactionManager}), whatever transaction's synchronizations Spring runs meanwhile: the rows a read between
+ * the write and the commit fetched are as they were before the write. For a JPA transaction, whose holder records nothing,
+ * the commit is observed through Spring's transaction synchronization of the innermost Spring transaction on the thread
+ * only: with synchronization disabled, the second invalidation runs right away too, and for a write to the data source of
+ * an enclosing transaction while another transaction manager's transaction runs inside it, at that inner transaction's
+ * commit, or not at all if it rolls back; a result read outside the transaction before the enclosing commit may then stay
+ * cached, until it expires. A result whose read overlapped an invalidation of its table is not stored (it may hold the rows
+ * as they were before): also one that the method's own nested write invalidated.</p>
+ *
  * <p>Per its {@code @Target}, this annotation can be placed on an individual DAO method, or on a
  * DAO interface type to enable caching for every method whose name matches {@link #filter()}. A
  * method-level annotation replaces the type-level one for that method: elements it omits take their

@@ -435,9 +435,11 @@ class DaoPerformanceRegressionTest {
         final OuterCacheDao dao = cachedDao(OuterCacheDao.class, contents);
         assertEquals("old", dao.getLeaf());
         assertEquals("new", dao.getAfterMutation());
-        assertEquals(1, contents.size());
+        // The outer result is not stored: its read overlapped an invalidation of its table (by its own nested write; a read
+        // can't tell whose), which a result read before a concurrent write would otherwise outlive.
+        assertEquals(0, contents.size());
         assertEquals("new", dao.getLeaf());
-        assertEquals(2, contents.size());
+        assertEquals(1, contents.size());
     }
 
     @Test

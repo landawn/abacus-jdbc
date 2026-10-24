@@ -272,6 +272,7 @@ public class UncheckedCrudDaoTest extends TestBase {
     @Test
     public void testUpsert_UpdatePath_IgnoresId() {
         IdentifiedUncheckedCrudDao dao = Mockito.mock(IdentifiedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         IdentifiedEntity entity = new IdentifiedEntity();
         entity.setId(100L);
         entity.setName("updated");
@@ -299,6 +300,7 @@ public class UncheckedCrudDaoTest extends TestBase {
     @Test
     public void testUpsert_InsertPath_WhenEntityNotFound() {
         IdentifiedUncheckedCrudDao dao = Mockito.mock(IdentifiedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         IdentifiedEntity entity = new IdentifiedEntity();
         entity.setId(5L);
         entity.setName("new");
@@ -513,6 +515,7 @@ public class UncheckedCrudDaoTest extends TestBase {
     @Test
     public void testUpsert_UpdatePath_NoIdField_CopiesAllFields() {
         NoIdUncheckedCrudDao dao = Mockito.mock(NoIdUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         NoIdEntity entity = new NoIdEntity();
         entity.setName("updated");
         NoIdEntity dbEntity = new NoIdEntity();
@@ -732,6 +735,7 @@ public class UncheckedCrudDaoTest extends TestBase {
     @Test
     public void testBatchUpsert_FullSig_SingleUniqueProp_InsertOnly() {
         IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(1L);
         entity.setName("Alice");
@@ -750,6 +754,7 @@ public class UncheckedCrudDaoTest extends TestBase {
     @Test
     public void testBatchUpsert_FullSig_SingleUniqueProp_UpdateOnly() {
         IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(1L);
         entity.setName("Alice");
@@ -770,6 +775,7 @@ public class UncheckedCrudDaoTest extends TestBase {
     @Test
     public void testBatchUpsert_FullSig_MultiUniqueProp_InsertOnly() {
         IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(1L);
         entity.setName("Alice");
@@ -787,6 +793,7 @@ public class UncheckedCrudDaoTest extends TestBase {
     @Test
     public void testBatchUpsert_FullSig_MultiUniqueProp_UpdateOnly() {
         IdAnnotatedUncheckedCrudDao dao = Mockito.mock(IdAnnotatedUncheckedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         IdAnnotatedEntity entity = new IdAnnotatedEntity();
         entity.setId(1L);
         entity.setName("Alice");
@@ -1150,6 +1157,26 @@ public class UncheckedCrudDaoTest extends TestBase {
             assertEquals(List.of(1L, 2L, 1L), result.stream().map(BatchUpsertUser::getId).toList());
             assertEquals("last-update", dao.getOrNull(1L).getName());
             assertEquals("second-update", dao.getOrNull(2L).getName());
+        }
+    }
+
+    /**
+     * A data source for the DAO's {@code dataSource()}: upsert and batchUpsert ask whether a transaction is active on it (they
+     * run their lookup and writes in one scope inside a transaction, and batchUpsert of several entities outside one too), and
+     * its connections let such a scope begin and complete.
+     */
+    private static javax.sql.DataSource transactionDataSource() {
+        try {
+            final java.sql.Connection connection = Mockito.mock(java.sql.Connection.class);
+            Mockito.when(connection.getAutoCommit()).thenReturn(true);
+            Mockito.when(connection.getTransactionIsolation()).thenReturn(java.sql.Connection.TRANSACTION_READ_COMMITTED);
+
+            final javax.sql.DataSource dataSource = Mockito.mock(javax.sql.DataSource.class);
+            Mockito.when(dataSource.getConnection()).thenReturn(connection);
+
+            return dataSource;
+        } catch (final java.sql.SQLException e) {
+            throw new IllegalStateException(e);
         }
     }
 }

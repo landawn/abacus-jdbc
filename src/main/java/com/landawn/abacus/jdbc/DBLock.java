@@ -925,13 +925,15 @@ public final class DBLock implements AutoCloseable {
     }
 
     /**
-     * Opens an independently owned connection for immediately visible lock-table changes.
+     * Opens an independently owned connection for immediately visible lock-table changes: from the target data source of a
+     * Spring {@code TransactionAwareDataSourceProxy}, whose own connections are those of the current Spring transaction
+     * (switching one to auto-commit would commit that transaction's work).
      *
      * @return an auto-commit connection that the caller must close
      * @throws SQLException if obtaining or configuring the connection fails
      */
     private Connection openLockConnection() throws SQLException {
-        final Connection conn = ds.getConnection();
+        final Connection conn = JdbcUtil.dataSourceOutsideSpringTransaction(ds).getConnection();
 
         try {
             if (!conn.getAutoCommit()) {

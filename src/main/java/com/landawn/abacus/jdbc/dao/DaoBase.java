@@ -65,6 +65,13 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * Retrieves the underlying data source used by this DAO for database connections.
      * This data source is used for all database operations performed by this DAO instance.
      *
+     * <p>A DAO interface may override this method with a {@code default} method, for example to route its statements to
+     * another data source: the DAO's statements then run on the data source it returns, and so do its transaction checks
+     * (the result caches kept out of transactions, the generated IDs put back when a transaction rolls back). Such an override
+     * is a non-DB operation, as this method is. It must return a data source of the same database as the one the DAO was
+     * created with (the same product and version, and the same schema): the DAO's SQL, its dialect handling, its type
+     * mappings and the metadata of its join properties are built from that one, once, when the DAO is created.</p>
+     *
      * @return the data source configured for this DAO
      */
     @NonDBOperation

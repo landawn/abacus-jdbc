@@ -126,6 +126,18 @@ import com.landawn.abacus.util.stream.Stream;
  * <p>In general, do not cache or reuse instances of this class unless
  * {@code closeAfterExecution(false)} has been explicitly called.</p>
  *
+ * <p>A query prepared from a data source while a {@code JdbcUtil} transaction is active for it on the current thread runs on
+ * the transaction's connection, which is used on the transaction's thread only: its execution methods, and the other
+ * methods that check whether it is closed (such as {@code setFetchSize}, {@code configureStatement},
+ * {@code addBatchParameters} and {@code onClose}), throw {@link IllegalStateException} when called on another thread, or
+ * once the transaction has completed and released its connection (for a transaction participating in a Spring-managed
+ * one, whose connection Spring keeps until its own transaction completes: once that Spring transaction has completed,
+ * detected for a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction), closing it in that
+ * case unless {@code closeAfterExecution(false)} is set; {@code callAsync}/{@code runAsync} reject it, whatever the
+ * executor. The deferred execution of a stream it returned is
+ * checked only for the transaction's completion, so that a parallel stream's worker threads can run it while the owner
+ * thread waits for the stream: don't hand such a stream to another thread.</p>
+ *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  *
  * <p>Most parameter-binding methods validate their arguments without checking whether this query has been closed.
@@ -265,6 +277,13 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * {@link #close()}.
      */
     volatile Runnable closeHandler;
+
+    /**
+     * The transaction this query was prepared in, from a data source and on the transaction's connection, or {@code null}: it
+     * then runs only on the transaction's thread and, unless the transaction participates in a Spring-managed one, only until
+     * the transaction completes and releases its connection. Set by {@code JdbcUtil}.
+     */
+    volatile TransactionContext transaction;
 
     /**
      * Creates a query that owns the supplied JDBC statement.
@@ -8842,7 +8861,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     private Supplier<ResultSet> createQuerySupplier() {
         return () -> {
-            assertNotClosed();
+            assertNotClosedForDeferredExecution();
 
             try {
                 return executeQuery();
@@ -8867,7 +8886,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     private Supplier<Boolean> createExecuteSupplier() {
         return () -> {
-            assertNotClosed();
+            assertNotClosedForDeferredExecution();
 
             try {
                 return JdbcUtil.execute(stmt);
@@ -11190,6 +11209,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * a JDBC-backed lazy {@link Stream}, which would depend on the closed query. If the task cannot
      * be submitted, the query is likewise closed before the submission failure is rethrown.</p>
      *
+     * <p>A query prepared from a data source while a {@code JdbcUtil} transaction is active for it (it runs on the
+     * transaction's connection) is rejected before anything is submitted, and closed unless {@code closeAfterExecution(false)}
+     * is set: the connection is used on the transaction's thread only, and the transaction may complete before the task runs.
+     * This holds whatever the executor, also one that runs the task on the calling thread, which can't be told before the task
+     * is handed over. Called on a thread other than the transaction's, it throws {@code IllegalStateException} without closing
+     * the query, as an execution there does. Run such a query directly on the transaction's thread, or prepare it in work run
+     * outside the transaction
+     * ({@link JdbcUtil#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), on a connection of its own.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<List<User>> future = preparedQuery
@@ -11207,7 +11235,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
      *         this method; it is held by the returned future and surfaces from it (as an
      *         {@code ExecutionException} from {@code get()}).
-     * @throws IllegalStateException if this query is closed, or the default async executor has already been shut down
+     * @throws IllegalStateException if this query is closed, or the default async executor has already been shut down, or it
+     *         was prepared in a transaction (from a data source, on the transaction's connection, which is used only on the
+     *         transaction's thread)
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws RejectedExecutionException if the executor refuses the task; no future is returned
      * @see #callAsync(Throwables.Function, Executor)
@@ -11217,6 +11247,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction)
             throws IllegalStateException, IllegalArgumentException, RejectedExecutionException {
         assertNotClosed();
+        // Before the arguments are validated, as for a closed query: ISE before IAE.
+        assertNotPreparedInTransaction();
 
         checkArgNotNull(sqlAction, cs.sqlAction);
 
@@ -11243,6 +11275,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * a materialized value rather than a JDBC-backed lazy {@link Stream}. If the task cannot be
      * submitted, the query is likewise closed before the submission failure is rethrown.</p>
      *
+     * <p>A query prepared from a data source while a {@code JdbcUtil} transaction is active for it (it runs on the
+     * transaction's connection) is rejected before anything is submitted, and closed unless {@code closeAfterExecution(false)}
+     * is set: the connection is used on the transaction's thread only, and the transaction may complete before the task runs.
+     * This holds whatever the executor, also one that runs the task on the calling thread, which can't be told before the task
+     * is handed over. Called on a thread other than the transaction's, it throws {@code IllegalStateException} without closing
+     * the query, as an execution there does. Run such a query directly on the transaction's thread, or prepare it in work run
+     * outside the transaction
+     * ({@link JdbcUtil#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), on a connection of its own.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
@@ -11266,7 +11307,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
      *         this method; it is held by the returned future and surfaces from it (as an
      *         {@code ExecutionException} from {@code get()}).
-     * @throws IllegalStateException if this query is closed
+     * @throws IllegalStateException if this query is closed, or it was prepared in a transaction (from a data source, on the
+     *         transaction's connection, which is used only on the transaction's thread)
      * @throws IllegalArgumentException if {@code sqlAction} or {@code executor} is null
      * @throws RejectedExecutionException if the {@code executor} refuses the task; no future is returned
      * @see #callAsync(Throwables.Function)
@@ -11276,6 +11318,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public <R> ContinuableFuture<R> callAsync(final Throwables.Function<? super This, ? extends R, SQLException> sqlAction, final Executor executor)
             throws IllegalStateException, IllegalArgumentException, RejectedExecutionException {
         assertNotClosed();
+        // Before the arguments are validated, as for a closed query: ISE before IAE.
+        assertNotPreparedInTransaction();
 
         checkArgNotNull(sqlAction, cs.sqlAction);
         checkArgNotNull(executor, cs.executor);
@@ -11302,6 +11346,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * is configured. If the task cannot be submitted, the query is likewise closed before the
      * submission failure is rethrown.</p>
      *
+     * <p>A query prepared from a data source while a {@code JdbcUtil} transaction is active for it (it runs on the
+     * transaction's connection) is rejected before anything is submitted, and closed unless {@code closeAfterExecution(false)}
+     * is set: the connection is used on the transaction's thread only, and the transaction may complete before the task runs.
+     * This holds whatever the executor, also one that runs the task on the calling thread, which can't be told before the task
+     * is handed over. Called on a thread other than the transaction's, it throws {@code IllegalStateException} without closing
+     * the query, as an execution there does. Run such a query directly on the transaction's thread, or prepare it in work run
+     * outside the transaction
+     * ({@link JdbcUtil#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), on a connection of its own.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<Void> future = preparedQuery
@@ -11321,7 +11374,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
      *         this method; it is held by the returned future and surfaces from it (as an
      *         {@code ExecutionException} from {@code get()}).
-     * @throws IllegalStateException if this query is closed, or the default async executor has already been shut down
+     * @throws IllegalStateException if this query is closed, or the default async executor has already been shut down, or it
+     *         was prepared in a transaction (from a data source, on the transaction's connection, which is used only on the
+     *         transaction's thread)
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws RejectedExecutionException if the executor refuses the task; no future is returned
      * @see #runAsync(Throwables.Consumer, Executor)
@@ -11331,6 +11386,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction)
             throws IllegalStateException, IllegalArgumentException, RejectedExecutionException {
         assertNotClosed();
+        // Before the arguments are validated, as for a closed query: ISE before IAE.
+        assertNotPreparedInTransaction();
 
         checkArgNotNull(sqlAction, cs.sqlAction);
 
@@ -11359,6 +11416,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * {@code closeAfterExecution(false)} is configured. If the task cannot be submitted, the query
      * is likewise closed before the submission failure is rethrown.</p>
      *
+     * <p>A query prepared from a data source while a {@code JdbcUtil} transaction is active for it (it runs on the
+     * transaction's connection) is rejected before anything is submitted, and closed unless {@code closeAfterExecution(false)}
+     * is set: the connection is used on the transaction's thread only, and the transaction may complete before the task runs.
+     * This holds whatever the executor, also one that runs the task on the calling thread, which can't be told before the task
+     * is handed over. Called on a thread other than the transaction's, it throws {@code IllegalStateException} without closing
+     * the query, as an execution there does. Run such a query directly on the transaction's thread, or prepare it in work run
+     * outside the transaction
+     * ({@link JdbcUtil#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), on a connection of its own.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
@@ -11383,7 +11449,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
      *         this method; it is held by the returned future and surfaces from it (as an
      *         {@code ExecutionException} from {@code get()}).
-     * @throws IllegalStateException if this query is closed
+     * @throws IllegalStateException if this query is closed, or it was prepared in a transaction (from a data source, on the
+     *         transaction's connection, which is used only on the transaction's thread)
      * @throws IllegalArgumentException if {@code sqlAction} or {@code executor} is null
      * @throws RejectedExecutionException if the {@code executor} refuses the task; no future is returned
      * @see #runAsync(Throwables.Consumer)
@@ -11393,6 +11460,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     public ContinuableFuture<Void> runAsync(final Throwables.Consumer<? super This, SQLException> sqlAction, final Executor executor)
             throws IllegalStateException, IllegalArgumentException, RejectedExecutionException {
         assertNotClosed();
+        // Before the arguments are validated, as for a closed query: ISE before IAE.
+        assertNotPreparedInTransaction();
 
         checkArgNotNull(sqlAction, cs.sqlAction);
         checkArgNotNull(executor, cs.executor);
@@ -11772,15 +11841,75 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Verifies that this query instance is not closed.
+     * Verifies that this query instance is not closed, and, for a query prepared in a transaction (see {@link #transaction}),
+     * that it runs on the transaction's thread while the transaction is open.
      *
      * <p>Execution methods and other operations that require an open query call this check internally.</p>
      *
-     * @throws IllegalStateException if this instance has been closed
+     * @throws IllegalStateException if this instance has been closed, or it was prepared in a transaction and is used on
+     *         another thread (it is not closed then: the owner thread may be using it), or after the transaction has completed
+     *         (for one participating in a Spring-managed transaction: after that Spring transaction has completed), in which
+     *         case this query is closed first, unless {@code closeAfterExecution(false)} is set
      */
     void assertNotClosed() throws IllegalStateException {
         if (isClosed) {
             throw new IllegalStateException("This " + ClassUtil.getSimpleClassName(getClass()) + " has already been closed");
+        }
+
+        final TransactionContext tran = transaction;
+
+        if (tran != null) {
+            // A query prepared in a transaction ran on another thread (with that thread's work and the transaction's own on one
+            // connection), or after the transaction had released its connection, to a pool that may have handed it to another
+            // thread (with closeAfterExecution(false)). Not closed on another thread, where the owner thread may be using it.
+            tran.assertOwnerThread();
+
+            try {
+                tran.assertDeferredQueryCanRun();
+            } catch (final IllegalStateException e) {
+                // Closed as after a failed execution: it was left open, with its statement and close handlers.
+                closeAfterExecutionIfAllowed(e);
+                throw e;
+            }
+        }
+    }
+
+    /**
+     * As {@link #assertNotClosed()}, for the deferred execution of a lazy result (a {@code Stream}) that an execution method
+     * returned after checking this query on the calling thread: a query prepared in a transaction is only checked to run
+     * before the transaction completes. A parallel stream starts the execution on one of its worker threads while the
+     * thread that consumes the stream waits for it; the stream reads the rows one thread at a time.
+     *
+     * @throws IllegalStateException if this instance has been closed, or it was prepared in a transaction that has completed
+     */
+    private void assertNotClosedForDeferredExecution() throws IllegalStateException {
+        if (isClosed) {
+            throw new IllegalStateException("This " + ClassUtil.getSimpleClassName(getClass()) + " has already been closed");
+        }
+
+        final TransactionContext tran = transaction;
+
+        if (tran != null) {
+            // Refusing the worker thread failed every parallel stream of a query prepared in a transaction.
+            tran.assertDeferredQueryCanRun();
+        }
+    }
+
+    /**
+     * Rejects running this query asynchronously if it was prepared in a transaction (see {@link #transaction}): its connection
+     * is used only on the transaction's thread. The query is closed first, as on a failed submission.
+     *
+     * @throws IllegalStateException if this query was prepared in a transaction
+     */
+    private void assertNotPreparedInTransaction() throws IllegalStateException {
+        final TransactionContext tran = transaction;
+
+        if (tran != null) {
+            final IllegalStateException failure = new IllegalStateException(
+                    "This " + ClassUtil.getSimpleClassName(getClass()) + " was prepared in transaction(id=" + tran.id()
+                            + ") on its connection, which is used only on the transaction's thread:" + " it can't run asynchronously");
+            closeAfterFailedAsyncSubmission(failure);
+            throw failure;
         }
     }
 

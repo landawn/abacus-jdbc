@@ -8226,6 +8226,25 @@ public final class Jdbc {
          * arguments cannot be serialized, {@code defaultCacheKey} ends after the DAO identity
          * ({@code fullMethodName#tableName#daoId#}).</p>
          *
+         * <p>It is also called in these cases, which an implementation must treat as invalidations of the table that
+         * {@code defaultCacheKey} names:</p>
+         * <ul>
+         *   <li>For a write in a transaction on the DAO's data source, once the transaction has committed (or its commit
+         *       failed, as it may have committed): with the write's key, result and arguments for a custom cache; once per
+         *       transaction and table, with the key {@code #tableName#}, a {@code null} result and {@code null} arguments for a
+         *       built-in one. A write that joins a {@code JdbcUtil} transaction of its own (a built-in or {@code @Query} method,
+         *       see {@link com.landawn.abacus.jdbc.annotation.RefreshCache}) is updated then only, and a
+         *       {@code RuntimeException} this method throws then is logged instead of thrown from the write (an {@code Error}
+         *       propagates from the commit); any other write in a transaction (one in a
+         *       Spring-managed transaction, a {@code default} method of the application, or a
+         *       {@code REQUIRES_NEW}/{@code NOT_SUPPORTED}/{@code NEVER} one) right away as well.</li>
+         *   <li>After a <i>read</i> stored its result while an invalidation of its table ran (see
+         *       {@link com.landawn.abacus.jdbc.annotation.CacheResult}), to remove the result again: with the read's key,
+         *       arguments and method signature and a {@code null} result for a custom cache, with the key {@code #tableName#} for
+         *       a built-in one. An implementation that tells writes by their method signature receives that of a read
+         *       here.</li>
+         * </ul>
+         *
          * <p><b>Usage Examples:</b></p>
          * <pre>{@code
          * DaoCache cache = DaoCache.create(1000, 3000);

@@ -53,6 +53,11 @@ import java.lang.annotation.Target;
  * transaction handling, and caching). Interface {@code static} methods are invoked on the interface itself and
  * never pass through a DAO proxy, so annotating them has no proxy effect.</p>
  *
+ * <p>A method that overrides one annotated with {@code @NonDBOperation} in a super-interface is a non-DB operation too,
+ * annotated or not (as {@link Transactional @Transactional} is found on the method an override overrides): a
+ * {@code default} override of {@code dataSource()}, for one, used to be processed as a database operation, so that the
+ * type-level handlers, logging and caching whose filters matched it applied to it.</p>
+ *
  * <p>This is a marker annotation: it declares no elements and carries no configuration. Its mere
  * presence on a method (per {@code @Target(METHOD)}, retained at runtime) is what signals the DAO
  * proxy to skip the database-related wiring listed above.</p>

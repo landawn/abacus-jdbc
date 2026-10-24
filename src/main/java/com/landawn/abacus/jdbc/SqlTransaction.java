@@ -16,20 +16,8 @@ package com.landawn.abacus.jdbc;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.logging.Logger;
-import com.landawn.abacus.logging.LoggerFactory;
-import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Strings;
 import com.landawn.abacus.util.Throwables;
 
 /**
@@ -44,18 +32,27 @@ import com.landawn.abacus.util.Throwables;
  * <p>Instances are not created directly. {@code JdbcUtil.beginTransaction(ds)} acquires a connection through
  * {@link JdbcUtil#getConnection(javax.sql.DataSource)}, disables its auto-commit mode, applies the requested isolation level
  * (unless it is {@link IsolationLevel#DEFAULT} or already in effect), and registers the transaction under the pair
- * (data source, current thread). {@code SqlTransaction} owns the connection for the lifetime of the transaction and tracks
+ * (data source, current thread). The transaction owns the connection for its lifetime and tracks
  * its status: when the transaction completes, the connection's original auto-commit mode and isolation level are restored
- * and the connection is released back to the data source. Do not close the connection manually while the transaction is
- * active.</p>
+ * and the connection is released back to the data source (after a failed rollback the connection is aborted and released
+ * without restoring them: restoring auto-commit would commit the work the rollback failed to undo; a connection Spring bound
+ * to the thread for synchronization is taken from Spring as well, so that later work in its scope gets a new one). Do not
+ * close the connection manually while the transaction is active.</p>
  *
  * <p><b>&#9888; Warning:</b> A transaction and its connection must be used only on the thread that
  * started it. Transaction context is not propagated to executor tasks, asynchronous query execution
- * ({@code callAsync}/{@code runAsync}), parallel streams, or other threads. This is
+ * ({@code callAsync}/{@code runAsync}), parallel streams, or other threads: work started there does not see the
+ * transaction (a lazy {@code Stream} a query prepared in the transaction returned is the one exception, see below). This is
  * enforced: {@link #connection()}, {@link #commit()}, {@link #rollback()},
  * {@link #rollbackIfNotCommitted()}, {@link #close()}, {@link #runOutsideTransaction(Throwables.Runnable)},
  * and {@link #callOutsideTransaction(Throwables.Callable)} all throw {@link IllegalStateException}
- * when invoked from any other thread.</p>
+ * when invoked from any other thread. So does a query prepared from the data source in the transaction (it runs on the
+ * transaction's connection), also once the transaction has completed and released its connection (for a transaction that
+ * participates in a Spring-managed one, whose connection Spring keeps: once the completion of that Spring transaction has
+ * started, as for {@link #commit()}); {@code callAsync} and {@code runAsync} reject such a
+ * query, whatever the executor (also one that runs the task on the calling thread). The deferred execution of a lazy
+ * {@code Stream} such a query returned is checked only for the transaction's completion, so that a parallel stream's worker
+ * threads can run it while the owner thread waits: don't hand such a stream to another thread.</p>
  *
  * <p><b>Starting and completing a transaction</b></p>
  * <pre>{@code
@@ -82,9 +79,14 @@ import com.landawn.abacus.util.Throwables;
  * }</pre>
  * <p>This class implements {@link AutoCloseable}; {@link #close()} simply delegates to
  * {@link #rollbackIfNotCommitted()}, making it safe to use in a try-with-resources block. The status is
- * {@link Status#ACTIVE} until the outermost scope completes, and then {@link Status#COMMITTED} or {@link Status#ROLLED_BACK}.
- * A failed database commit moves to {@link Status#FAILED_COMMIT} and is rolled back automatically; a failed rollback ends in
- * {@link Status#FAILED_ROLLBACK}.</p>
+ * {@link Status#ACTIVE} until the transaction is marked rollback-only ({@link Status#MARKED_ROLLBACK}: a nested scope rolled
+ * back or was never completed, or its isolation level could not be restored) or the outermost scope completes, and then
+ * {@link Status#COMMITTED} or {@link Status#ROLLED_BACK}, or {@link Status#FAILED_ROLLBACK} if the outermost rollback fails
+ * (for a transaction participating in a Spring-managed one: if the Spring transaction can't be marked rollback-only). A
+ * failed database commit is rolled back automatically, so the status after a failed {@code commit()} is
+ * {@link Status#ROLLED_BACK}, or {@link Status#FAILED_ROLLBACK} if that rollback fails too; a participating transaction
+ * whose Spring transaction completed (or began to complete) before its outermost {@code commit()} ends
+ * {@link Status#FAILED_COMMIT}, for good: Spring decided the outcome of its work.</p>
  *
  * <p><b>Which operations enlist</b></p>
  * <p>An operation given the data source looks up the transaction of the current thread for that data source and, if there
@@ -97,19 +99,37 @@ import com.landawn.abacus.util.Throwables;
  * <ul>
  *   <li>operations given a {@link Connection}, such as {@link JdbcUtil#prepareQuery(Connection, String)}: they run on that
  *       connection as it is;</li>
- *   <li>{@link JdbcUtil#getConnection(javax.sql.DataSource)}, which never returns this transaction's connection (use
- *       {@link #connection()} for it);</li>
+ *   <li>{@link JdbcUtil#getConnection(javax.sql.DataSource)}, which does not consult this transaction (use
+ *       {@link #connection()} for its connection); with Spring JDBC on the class path it may still return the same
+ *       connection, the one Spring bound to the data source, so never close a connection without releasing it through
+ *       {@link JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)};</li>
  *   <li>work on another data source, or on another thread.</li>
  * </ul>
+ * <p>Reads enlist like writes: a {@code SELECT} runs on the transaction's connection too, so it sees the transaction's own
+ * uncommitted writes and session state (a generated key read with {@code LAST_INSERT_ID()}, temporary tables, session
+ * variables, locks). A read that should run on a connection of its own, for example one that reads only committed data,
+ * says so explicitly (see <i>Running work outside the transaction</i> below):</p>
+ * <pre>{@code
+ * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+ *     JdbcUtil.executeUpdate(dataSource, "INSERT INTO orders (item) VALUES (?)", item);
+ *     long orderId = JdbcUtil.prepareQuery(dataSource, "SELECT LAST_INSERT_ID()").queryForLong().orElseThrow(); // the transaction's connection
+ *     Report report = JdbcUtil.callOutsideTransaction(dataSource, () -> reportDao.loadDashboard()); // a connection of its own
+ *     tran.commit();
+ * }
+ * }</pre>
  * <p>DAO batch operations ({@code batchSave}, {@code batchInsert}, {@code batchUpdate}, {@code batchDelete},
- * {@code batchDeleteByIds}, {@code @Query(batch = true)}) and {@code executeBatchUpdate}/{@code executeLargeBatchUpdate} with a
- * data source run in a transaction scope whenever they have more than one element (joining the current transaction if there
- * is one), so that all elements commit or roll back together.</p>
+ * {@code batchDeleteByIds}, {@code batchUpsert}, {@code @Query(batch = true)}) and
+ * {@code executeBatchUpdate}/{@code executeLargeBatchUpdate} with a data source run in a transaction scope whenever they
+ * have more than one element, so that all elements commit or roll back together: a nested scope of the current transaction
+ * if there is one (a failure then marks that transaction rollback-only, as in any nested scope), otherwise a transaction of
+ * their own. Inside a transaction, a DAO {@code upsert} (and a {@code batchUpsert} of one entity) runs its lookup and its
+ * write in a nested scope too, and the parallel join loads and deletes of a DAO run their tasks on the calling thread, in
+ * the transaction.</p>
  *
  * <p><b>Nested scopes</b></p>
- * <p>Beginning a transaction again on the same thread and data source does
- * not start a brand-new transaction; instead it re-enters this one and increments an internal
- * reference count. There is still one connection and one database transaction:</p>
+ * <p>Beginning a transaction again on the same thread and data source does not start a brand-new transaction: it opens a
+ * <i>nested scope</i> of the current one. Every {@code beginTransaction} call returns a new {@code SqlTransaction} object,
+ * a handle for that scope, while all scopes of the transaction share one connection and one database transaction:</p>
  * <table border="1" style="border-collapse: collapse;">
  *   <caption><b>Scope events and their effect</b></caption>
  *   <tr style="background-color: #f2f2f2;">
@@ -118,43 +138,57 @@ import com.landawn.abacus.util.Throwables;
  *   </tr>
  *   <tr>
  *     <td>Nested {@code commit()}</td>
- *     <td>Exits the scope; no database {@code COMMIT}</td>
+ *     <td>Completes the scope; no database {@code COMMIT}</td>
  *   </tr>
  *   <tr>
- *     <td>Nested rollback (or a nested {@code rollbackIfNotCommitted()} without a preceding {@code commit()})</td>
- *     <td>Exits the scope and marks the transaction rollback-only ({@link Status#MARKED_ROLLBACK})</td>
+ *     <td>Nested rollback (or a nested {@code rollbackIfNotCommitted()}/{@code close()} without a preceding {@code commit()})</td>
+ *     <td>Completes the scope and marks the transaction rollback-only ({@link Status#MARKED_ROLLBACK})</td>
+ *   </tr>
+ *   <tr>
+ *     <td>Scope begun in a transaction marked rollback-only</td>
+ *     <td>Joins it, as any nested scope: its work is rolled back with the transaction</td>
  *   </tr>
  *   <tr>
  *     <td>Outermost {@code commit()}</td>
- *     <td>Database {@code COMMIT}, or a database {@code ROLLBACK} if the transaction is marked rollback-only</td>
+ *     <td>Database {@code COMMIT}; if the transaction is marked rollback-only, a database {@code ROLLBACK} and a
+ *         {@link RollbackOnlyException}, so the caller does not take the rolled-back work for committed</td>
  *   </tr>
  *   <tr>
  *     <td>Outermost rollback</td>
  *     <td>Database {@code ROLLBACK}</td>
  *   </tr>
+ *   <tr>
+ *     <td>A scope completes while a scope opened inside it is still open</td>
+ *     <td>The inner scope was never completed: it is exited and the transaction is marked rollback-only. An outermost
+ *         {@code commit()} then rolls back and throws {@link RollbackOnlyException}, a nested one throws
+ *         {@link IllegalStateException}, and a later {@code commit()} of the exited inner scope throws
+ *         {@link IllegalStateException} too</td>
+ *   </tr>
+ *   <tr>
+ *     <td>{@code commit()} of a scope that has completed</td>
+ *     <td>{@link IllegalStateException}: {@code commit()} may be called only once per scope, as in Spring, also after a
+ *         successful one; the work of a scope that was rolled back or whose commit failed can't be committed</td>
+ *   </tr>
+ *   <tr>
+ *     <td>Deprecated {@code rollback()} of a scope that has completed</td>
+ *     <td>{@link IllegalStateException}, as in Spring; {@code rollbackIfNotCommitted()} and {@code close()} stay no-ops on a
+ *         completed scope</td>
+ *   </tr>
  * </table>
- * <p>Each scope must be completed exactly once: call {@link #commit()} and pair it with
- * {@link #rollbackIfNotCommitted()} in a {@code finally} block (calling only one of them may leave
- * the scope open if the other path is skipped by an exception). A nested {@code commit()} or
- * {@code rollback()} whose paired cleanup call never runs leaves that cleanup's no-op pending, where it
- * can absorb the enclosing scope's {@code rollbackIfNotCommitted()} if that scope fails before it
- * commits, leaving the transaction open. Additional cleanup calls can consume another nested scope
- * and must not be used as a general idempotent close operation.
- * A nested scope may request a
- * different isolation level; the previous level is pushed onto a stack and restored when that scope exits.
- * {@link IsolationLevel#DEFAULT} inherits the currently effective level in a nested scope.
- * When the cleanup call of a nested scope ({@link #rollbackIfNotCommitted()} or {@link #close()}) cannot restore the
- * enclosing scope's isolation level (some drivers, such as PostgreSQL's, reject isolation changes once the transaction has
- * started), the scope is exited anyway and the transaction is marked rollback-only; the outermost completion rolls back,
- * restores the connection's original isolation level and releases the connection.</p>
- *
- * <p><b>For-update-only transactions</b></p>
- * <p>A transaction begun by {@link JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)} with
- * {@code isForUpdateOnly = true} is used only for writes while that scope is the innermost one: a plain {@code SELECT}
- * prepared from the data source runs on a separate connection. A {@code SELECT} still joins the transaction if it writes
- * data (a data-modifying CTE, an {@code INTO} clause) or locks rows ({@code FOR UPDATE}, {@code FOR SHARE},
- * {@code LOCK IN SHARE MODE}, {@code WITH (UPDLOCK)}, ...), whose locks would otherwise be released as soon as it completes;
- * so does SQL with several statements separated by {@code ';'} unless every one of them is a plain read.</p>
+ * <p>Each scope records whether it has completed, so its cleanup call is unambiguous: {@link #rollbackIfNotCommitted()} and
+ * {@link #close()} are no-ops on a scope that has committed or rolled back, and on any further call. A nested scope whose
+ * cleanup call never runs (for example, its code threw and it has no {@code finally} block) is detected when the enclosing
+ * scope completes, instead of leaving the transaction open. Complete scopes innermost first, ideally with
+ * try-with-resources.</p>
+ * <p>A nested scope may request a different isolation level; it applies to the connection until the scope exits, when the
+ * enclosing scope's level is restored. {@link IsolationLevel#DEFAULT} inherits the enclosing scope's level. Databases
+ * differ in when a changed level takes effect inside a transaction: PostgreSQL rejects the change once the transaction has
+ * run a statement (the nested begin then fails), and MySQL applies it only from the next transaction, so the nested scope's
+ * statements still run at the enclosing level. Set the level on the outermost scope where it matters. When the cleanup
+ * call of a nested scope cannot restore the enclosing scope's isolation level (some drivers, such as PostgreSQL's, reject
+ * isolation changes once the transaction has started), the scope is exited anyway and the transaction is marked
+ * rollback-only; the outermost completion rolls back, restores the connection's original isolation level and releases the
+ * connection.</p>
  *
  * <p><b>Running work outside the transaction</b></p>
  * <ul>
@@ -163,10 +197,14 @@ import com.landawn.abacus.util.Throwables;
  *       {@link JdbcUtil#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}, which need no transaction
  *       reference: the transaction is unregistered from the thread while the command runs, so its operations on the data
  *       source acquire their own connections and commit independently (for example an audit record that must survive a
- *       rollback); the transaction is registered again afterwards. Spring transaction participation is disabled meanwhile
- *       too.</li>
+ *       rollback); the transaction is registered again afterwards. Spring transaction participation is suspended for the
+ *       data source meanwhile too, so the connections do not come from a Spring-managed transaction either, nor from
+ *       Spring's synchronization of this transaction's own connection (behind a Spring
+ *       {@code TransactionAwareDataSourceProxy}, they come from its target data source); work on other data sources still
+ *       joins their Spring transactions.</li>
  *   <li>{@link JdbcUtil#runIgnoringSpringTransaction(Throwables.Runnable)} disables only this library's use of
- *       Spring-managed transactions on the current thread.</li>
+ *       Spring-managed transactions on the current thread (connections are acquired as described for
+ *       {@link JdbcUtil#getConnection(javax.sql.DataSource)}).</li>
  * </ul>
  *
  * <p><b>DAO methods annotated with {@code @Transactional}</b></p>
@@ -218,31 +256,463 @@ import com.landawn.abacus.util.Throwables;
  * {@code commit()}, or the commit of a transaction marked rollback-only) issues no database {@code ROLLBACK} but marks the
  * Spring transaction rollback-only, so Spring rolls it back when it completes (Spring then reports an
  * {@code UnexpectedRollbackException} for a commit attempt). Either way the connection is released back to Spring.
- * If the Spring transaction cannot be marked rollback-only (the mark throws a {@link RuntimeException} or an {@link Error}),
- * that failure propagates, the status becomes {@link Status#FAILED_ROLLBACK}, the connection is still released back to Spring,
- * and the in-memory changes tied to the work (such as generated IDs written back to entities) are not undone but left to the
- * Spring transaction's outcome, as Spring may still commit the work. A Spring transaction that no rollback-only mark would
- * reach is refused: {@code beginTransaction} then throws {@link IllegalStateException} before any work runs.
- * Nested scopes and queries on the data source on this thread use the participating transaction as they would any other.
+ * The transaction marked is the one participated in: completed while Spring runs another transaction on the data source
+ * ({@code REQUIRES_NEW}) or none ({@code NOT_SUPPORTED}), a participating transaction marks the connection
+ * holder of the suspended one (that of {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}), which it
+ * consults when it completes, and leaves its connection to it.
+ * If the Spring transaction cannot be marked rollback-only - it has completed, or it is suspended and exposes its connection
+ * through a handle of its own (JPA), a JPA transaction that owns the connection refuses the mark or can no longer be
+ * identified, or the mark throws - the rollback fails: it throws an {@link IllegalStateException} (or the mark's own
+ * {@link RuntimeException} or {@link Error}), the status becomes {@link Status#FAILED_ROLLBACK}, the connection is still
+ * released back to Spring, and the in-memory changes tied to the work (such as generated IDs written back to entities) are
+ * not undone but left to the Spring transaction's outcome, as Spring may still commit the work (if the exception propagates
+ * out of a Spring transaction's callback or {@code @Transactional} method, Spring usually rolls it back). A Spring transaction
+ * that no rollback-only mark would reach is refused: {@code beginTransaction} then throws {@link IllegalStateException}
+ * before any work runs.
+ * Nested scopes and queries on the data source on this thread use the participating transaction as they would any other,
+ * except while Spring binds another transaction to the data source ({@code REQUIRES_NEW}) or none (it suspended its
+ * transaction for {@code NOT_SUPPORTED}): they follow Spring's binding then, until Spring binds the
+ * participated transaction again. A Spring transaction whose completion has started (its {@code afterCommit} or
+ * {@code afterCompletion} callbacks run; {@code afterCommit} recognized once this library has taken a connection of the
+ * transaction or begun a scope in it while it was the innermost Spring transaction on the thread, not only inside another
+ * transaction manager's transaction begun in it) is not participated in: a transaction begun there is one of its own, on a
+ * connection of its own (see {@link JdbcUtil#beginTransaction(javax.sql.DataSource)}). A participating scope left open into
+ * those callbacks can neither commit nor roll back there (see {@link #commit()}), nor can a query prepared in it run.
  * A connection Spring bound only for synchronization (a non-transactional scope such as {@code SUPPORTS}) is not a
  * Spring-managed transaction, and JTA transactions are not detected: the returned transaction then completes the connection
- * itself.</p>
+ * itself. So does a transaction that an operation begins of its own (a DAO batch operation of more than one element, or a
+ * {@code @Transactional} DAO method, outside a transaction this library sees), which fails on a connection a JTA
+ * transaction manages, as such a connection rejects {@code commit()} and {@code rollback()}.</p>
  *
  * <p><b>Rollback actions</b></p>
  * <p>DAO inserts that write generated IDs back onto their entities register an action that puts the previous IDs back.
  * The actions run newest first when the transaction rolls back, or as soon as a nested scope marks it rollback-only (a
- * rollback-only transaction can only end rolled back), so entities do not keep the IDs of rows that were never committed. In
- * a participating transaction they are registered with Spring's transaction synchronization: they run when the Spring
- * transaction rolls back, or right away when a participating scope marks it rollback-only (inside a
- * {@code PROPAGATION_NESTED} scope, only those registered since the newest open savepoint); a Spring rollback to a savepoint
- * runs those registered since that savepoint, with Spring 6.2 or later. Without an active synchronization, they run only if
- * the participating transaction's outermost scope ends rolled back: once it has completed its scope, the IDs are kept even
- * if Spring rolls back later.</p>
+ * rollback-only transaction can only end rolled back; actions registered after the mark, by work in scopes begun since,
+ * run when the outermost scope completes), so entities do not keep the IDs of rows that were never committed.
+ * Spring decides the outcome of a participating transaction, so a nested scope's rollback does not run its actions. They are
+ * registered with Spring's transaction synchronization: they run when the Spring transaction rolls back, or right away when
+ * the participating transaction's outermost scope marks it rollback-only (inside a {@code PROPAGATION_NESTED} scope, only
+ * those registered since the newest open savepoint), with Spring 6.2 or later: a Spring older than 6.2 reports no
+ * savepoints, so none run at the mark, and all follow the Spring transaction's outcome; a Spring rollback to a savepoint
+ * runs those registered since that savepoint, with Spring 6.2 or later. Without an active synchronization, they are recorded by the participating transaction
+ * itself and run when its outermost scope marks the Spring transaction rollback-only; once its outermost scope has committed,
+ * the IDs are kept even if Spring rolls back later. If the mark fails (see above), the IDs are left to the Spring
+ * transaction's outcome (and kept, without an active synchronization), as Spring may still commit the rows. A failing
+ * action is logged and does not stop the others; an {@link Error} thrown by an action run by a completion call (by the
+ * transaction itself, or by Spring's transaction synchronization once the outermost scope has marked the Spring transaction
+ * rollback-only) propagates from that call, once the scope has completed. An {@code Error} thrown by an action Spring runs
+ * when its transaction completes is logged by Spring.</p>
+ *
+ * <p><b>Completion scenarios</b></p>
+ * <p>In the samples, {@code tran} is the outermost scope, begun by the first {@code JdbcUtil.beginTransaction(dataSource)}
+ * on the thread, and {@code nested} a scope begun by a later call on the same thread and data source while {@code tran} is
+ * open: they share one connection and one database transaction. {@code dao} is a DAO created on {@code dataSource} (an
+ * unchecked one inside Spring's callbacks). Rows 1 to 24 describe a transaction of this library's own; in rows 25 to 29,
+ * {@code transactionTemplate} runs a Spring-managed transaction that owns the data source's connection (a
+ * {@code DataSourceTransactionManager} for {@code dataSource}), in which {@code tran} participates.</p>
+ * <table border="1" style="border-collapse: collapse;">
+ *   <caption><b>Completion scenarios and their outcome</b></caption>
+ *   <tr style="background-color: #f2f2f2;">
+ *     <th>Scenario (explanation and sample code)</th>
+ *     <th>Result / expected behavior</th>
+ *   </tr>
+ *   <tr>
+ *     <td><b>1. Commit the outermost scope.</b> The normal success path.
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * try {
+ *     dao.insert(entity);
+ *     tran.commit();
+ * } finally {
+ *     tran.rollbackIfNotCommitted(); // no-op after the commit
+ * }
+ * }</pre></td>
+ *     <td>Database {@code COMMIT}; the status is {@link Status#COMMITTED}. The actions registered to run after the commit
+ *         (DAO cache invalidations) run, then the connection's auto-commit mode and isolation level are restored and the
+ *         connection is released.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>2. Clean up the outermost scope without a commit.</b> The work threw before {@code commit()} was reached.
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * try {
+ *     dao.insert(entity); // throws
+ *     tran.commit();
+ * } finally {
+ *     tran.rollbackIfNotCommitted();
+ * }
+ * }</pre></td>
+ *     <td>Database {@code ROLLBACK}; the status is {@link Status#ROLLED_BACK}. Entities that received generated IDs in the
+ *         transaction get their previous IDs back, and the connection is restored and released.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>3. Use try-with-resources.</b> {@code close()} does what {@code rollbackIfNotCommitted()} does.
+ *       <pre>{@code
+ * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+ *     dao.insert(entity);
+ *     tran.commit();
+ * }
+ * }</pre></td>
+ *     <td>After a commit, {@code close()} does nothing. If {@code commit()} was not reached, {@code close()} rolls back as
+ *         in row 2.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>4. Deprecated {@code rollback()} of an open outermost scope.</b>
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * tran.rollback();
+ * }</pre></td>
+ *     <td>As in row 2: database {@code ROLLBACK}, and the status is {@link Status#ROLLED_BACK}.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>5. Commit a nested scope.</b>
+ *       <pre>{@code
+ * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+ *     try (SqlTransaction nested = JdbcUtil.beginTransaction(dataSource)) {
+ *         dao.insert(entity);
+ *         nested.commit(); // completes the scope only
+ *     }
+ *
+ *     tran.commit(); // the database COMMIT
+ * }
+ * }</pre></td>
+ *     <td>The nested {@code commit()} issues no database {@code COMMIT}: it completes the scope and restores the enclosing
+ *         scope's isolation level, and the status stays {@link Status#ACTIVE}. The outermost scope decides the
+ *         outcome.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>6. Clean up a nested scope without a commit.</b> Its work failed. {@code close()} and the deprecated
+ *         {@code rollback()} do the same.
+ *       <pre>{@code
+ * SqlTransaction nested = JdbcUtil.beginTransaction(dataSource);
+ * try {
+ *     dao.insert(entity); // throws
+ *     nested.commit();
+ * } finally {
+ *     nested.rollbackIfNotCommitted();
+ * }
+ * }</pre></td>
+ *     <td>No database {@code ROLLBACK} yet: the transaction is marked rollback-only ({@link Status#MARKED_ROLLBACK}), and
+ *         entities that received generated IDs in the transaction so far get their previous IDs back right away.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>7. Begin a scope in a transaction marked rollback-only.</b> A nested failure was caught, and the work goes on.
+ *       <pre>{@code
+ * // the transaction is rollback-only (row 6)
+ * try (SqlTransaction another = JdbcUtil.beginTransaction(dataSource)) {
+ *     dao.insert(otherEntity);
+ *     another.commit();
+ * }
+ * }</pre></td>
+ *     <td>Accepted: the scope joins the transaction as any nested scope does, its {@code commit()} completes the scope only,
+ *         and its work is rolled back with the transaction.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>8. Commit the outermost scope of a transaction marked rollback-only.</b>
+ *       <pre>{@code
+ * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+ *     try (SqlTransaction nested = JdbcUtil.beginTransaction(dataSource)) {
+ *         dao.insert(entity);
+ *     } // closed without a commit: the transaction is rollback-only
+ *
+ *     tran.commit(); // throws
+ * }
+ * }</pre></td>
+ *     <td>Database {@code ROLLBACK}, then {@link RollbackOnlyException} (an {@code IllegalStateException}); the status is
+ *         {@link Status#ROLLED_BACK}. If that rollback fails, its failure is thrown instead, with the reason the commit
+ *         failed attached as a suppressed exception, and the status is {@link Status#FAILED_ROLLBACK}.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>9. Swallow a nested failure in {@code callInTransaction}.</b> A batch operation of more than one element runs
+ *         in a nested scope.
+ *       <pre>{@code
+ * int count = JdbcUtil.callInTransaction(dataSource, () -> {
+ *     try {
+ *         dao.batchInsert(entities); // fails in a nested scope
+ *     } catch (SQLException e) {
+ *         // swallowed: the work goes on
+ *     }
+ *
+ *     return dao.count(cond);
+ * });
+ * }</pre></td>
+ *     <td>The transaction is rolled back, and {@link RollbackOnlyException} is thrown instead of returning the count: the
+ *         caller can't take the rolled-back work for committed.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>10. Commit the outermost scope twice.</b>
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * tran.commit();
+ * tran.commit(); // throws
+ * }</pre></td>
+ *     <td>The second call throws {@code IllegalStateException} (the scope has already been committed): {@code commit()} may
+ *         be called only once per scope, as in Spring. The database commits once.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>11. Commit a nested scope twice.</b>
+ *       <pre>{@code
+ * SqlTransaction nested = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * nested.commit();
+ * nested.commit(); // throws
+ * }</pre></td>
+ *     <td>The second call throws {@code IllegalStateException}. The transaction stays {@link Status#ACTIVE}, and the
+ *         enclosing scope is unaffected.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>12. Commit a nested scope again after the outermost scope rolled back.</b>
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * SqlTransaction nested = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * nested.commit();
+ * tran.rollbackIfNotCommitted(); // the work is gone
+ * nested.commit(); // throws
+ * }</pre></td>
+ *     <td>{@code IllegalStateException}, reporting the status {@link Status#ROLLED_BACK}: the call can't suggest that the
+ *         scope's work was committed.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>13. Commit a scope that was rolled back.</b>
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * tran.rollbackIfNotCommitted();
+ * tran.commit(); // throws
+ * }</pre></td>
+ *     <td>{@code IllegalStateException}: the scope has already ended without a commit, and the transaction has been rolled
+ *         back.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>14. Commit again after a {@code RollbackOnlyException}.</b>
+ *       <pre>{@code
+ * try {
+ *     tran.commit(); // the transaction was marked rollback-only
+ * } catch (RollbackOnlyException e) {
+ *     tran.commit(); // throws
+ * }
+ * }</pre></td>
+ *     <td>The second call throws a plain {@code IllegalStateException}, not another {@code RollbackOnlyException}: the
+ *         scope has ended without a commit, and the transaction has been rolled back.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>15. The database commit fails.</b> The driver's {@code Connection.commit()} throws, possibly after the
+ *         database committed.
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * tran.commit(); // throws UncheckedSQLException
+ * }</pre></td>
+ *     <td>{@link UncheckedSQLException}. The transaction is rolled back automatically: the status is
+ *         {@link Status#ROLLED_BACK}, or {@link Status#FAILED_ROLLBACK} if that rollback fails too (its failure is
+ *         suppressed on the commit's). The actions registered to run after the commit run all the same, because the
+ *         database may have committed with only the acknowledgement lost. The generated IDs of the transaction's inserts are
+ *         put back with the rollback, as a failed commit usually rolled the work back (a constraint checked at commit, a
+ *         serialization failure); in the rare case of a lost acknowledgement, the entities lose the IDs of rows that exist.
+ *         A later {@code commit()} throws {@code IllegalStateException}.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>16. Deprecated {@code rollback()} twice.</b>
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * tran.rollback();
+ * tran.rollback(); // throws
+ * }</pre></td>
+ *     <td>The second call throws {@code IllegalStateException} (the scope has already completed), as in Spring; clean up
+ *         with {@code rollbackIfNotCommitted()} or {@code close()} instead. The database rolls back once.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>17. Deprecated {@code rollback()} after a commit.</b>
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * tran.commit();
+ * tran.rollback(); // throws
+ * }</pre></td>
+ *     <td>{@code IllegalStateException}, reporting the status {@link Status#COMMITTED}: nothing is undone.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>18. Deprecated {@code rollback()} of a committed nested scope.</b>
+ *       <pre>{@code
+ * SqlTransaction nested = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * nested.commit();
+ * nested.rollback(); // throws
+ * }</pre></td>
+ *     <td>{@code IllegalStateException}. The transaction is not marked rollback-only and stays {@link Status#ACTIVE}.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>19. Clean up a completed scope.</b> The same after a rollback.
+ *       <pre>{@code
+ * tran.commit();
+ * tran.rollbackIfNotCommitted(); // no-op
+ * tran.close(); // no-op
+ * tran.close(); // no-op
+ * }</pre></td>
+ *     <td>No effect, however often they are called, so {@code finally} blocks and try-with-resources stay safe.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>20. Complete a scope while a scope opened inside it is still open.</b> The inner scope was never completed,
+ *         for example because its code threw and it has no {@code finally} block.
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * SqlTransaction nested = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity); // nested is never completed
+ * tran.commit(); // throws
+ * }</pre></td>
+ *     <td>The inner scope is exited, never having completed, and the transaction is marked rollback-only. An outermost
+ *         {@code commit()} then rolls back and throws {@link RollbackOnlyException}; a nested one throws
+ *         {@code IllegalStateException} and ends without a commit, leaving the transaction marked rollback-only.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>21. Commit a scope that an enclosing scope exited.</b>
+ *       <pre>{@code
+ * // continues row 20: tran.commit() exited nested
+ * nested.commit(); // throws
+ * }</pre></td>
+ *     <td>{@code IllegalStateException}: an enclosing scope completed while the scope was still open and exited it, and the
+ *         transaction has been rolled back.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>22. Clean up or roll back a scope that an enclosing scope exited.</b>
+ *       <pre>{@code
+ * // continues row 20
+ * nested.rollbackIfNotCommitted(); // no-op
+ * nested.close(); // no-op
+ * nested.rollback(); // throws
+ * }</pre></td>
+ *     <td>{@code rollbackIfNotCommitted()} and {@code close()} do nothing; the deprecated {@code rollback()} throws
+ *         {@code IllegalStateException} (the scope has already completed).</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>23. Complete scopes in the order they were opened.</b> An easy mistake with two scopes in one
+ *         try-with-resources statement.
+ *       <pre>{@code
+ * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ *         SqlTransaction nested = JdbcUtil.beginTransaction(dataSource)) {
+ *     dao.insert(entity);
+ *     tran.commit(); // throws: nested is still open
+ *     nested.commit();
+ * }
+ * }</pre></td>
+ *     <td>{@code tran.commit()} finds {@code nested} still open, as in row 20: it rolls back and throws
+ *         {@link RollbackOnlyException}, and a {@code commit()} of {@code nested} would throw
+ *         {@code IllegalStateException}. Complete scopes innermost first: {@code nested.commit()} before
+ *         {@code tran.commit()}.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>24. Complete a scope on another thread.</b>
+ *       <pre>{@code
+ * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ * dao.insert(entity);
+ * executor.submit(() -> tran.commit()); // fails
+ * }</pre></td>
+ *     <td>{@code IllegalStateException}: the transaction is bound to the thread that began it. Every completion call
+ *         ({@code commit()}, {@code rollback()}, {@code rollbackIfNotCommitted()}, {@code close()}) checks the thread
+ *         first, on a completed scope too.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>25. Participating: commit the outermost scope.</b>
+ *       <pre>{@code
+ * transactionTemplate.executeWithoutResult(status -> {
+ *     SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ *     try {
+ *         dao.insert(entity);
+ *         tran.commit(); // no database COMMIT
+ *     } finally {
+ *         tran.rollbackIfNotCommitted();
+ *     }
+ * }); // Spring commits here
+ * }</pre></td>
+ *     <td>No database {@code COMMIT}; the status is {@link Status#COMMITTED}, and the connection is released to Spring,
+ *         which commits the work when its transaction completes. The connection's auto-commit mode and isolation level are
+ *         left to Spring (a requested isolation level is ignored).</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>26. Participating: roll back.</b> The work failed, or the outermost commit found the transaction
+ *         rollback-only (row 8).
+ *       <pre>{@code
+ * transactionTemplate.executeWithoutResult(status -> {
+ *     try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
+ *         dao.insert(entity);
+ *         // no commit: close() rolls back
+ *     }
+ * }); // throws UnexpectedRollbackException
+ * }</pre></td>
+ *     <td>No database {@code ROLLBACK}: the Spring transaction is marked rollback-only, and the connection is released to
+ *         Spring, which rolls back when its transaction completes; committing it throws Spring's
+ *         {@code UnexpectedRollbackException}. Generated IDs are put back once the mark is set (with a Spring older than 6.2,
+ *         once the Spring transaction has rolled back).</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>27. Participating: the rollback can't mark the Spring transaction.</b> Here the scope was left open past
+ *         the Spring transaction, which committed its work; a suspended JPA transaction that can no longer be identified
+ *         fails the same way.
+ *       <pre>{@code
+ * SqlTransaction[] leaked = new SqlTransaction[1];
+ *
+ * transactionTemplate.executeWithoutResult(status -> {
+ *     leaked[0] = JdbcUtil.beginTransaction(dataSource);
+ *     dao.insert(entity);
+ * }); // Spring commits the row
+ *
+ * leaked[0].rollbackIfNotCommitted(); // throws
+ * }</pre></td>
+ *     <td>{@code IllegalStateException}; the status is {@link Status#FAILED_ROLLBACK}. Generated IDs are not put back but
+ *         left to the Spring transaction's outcome (kept here, as the row is committed). The scope is completed: a later
+ *         {@code close()} does nothing. A {@code leaked[0].commit()} in place of the rollback throws
+ *         {@code IllegalStateException} too, and ends {@link Status#FAILED_COMMIT}: Spring decided the outcome of the work
+ *         without it. Both fail the same way in the Spring transaction's {@code afterCommit} or {@code afterCompletion}
+ *         callbacks, where Spring still binds its connection: detected there through the synchronization this library
+ *         registers with the synchronizations Spring runs when the scope begins (for a scope begun inside another
+ *         transaction manager's transaction, begun in the one it participates in, while that inner transaction's callbacks
+ *         run as well). Once the callbacks have run, detected for a {@code DataSourceTransactionManager} or
+ *         {@code JdbcTransactionManager} transaction, whose connection holder records its completion: a completed JPA
+ *         transaction can't be told from a suspended one, so such a commit returns normally.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>28. Participating: complete the scope while Spring runs another transaction on the data source.</b>
+ *       <pre>{@code
+ * transactionTemplate.executeWithoutResult(outer -> {
+ *     SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ *     dao.insert(entity);
+ *
+ *     requiresNewTemplate.executeWithoutResult(inner -> {
+ *         tran.rollbackIfNotCommitted(); // inside REQUIRES_NEW
+ *     });
+ * }); // throws UnexpectedRollbackException
+ * }</pre></td>
+ *     <td>The Spring transaction {@code tran} participates in is marked rollback-only, not the {@code REQUIRES_NEW} one
+ *         Spring runs meanwhile, and {@code tran}'s connection is left to it. The inner transaction commits
+ *         normally.</td>
+ *   </tr>
+ *   <tr>
+ *     <td><b>29. Participating: repeat a completion call.</b>
+ *       <pre>{@code
+ * transactionTemplate.executeWithoutResult(status -> {
+ *     SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+ *     dao.insert(entity);
+ *     tran.commit();
+ *     tran.commit(); // throws
+ * });
+ * }</pre></td>
+ *     <td>The same rules as rows 10 to 19: a repeated {@code commit()} or deprecated {@code rollback()} throws
+ *         {@code IllegalStateException}, and {@code rollbackIfNotCommitted()} and {@code close()} do nothing. An exception
+ *         that leaves Spring's callback rolls the Spring transaction back.</td>
+ *   </tr>
+ * </table>
+ * <p>Row 23 is the one most likely to surprise: completing scopes in the order they were opened fails, because the outer
+ * scope finds the inner one still open. Give each scope its own try-with-resources statement (or {@code try}/{@code finally}
+ * block), ending with its {@code commit()} in that block.</p>
  *
  * <p><b>Rules of thumb</b></p>
  * <ol>
- *   <li>Complete every scope exactly once: try-with-resources, or {@code commit()} in the {@code try} block and
- *       {@code rollbackIfNotCommitted()} in the {@code finally} block.</li>
+ *   <li>Complete every scope exactly once, innermost first: try-with-resources, or {@code commit()} in the {@code try}
+ *       block and {@code rollbackIfNotCommitted()} in the {@code finally} block.</li>
  *   <li>Never close {@link #connection()} yourself, and never use the transaction on another thread.</li>
  *   <li>Prefer {@code JdbcUtil.callInTransaction}/{@code runInTransaction} for a unit of work, and
  *       {@code @Transactional(propagation = REQUIRED)} for DAO methods that must be atomic.</li>
@@ -253,7 +723,6 @@ import com.landawn.abacus.util.Throwables;
  * @see Transaction
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel)
- * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
  * @see JdbcUtil#callInTransaction(javax.sql.DataSource, Throwables.Callable)
  * @see JdbcUtil#runInTransaction(javax.sql.DataSource, Throwables.Runnable)
  * @see JdbcUtil#isInTransaction(javax.sql.DataSource)
@@ -263,341 +732,60 @@ import com.landawn.abacus.util.Throwables;
 public final class SqlTransaction implements Transaction, AutoCloseable {
 
     /**
-     * Logger for transaction lifecycle events and diagnostic messages.
+     * The state this scope shares with the other scopes of its transaction.
      */
-    private static final Logger logger = LoggerFactory.getLogger(SqlTransaction.class);
+    private final TransactionContext _context; //NOSONAR
 
     /**
-     * Registry of active transactions keyed by data source, owner thread, and creator.
-     * Used to detect and join a nested transaction started on the same thread and data source.
+     * Whether this scope opened the transaction: only the outermost scope commits or rolls back the connection.
      */
-    private static final Map<TransactionKey, SqlTransaction> threadTransactionMap = new ConcurrentHashMap<>();
+    private final boolean _outermost; //NOSONAR
 
     /**
-     * Collision-safe registry key. The diagnostic transaction id contains identity hash codes,
-     * but registry correctness must not depend on those non-unique integer values.
+     * The isolation level this scope runs at ({@link IsolationLevel#DEFAULT}: the connection's original level).
      */
-    private static final class TransactionKey {
-        /**
-         * The data source the transaction's connection came from; may be {@code null} for a
-         * connection-owned transaction.
-         */
-        private final javax.sql.DataSource dataSource;
-        /**
-         * The thread that owns the transaction.
-         */
-        private final Thread thread;
-        /**
-         * The originator type of the transaction.
-         */
-        private final CreatedBy creator;
-
-        TransactionKey(final javax.sql.DataSource dataSource, final Thread thread, final CreatedBy creator) {
-            this.dataSource = dataSource;
-            this.thread = thread;
-            this.creator = creator;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = System.identityHashCode(dataSource);
-            result = 31 * result + System.identityHashCode(thread);
-            return 31 * result + creator.hashCode();
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            if (this == obj) {
-                return true;
-            }
-
-            return obj instanceof TransactionKey other && dataSource == other.dataSource && thread == other.thread && creator == other.creator;
-        }
-    }
-
-    // Millisecond timestamps alone are not unique: a fast transaction loop can create multiple
-    // transactions on the same thread and data source during one clock tick. Keep the timestamp
-    // for diagnostics and append this process-local sequence to make id()/equals()/hashCode()
-    // collision-free within the JVM.
-    /**
-     * Process-local sequence number appended to the timestamp when building {@link #_timedId},
-     * making the transaction id unique within the JVM.
-     */
-    private static final AtomicLong transactionIdSequence = new AtomicLong();
+    private final IsolationLevel _isolationLevel; //NOSONAR
 
     /**
-     * Diagnostic base identifier of this transaction, as generated by {@code getTransactionId}
-     * from the data source identity hash code, the creating thread's id, and the creator ordinal.
+     * Whether this scope has completed: committed, rolled back, ended by {@link #rollbackIfNotCommitted()} or {@link #close()},
+     * or exited because an enclosing scope completed while it was still open.
      */
-    private final String _id; //NOSONAR
+    private boolean _completed; //NOSONAR
 
     /**
-     * Collision-safe registry key (data source, owner thread, creator) under which this
-     * transaction is stored in {@code threadTransactionMap}.
+     * Whether this scope was completed by an enclosing scope that completed while this one was still open (see
+     * {@link TransactionContext}): its work can't be committed, so a later {@link #commit()} of this scope throws.
      */
-    private final TransactionKey _key; //NOSONAR
-
-    // Dedicated per-instance monitor for runOutsideTransaction/callOutsideTransaction. Replaces
-    // synchronized(_id): locking on a String is an anti-pattern (lock identity depends on String
-    // interning). _id is a freshly built String per instance, so the intended semantics are
-    // "lock this transaction instance" - this object preserves exactly that, safely.
-    /**
-     * Per-instance monitor guarding {@code runOutsideTransaction}/{@code callOutsideTransaction}.
-     */
-    private final Object _outsideTxLock = new Object(); //NOSONAR
+    private boolean _exitedByEnclosingScope; //NOSONAR
 
     /**
-     * Unique transaction identifier: {@link #_id} suffixed with a millisecond timestamp and a
-     * process-local sequence number. Returned by {@link #id()} and backs {@code equals},
-     * {@code hashCode}, and {@code toString}.
+     * Whether this nested scope was completed by its own successful {@link #commit()}, which a repeated commit's failure then
+     * says (the commit of a scope that ended otherwise says so instead). The outermost scope tells by the transaction's status.
      */
-    private final String _timedId; //NOSONAR
+    private boolean _committed; //NOSONAR
 
     /**
-     * The data source the backing connection came from; used to release the connection when the
-     * transaction completes. May be {@code null} when {@code closeConnection} is {@code false}.
-     */
-    private final javax.sql.DataSource _ds; //NOSONAR
-
-    /**
-     * The JDBC connection backing this transaction; never {@code null}.
-     */
-    private final Connection _conn; //NOSONAR
-
-    /**
-     * Whether the backing connection is released back to {@link #_ds} when the transaction completes.
-     */
-    private final boolean _closeConnection; //NOSONAR
-
-    /**
-     * Whether this transaction participates in the Spring-managed transaction that owns the connection: it then never
-     * changes, commits or rolls back the connection, and a rollback marks the Spring transaction rollback-only instead.
-     */
-    private final boolean _springParticipating; //NOSONAR
-
-    /**
-     * Actions to run (newest first) if the outermost scope ends without a successful commit; {@code null} until the first
-     * registration. In a participating transaction they are registered with Spring's transaction synchronization instead,
-     * when it is active.
-     */
-    private RollbackActionLog _rollbackActions; //NOSONAR
-
-    /**
-     * The connection's auto-commit mode captured at construction, restored when the transaction completes.
-     */
-    private final boolean _originalAutoCommit; //NOSONAR
-
-    /**
-     * The connection's transaction isolation level captured at construction, restored when the
-     * transaction completes.
-     */
-    private final int _originalIsolationLevel; //NOSONAR
-
-    /**
-     * The current status of this transaction, initially {@link Status#ACTIVE}; updated by
-     * commit/rollback and returned by {@link #status()}.
-     */
-    private volatile Transaction.Status _status = Status.ACTIVE; //NOSONAR
-
-    /**
-     * Reference count of nested transaction scopes joined on this transaction; the actual
-     * commit/rollback is performed only when the count reaches zero.
-     */
-    private final AtomicInteger _refCount = new AtomicInteger(); //NOSONAR
-
-    /**
-     * Stack of previous isolation levels saved when a nested scope joins with a different level;
-     * popped to restore the previous level when the nested scope exits.
-     */
-    private final Deque<IsolationLevel> _isolationLevelStack = new ConcurrentLinkedDeque<>(); //NOSONAR
-
-    /**
-     * Stack of previous for-update-only flags saved when a nested scope joins; popped to restore
-     * the previous flag when the nested scope exits.
-     */
-    private final Deque<Boolean> _isForUpdateOnlyStack = new ConcurrentLinkedDeque<>(); //NOSONAR
-
-    /**
-     * The current isolation level of this transaction; may change as nested scopes join and exit.
-     */
-    private volatile IsolationLevel _isolationLevel; //NOSONAR
-
-    /**
-     * Whether this transaction is currently marked for update operations only; may change as
-     * nested scopes join and exit.
-     */
-    private volatile boolean _isForUpdateOnly; //NOSONAR
-
-    /**
-     * The database facts {@link JdbcUtil}'s for-update-only {@code SELECT} routing depends on, read from {@link #_conn} at
-     * most once per transaction ({@code null} if they could not be read); valid once {@link #_scanDialectResolved} is set.
-     */
-    private JdbcUtil.ScanDialect _scanDialect; //NOSONAR
-
-    /** Whether {@link #_scanDialect} has been resolved. */
-    private boolean _scanDialectResolved; //NOSONAR
-
-    // "Skip the paired cleanup" markers. Each explicit commit()/rollback() that exits a scope records
-    // the reference count it left behind; the scope's paired rollbackIfNotCommitted()/close() (normally
-    // in its finally block) runs at that same reference count and consumes the marker as a no-op
-    // instead of exiting another scope. A single boolean latch is not enough: a nested scope opened
-    // and completed between a scope's commit() and its finally block (e.g. a DAO call made after
-    // commit()) consumed the latch, so that finally block then exited - and rolled back - the
-    // enclosing scope, after which the outermost commit() was silently ignored.
-    /**
-     * Number of pending no-op {@code rollbackIfNotCommitted()}/{@code close()} calls left by explicit
-     * {@code commit()}/{@code rollback()} calls, keyed by the reference count at which each runs.
-     * Every key is at most the current reference count; keys above it are dropped as a scope exits.
-     */
-    private final Map<Integer, Integer> _pendingCleanupNoOps = new HashMap<>(); //NOSONAR
-
-    /**
-     * Constructs a new {@code SqlTransaction} backed by the given JDBC {@link Connection}.
+     * Constructs a scope of {@code context}; called by {@link TransactionContext#enterScope(IsolationLevel)} only.
      *
-     * <p>The connection's original auto-commit mode and transaction isolation level are captured
-     * so they can be restored when the transaction completes. Auto-commit is disabled and, if the
-     * given {@code isolationLevel} is not {@link IsolationLevel#DEFAULT}, the connection's
-     * transaction isolation is updated accordingly. Settings that already match the requested state
-     * are left untouched, avoiding redundant driver calls during existing transaction work.</p>
-     *
-     * @param ds the data source the connection came from; used to release the connection on completion when {@code closeConnection} is {@code true}. May be {@code null} if {@code closeConnection} is {@code false}.
-     * @param conn the JDBC connection that backs this transaction, must not be {@code null}
-     * @param isolationLevel the isolation level for this transaction, must not be {@code null}
-     * @param creator the originator type (see {@link CreatedBy}) used to identify the registry slot and diagnostic ID; must not be {@code null}
-     * @param closeConnection if {@code true}, the connection will be released back to {@code ds} when the transaction completes
-     * @throws IllegalArgumentException if {@code ds} is {@code null} while {@code closeConnection} is
-     *         {@code true}, if {@code conn}, {@code isolationLevel}, or {@code creator} is {@code null},
-     *         or if {@code isolationLevel} is {@link IsolationLevel#NONE}
-     * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails;
-     *         after a modification fails, the settings this constructor attempted to change are restored on a
-     *         best-effort basis first and any restore failure is attached as a suppressed exception
+     * @param context the transaction this scope belongs to
+     * @param outermost whether this scope opened the transaction
+     * @param isolationLevel the effective isolation level of this scope
      */
-    SqlTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
-            final boolean closeConnection) throws IllegalArgumentException, SQLException {
-        this(ds, conn, isolationLevel, creator, closeConnection, false);
-    }
-
-    /**
-     * Constructs a new {@code SqlTransaction} backed by the given JDBC {@link Connection}, optionally participating in the
-     * Spring-managed transaction that owns the connection.
-     *
-     * <p>A participating transaction leaves the connection's auto-commit mode and isolation level untouched (it neither reads
-     * nor changes them), ignores {@code isolationLevel} (its scopes report {@link IsolationLevel#DEFAULT}), and never commits
-     * or rolls back the connection; see the class documentation. Otherwise this behaves as
-     * {@link #SqlTransaction(javax.sql.DataSource, Connection, IsolationLevel, CreatedBy, boolean)}.</p>
-     *
-     * @param ds the data source the connection came from; must not be {@code null} when {@code closeConnection} or
-     *        {@code springParticipating} is {@code true}
-     * @param conn the JDBC connection that backs this transaction, must not be {@code null}
-     * @param isolationLevel the isolation level for this transaction, must not be {@code null}
-     * @param creator the originator type, must not be {@code null}
-     * @param closeConnection if {@code true}, the connection is released back to {@code ds} when the transaction completes
-     * @param springParticipating whether the transaction participates in the Spring-managed transaction owning {@code conn}
-     * @throws IllegalArgumentException if {@code ds} is {@code null} while {@code closeConnection} or {@code springParticipating}
-     *         is {@code true}, if {@code conn}, {@code isolationLevel}, or {@code creator} is {@code null}, or if
-     *         {@code isolationLevel} is {@link IsolationLevel#NONE}
-     * @throws SQLException if reading or modifying the connection's auto-commit / isolation level fails (never for a
-     *         participating transaction)
-     */
-    @SuppressWarnings("deprecation")
-    SqlTransaction(final javax.sql.DataSource ds, final Connection conn, final IsolationLevel isolationLevel, final CreatedBy creator,
-            final boolean closeConnection, final boolean springParticipating) throws IllegalArgumentException, SQLException {
-        N.checkArgument(ds != null || !closeConnection, "'ds' must not be null when 'closeConnection' is true");
-        N.checkArgument(ds != null || !springParticipating, "'ds' must not be null when 'springParticipating' is true");
-        N.checkArgNotNull(conn, cs.conn);
-        N.checkArgNotNull(isolationLevel, cs.isolationLevel);
-        N.checkArgument(isolationLevel != IsolationLevel.NONE,
-                "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
-        N.checkArgNotNull(creator, cs.creator);
-
-        _key = new TransactionKey(ds, Thread.currentThread(), creator);
-        _id = getTransactionId(ds, creator);
-        _timedId = _id + "_" + System.currentTimeMillis() + "_" + transactionIdSequence.incrementAndGet();
-        _ds = ds;
-        _conn = conn;
-        _closeConnection = closeConnection;
-        _springParticipating = springParticipating;
-
-        if (springParticipating) {
-            // Spring owns the connection's state: it set auto-commit and isolation for its transaction and restores them when
-            // the transaction completes. Changing them here would alter Spring's transaction, so they are neither read nor set.
-            _isolationLevel = IsolationLevel.DEFAULT;
-            _originalAutoCommit = false;
-            _originalIsolationLevel = Connection.TRANSACTION_NONE;
-
-            logger.info("Started transaction(id={}) participating in the Spring-managed transaction", _timedId);
-            return;
-        }
-
+    SqlTransaction(final TransactionContext context, final boolean outermost, final IsolationLevel isolationLevel) {
+        _context = context;
+        _outermost = outermost;
         _isolationLevel = isolationLevel;
-        _originalAutoCommit = conn.getAutoCommit();
-        _originalIsolationLevel = conn.getTransactionIsolation();
-
-        // Atomically apply both mutations: if the isolation change throws AFTER setAutoCommit(false) succeeded,
-        // best-effort restore the original autoCommit before propagating the exception so the partially-mutated
-        // connection isn't observed (e.g., released back to the pool by an outer try/finally).
-        // Only settings this constructor attempted to change are restored on failure: re-applying an untouched
-        // setting would be the same redundant driver call the conditional mutations above avoid.
-        boolean autoCommitAttempted = false;
-        boolean isolationAttempted = false;
-
-        try {
-            if (_originalAutoCommit) {
-                autoCommitAttempted = true;
-                conn.setAutoCommit(false);
-            }
-
-            // Avoid a redundant driver call: a connection may already be doing transaction work,
-            // and some drivers reject even reapplying the same isolation level in that state.
-            if (isolationLevel != IsolationLevel.DEFAULT && isolationLevel.intValue() != _originalIsolationLevel) {
-                isolationAttempted = true;
-                conn.setTransactionIsolation(isolationLevel.intValue());
-            }
-        } catch (final SQLException | RuntimeException | Error e) {
-            if (autoCommitAttempted) {
-                try {
-                    conn.setAutoCommit(_originalAutoCommit);
-                } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary failure
-                    if (restoreException != e) {
-                        e.addSuppressed(restoreException);
-                    }
-                }
-            }
-            if (isolationAttempted) {
-                try {
-                    conn.setTransactionIsolation(_originalIsolationLevel);
-                } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary failure
-                    if (restoreException != e) {
-                        e.addSuppressed(restoreException);
-                    }
-                }
-            }
-
-            throw e;
-        }
-
-        logger.info("Started transaction(id={}, isolationLevel={}, closeConnection={})", _timedId, _isolationLevel, _closeConnection);
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("Original connection state for transaction(id={}): autoCommit={}, isolationLevel={}", _timedId, _originalAutoCommit,
-                    _originalIsolationLevel);
-        }
     }
 
     /**
-     * Returns the unique identifier of this transaction.
-     * The ID combines a timestamp with a process-local sequence number to guarantee uniqueness
-     * (a millisecond timestamp alone is not unique across rapid successive transactions).
-     *
-     * <p>This same value backs {@link #equals(Object)}, {@link #hashCode()}, and
-     * {@link #toString()}, and appears in this class's log messages, so it can be used to correlate
-     * a transaction across logs.</p>
+     * Returns the unique identifier of the transaction this scope belongs to. All scopes of one transaction (the outermost
+     * scope and the nested scopes opened inside it) report the same identifier, which also appears in this class's log
+     * messages.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
-     *     String transactionId = tran.id();
-     *     logger.info("Starting transaction: {}", transactionId);
+     *     logger.info("Starting transaction: {}", tran.id());
      * }
      * }</pre>
      *
@@ -605,73 +793,45 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      */
     @Override
     public String id() {
-        return _timedId;
+        return _context.id();
     }
 
     /**
-     * Verifies that the current thread is the thread that created (owns) this transaction.
-     *
-     * @throws IllegalStateException if called from a thread other than the transaction's owner thread
-     */
-    private void assertOwnerThread() throws IllegalStateException {
-        if (_key.thread != Thread.currentThread()) {
-            throw new IllegalStateException("Transaction(id=" + _timedId + ") is bound to thread '" + _key.thread.getName()
-                    + "' and cannot be used from thread '" + Thread.currentThread().getName() + "'");
-        }
-    }
-
-    /**
-     * Returns the JDBC connection associated with this transaction.
-     * This connection should not be closed manually as it will be managed by the transaction.
+     * Returns the JDBC connection of the transaction. It is shared by all scopes of the transaction and must not be closed
+     * manually: the outermost scope releases it when the transaction completes.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
      *     Connection conn = tran.connection();
-     *     // Use the connection for custom operations
-     *     try (PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE id = ?")) {
+     *     try (PreparedStatement stmt = conn.prepareStatement("UPDATE users SET active = 0 WHERE id = ?")) {
      *         stmt.setLong(1, userId);
-     *         try (ResultSet rs = stmt.executeQuery()) {
-     *             // Process results...
-     *         }
+     *         stmt.executeUpdate();
      *     }
      *     tran.commit();
-     * } finally {
-     *     tran.rollbackIfNotCommitted();
      * }
      * }</pre>
      *
-     * @return the JDBC connection used by this transaction
+     * @return the JDBC connection used by the transaction
      * @throws IllegalStateException if called from a thread other than the transaction's owner thread
      */
     public Connection connection() throws IllegalStateException {
-        assertOwnerThread();
-
-        return _conn;
+        return _context.connection();
     }
 
     /**
-     * Returns the isolation level of this transaction.
-     * The isolation level determines how this transaction interacts with other concurrent transactions.
-     *
-     * <p>While nested scopes are active, this reflects the isolation level of the current
-     * (innermost) scope, which may differ from the level supplied to the outermost scope; the
-     * previous level is restored as each nested scope exits. A transaction participating in a Spring-managed transaction
-     * always reports {@link IsolationLevel#DEFAULT}: it runs at the isolation level of the Spring transaction.</p>
+     * Returns the isolation level of this scope: the level requested when it was begun or, for a nested scope that requested
+     * {@link IsolationLevel#DEFAULT}, the level of the scope it is nested in. A transaction participating in a Spring-managed
+     * transaction always reports {@link IsolationLevel#DEFAULT}: it runs at the isolation level of the Spring transaction.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE)) {
-     *     IsolationLevel level = tran.isolationLevel();
-     *     if (level == IsolationLevel.SERIALIZABLE) {
-     *         // Handle high isolation scenario
-     *     }
+     *     assert tran.isolationLevel() == IsolationLevel.SERIALIZABLE;
      * }
      * }</pre>
      *
-     * @return the transaction isolation level, never {@code null}
-     *
+     * @return the isolation level of this scope, never {@code null}
      * @see IsolationLevel
      */
     @Override
@@ -680,57 +840,33 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Returns the database facts {@link JdbcUtil}'s for-update-only {@code SELECT} routing depends on, resolving them from
-     * this transaction's connection on the first call only: the connection is fixed for the transaction's lifetime.
-     *
-     * @param resolver Reads the facts from the connection; returns {@code null} if they cannot be read.
-     * @return The facts, or {@code null} if they could not be read.
-     */
-    JdbcUtil.ScanDialect scanDialect(final java.util.function.Function<Connection, JdbcUtil.ScanDialect> resolver) {
-        if (!_scanDialectResolved) {
-            _scanDialect = resolver.apply(_conn);
-            _scanDialectResolved = true;
-        }
-
-        return _scanDialect;
-    }
-
-    /**
-     * Returns the current status of this transaction.
-     * The status indicates whether the transaction is active, committed, rolled back, or marked for rollback.
+     * Returns the current status of the transaction this scope belongs to: {@link Status#ACTIVE} until the transaction is
+     * marked rollback-only ({@link Status#MARKED_ROLLBACK}) or the outermost scope completes.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
-     *     Transaction.Status status = tran.status();
-     *     if (status == Transaction.Status.ACTIVE) {
-     *         // Transaction is still active and can be committed or rolled back
+     *     if (tran.status() == Transaction.Status.ACTIVE) {
+     *         // The transaction can still be committed
      *     }
      * }
      * }</pre>
      *
      * @return the current transaction status, never {@code null}
-     *
      * @see Transaction.Status
      */
     @Override
     public Transaction.Status status() {
-        return _status;
+        return _context.status();
     }
 
     /**
-     * Checks if this transaction is currently active.
-     * A transaction is active only when its status is {@link Status#ACTIVE} (i.e. it has not been
-     * committed, rolled back, marked for rollback, or transitioned to {@code FAILED_COMMIT}/{@code FAILED_ROLLBACK}).
-     *
-     * <p>This is a convenience method equivalent to checking if the status
-     * equals {@link Status#ACTIVE}.</p>
+     * Checks whether the transaction this scope belongs to is active, i.e. its status is {@link Status#ACTIVE}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
      *     if (tran.isActive()) {
-     *         // Safe to perform operations within this transaction
      *         performDatabaseOperations();
      *     }
      * }
@@ -740,1142 +876,202 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      */
     @Override
     public boolean isActive() {
-        return _status == Status.ACTIVE;
+        return _context.status() == Status.ACTIVE;
     }
 
     /**
-     * Commits this transaction scope.
+     * Commits this scope.
      *
-     * <p>Behaviour with nested scopes: each call to this method decrements the internal scope
-     * reference count. The actual JDBC {@code COMMIT} is issued only when the outermost scope
-     * commits (reference count reaches zero). Nested invocations simply return after
-     * decrementing the counter.</p>
+     * <p>A nested scope's commit only completes the scope: the database {@code COMMIT} is issued when the outermost scope
+     * commits. If the transaction has been marked rollback-only (a nested scope rolled back, typically because its failure
+     * was caught and the work went on), the outermost commit rolls back instead and throws {@link RollbackOnlyException}:
+     * none of the transaction's work was committed. If the rollback fails, its failure is thrown instead (such as the
+     * {@link UncheckedSQLException} of the rollback), as is an unchecked failure of the connection cleanup after the
+     * rollback; the reason the commit failed is attached to it as a suppressed exception (a {@code RollbackOnlyException}
+     * once the transaction has been rolled back, an {@code IllegalStateException} otherwise).</p>
      *
-     * <p>If the transaction has been marked for rollback only (status {@link Status#MARKED_ROLLBACK}
-     * because an inner scope rolled back), the outermost commit is converted into a rollback
-     * rather than a commit; this method returns normally in that case (or throws
-     * {@link UncheckedSQLException} if that rollback itself fails).</p>
+     * <p>Scopes opened inside this one that are still open when it commits were never completed (for example, a nested scope
+     * whose code threw before its {@code commit()} and has no {@code finally} block): they are exited, the transaction is
+     * marked rollback-only, and this method throws: an outermost scope rolls the transaction back and throws
+     * {@link RollbackOnlyException} (or the failure of the rollback, as above), a nested scope throws
+     * {@link IllegalStateException}. If restoring an isolation level while exiting such a scope fails with an unchecked
+     * exception, that exception is thrown instead (by an outermost scope, after the same rollback).</p>
      *
-     * <p>When the outermost scope actually commits, the status transitions to
-     * {@link Status#COMMITTED} on success. On failure the status first becomes
-     * {@link Status#FAILED_COMMIT} and an automatic rollback is attempted, leaving the status
-     * {@link Status#ROLLED_BACK} (or {@link Status#FAILED_ROLLBACK} if that rollback also fails).
-     * After the commit attempt (success or failure) the connection's original auto-commit and
-     * isolation level are restored, and the connection is released back to its data source if this
-     * transaction was created with connection ownership. The one exception is a failed automatic
-     * rollback: restoring the connection state could then commit the pending work, so it is skipped
-     * and an owned connection is only released.</p>
+     * <p>If the driver fails to restore the enclosing scope's isolation level when this nested scope exits, the failure
+     * propagates (an SQL error as an {@link UncheckedSQLException}, a runtime exception or an error as it is) and this scope
+     * stays open, so its {@link #rollbackIfNotCommitted()} can complete it.</p>
      *
-     * <p>For a transaction participating in a Spring-managed transaction (see the class documentation), the outermost commit
-     * issues no database {@code COMMIT}: it completes the scope (status {@link Status#COMMITTED}) and releases the connection
-     * to Spring, which commits the work when its transaction completes. A participating transaction marked rollback-only
-     * marks the Spring transaction rollback-only instead (if that mark throws, see {@link #rollbackIfNotCommitted()}).</p>
+     * <p>When the outermost scope actually commits, the status becomes {@link Status#COMMITTED} on success. On failure the
+     * transaction is rolled back automatically, leaving the status {@link Status#ROLLED_BACK} (or
+     * {@link Status#FAILED_ROLLBACK} if that rollback also fails). Then the connection's original auto-commit mode and
+     * isolation level are restored and the connection is released (after a failed rollback it is aborted and released). For a
+     * transaction participating in a Spring-managed transaction, the outermost commit issues no database {@code COMMIT}: it
+     * completes the transaction and releases the connection to Spring, which commits the work when its transaction
+     * completes; a rollback-only one marks the Spring transaction rollback-only and throws {@link RollbackOnlyException}, or the
+     * failure of the mark (the status is then {@link Status#FAILED_ROLLBACK}; see {@link #rollbackIfNotCommitted()}). If the
+     * Spring transaction has completed already (the scope was left open past it), or runs its {@code afterCommit} or
+     * {@code afterCompletion} callbacks (the scope was left open into them), the commit throws {@link IllegalStateException}
+     * and the status becomes {@link Status#FAILED_COMMIT}: Spring decided the outcome of the work without it (see row 27 of
+     * the completion scenarios for what is detected).</p>
+     *
+     * <p>After a successful database commit, this library runs its actions registered to run after the commit (such as the
+     * invalidation of DAO result caches). A failing one is logged; an {@link Error} thrown by one propagates from this method,
+     * once the connection has been cleaned up, although the work has been committed (the status is {@link Status#COMMITTED}).</p>
+     *
+     * <p>A commit of a scope that has completed throws {@link IllegalStateException}. {@code commit()} may be called only once
+     * per scope, as in Spring: a repeated commit after a successful one throws too (it used to be ignored, and for a nested
+     * scope returned normally also after the transaction had rolled back the scope's work). The work of a scope that has
+     * ended otherwise can't be committed: a scope that was rolled back (by
+     * {@link #rollbackIfNotCommitted()}, {@link #close()} or {@link #rollback()}), whose commit failed (for example with
+     * {@link RollbackOnlyException}), or that an enclosing scope exited because it completed while this one was still open.
+     * The paired {@link #rollbackIfNotCommitted()} (or {@link #close()}) of a completed scope is a no-op.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
-     *     // Perform database operations
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
      *     dao.save(entity);
      *     dao.update(anotherEntity);
      *     tran.commit();
-     * } finally {
-     *     tran.rollbackIfNotCommitted();
      * }
      * }</pre>
      *
-     * @throws IllegalStateException if called from a thread other than the transaction's owner
-     *         thread, or if the outermost commit is attempted while the transaction is not in
-     *         {@link Status#ACTIVE} or {@link Status#MARKED_ROLLBACK}. If the whole transaction
-     *         has already completed (reference count already zero or below), the call is logged and ignored
-     *         rather than throwing. A repeated call from a nested scope that has already completed
-     *         is not detected: it exits the enclosing scope instead.
-     * @throws UncheckedSQLException if an SQL error occurs while restoring a nested scope's isolation level,
-     *         committing, or rolling back a rollback-only transaction. A failed database commit triggers
-     *         an automatic rollback; any rollback failure is suppressed on the commit exception.
+     * @throws IllegalStateException if called from a thread other than the transaction's owner thread, if a scope opened
+     *         inside this one was never completed, if this scope has already completed (committed, rolled back, its commit
+     *         failed, or an enclosing scope completed and exited it while it was still open), if the outermost commit of a
+     *         participating transaction marked rollback-only cannot mark the Spring transaction rollback-only (see
+     *         {@link #rollbackIfNotCommitted()}), or if the Spring-managed transaction a participating transaction participates in
+     *         has completed, or begun to complete, before its outermost commit
+     * @throws RollbackOnlyException if this is the outermost scope and the transaction was marked rollback-only, or a scope
+     *         opened inside this one was never completed: the transaction has been rolled back (a participating transaction:
+     *         the Spring-managed transaction has been marked rollback-only, so Spring rolls back the work)
+     * @throws UncheckedSQLException if an SQL error occurs while restoring the enclosing scope's isolation level (the scope
+     *         then stays open, so its {@link #rollbackIfNotCommitted()} can complete it), committing, or rolling back a
+     *         rollback-only transaction. A failed database commit triggers an automatic rollback; any rollback failure is
+     *         suppressed on the commit exception.
      */
     @Override
     public void commit() throws IllegalStateException, UncheckedSQLException {
-        commit(Fn.emptyAction());
+        _context.commit(this);
     }
 
     /**
-     * Commits the current transaction and executes the specified action after the commit.
-     * This is an internal method used for executing post-commit callbacks with nested transaction support.
+     * Rolls back this scope.
      *
-     * <p>When called on a nested transaction (reference count still greater than 0 after decrementing), this method simply decrements
-     * the reference count without actually committing. The actual commit only occurs when the
-     * outermost transaction's commit is called (reference count reaches 0).</p>
+     * <p>A nested scope's rollback marks the transaction rollback-only ({@link Status#MARKED_ROLLBACK}); the database
+     * {@code ROLLBACK} is issued when the outermost scope completes, whether it commits or rolls back. The outermost rollback
+     * sets the status to {@link Status#ROLLED_BACK} (or {@link Status#FAILED_ROLLBACK} if the rollback fails), restores the
+     * connection's original state and releases it (after a failed rollback, aborts and releases it without restoring its
+     * state). For a participating transaction, see {@link #rollbackIfNotCommitted()}.
+     * The scope is always exited, as by {@link #rollbackIfNotCommitted()}: if the enclosing scope's isolation level cannot be
+     * restored, the transaction stays marked rollback-only; an {@link SQLException} from the connection is logged, while a
+     * {@link RuntimeException} or an {@link Error} is thrown after the scope has been exited (it used to leave a nested scope
+     * open, and the transaction {@link Status#ACTIVE}, after an explicit rollback). Scopes opened inside this one that are
+     * still open are exited first; an unchecked failure while exiting them is thrown after this scope has been rolled
+     * back.</p>
      *
-     * <p>If the transaction is marked for rollback only (status {@link Status#MARKED_ROLLBACK}), it
-     * will be rolled back instead of committed, and {@code actionAfterCommit} is not run.</p>
+     * <p>A rollback of a scope that has already completed (committed, rolled back, or exited by an enclosing scope) throws
+     * {@link IllegalStateException}, as in Spring and as {@link #commit()} does (it used to be logged and ignored); the
+     * cleanup calls {@link #rollbackIfNotCommitted()} and {@link #close()} stay no-ops on a completed scope.</p>
      *
-     * <p>After a successful commit, the action runs after connection cleanup has been attempted,
-     * even if cleanup fails. An action failure is suppressed on an earlier cleanup failure.</p>
-     *
-     * @param actionAfterCommit the action to be executed after the current transaction is committed successfully in this
-     *        (outermost) scope; for a nested scope the commit is deferred to the outermost scope and this action is
-     *        <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
-     * @throws IllegalStateException if called from a thread other than the transaction's owner
-     *         thread, or if the outermost commit is attempted while the transaction is neither
-     *         {@link Status#ACTIVE} nor {@link Status#MARKED_ROLLBACK}. If the whole transaction
-     *         has already completed (reference count already zero or below), the call is logged and ignored
-     *         rather than throwing; a repeated call from an already completed nested scope exits
-     *         the enclosing scope instead.
-     * @throws IllegalArgumentException if {@code actionAfterCommit} is {@code null}
-     * @throws UncheckedSQLException if an SQL error occurs while restoring a nested scope's isolation level,
-     *         committing, or rolling back a rollback-only transaction. A failed database commit triggers
-     *         an automatic rollback; any rollback failure is suppressed on the commit exception.
-     */
-    void commit(final Runnable actionAfterCommit) throws IllegalStateException, IllegalArgumentException, UncheckedSQLException {
-        assertOwnerThread();
-        N.checkArgNotNull(actionAfterCommit, cs.actionAfterCommit);
-
-        // Record the cleanup marker only after the scope exit succeeds: decrementAndGetRef() can throw on a
-        // nested exit (isolation restore failure) and restores _refCount for a retry, which the paired
-        // rollbackIfNotCommitted() must then perform - a marker recorded for the failed exit would leak the scope.
-        final int refCount = decrementAndGetRef();
-        _pendingCleanupNoOps.merge(refCount, 1, Integer::sum);
-
-        if (refCount > 0) {
-            logger.debug("Deferred commit for nested transaction(id={}); remaining scopes={}", _timedId, refCount);
-            return;
-        } else if (refCount < 0) {
-            logger.warn("Transaction(id={}) is already: {}. Commit operation ignored", _timedId, _status);
-            return;
-        }
-
-        if (_status == Status.MARKED_ROLLBACK) {
-            logger.warn("Transaction(id={}) will be rolled back because it is marked for rollback only", _timedId);
-            executeRollback();
-            return;
-        }
-
-        if (_status != Status.ACTIVE) {
-            throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be committed"); //NOSONAR
-        }
-
-        if (_springParticipating) {
-            // The work stays in the Spring-managed transaction, which commits (or rolls back) the connection when it completes.
-            _status = Status.COMMITTED;
-
-            if (_rollbackActions != null && _rollbackActions.size() > 0) {
-                // Recorded here only when Spring's transaction synchronization was not active (a transaction manager configured
-                // with SYNCHRONIZATION_NEVER): without it, the Spring transaction's outcome can't be observed.
-                logger.warn("Discarded {} rollback action(s) of transaction(id={}): Spring transaction synchronization is not active, so they"
-                        + " can't run if the Spring-managed transaction is rolled back", _rollbackActions.size(), _timedId);
-            }
-
-            _rollbackActions = null;
-            logger.info("Completed transaction(id={}); the Spring-managed transaction it participates in decides its outcome", _timedId);
-
-            complete(actionAfterCommit, null);
-            return;
-        }
-
-        logger.info("Committing transaction(id={})", _timedId);
-
-        _status = Status.FAILED_COMMIT;
-        SQLException commitException = null;
-        Throwable commitFailure = null;
-
-        try {
-            _conn.commit();
-
-            _status = Status.COMMITTED;
-        } catch (final SQLException e) {
-            commitException = e;
-            final UncheckedSQLException failure = new UncheckedSQLException("Failed to commit transaction(id=" + _timedId + ")", e);
-            commitFailure = failure;
-            throw failure;
-        } catch (final RuntimeException | Error e) {
-            commitFailure = e;
-            throw e;
-        } finally {
-            if (_status == Status.COMMITTED) {
-                logger.info("Transaction(id={}) has been committed successfully", _timedId);
-                _rollbackActions = null;
-
-                complete(actionAfterCommit, null);
-            } else {
-                if (commitException == null) {
-                    logger.warn("Commit did not complete transaction(id={}). Automatically rolling back", _timedId);
-                } else {
-                    logger.warn(commitException, "Failed to commit transaction(id={}). Automatically rolling back", _timedId);
-                }
-
-                try {
-                    executeRollback();
-                } catch (final RuntimeException | Error rollbackEx) {
-                    if (commitFailure != null && commitFailure != rollbackEx) {
-                        commitFailure.addSuppressed(rollbackEx);
-                    }
-
-                    logger.warn(rollbackEx,
-                            "Failed to roll back transaction(id={}) after failed commit. Rollback error suppressed to preserve original commit exception.",
-                            _timedId);
-                }
-            }
-        }
-    }
-
-    /**
-     * Rolls back this transaction scope.
-     *
-     * <p>Behaviour with nested scopes: each call decrements the internal scope reference count.
-     * For non-outermost scopes the transaction is marked as {@link Status#MARKED_ROLLBACK} and
-     * the actual JDBC {@code ROLLBACK} is deferred until the outermost scope completes; the
-     * outermost scope then performs the rollback regardless of whether it was asked to commit
-     * or rollback.</p>
-     *
-     * <p>After a successful rollback the status transitions to {@link Status#ROLLED_BACK}, the
-     * connection's original auto-commit and isolation level are restored, and the connection is
-     * released back to its data source if this transaction was created with connection ownership.
-     * If the underlying {@code Connection.rollback()} fails, the status becomes
-     * {@link Status#FAILED_ROLLBACK} and an {@link UncheckedSQLException} is thrown. For a transaction participating in a
-     * Spring-managed transaction, see {@link #rollbackIfNotCommitted()}.</p>
-     *
-     * <p><b>&#9888; Warning:</b> Prefer one {@link #rollbackIfNotCommitted()} call in the matching
-     * {@code finally} block. It safely consumes the one-shot marker left by this scope's explicit
-     * commit or rollback, but extra cleanup calls are not generally idempotent for nested scopes.</p>
-     *
-     * <p>Example of preferred usage:</p>
-     * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
-     *     // Perform database operations
-     *     dao.save(entity);
-     *     tran.commit();
-     * } finally {
-     *     tran.rollbackIfNotCommitted();   // Safer than rollback()
-     * }
-     * }</pre>
-     *
-     * @throws IllegalStateException if called from a thread other than the transaction's owner
-     *         thread, or if the outermost rollback is attempted while the transaction status is
-     *         not {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK}, or
-     *         {@link Status#FAILED_COMMIT}. If the whole transaction has already completed
-     *         (reference count already zero or below), the call is logged and ignored rather than
-     *         throwing. A repeated call from a nested scope that has already completed is not
-     *         detected: it exits the enclosing scope instead.
-     * @throws UncheckedSQLException if an SQL error occurs during rollback or while restoring a nested scope's isolation level
-     * @throws RuntimeException if the outermost rollback of a transaction participating in a Spring-managed transaction cannot
-     *         mark that transaction rollback-only (an {@link Error} from the mark propagates as well); the status is then
-     *         {@link Status#FAILED_ROLLBACK}, see {@link #rollbackIfNotCommitted()}
+     * @throws IllegalStateException if called from a thread other than the transaction's owner thread, if this scope has
+     *         already completed, or if the outermost rollback of a participating transaction cannot mark the Spring
+     *         transaction rollback-only (see {@link #rollbackIfNotCommitted()}; the status is then {@link Status#FAILED_ROLLBACK})
+     * @throws UncheckedSQLException if an SQL error occurs during the outermost rollback
+     * @throws RuntimeException if marking the Spring transaction rollback-only fails with another exception (an {@link Error}
+     *         from the mark propagates as well); the status is then {@link Status#FAILED_ROLLBACK}
      * @deprecated replaced by {@link #rollbackIfNotCommitted()}
      */
     @Deprecated
     @Override
     public void rollback() throws IllegalStateException, UncheckedSQLException {
-        rollback(Fn.emptyAction());
+        _context.rollback(this);
     }
 
     /**
-     * Rolls back the current transaction and executes the specified action after the rollback.
-     * This is an internal method used for executing post-rollback callbacks with nested transaction support.
+     * Ends this scope, rolling it back unless it has completed: a no-op after {@link #commit()} or {@link #rollback()} of this
+     * scope, and on any further call. Call it from the {@code finally} block paired with the scope (or use try-with-resources:
+     * {@link #close()} does the same).
      *
-     * <p>When called on a nested transaction (reference count still greater than 0 after decrementing),
-     * this method marks the transaction for rollback ({@link Status#MARKED_ROLLBACK}). The actual rollback
-     * occurs when the outermost transaction completes (reference count reaches 0).</p>
-     *
-     * <p>The outermost action runs after rollback and connection cleanup have been attempted,
-     * even if either fails. Later failures are suppressed on the first failure.</p>
-     *
-     * @param actionAfterRollback the action to be executed after the rollback completes in this (outermost) scope; for a nested scope the rollback is deferred to the outermost scope and this action is <i>not</i> executed (the outermost scope runs its own action). Must not be {@code null}
-     * @throws IllegalStateException if called from a thread other than the transaction's owner
-     *         thread, or if the outermost rollback is attempted while the transaction status is
-     *         none of {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK}, or
-     *         {@link Status#FAILED_COMMIT}. If the whole transaction has already completed
-     *         (reference count already zero or below), the call is logged and ignored rather than throwing;
-     *         a repeated call from an already completed nested scope exits the enclosing scope instead.
-     * @throws IllegalArgumentException if {@code actionAfterRollback} is {@code null}
-     * @throws UncheckedSQLException if an SQL error occurs during rollback or while restoring a nested scope's isolation level
-     * @throws RuntimeException if the outermost rollback of a transaction participating in a Spring-managed transaction cannot
-     *         mark that transaction rollback-only (an {@link Error} from the mark propagates as well); the status is then
-     *         {@link Status#FAILED_ROLLBACK}, see {@link #rollbackIfNotCommitted()}
-     */
-    void rollback(final Runnable actionAfterRollback) throws IllegalStateException, IllegalArgumentException, UncheckedSQLException {
-        assertOwnerThread();
-        N.checkArgNotNull(actionAfterRollback, cs.actionAfterRollback);
-
-        // Mark after the scope exit succeeds — see commit(Runnable) for the failure-path reasoning.
-        final int refCount = decrementAndGetRef();
-        _pendingCleanupNoOps.merge(refCount, 1, Integer::sum);
-
-        if (refCount > 0) {
-            _status = Status.MARKED_ROLLBACK;
-            logger.warn("Marked nested transaction(id={}) for rollback; remaining scopes={}", _timedId, refCount);
-            // A rollback-only transaction can only end rolled back: undo the in-memory changes tied to its work right away.
-            runRollbackActions(null);
-            return;
-        } else if (refCount < 0) {
-            logger.warn("Transaction(id={}) is already: {}. Rollback operation ignored", _timedId, _status);
-            return;
-        }
-
-        if (!(_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK || _status == Status.FAILED_COMMIT)) {
-            throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status);
-        }
-
-        executeRollback(actionAfterRollback);
-    }
-
-    /**
-     * Rolls back the transaction if it has not been committed successfully.
-     * It rolls back when the transaction is still active, marked for rollback, or in a failed-commit state.
-     *
-     * <p><b>&#9888; Warning:</b> Call this once from the {@code finally} block paired with the current
-     * transaction scope. Repeated calls are not a general-purpose idempotent operation for nested scopes.</p>
-     *
-     * <p>This method is particularly useful in finally blocks or cleanup code
-     * where you want to ensure a transaction is not left in an active state.
-     * It will do nothing if the transaction has already been committed or rolled back.</p>
-     *
-     * <p>After an explicit {@link #commit()} or {@link #rollback()} on this scope, the next call to
-     * this method made at that scope's nesting level is a deliberate no-op: it consumes a marker left by
-     * that commit/rollback rather than decrementing the scope reference count a second time. Nested
-     * scopes opened and completed in between (for example by work done after {@code commit()}) do not
-     * consume it. This is what makes the common idiom of {@code commit()} in a {@code try} block
-     * followed by {@code rollbackIfNotCommitted()} in the {@code finally} block safe.</p>
-     *
-     * <p>For a nested (non-outermost) scope this method marks the transaction
-     * {@link Status#MARKED_ROLLBACK} and defers the actual rollback to the outermost scope. It always exits the nested scope:
-     * if the enclosing scope's isolation level cannot be restored on the connection, the transaction stays marked
-     * rollback-only, so that the outermost scope can still complete and release the connection; an {@link SQLException} from
-     * the connection is logged, while a {@link RuntimeException} or an {@link Error} is propagated after the scope has been
-     * exited and the transaction's rollback actions have run.</p>
+     * <p>A nested scope that is ended this way marks the transaction {@link Status#MARKED_ROLLBACK}; the database
+     * {@code ROLLBACK} is issued when the outermost scope completes. The scope is always exited: if the enclosing scope's
+     * isolation level cannot be restored on the connection, the transaction stays marked rollback-only; an
+     * {@link SQLException} from the connection is logged, while a {@link RuntimeException} or an {@link Error} is propagated
+     * after the scope has been exited. Scopes opened inside this one that are still open are exited first.</p>
      *
      * <p>For a transaction participating in a Spring-managed transaction, the outermost rollback issues no database
      * {@code ROLLBACK}; it marks the Spring transaction rollback-only and releases the connection to Spring. If the Spring
-     * transaction cannot be marked (the mark throws), that failure propagates, the status becomes {@link Status#FAILED_ROLLBACK}
-     * (not {@link Status#ROLLED_BACK}: Spring may still commit the work), the scope is still completed and the connection
-     * released to Spring, and the in-memory changes tied to the work (such as generated IDs written back to entities) are not
-     * undone but left to the Spring transaction's outcome. A later call of this method or of {@link #close()} is then a no-op.</p>
+     * transaction cannot be marked (no connection holder is bound to the data source any more, a JPA transaction that owns
+     * the connection refuses the mark or can no longer be identified, the completion of the Spring transaction has started so
+     * that the mark can't change its outcome any more, see {@link #commit()}, or the mark throws), the rollback fails with an
+     * {@link IllegalStateException} (or the mark's own failure), the status becomes {@link Status#FAILED_ROLLBACK} (Spring
+     * may still commit the work), and the in-memory changes tied to the work (such as generated IDs written back to
+     * entities) are not undone but left to the Spring transaction's outcome.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
      * try {
-     *     // Perform database operations
      *     dao.save(entity);
-     *     dao.update(anotherEntity);
-     *
      *     tran.commit();
      * } finally {
-     *     tran.rollbackIfNotCommitted();   // Ensures cleanup
+     *     tran.rollbackIfNotCommitted(); // no-op after the commit
      * }
      * }</pre>
      *
-     * @throws IllegalStateException if called from a thread other than the transaction's owner thread, or if
-     *         the outermost scope reaches the rollback while the status is none of {@link Status#ACTIVE},
-     *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}. A {@link Status#COMMITTED},
-     *         {@link Status#ROLLED_BACK}, or {@link Status#FAILED_ROLLBACK} transaction returns without
-     *         throwing, so that second condition is a defensive guard.
+     * @throws IllegalStateException if called from a thread other than the transaction's owner thread, or if the outermost
+     *         rollback of a participating transaction cannot mark the Spring transaction rollback-only (see above); the status
+     *         is then {@link Status#FAILED_ROLLBACK}
      * @throws UncheckedSQLException if an SQL error occurs during the outermost rollback
-     * @throws RuntimeException if the outermost rollback of a transaction participating in a Spring-managed transaction cannot
-     *         mark that transaction rollback-only (an {@link Error} from the mark propagates as well); the status is then
-     *         {@link Status#FAILED_ROLLBACK}
+     * @throws RuntimeException if marking the Spring transaction rollback-only fails with another exception (an {@link Error}
+     *         from the mark propagates as well); the status is then {@link Status#FAILED_ROLLBACK}
      */
     @Override
     public void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException {
-        assertOwnerThread();
-
-        final int currentRefCount = _refCount.get();
-
-        if (_pendingCleanupNoOps.containsKey(currentRefCount)) { // Do nothing: paired with this scope's explicit commit()/rollback().
-            _pendingCleanupNoOps.computeIfPresent(currentRefCount, (k, pending) -> pending > 1 ? pending - 1 : null);
-            return;
-        }
-
-        if (_status == Status.COMMITTED || _status == Status.ROLLED_BACK || _status == Status.FAILED_ROLLBACK) {
-            return;
-        }
-
-        // The cleanup path must always make progress: a nested exit that keeps failing to restore the isolation level would
-        // otherwise leave the scope - and with it the whole transaction, its registry entry and its connection - open forever.
-        final int refCount;
-
-        try {
-            refCount = decrementAndGetRef(true);
-        } catch (final RuntimeException | Error e) {
-            // An unchecked driver failure on the forced exit propagates only after the nested scope was exited and the
-            // transaction marked rollback-only (see decrementAndGetRef(boolean)); the owner thread was verified above, so
-            // nothing else throws there. Finish the nested cleanup as the success path below does: a rollback-only
-            // transaction can only end rolled back, so undo the in-memory changes tied to its work right away.
-            if (_status == Status.MARKED_ROLLBACK && _refCount.get() > 0) {
-                runRollbackActions(null);
-            }
-
-            throw e;
-        }
-
-        if (refCount > 0) {
-            _status = Status.MARKED_ROLLBACK;
-            logger.warn("Marked nested transaction(id={}) for rollback; remaining scopes={}", _timedId, refCount);
-            // A rollback-only transaction can only end rolled back: undo the in-memory changes tied to its work right away.
-            runRollbackActions(null);
-            return;
-        }
-
-        if (!(_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK || _status == Status.FAILED_COMMIT)) {
-            throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status + ". It cannot be rolled back");
-        }
-
-        executeRollback();
+        _context.rollbackIfNotCommitted(this);
     }
 
     /**
-     * Rolls back this transaction without running any post-rollback action.
-     *
-     * @throws UncheckedSQLException if the JDBC connection rejects the rollback
-     */
-    private void executeRollback() throws UncheckedSQLException {
-        executeRollback(Fn.emptyAction());
-    }
-
-    /**
-     * Executes the rollback operation and runs the specified action after completion.
-     * This is an internal method that performs the actual database rollback operation,
-     * resets the connection state, and executes the post-rollback callback.
-     *
-     * <p>The method sets the transaction status to {@link Status#FAILED_ROLLBACK} before attempting
-     * the rollback, and updates it to {@link Status#ROLLED_BACK} upon success. Connection state is
-     * restored only after a successful rollback; changing auto-commit or isolation after a failed
-     * rollback could commit the pending work. An owned connection is released in either case.</p>
-     *
-     * <p>The action runs after the cleanup attempt, even if rollback or cleanup fails. The first
-     * failure remains primary, with distinct later failures attached as suppressed exceptions.</p>
-     *
-     * <p>For a transaction participating in a Spring-managed transaction, the Spring transaction is marked rollback-only instead
-     * of rolling back the connection, and the status becomes {@link Status#ROLLED_BACK}. If the mark throws, the status becomes
-     * {@link Status#FAILED_ROLLBACK} and the rollback actions recorded here are not run (Spring may still commit the work); the
-     * scope is completed and the connection released to Spring either way, and the failure propagates.</p>
-     *
-     * @param actionAfterRollback the action to be executed after rollback, must not be {@code null}
-     * @throws UncheckedSQLException if the JDBC connection rejects the rollback
-     * @throws RuntimeException if the Spring-managed transaction a participating transaction takes part in cannot be marked
-     *         rollback-only (an {@link Error} from the mark propagates as well)
-     */
-    private void executeRollback(final Runnable actionAfterRollback) throws UncheckedSQLException {
-        final Status previousStatus = _status;
-
-        if (_springParticipating) {
-            // Rolling back the connection would discard the Spring transaction's work done before this scope, and Spring would
-            // then commit whatever follows. Mark the Spring transaction rollback-only instead: it rolls back when it completes.
-            logger.warn("Marking the Spring-managed transaction rollback-only for transaction(id={}, status={})", _timedId, previousStatus);
-
-            Throwable markFailure = null;
-
-            try {
-                JdbcUtil.markSpringTransactionRollbackOnly(_ds);
-            } catch (final RuntimeException | Error e) {
-                markFailure = e;
-                throw e;
-            } finally {
-                if (markFailure == null) {
-                    _status = Status.ROLLED_BACK;
-                    runRollbackActions(null);
-                } else {
-                    // The Spring transaction may not be marked, so Spring may still commit the work: the rollback did not take
-                    // effect (FAILED_ROLLBACK, not ROLLED_BACK), and the in-memory changes tied to the work (generated IDs written
-                    // back to entities) are left to the Spring transaction's outcome, as JdbcUtil does when no JPA owner could be
-                    // marked. Undone here (as before), they were lost although Spring went on to commit the rows. Actions registered
-                    // with Spring's synchronization still follow that outcome; those recorded here (synchronization not active)
-                    // can't, and are discarded. The scope is still completed below: its registry entry is already gone
-                    // (decrementAndGetRef), and the connection reference obtained from Spring must be given back either way;
-                    // rollbackIfNotCommitted()/close() then return without a retry.
-                    _status = Status.FAILED_ROLLBACK;
-                    logger.warn(markFailure, "Failed to mark the Spring-managed transaction rollback-only for transaction(id={}); it may still"
-                            + " commit the work, so the in-memory changes tied to this transaction are left to its outcome", _timedId);
-
-                    if (_rollbackActions != null && _rollbackActions.size() > 0) {
-                        logger.warn("Discarded {} rollback action(s) of transaction(id={}): Spring transaction synchronization is not active, so"
-                                + " they can't follow the Spring-managed transaction's outcome", _rollbackActions.size(), _timedId);
-                    }
-
-                    _rollbackActions = null;
-                }
-
-                complete(actionAfterRollback, markFailure);
-            }
-
-            return;
-        }
-
-        logger.info("Rolling back transaction(id={}, status={})", _timedId, previousStatus);
-
-        _status = Status.FAILED_ROLLBACK;
-        SQLException rollbackException = null;
-        Throwable rollbackFailure = null;
-
-        try {
-            _conn.rollback();
-
-            _status = Status.ROLLED_BACK;
-        } catch (final SQLException e) {
-            rollbackException = e;
-            final UncheckedSQLException sqlFailure = new UncheckedSQLException("Failed to roll back transaction(id=" + _timedId + ")", e);
-            rollbackFailure = sqlFailure;
-            throw sqlFailure;
-        } catch (final RuntimeException | Error e) {
-            rollbackFailure = e;
-            throw e;
-        } finally {
-            if (_status == Status.ROLLED_BACK) {
-                logger.info("Transaction(id={}) has been rolled back successfully", _timedId);
-            } else if (rollbackException == null) {
-                logger.warn("Failed to roll back transaction(id={})", _timedId);
-            } else {
-                logger.warn(rollbackException, "Failed to roll back transaction(id={})", _timedId);
-            }
-
-            // Also after a failed ROLLBACK: the work was never committed, so in-memory changes tied to it are undone either way.
-            runRollbackActions(rollbackFailure);
-            complete(actionAfterRollback, rollbackFailure);
-        }
-    }
-
-    /**
-     * Registers an action to run if this transaction does not end with a successful commit: when a nested scope rolls back
-     * (the transaction then is rollback-only and can only end rolled back), or when the outermost scope rolls back (including
-     * after a failed commit, a rollback-only commit, or a failed rollback). Each action runs at most once, and the actions run
-     * newest first, as an undo log. Used to undo in-memory changes tied to the transaction's work, such as generated IDs
-     * written back to entities.
-     *
-     * <p>For a transaction participating in a Spring-managed transaction, the action is registered with Spring's
-     * transaction synchronization when it is active, and runs if Spring rolls its transaction back; otherwise it runs if
-     * this transaction's outermost scope ends rolled back (marking the Spring transaction rollback-only).</p>
-     *
-     * @param action the action to run; ignored if {@code null}
-     * @throws IllegalStateException if called from a thread other than the transaction's owner thread
-     */
-    void addRollbackAction(final Runnable action) throws IllegalStateException {
-        // The log is not thread-safe and the actions run on the owner thread: bound to it like every other mutator.
-        assertOwnerThread();
-
-        if (action == null) {
-            return;
-        }
-
-        if (_springParticipating && JdbcUtil.registerSpringRollbackAction(_ds, action)) {
-            return;
-        }
-
-        if (_rollbackActions == null) {
-            _rollbackActions = new RollbackActionLog();
-        }
-
-        _rollbackActions.add(action);
-    }
-
-    /**
-     * Runs (and discards) the registered rollback actions, newest first. A failing action is logged, attached to
-     * {@code primaryFailure} if there is one, and does not stop the remaining actions or the completion of the transaction.
-     *
-     * @param primaryFailure the failure already propagating from the rollback, or {@code null}
-     */
-    private void runRollbackActions(final Throwable primaryFailure) {
-        final RollbackActionLog actions = _rollbackActions;
-        _rollbackActions = null;
-
-        if (actions == null) {
-            return;
-        }
-
-        actions.runNewestFirst(e -> {
-            if (primaryFailure != null && primaryFailure != e) {
-                primaryFailure.addSuppressed(e);
-            }
-
-            logger.warn(e, "Failed to run a rollback action of transaction(id={})", _timedId);
-        });
-    }
-
-    /**
-     * Attempts connection cleanup and then runs the completion action, preserving the first failure.
-     *
-     * @param actionAfterCompletion the non-null action to run after the cleanup attempt
-     * @param primaryFailure an already propagating failure, or {@code null} if the database operation succeeded
-     */
-    private void complete(final Runnable actionAfterCompletion, final Throwable primaryFailure) {
-        Throwable failure = primaryFailure;
-
-        try {
-            resetAndCloseConnection();
-        } catch (final RuntimeException | Error e) {
-            if (failure == null) {
-                failure = e;
-            } else if (failure != e) {
-                failure.addSuppressed(e);
-            }
-        }
-
-        try {
-            actionAfterCompletion.run();
-        } catch (final RuntimeException | Error e) {
-            if (failure == null) {
-                failure = e;
-            } else if (failure != e) {
-                failure.addSuppressed(e);
-            }
-        }
-
-        if (primaryFailure == null) {
-            if (failure instanceof RuntimeException runtimeFailure) {
-                throw runtimeFailure;
-            } else if (failure instanceof Error error) {
-                throw error;
-            }
-        }
-    }
-
-    /**
-     * Resets the connection to its original state and closes it if necessary.
-     * This is an internal method that restores the auto-commit mode and transaction isolation level
-     * to their original values before the transaction was started.
-     *
-     * <p>If the {@code closeConnection} flag was set to {@code true} during transaction
-     * creation, the connection will be released back to the data source pool.</p>
-     *
-     * <p>This method is called automatically after commit or rollback operations.</p>
-     *
-     * <p>Package-private so {@link JdbcUtil#beginTransaction} can invoke it on the failure path after a
-     * partially-constructed transaction (constructor succeeded, then {@link #incrementAndGetRef} threw), so the
-     * polluted connection is restored before being released back to the pool.</p>
-     *
-     * <p>SQL exceptions from restoring connection state are logged. Unchecked cleanup failures are
-     * propagated after the remaining cleanup steps have been attempted; subsequent failures are suppressed.</p>
-     *
-     * <p>After a failed rollback, state restoration is skipped to avoid implicitly committing pending
-     * work. An owned connection is released; a caller-owned connection remains in its current state
-     * and must be recovered or discarded by its owner.</p>
-     */
-    void resetAndCloseConnection() {
-        if (_springParticipating) {
-            // Nothing was changed on the connection, and Spring's transaction completion resets and releases it: only give back
-            // the reference obtained through Spring when this transaction began.
-            JdbcUtil.releaseSpringManagedConnection(_conn, _ds);
-            return;
-        }
-
-        if (_status == Status.FAILED_ROLLBACK) {
-            if (_closeConnection) {
-                JdbcUtil.releaseConnection(_conn, _ds);
-            }
-
-            return;
-        }
-
-        Throwable cleanupFailure = null;
-
-        // Restore both original settings even if the constructor left them unchanged: callers can modify the exposed connection.
-        try {
-            _conn.setAutoCommit(_originalAutoCommit);
-        } catch (final SQLException e) {
-            logger.warn(e, "Failed to reset autoCommit for transaction(id={}) to {}", _timedId, _originalAutoCommit);
-        } catch (final RuntimeException | Error e) {
-            cleanupFailure = e;
-        }
-
-        try {
-            _conn.setTransactionIsolation(_originalIsolationLevel);
-        } catch (final SQLException e) {
-            logger.warn(e, "Failed to reset transaction isolation for transaction(id={}) to {}", _timedId, _originalIsolationLevel);
-        } catch (final RuntimeException | Error e) {
-            if (cleanupFailure == null) {
-                cleanupFailure = e;
-            } else {
-                if (cleanupFailure != e) {
-                    cleanupFailure.addSuppressed(e);
-                }
-            }
-        }
-
-        if (_closeConnection) {
-            logger.debug("Releasing connection for transaction(id={})", _timedId);
-
-            try {
-                JdbcUtil.releaseConnection(_conn, _ds);
-            } catch (final RuntimeException | Error e) {
-                if (cleanupFailure == null) {
-                    cleanupFailure = e;
-                } else {
-                    if (cleanupFailure != e) {
-                        cleanupFailure.addSuppressed(e);
-                    }
-                }
-            }
-        }
-
-        if (cleanupFailure instanceof RuntimeException runtimeException) {
-            throw runtimeException;
-        } else if (cleanupFailure instanceof Error error) {
-            throw error;
-        }
-    }
-
-    /**
-     * Increments the reference count and updates transaction settings for nested transactions.
-     * This is an internal method used to support nested transaction operations by maintaining
-     * a reference count and stacking isolation levels.
-     *
-     * <p>For the second and deeper nested scopes, the current isolation level and forUpdateOnly flag
-     * are pushed onto a stack and restored when that scope exits. This allows nested transactions to
-     * have different isolation levels, which are restored when the nested transaction completes.</p>
-     *
-     * @param isolationLevel the isolation level for the nested transaction, must not be {@code null}
-     * @param forUpdateOnly whether this transaction level is for update operations only
-     * @return the new reference count after incrementing
-     * @throws IllegalStateException if called from a thread other than the transaction's owner thread, or if
-     *         the transaction's status is not {@link Status#ACTIVE}
-     * @throws IllegalArgumentException if {@code isolationLevel} is {@code null} or {@link IsolationLevel#NONE}
-     * @throws UncheckedSQLException if the JDBC connection rejects the isolation level this scope requests
-     *         (attempted only when the effective level differs from the one already applied); the stacks
-     *         pushed for this scope are unwound and the enclosing scope's level restored beforehand
-     */
-    @SuppressWarnings("deprecation")
-    synchronized int incrementAndGetRef(final IsolationLevel isolationLevel, final boolean forUpdateOnly)
-            throws IllegalStateException, IllegalArgumentException, UncheckedSQLException {
-        assertOwnerThread();
-
-        if (_status != Status.ACTIVE) {
-            throw new IllegalStateException("Transaction(id=" + _timedId + ") is already: " + _status);
-        }
-
-        N.checkArgNotNull(isolationLevel, cs.isolationLevel);
-        N.checkArgument(isolationLevel != IsolationLevel.NONE,
-                "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
-
-        final boolean shouldPushStacks = _refCount.get() > 0;
-        // DEFAULT means do not change the connection. In a nested scope that means inheriting
-        // the currently effective level, not replacing the in-memory value with DEFAULT. Otherwise,
-        // after a still-deeper explicit level exits, decrementAndGetRef() would interpret DEFAULT as
-        // the connection's original level and restore the wrong isolation for the active outer scope.
-        // A transaction participating in a Spring-managed transaction runs at Spring's isolation level: requests are ignored.
-        final IsolationLevel effectiveIsolationLevel = _springParticipating ? IsolationLevel.DEFAULT
-                : shouldPushStacks && isolationLevel == IsolationLevel.DEFAULT ? _isolationLevel : isolationLevel;
-
-        // Push recovery state BEFORE mutating the connection so a setTransactionIsolation failure
-        // doesn't leave the stacks/fields inconsistent with the actual connection state. Pre-fix the
-        // ordering was conn-mutate → stack-push → field-update → refcount-increment, so a throw at
-        // the conn-mutate step left _refCount and _isolationLevel reflecting the outer scope but
-        // potentially with a half-applied connection isolation.
-        if (shouldPushStacks) {
-            _isolationLevelStack.push(_isolationLevel);
-            _isForUpdateOnlyStack.push(_isForUpdateOnly);
-        }
-
-        // Skip the connection mutation when the effective level is unchanged: the constructor already
-        // applied the requested isolation for the outermost scope (where _isolationLevel equals the
-        // requested level), and a nested scope re-requesting the current level needs no JDBC call.
-        // Compare the PHYSICAL levels: an outer DEFAULT scope runs at the connection's original level,
-        // so a nested scope explicitly requesting that same level must not issue a redundant call
-        // either - some drivers reject setTransactionIsolation once transaction work has started.
-        if (_conn != null && effectiveIsolationLevel != IsolationLevel.DEFAULT
-                && toConnectionIsolationLevel(effectiveIsolationLevel) != toConnectionIsolationLevel(_isolationLevel)) {
-            try {
-                _conn.setTransactionIsolation(effectiveIsolationLevel.intValue());
-            } catch (final SQLException e) {
-                final UncheckedSQLException failure = new UncheckedSQLException(e);
-
-                // A JDBC driver is allowed to report a failure after changing connection state.
-                // Best-effort restore the isolation that belongs to the still-active outer scope.
-                try {
-                    _conn.setTransactionIsolation(toConnectionIsolationLevel(_isolationLevel));
-                } catch (final Throwable restoreException) { //NOSONAR - cleanup must not mask the primary SQL failure
-                    if (restoreException != e) {
-                        failure.addSuppressed(restoreException);
-                    }
-                }
-
-                // Pop back what we just pushed so the in-memory scope state remains intact.
-                if (shouldPushStacks) {
-                    _isolationLevelStack.pop();
-                    _isForUpdateOnlyStack.pop();
-                }
-                throw failure;
-            } catch (final RuntimeException | Error e) {
-                // JDBC implementations can throw unchecked failures after mutating their state. Restore
-                // both the physical connection and the just-pushed in-memory nesting state before the
-                // original failure escapes; any restoration failure is secondary.
-                try {
-                    _conn.setTransactionIsolation(toConnectionIsolationLevel(_isolationLevel));
-                } catch (final Throwable restoreException) { //NOSONAR
-                    if (restoreException != e) {
-                        e.addSuppressed(restoreException);
-                    }
-                }
-
-                if (shouldPushStacks) {
-                    _isolationLevelStack.pop();
-                    _isForUpdateOnlyStack.pop();
-                }
-
-                throw e;
-            }
-        }
-
-        // Entering a scope leaves _pendingCleanupNoOps untouched: an enclosing scope that already
-        // committed explicitly still owes its no-op cleanup once this scope has completed.
-        _isolationLevel = effectiveIsolationLevel;
-        _isForUpdateOnly = forUpdateOnly;
-
-        final int refCount = _refCount.incrementAndGet();
-
-        logger.debug("Entered transaction scope(id={}, isolationLevel={}, forUpdateOnly={}, refCount={})", _timedId, _isolationLevel, _isForUpdateOnly,
-                refCount);
-
-        return refCount;
-    }
-
-    /**
-     * Decrements the reference count and manages transaction cleanup for nested transactions.
-     * This is an internal method used to support nested transaction operations.
-     *
-     * <p>When the reference count reaches zero, the transaction is removed from the thread-local map
-     * and the transaction is considered complete. For counts greater than zero, the previous isolation
-     * level and for-update-only flag are restored from their stacks.</p>
-     *
-     * <p>If restoring a nested scope fails, its reference count and settings are retained for a
-     * retry. The connection's nested isolation level is restored on a best-effort basis, and any
-     * failure of that recovery is suppressed on the original failure.</p>
-     *
-     * @return the new reference count after decrementing
-     * @throws IllegalStateException if called from a thread other than the transaction's owner thread
-     * @throws UncheckedSQLException if the JDBC connection rejects restoration of the enclosing scope's isolation level
-     */
-    synchronized int decrementAndGetRef() throws IllegalStateException, UncheckedSQLException {
-        return decrementAndGetRef(false);
-    }
-
-    /**
-     * Decrements the reference count, as {@link #decrementAndGetRef()} does, optionally exiting a nested scope even when the
-     * enclosing scope's isolation level cannot be restored.
-     *
-     * @param forceExit if {@code true}, the scope is exited even when the enclosing scope's isolation level cannot be
-     *        restored, and the transaction is marked {@link Status#MARKED_ROLLBACK}: an {@link SQLException} from the
-     *        connection is logged instead of thrown, while a {@link RuntimeException} or an {@link Error} is propagated once
-     *        the exit has been recorded (as {@link #resetAndCloseConnection()} does for its cleanup)
-     * @return the new reference count after decrementing
-     * @throws IllegalStateException if called from a thread other than the transaction's owner thread
-     * @throws UncheckedSQLException if {@code forceExit} is {@code false} and the JDBC connection rejects restoration of the
-     *         enclosing scope's isolation level
-     */
-    private synchronized int decrementAndGetRef(final boolean forceExit) throws IllegalStateException, UncheckedSQLException {
-        assertOwnerThread();
-
-        final int res = _refCount.decrementAndGet();
-        Throwable forcedExitFailure = null;
-
-        if (res == 0) {
-            threadTransactionMap.computeIfPresent(_key, (k, v) -> v == this ? null : v);
-
-            logger.info("Finishing transaction scope(id={}, status={})", _timedId, _status);
-
-            if (logger.isDebugEnabled()) {
-                logger.debug("Remaining active transactions: {}", threadTransactionMap.values());
-            }
-        } else if (res > 0) {
-            // Add safety checks to prevent NoSuchElementException
-            final boolean isolationPoppedFromStack = !_isolationLevelStack.isEmpty();
-            final boolean forUpdateOnlyPoppedFromStack = !_isForUpdateOnlyStack.isEmpty();
-
-            // Capture pre-pop field values so a failed conn.setTransactionIsolation can restore
-            // BOTH the stacks AND the fields. Pre-fix the failure path only re-pushed the stack
-            // but left _isolationLevel/_isForUpdateOnly at the popped (outer) value, leaving the
-            // tx in an inconsistent state where stacks and fields disagree about which scope is
-            // current — observable via isolationLevel() and incorrect on the next nested push.
-            final IsolationLevel preIsolationLevel = _isolationLevel;
-            final boolean preIsForUpdateOnly = _isForUpdateOnly;
-
-            if (isolationPoppedFromStack) {
-                _isolationLevel = _isolationLevelStack.pop();
-            }
-            if (forUpdateOnlyPoppedFromStack) {
-                _isForUpdateOnly = _isForUpdateOnlyStack.pop();
-            }
-
-            // Restore the physical connection only when the effective isolation actually changes.
-            // Reissuing the same level is not merely a redundant round-trip: some drivers reject
-            // setTransactionIsolation once transaction work has started, even for the current value.
-            // DEFAULT resolves to the connection's original level, so DEFAULT and that explicit level are equal.
-            if (_conn != null && toConnectionIsolationLevel(_isolationLevel) != toConnectionIsolationLevel(preIsolationLevel)) {
-                try {
-                    _conn.setTransactionIsolation(toConnectionIsolationLevel(_isolationLevel));
-                } catch (final SQLException | RuntimeException | Error e) {
-                    if (forceExit) {
-                        // The cleanup path: exit the scope anyway (a retry would keep failing, e.g. on PostgreSQL, which rejects
-                        // isolation changes once the transaction has started). The enclosing scope can no longer run at its own
-                        // isolation level, so the transaction must not commit; the outermost completion rolls it back, restores
-                        // the connection's original isolation level and releases the connection.
-                        if (_status == Status.ACTIVE) {
-                            _status = Status.MARKED_ROLLBACK;
-                        }
-
-                        logger.warn(e,
-                                "Failed to restore isolation level for transaction(id={}) to {}; exited the scope and marked the transaction" + " for rollback",
-                                _timedId, _isolationLevel);
-
-                        if (!(e instanceof SQLException)) {
-                            // Only an SQLException is a cleanup failure to log and move on from. A RuntimeException or an Error
-                            // from the driver (a LinkageError, an OutOfMemoryError) used to be reduced to that WARN here, while
-                            // the retryable exit above and resetAndCloseConnection() propagate it: do the same, after the exit
-                            // has been recorded below.
-                            forcedExitFailure = e;
-                        }
-                    } else {
-                        restoreScopeAfterFailedExit(e, isolationPoppedFromStack, forUpdateOnlyPoppedFromStack, preIsolationLevel, preIsForUpdateOnly);
-                    }
-                }
-            }
-
-            logger.debug("Left nested transaction scope(id={}, isolationLevel={}, forUpdateOnly={}, refCount={})", _timedId, _isolationLevel, _isForUpdateOnly,
-                    res);
-        }
-
-        // Markers above the new count belong to scopes nested in the one just exited whose paired
-        // cleanup never ran (commit() without a finally block); they can never be consumed correctly.
-        _pendingCleanupNoOps.keySet().removeIf(pendingRefCount -> pendingRefCount > res);
-
-        if (forcedExitFailure instanceof RuntimeException runtimeException) {
-            throw runtimeException;
-        } else if (forcedExitFailure != null) {
-            throw (Error) forcedExitFailure;
-        }
-
-        return res;
-    }
-
-    /**
-     * Undoes a nested scope exit whose isolation restore failed, so the exit can be retried, and throws the failure.
-     *
-     * @param e the failure of {@code Connection.setTransactionIsolation}
-     * @param isolationPoppedFromStack whether the exit popped the isolation stack
-     * @param forUpdateOnlyPoppedFromStack whether the exit popped the for-update-only stack
-     * @param preIsolationLevel the nested scope's isolation level
-     * @param preIsForUpdateOnly the nested scope's for-update-only flag
-     */
-    private void restoreScopeAfterFailedExit(final Throwable e, final boolean isolationPoppedFromStack, final boolean forUpdateOnlyPoppedFromStack,
-            final IsolationLevel preIsolationLevel, final boolean preIsForUpdateOnly) {
-        // Capture the level we failed to restore to before resetting the field below,
-        // otherwise the log would report the (rolled-back) inner level instead of the target.
-        final IsolationLevel failedTargetIsolationLevel = _isolationLevel;
-        // Restore the stacks, the fields AND the ref count symmetrically, so the scope
-        // depth stays consistent with the per-scope state after the failed exit.
-        if (isolationPoppedFromStack) {
-            _isolationLevelStack.push(_isolationLevel);
-        }
-        if (forUpdateOnlyPoppedFromStack) {
-            _isForUpdateOnlyStack.push(_isForUpdateOnly);
-        }
-        _isolationLevel = preIsolationLevel;
-        _isForUpdateOnly = preIsForUpdateOnly;
-        _refCount.incrementAndGet();
-
-        final Throwable failure = e instanceof SQLException sqlException ? new UncheckedSQLException(sqlException) : e;
-
-        // The driver may have changed the physical isolation before reporting failure.
-        // Keep it aligned with the nested scope that remains active after this failed exit.
-        try {
-            _conn.setTransactionIsolation(toConnectionIsolationLevel(preIsolationLevel));
-        } catch (final Throwable recoveryFailure) { //NOSONAR - preserve the original scope-exit failure
-            if (recoveryFailure != failure && recoveryFailure != e) {
-                failure.addSuppressed(recoveryFailure);
-            }
-        }
-
-        logger.warn(e, "Failed to restore isolation level for transaction(id={}) to {}", _timedId, failedTargetIsolationLevel);
-
-        if (failure instanceof RuntimeException runtimeException) {
-            throw runtimeException;
-        }
-
-        throw (Error) failure;
-    }
-
-    /**
-     * Maps a scope's isolation level to the JDBC isolation constant the connection actually runs at:
-     * {@link IsolationLevel#DEFAULT} leaves the connection unchanged, so it resolves to the level
-     * captured when this transaction was created.
-     *
-     * @param isolationLevel the scope's isolation level, never {@code null}
-     * @return the JDBC {@code TRANSACTION_*} constant in effect for that scope
-     */
-    private int toConnectionIsolationLevel(final IsolationLevel isolationLevel) {
-        return isolationLevel == IsolationLevel.DEFAULT ? _originalIsolationLevel : isolationLevel.intValue();
-    }
-
-    /**
-     * Checks if this transaction is marked for update operations only.
-     * A for-update-only transaction is not enlisted for read-only ({@code SELECT}) operations;
-     * such queries execute outside the transaction.
-     *
-     * @return {@code true} if the transaction is for update only, {@code false} otherwise
-     */
-    boolean isForUpdateOnly() {
-        return _isForUpdateOnly;
-    }
-
-    /**
-     * Generates the diagnostic base ID for a transaction created by the current thread.
-     * The value is composed of the data source's identity hash code, the current thread ID, and the
-     * creator's ordinal value. It is intended for readable diagnostics; the active-transaction registry
-     * uses a collision-safe key containing the actual object references.
-     *
-     * @param ds the data source; may be {@code null} (as permitted by the constructor when {@code closeConnection} is {@code false}), in which case the identity hash code is {@code 0}.
-     * @param creator the transaction creator type, must not be {@code null}
-     * @return the diagnostic transaction identifier string, never {@code null}
-     * @throws IllegalArgumentException if {@code creator} is {@code null}
-     */
-    static String getTransactionId(final javax.sql.DataSource ds, final CreatedBy creator) throws IllegalArgumentException {
-        N.checkArgNotNull(creator, cs.creator);
-
-        return Strings.concat(System.identityHashCode(ds), "_", Thread.currentThread().threadId(), "_", creator.ordinal());
-    }
-
-    /**
-     * Retrieves the active transaction for the given data source and creator from the thread-local map.
-     * This is an internal method used to check if a transaction already exists for the current thread.
-     *
-     * @param ds the data source; may be {@code null} for a connection-owned transaction
-     * @param creator the transaction creator type, must not be {@code null}
-     * @return the active transaction for this thread, or {@code null} if none exists
-     * @throws IllegalArgumentException if {@code creator} is {@code null}
-     */
-    static SqlTransaction getTransaction(final javax.sql.DataSource ds, final CreatedBy creator) throws IllegalArgumentException {
-        N.checkArgNotNull(creator, cs.creator);
-
-        return threadTransactionMap.get(new TransactionKey(ds, Thread.currentThread(), creator));
-    }
-
-    /**
-     * Registers a transaction in the thread-local transaction map.
-     * This is an internal method used to track active transactions for the current thread.
-     *
-     * @param tran the transaction to register, must not be {@code null}
-     * @return the previously registered transaction for this thread and data source, or {@code null} if none existed
-     * @throws NullPointerException if {@code tran} is {@code null}
-     */
-    static SqlTransaction putTransaction(final SqlTransaction tran) throws NullPointerException {
-        return threadTransactionMap.put(tran._key, tran);
-    }
-
-    /**
-     * Executes the specified {@code Runnable} outside of this transaction context.
-     * This method temporarily removes the transaction from the current thread,
-     * executes the runnable, and then restores the transaction (only if it was registered
-     * on this thread and is still active or marked rollback-only when {@code cmd} completes).
-     *
-     * <p>This is useful when you need to perform operations that should not be
-     * part of the current transaction, such as logging or audit operations that
-     * should not be rolled back with the main transaction.</p>
-     *
-     * <p>For a transaction participating in a Spring-managed transaction, this library's participation in Spring
-     * transactions is also disabled while {@code cmd} runs (as by {@link JdbcUtil#runIgnoringSpringTransaction(Throwables.Runnable)}),
-     * so that its work does not run on the Spring transaction's connection either.</p>
+     * Executes {@code cmd} outside of this transaction: the transaction is unregistered from the current thread while
+     * {@code cmd} runs, so operations on the data source inside it acquire their own connections and commit independently,
+     * and it is registered again afterwards (if it is still active or marked rollback-only). This library's participation in
+     * Spring-managed transactions is also suspended for the transaction's data source while {@code cmd} runs, so those
+     * connections come neither from a Spring transaction this transaction participates in nor, while Spring's transaction
+     * synchronization is active, from Spring's binding of this transaction's own connection to the thread. Work on other
+     * data sources inside {@code cmd} still joins their Spring-managed transactions.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
-     *     // Perform transactional operations
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
      *     dao.update(entity);
-     *
-     *     // Execute non-transactional operation
-     *     tran.runOutsideTransaction(() -> {
-     *         // This code runs outside the transaction
-     *         auditLogger.log("Entity updated");
-     *     });
-     *
+     *     tran.runOutsideTransaction(() -> auditDao.insert(auditRecord)); // committed even if tran rolls back
      *     tran.commit();
-     * } finally {
-     *     tran.rollbackIfNotCommitted();
      * }
      * }</pre>
      *
      * @param <E> the exception type that may be thrown during execution
      * @param cmd the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
-     * @throws IllegalStateException if called from a thread other than the transaction's owner
-     *         thread, or if, after {@code cmd} completes normally, another transaction has been
-     *         opened on this thread for the same data source and creator and was not closed. If
-     *         {@code cmd} itself throws, the latter condition is instead attached to that
-     *         exception as a suppressed exception.
+     * @throws IllegalStateException if called from a thread other than the transaction's owner thread, or if, after
+     *         {@code cmd} completes normally, another transaction has been opened on this thread for the same data source and
+     *         was not closed: it is rolled back, as by {@link #rollbackIfNotCommitted()} of its outermost scope, and this
+     *         transaction registered again (if {@code cmd} throws, that condition is attached to its exception as a suppressed
+     *         exception)
      * @throws IllegalArgumentException if {@code cmd} is {@code null}
      * @throws E if the {@code Runnable} throws an exception
      */
     public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws IllegalStateException, IllegalArgumentException, E {
-        assertOwnerThread();
-        N.checkArgNotNull(cmd, cs.cmd);
-
-        synchronized (_outsideTxLock) { //NOSONAR
-            final boolean wasRegistered = threadTransactionMap.remove(_key, this);
-
-            Throwable throwable = null;
-
-            // A participating transaction's connection is Spring's: without also leaving Spring's transaction, cmd would still
-            // run in it.
-            final boolean leavesSpringTransaction = _springParticipating && !JdbcUtil.isSpringTransactionalNotUsed();
-
-            if (leavesSpringTransaction) {
-                JdbcUtil.doNotUseSpringTransactional(true);
-            }
-
-            try {
-                cmd.run();
-            } catch (final Throwable e) { //NOSONAR
-                throwable = e;
-                throw e;
-            } finally {
-                if (leavesSpringTransaction) {
-                    JdbcUtil.doNotUseSpringTransactional(false);
-                }
-
-                if (wasRegistered && (_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK) && threadTransactionMap.putIfAbsent(_key, this) != null) {
-                    final IllegalStateException ex = new IllegalStateException(
-                            "Another transaction is opened but not closed in 'SqlTransaction.runOutsideTransaction'."); //NOSONAR
-
-                    if (throwable != null) {
-                        throwable.addSuppressed(ex);
-                    } else {
-                        throw ex;
-                    }
-                }
-            }
-        }
+        _context.runOutsideTransaction(cmd);
     }
 
     /**
-     * Executes the specified {@code Callable} outside of this transaction context.
-     * This method temporarily removes the transaction from the current thread,
-     * executes the callable, and then restores the transaction (only if it was registered
-     * on this thread and is still active or marked rollback-only when {@code cmd} completes).
-     *
-     * <p>This is useful when you need to perform operations that should not be
-     * part of the current transaction and return a result, such as querying
-     * data that should not be affected by uncommitted changes.</p>
-     *
-     * <p>For a transaction participating in a Spring-managed transaction, this library's participation in Spring
-     * transactions is also disabled while {@code cmd} runs (as by {@link JdbcUtil#runIgnoringSpringTransaction(Throwables.Runnable)}),
-     * so that its work does not run on the Spring transaction's connection either.</p>
+     * Executes {@code cmd} outside of this transaction and returns its result; see
+     * {@link #runOutsideTransaction(Throwables.Runnable)}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
-     * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
-     * try {
-     *     // Perform transactional operations
+     * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
      *     dao.save(entity);
-     *
-     *     // Query outside transaction to see committed state
-     *     String timestamp = tran.callOutsideTransaction(() -> {
-     *         // This query runs outside the transaction
-     *         return JdbcUtil.prepareQuery(dataSource, "SELECT current_timestamp")
-     *                        .findFirst(String.class)
-     *                        .orElseNull();
-     *     });
-     *
+     *     Config committed = tran.callOutsideTransaction(() -> configDao.gett(configKey)); // reads committed state
      *     tran.commit();
-     * } finally {
-     *     tran.rollbackIfNotCommitted();
      * }
      * }</pre>
      *
@@ -1883,73 +1079,30 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @param <E> the exception type that may be thrown during execution
      * @param cmd the {@code Callable} to be executed outside of this transaction, must not be {@code null}
      * @return the result returned by the {@code Callable}
-     * @throws IllegalStateException if called from a thread other than the transaction's owner
-     *         thread, or if, after {@code cmd} completes normally, another transaction has been
-     *         opened on this thread for the same data source and creator and was not closed. If
-     *         {@code cmd} itself throws, the latter condition is instead attached to that
-     *         exception as a suppressed exception.
+     * @throws IllegalStateException see {@link #runOutsideTransaction(Throwables.Runnable)}
      * @throws IllegalArgumentException if {@code cmd} is {@code null}
      * @throws E if the {@code Callable} throws an exception
      */
     public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<? extends R, E> cmd)
             throws IllegalStateException, IllegalArgumentException, E {
-        assertOwnerThread();
-        N.checkArgNotNull(cmd, cs.cmd);
-
-        synchronized (_outsideTxLock) { //NOSONAR
-            final boolean wasRegistered = threadTransactionMap.remove(_key, this);
-
-            Throwable throwable = null;
-
-            // A participating transaction's connection is Spring's: without also leaving Spring's transaction, cmd would still
-            // run in it.
-            final boolean leavesSpringTransaction = _springParticipating && !JdbcUtil.isSpringTransactionalNotUsed();
-
-            if (leavesSpringTransaction) {
-                JdbcUtil.doNotUseSpringTransactional(true);
-            }
-
-            try {
-                return cmd.call();
-            } catch (final Throwable e) { //NOSONAR
-                throwable = e;
-                throw e;
-            } finally {
-                if (leavesSpringTransaction) {
-                    JdbcUtil.doNotUseSpringTransactional(false);
-                }
-
-                if (wasRegistered && (_status == Status.ACTIVE || _status == Status.MARKED_ROLLBACK) && threadTransactionMap.putIfAbsent(_key, this) != null) {
-                    final IllegalStateException ex = new IllegalStateException(
-                            "Another transaction is opened but not closed in 'SqlTransaction.callOutsideTransaction'."); //NOSONAR
-
-                    if (throwable != null) {
-                        throwable.addSuppressed(ex);
-                    } else {
-                        throw ex;
-                    }
-                }
-            }
-        }
+        return _context.callOutsideTransaction(cmd);
     }
 
     /**
-     * Closes this transaction by calling {@link #rollbackIfNotCommitted()}.
-     * This method is provided to support try-with-resources statements.
+     * Ends this scope by calling {@link #rollbackIfNotCommitted()}, so the scope can be used in a try-with-resources block:
+     * a no-op after {@link #commit()}, and on any further call.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
-     *     // perform operations
+     *     dao.save(entity);
      *     tran.commit();
-     * } // Automatically calls close(), which calls rollbackIfNotCommitted()
+     * } // close() rolls back if commit() was not reached
      * }</pre>
      *
-     * @throws IllegalStateException if called from a thread other than the transaction's owner thread, or if
-     *         the outermost scope reaches the rollback while the status is none of {@link Status#ACTIVE},
-     *         {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}. An already completed
-     *         transaction, and the scope that has just committed or rolled back explicitly, return without
-     *         throwing.
+     * @throws IllegalStateException if called from a thread other than the transaction's owner thread, or if the outermost
+     *         rollback of a participating transaction cannot mark the Spring transaction rollback-only (see
+     *         {@link #rollbackIfNotCommitted()})
      * @throws UncheckedSQLException if an SQL error occurs during the outermost rollback
      * @see #rollbackIfNotCommitted()
      */
@@ -1959,71 +1112,75 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     }
 
     /**
-     * Returns the hash code value for this transaction.
-     * The hash code is based on the transaction's unique timed ID.
+     * Returns the transaction this scope belongs to.
      *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * try (SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource1);
-     *         SqlTransaction tran2 = JdbcUtil.beginTransaction(dataSource2)) {
-     *     Set<SqlTransaction> transactions = new HashSet<>();
-     *     transactions.add(tran1);
-     *     transactions.add(tran2);
-     * }
-     * }</pre>
-     *
-     * @return the hash code value for this transaction
+     * @return the shared transaction state
      */
-    @Override
-    public int hashCode() {
-        return _timedId.hashCode();
+    TransactionContext context() {
+        return _context;
     }
 
     /**
-     * Indicates whether some other object is "equal to" this transaction.
-     * Two transactions are considered equal if they have the same timed ID.
+     * Returns whether this scope opened the transaction.
      *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * try (SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource)) {
-     *     SqlTransaction tran2 = tran1;
-     *     if (tran1.equals(tran2)) {
-     *         // Same transaction instance
-     *     }
-     * }
-     * }</pre>
-     *
-     * @param obj the reference object with which to compare
-     * @return {@code true} if this transaction is equal to the obj argument; {@code false} otherwise
+     * @return {@code true} for the outermost scope
      */
-    @Override
-    public boolean equals(final Object obj) {
-        return obj instanceof SqlTransaction && _timedId.equals(((SqlTransaction) obj)._timedId);
+    boolean isOutermost() {
+        return _outermost;
+    }
+
+    boolean isCompleted() {
+        return _completed;
+    }
+
+    void markCompleted() {
+        _completed = true;
+    }
+
+    boolean isCommitted() {
+        return _committed;
     }
 
     /**
-     * Returns a string representation of this transaction.
-     * The string includes the transaction's unique timed ID for logging and debugging purposes.
+     * Marks this nested scope completed by its own successful commit.
+     */
+    void markCommitted() {
+        _completed = true;
+        _committed = true;
+    }
+
+    boolean isExitedByEnclosingScope() {
+        return _exitedByEnclosingScope;
+    }
+
+    /**
+     * Marks this scope completed by an enclosing scope that completed while this one was still open.
+     */
+    void markExitedByEnclosingScope() {
+        _completed = true;
+        _exitedByEnclosingScope = true;
+    }
+
+    /**
+     * Returns a string representation of this scope, including the transaction's identifier.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
-     *     logger.debug("Transaction details: {}", tran);
-     *     // Output: SqlTransaction={id=...}
+     *     logger.debug("Transaction details: {}", tran); // SqlTransaction={id=..., outermost=true, completed=false}
      * }
      * }</pre>
      *
-     * @return a string representation of this transaction
+     * @return a string representation of this scope
      */
     @Override
     public String toString() {
-        return "SqlTransaction={id=" + _timedId + "}";
+        return "SqlTransaction={id=" + _context.id() + ", outermost=" + _outermost + ", completed=" + _completed + "}";
     }
 
     /**
      * Enumeration representing the creator of a transaction.
-     * This is used internally to track and manage transactions by their origin,
-     * allowing different transaction scopes based on how they were created.
+     * This is used internally to track and manage transactions by their origin.
      */
     enum CreatedBy {
         /**

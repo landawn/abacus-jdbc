@@ -273,6 +273,7 @@ public class CrudDaoTest extends TestBase {
     @Test
     public void testUpsert_UpdatePath_IgnoresId() throws SQLException {
         IdentifiedCrudDao dao = Mockito.mock(IdentifiedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         IdentifiedEntity entity = new IdentifiedEntity();
         entity.setId(100L);
         entity.setName("updated");
@@ -300,6 +301,7 @@ public class CrudDaoTest extends TestBase {
     @Test
     public void testUpsert_InsertPath_WhenEntityNotFound() throws SQLException {
         IdentifiedCrudDao dao = Mockito.mock(IdentifiedCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         IdentifiedEntity entity = new IdentifiedEntity();
         entity.setId(5L);
         entity.setName("new");
@@ -496,6 +498,7 @@ public class CrudDaoTest extends TestBase {
     @Test
     public void testUpsert_UpdatePath_NoIdField_CopiesAllFields() throws SQLException {
         NoIdCrudDao dao = Mockito.mock(NoIdCrudDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         NoIdEntity entity = new NoIdEntity();
         entity.setName("updated");
         NoIdEntity dbEntity = new NoIdEntity();
@@ -865,5 +868,25 @@ public class CrudDaoTest extends TestBase {
         assertThrows(IllegalArgumentException.class, () -> dao.batchUpsert(withNullLater, List.of("name"), 2));
         assertThrows(IllegalArgumentException.class, () -> dao.batchRefresh(withNullLater, 2));
         assertThrows(IllegalArgumentException.class, () -> dao.batchRefresh(withNullLater, List.of("name"), 2));
+    }
+
+    /**
+     * A data source for the DAO's {@code dataSource()}: upsert and batchUpsert ask whether a transaction is active on it (they
+     * run their lookup and writes in one scope inside a transaction, and batchUpsert of several entities outside one too), and
+     * its connections let such a scope begin and complete.
+     */
+    private static javax.sql.DataSource transactionDataSource() {
+        try {
+            final java.sql.Connection connection = Mockito.mock(java.sql.Connection.class);
+            Mockito.when(connection.getAutoCommit()).thenReturn(true);
+            Mockito.when(connection.getTransactionIsolation()).thenReturn(java.sql.Connection.TRANSACTION_READ_COMMITTED);
+
+            final javax.sql.DataSource dataSource = Mockito.mock(javax.sql.DataSource.class);
+            Mockito.when(dataSource.getConnection()).thenReturn(connection);
+
+            return dataSource;
+        } catch (final java.sql.SQLException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

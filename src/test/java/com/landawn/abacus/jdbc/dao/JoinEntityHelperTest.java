@@ -29,6 +29,7 @@ import org.mockito.Mockito;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.JoinInfo;
 import com.landawn.abacus.jdbc.SqlTransaction;
 import com.landawn.abacus.query.condition.Condition;
 import com.landawn.abacus.util.u.Optional;
@@ -292,15 +293,19 @@ public class JoinEntityHelperTest extends TestBase {
     // loadJoinEntities(entity, Collection<String> joinEntityPropNames) — loops over each name (lines 745-753).
     @Test
     public void testLoadJoinEntities_Entity_PropNames_LoopsEach() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
-        Mockito.doCallRealMethod().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
+            Mockito.doCallRealMethod().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
 
-        dao.loadJoinEntities(entity, List.of("orders", "addresses"));
+            dao.loadJoinEntities(entity, List.of("orders", "addresses"));
 
-        verify(dao).loadJoinEntities(entity, "orders");
-        verify(dao).loadJoinEntities(entity, "addresses");
+            verify(dao).loadJoinEntities(entity, "orders");
+            verify(dao).loadJoinEntities(entity, "addresses");
+        }
     }
 
     @Test
@@ -328,14 +333,18 @@ public class JoinEntityHelperTest extends TestBase {
     // loadJoinEntities(entity, propNames, executor) — uses executor and completes futures.
     @Test
     public void testLoadJoinEntities_Entity_PropNames_WithExecutor_RunsLoad() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
 
-        dao.loadJoinEntities(entity, List.of("orders", "addresses"), Runnable::run);
+            dao.loadJoinEntities(entity, List.of("orders", "addresses"), Runnable::run);
 
-        verify(dao).loadJoinEntities(entity, "orders");
-        verify(dao).loadJoinEntities(entity, "addresses");
+            verify(dao).loadJoinEntities(entity, "orders");
+            verify(dao).loadJoinEntities(entity, "addresses");
+        }
     }
 
     @Test
@@ -349,27 +358,35 @@ public class JoinEntityHelperTest extends TestBase {
 
     @Test
     public void testLoadJoinEntities_Entity_PropNames_InParallelTrue_UsesExecutor() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            when(dao.executor()).thenReturn(Runnable::run);
+            doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
 
-        dao.loadJoinEntities(entity, List.of("orders"), true);
+            dao.loadJoinEntities(entity, List.of("orders"), true);
 
-        verify(dao).executor();
+            verify(dao).executor();
+        }
     }
 
     // loadJoinEntities(entities, Collection<String> joinEntityPropNames) — loops over each name.
     @Test
     public void testLoadJoinEntities_Entities_PropNames_LoopsEach() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            List<TestEntity> entities = List.of(new TestEntity());
+            doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
-        dao.loadJoinEntities(entities, List.of("orders", "addresses"));
+            dao.loadJoinEntities(entities, List.of("orders", "addresses"));
 
-        verify(dao).loadJoinEntities(entities, "orders");
-        verify(dao).loadJoinEntities(entities, "addresses");
+            verify(dao).loadJoinEntities(entities, "orders");
+            verify(dao).loadJoinEntities(entities, "addresses");
+        }
     }
 
     @Test
@@ -393,14 +410,18 @@ public class JoinEntityHelperTest extends TestBase {
 
     @Test
     public void testLoadJoinEntities_Entities_PropNames_WithExecutor_RunsLoad() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            List<TestEntity> entities = List.of(new TestEntity());
+            doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
-        dao.loadJoinEntities(entities, List.of("orders", "addresses"), Runnable::run);
+            dao.loadJoinEntities(entities, List.of("orders", "addresses"), Runnable::run);
 
-        verify(dao).loadJoinEntities(entities, "orders");
-        verify(dao).loadJoinEntities(entities, "addresses");
+            verify(dao).loadJoinEntities(entities, "orders");
+            verify(dao).loadJoinEntities(entities, "addresses");
+        }
     }
 
     @Test
@@ -413,14 +434,18 @@ public class JoinEntityHelperTest extends TestBase {
 
     @Test
     public void testLoadJoinEntities_Entities_PropNames_InParallelTrue_UsesExecutor() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        List<TestEntity> entities = List.of(new TestEntity());
-        when(dao.executor()).thenReturn(Runnable::run);
-        doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            List<TestEntity> entities = List.of(new TestEntity());
+            when(dao.executor()).thenReturn(Runnable::run);
+            doNothing().when(dao).loadJoinEntities(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
-        dao.loadJoinEntities(entities, List.of("orders"), true);
+            dao.loadJoinEntities(entities, List.of("orders"), true);
 
-        verify(dao).executor();
+            verify(dao).executor();
+        }
     }
 
     // loadAllJoinEntities(entity, boolean) — both true/false branches.
@@ -473,90 +498,117 @@ public class JoinEntityHelperTest extends TestBase {
     // loadJoinEntitiesIfAbsent variants.
     @Test
     public void testloadJoinEntitiesIfAbsent_Entity_PropNames_LoopsEach() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(eq(entity), ArgumentMatchers.anyString());
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            doNothing().when(dao).loadJoinEntitiesIfAbsent(eq(entity), ArgumentMatchers.anyString());
 
-        dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"));
+            dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"));
 
-        verify(dao).loadJoinEntitiesIfAbsent(entity, "orders");
-        verify(dao).loadJoinEntitiesIfAbsent(entity, "addresses");
+            verify(dao).loadJoinEntitiesIfAbsent(entity, "orders");
+            verify(dao).loadJoinEntitiesIfAbsent(entity, "addresses");
+        }
     }
 
     @Test
     public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_RechecksBeforeLoading() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        java.util.concurrent.Executor executor = command -> {
-            entity.setOrders("already-loaded");
-            command.run();
-        };
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            // Outside a transaction on the DAO's data source, the tasks go to the executor (inside one they run on the calling
+            // thread, in it).
+            Mockito.doReturn(Mockito.mock(javax.sql.DataSource.class)).when(dao).dataSource();
+            TestEntity entity = new TestEntity();
+            java.util.concurrent.Executor executor = command -> {
+                entity.setOrders("already-loaded");
+                command.run();
+            };
 
-        Mockito.doAnswer(invocation -> {
-            entity.setOrders("loaded-by-dao");
-            return null;
-        }).when(dao).loadJoinEntities(entity, "orders");
+            Mockito.doAnswer(invocation -> {
+                entity.setOrders("loaded-by-dao");
+                return null;
+            }).when(dao).loadJoinEntities(entity, "orders");
 
-        dao.loadJoinEntitiesIfAbsent(entity, List.of("orders"), executor);
+            dao.loadJoinEntitiesIfAbsent(entity, List.of("orders"), executor);
 
-        assertEquals("already-loaded", entity.getOrders());
-        verify(dao, Mockito.never()).loadJoinEntities(entity, "orders");
+            assertEquals("already-loaded", entity.getOrders());
+            verify(dao, Mockito.never()).loadJoinEntities(entity, "orders");
+        }
     }
 
     @Test
     public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_InvalidNameRejectedBeforeAnyTaskSubmitted() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        List<Runnable> submitted = new ArrayList<>();
-        Executor executor = submitted::add;
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            List<Runnable> submitted = new ArrayList<>();
+            Executor executor = submitted::add;
 
-        assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "noSuchProp"), executor));
-        assertTrue(submitted.isEmpty(), "no load task may be left running after the invalid name is rejected");
+            assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "noSuchProp"), executor));
+            assertTrue(submitted.isEmpty(), "no load task may be left running after the invalid name is rejected");
 
-        List<String> withNull = new ArrayList<>();
-        withNull.add("orders");
-        withNull.add(null);
+            List<String> withNull = new ArrayList<>();
+            withNull.add("orders");
+            withNull.add(null);
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entity, withNull, executor));
-        assertTrue(e.getMessage().contains("joinEntityPropName"), e.getMessage());
-        assertTrue(submitted.isEmpty(), "no load task may be left running after the null name is rejected");
-        verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.any(TestEntity.class), ArgumentMatchers.anyString());
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entity, withNull, executor));
+            assertTrue(e.getMessage().contains("joinEntityPropName"), e.getMessage());
+            assertTrue(submitted.isEmpty(), "no load task may be left running after the null name is rejected");
+            verify(dao, Mockito.never()).loadJoinEntities(ArgumentMatchers.any(TestEntity.class), ArgumentMatchers.anyString());
+        }
     }
 
     @Test
     public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_EmptyNameRejectedAndLoadedPropSkipped() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        entity.setAddresses("already-loaded");
-        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
-        List<Runnable> submitted = new ArrayList<>();
-        Executor executor = command -> {
-            submitted.add(command);
-            command.run();
-        };
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            // Outside a transaction on the DAO's data source, the tasks go to the executor (inside one they run on the calling
+            // thread, in it).
+            Mockito.doReturn(Mockito.mock(javax.sql.DataSource.class)).when(dao).dataSource();
+            TestEntity entity = new TestEntity();
+            entity.setAddresses("already-loaded");
+            doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
+            List<Runnable> submitted = new ArrayList<>();
+            Executor executor = command -> {
+                submitted.add(command);
+                command.run();
+            };
 
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", ""), executor));
-        assertTrue(e.getMessage().contains("joinEntityPropName"), e.getMessage());
-        assertTrue(submitted.isEmpty());
-        verify(dao, Mockito.never()).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
+            IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                    () -> dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", ""), executor));
+            assertTrue(e.getMessage().contains("joinEntityPropName"), e.getMessage());
+            assertTrue(submitted.isEmpty());
+            verify(dao, Mockito.never()).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
 
-        // Valid names: only the property that is still null gets a task.
-        dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"), executor);
-        assertEquals(1, submitted.size());
-        verify(dao).loadJoinEntities(entity, "orders", null);
-        verify(dao, Mockito.never()).loadJoinEntities(entity, "addresses", null);
+            // Valid names: only the property that is still null gets a task.
+            dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"), executor);
+            assertEquals(1, submitted.size());
+            verify(dao).loadJoinEntities(entity, "orders", null);
+            verify(dao, Mockito.never()).loadJoinEntities(entity, "addresses", null);
+        }
     }
 
     @Test
     public void testloadJoinEntitiesIfAbsent_Entities_PropNames_LoopsEach() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            List<TestEntity> entities = List.of(new TestEntity());
+            doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
-        dao.loadJoinEntitiesIfAbsent(entities, List.of("orders", "addresses"));
+            dao.loadJoinEntitiesIfAbsent(entities, List.of("orders", "addresses"));
 
-        verify(dao).loadJoinEntitiesIfAbsent(entities, "orders");
-        verify(dao).loadJoinEntitiesIfAbsent(entities, "addresses");
+            verify(dao).loadJoinEntitiesIfAbsent(entities, "orders");
+            verify(dao).loadJoinEntitiesIfAbsent(entities, "addresses");
+        }
     }
 
     // stream variants load joins while flattening split batches.
@@ -1044,14 +1096,18 @@ public class JoinEntityHelperTest extends TestBase {
     // loadJoinEntitiesIfAbsent(entity, Collection<String>, Executor) - non-empty
     @Test
     public void testloadJoinEntitiesIfAbsent_Entity_PropNames_WithExecutor_RunsLoad() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString(), isNull());
 
-        dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"), Runnable::run);
+            dao.loadJoinEntitiesIfAbsent(entity, List.of("orders", "addresses"), Runnable::run);
 
-        verify(dao).loadJoinEntities(entity, "orders", null);
-        verify(dao).loadJoinEntities(entity, "addresses", null);
+            verify(dao).loadJoinEntities(entity, "orders", null);
+            verify(dao).loadJoinEntities(entity, "addresses", null);
+        }
     }
 
     // edge: loadJoinEntitiesIfAbsent(entity, Collection<String>, Executor) - empty propNames
@@ -1094,14 +1150,18 @@ public class JoinEntityHelperTest extends TestBase {
     // loadJoinEntitiesIfAbsent(entities, Collection<String>, Executor) - non-empty
     @Test
     public void testloadJoinEntitiesIfAbsent_Entities_PropNames_WithExecutor_RunsLoad() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        List<TestEntity> entities = List.of(new TestEntity());
-        doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            List<TestEntity> entities = List.of(new TestEntity());
+            doNothing().when(dao).loadJoinEntitiesIfAbsent(ArgumentMatchers.same(entities), ArgumentMatchers.anyString());
 
-        dao.loadJoinEntitiesIfAbsent(entities, List.of("orders", "addresses"), Runnable::run);
+            dao.loadJoinEntitiesIfAbsent(entities, List.of("orders", "addresses"), Runnable::run);
 
-        verify(dao).loadJoinEntitiesIfAbsent(entities, "orders");
-        verify(dao).loadJoinEntitiesIfAbsent(entities, "addresses");
+            verify(dao).loadJoinEntitiesIfAbsent(entities, "orders");
+            verify(dao).loadJoinEntitiesIfAbsent(entities, "addresses");
+        }
     }
 
     // edge: loadJoinEntitiesIfAbsent(entities, Collection<String>, Executor) - both empty
@@ -1264,14 +1324,18 @@ public class JoinEntityHelperTest extends TestBase {
     // deleteJoinEntities(entity, Collection<String>, Executor)
     @Test
     public void testDeleteJoinEntities_Entity_PropNames_WithExecutor() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        doReturn(2).when(dao).deleteJoinEntities(ArgumentMatchers.eq(entity), ArgumentMatchers.anyString());
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            doReturn(2).when(dao).deleteJoinEntities(ArgumentMatchers.eq(entity), ArgumentMatchers.anyString());
 
-        int result = dao.deleteJoinEntities(entity, List.of("orders"), Runnable::run);
+            int result = dao.deleteJoinEntities(entity, List.of("orders"), Runnable::run);
 
-        assertEquals(2, result);
-        verify(dao).deleteJoinEntities(entity, "orders");
+            assertEquals(2, result);
+            verify(dao).deleteJoinEntities(entity, "orders");
+        }
     }
 
     // edge: deleteJoinEntities(entity, Collection<String>, Executor) - empty propNames
@@ -1317,14 +1381,18 @@ public class JoinEntityHelperTest extends TestBase {
     // deleteJoinEntities(entities, Collection<String>, Executor)
     @Test
     public void testDeleteJoinEntities_Entities_PropNames_WithExecutor() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        List<TestEntity> entities = List.of(new TestEntity());
-        doReturn(3).when(dao).deleteJoinEntities(ArgumentMatchers.eq(entities), ArgumentMatchers.anyString());
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            List<TestEntity> entities = List.of(new TestEntity());
+            doReturn(3).when(dao).deleteJoinEntities(ArgumentMatchers.eq(entities), ArgumentMatchers.anyString());
 
-        int result = dao.deleteJoinEntities(entities, List.of("orders"), Runnable::run);
+            int result = dao.deleteJoinEntities(entities, List.of("orders"), Runnable::run);
 
-        assertEquals(3, result);
-        verify(dao).deleteJoinEntities(entities, "orders");
+            assertEquals(3, result);
+            verify(dao).deleteJoinEntities(entities, "orders");
+        }
     }
 
     // edge: deleteJoinEntities(entities, Collection<String>, Executor) - both empty
@@ -1924,44 +1992,52 @@ public class JoinEntityHelperTest extends TestBase {
     // deleteJoinEntities(T, Collection<String>) - multi propName transaction path (lines 1764-1778)
     @Test
     public void testDeleteJoinEntities_Entity_PropNames_MultiProp() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        DataSource dataSource = Mockito.mock(DataSource.class);
-        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            DataSource dataSource = Mockito.mock(DataSource.class);
+            SqlTransaction tran = Mockito.mock(SqlTransaction.class);
 
-        when(dao.dataSource()).thenReturn(dataSource);
+            when(dao.dataSource()).thenReturn(dataSource);
 
-        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
-            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
-            doReturn(3).when(dao).deleteJoinEntities(entity, "orders");
-            doReturn(4).when(dao).deleteJoinEntities(entity, "addresses");
+            try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+                jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+                doReturn(3).when(dao).deleteJoinEntities(entity, "orders");
+                doReturn(4).when(dao).deleteJoinEntities(entity, "addresses");
 
-            int result = dao.deleteJoinEntities(entity, List.of("orders", "addresses"));
+                int result = dao.deleteJoinEntities(entity, List.of("orders", "addresses"));
 
-            assertEquals(7, result);
-            verify(tran).commit();
-            verify(tran).rollbackIfNotCommitted();
+                assertEquals(7, result);
+                verify(tran).commit();
+                verify(tran).rollbackIfNotCommitted();
+            }
         }
     }
 
     @Test
     public void testDeleteJoinEntities_Entity_PropNames_MultiProp_ThrowsOnOverflow() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        DataSource dataSource = Mockito.mock(DataSource.class);
-        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            DataSource dataSource = Mockito.mock(DataSource.class);
+            SqlTransaction tran = Mockito.mock(SqlTransaction.class);
 
-        when(dao.dataSource()).thenReturn(dataSource);
+            when(dao.dataSource()).thenReturn(dataSource);
 
-        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
-            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
-            doReturn(Integer.MAX_VALUE).when(dao).deleteJoinEntities(entity, "orders");
-            doReturn(1).when(dao).deleteJoinEntities(entity, "addresses");
+            try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+                jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+                doReturn(Integer.MAX_VALUE).when(dao).deleteJoinEntities(entity, "orders");
+                doReturn(1).when(dao).deleteJoinEntities(entity, "addresses");
 
-            assertThrows(ArithmeticException.class, () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
+                assertThrows(ArithmeticException.class, () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
 
-            verify(tran, Mockito.never()).commit();
-            verify(tran).rollbackIfNotCommitted();
+                verify(tran, Mockito.never()).commit();
+                verify(tran).rollbackIfNotCommitted();
+            }
         }
     }
 
@@ -2002,44 +2078,52 @@ public class JoinEntityHelperTest extends TestBase {
     // deleteJoinEntities(Collection<T>, Collection<String>) - multi propName transaction path (lines 1869-1883)
     @Test
     public void testDeleteJoinEntities_Entities_PropNames_MultiProp() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        List<TestEntity> entities = List.of(new TestEntity());
-        DataSource dataSource = Mockito.mock(DataSource.class);
-        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            List<TestEntity> entities = List.of(new TestEntity());
+            DataSource dataSource = Mockito.mock(DataSource.class);
+            SqlTransaction tran = Mockito.mock(SqlTransaction.class);
 
-        when(dao.dataSource()).thenReturn(dataSource);
+            when(dao.dataSource()).thenReturn(dataSource);
 
-        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
-            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
-            doReturn(2).when(dao).deleteJoinEntities(entities, "orders");
-            doReturn(3).when(dao).deleteJoinEntities(entities, "addresses");
+            try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+                jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+                doReturn(2).when(dao).deleteJoinEntities(entities, "orders");
+                doReturn(3).when(dao).deleteJoinEntities(entities, "addresses");
 
-            int result = dao.deleteJoinEntities(entities, List.of("orders", "addresses"));
+                int result = dao.deleteJoinEntities(entities, List.of("orders", "addresses"));
 
-            assertEquals(5, result);
-            verify(tran).commit();
-            verify(tran).rollbackIfNotCommitted();
+                assertEquals(5, result);
+                verify(tran).commit();
+                verify(tran).rollbackIfNotCommitted();
+            }
         }
     }
 
     @Test
     public void testDeleteJoinEntities_Entities_PropNames_MultiProp_ThrowsOnOverflow() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        List<TestEntity> entities = List.of(new TestEntity());
-        DataSource dataSource = Mockito.mock(DataSource.class);
-        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            List<TestEntity> entities = List.of(new TestEntity());
+            DataSource dataSource = Mockito.mock(DataSource.class);
+            SqlTransaction tran = Mockito.mock(SqlTransaction.class);
 
-        when(dao.dataSource()).thenReturn(dataSource);
+            when(dao.dataSource()).thenReturn(dataSource);
 
-        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
-            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
-            doReturn(Integer.MAX_VALUE).when(dao).deleteJoinEntities(entities, "orders");
-            doReturn(1).when(dao).deleteJoinEntities(entities, "addresses");
+            try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+                jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+                doReturn(Integer.MAX_VALUE).when(dao).deleteJoinEntities(entities, "orders");
+                doReturn(1).when(dao).deleteJoinEntities(entities, "addresses");
 
-            assertThrows(ArithmeticException.class, () -> dao.deleteJoinEntities(entities, List.of("orders", "addresses")));
+                assertThrows(ArithmeticException.class, () -> dao.deleteJoinEntities(entities, List.of("orders", "addresses")));
 
-            verify(tran, Mockito.never()).commit();
-            verify(tran).rollbackIfNotCommitted();
+                verify(tran, Mockito.never()).commit();
+                verify(tran).rollbackIfNotCommitted();
+            }
         }
     }
 
@@ -2049,47 +2133,55 @@ public class JoinEntityHelperTest extends TestBase {
     @Test
     @Tag("2025")
     public void testDeleteJoinEntities_MultiProp_PreservesPrimaryFailureWhenRollbackFails() throws SQLException {
-        TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        TestEntity entity = new TestEntity();
-        DataSource dataSource = Mockito.mock(DataSource.class);
-        SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            TestEntity entity = new TestEntity();
+            DataSource dataSource = Mockito.mock(DataSource.class);
+            SqlTransaction tran = Mockito.mock(SqlTransaction.class);
 
-        when(dao.dataSource()).thenReturn(dataSource);
+            when(dao.dataSource()).thenReturn(dataSource);
 
-        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
-            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+            try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+                jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
 
-            final SQLException primary = new SQLException("primary delete failure");
-            Mockito.doThrow(primary).when(dao).deleteJoinEntities(entity, "orders");
-            Mockito.doThrow(new UncheckedSQLException(new SQLException("rollback failed"))).when(tran).rollbackIfNotCommitted();
+                final SQLException primary = new SQLException("primary delete failure");
+                Mockito.doThrow(primary).when(dao).deleteJoinEntities(entity, "orders");
+                Mockito.doThrow(new UncheckedSQLException(new SQLException("rollback failed"))).when(tran).rollbackIfNotCommitted();
 
-            final SQLException thrown = assertThrows(SQLException.class, () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
+                final SQLException thrown = assertThrows(SQLException.class, () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
 
-            assertSame(primary, thrown, "the primary delete failure must propagate, not the rollback failure");
-            assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
+                assertSame(primary, thrown, "the primary delete failure must propagate, not the rollback failure");
+                assertEquals(1, thrown.getSuppressed().length, "the rollback failure should be attached as suppressed");
+            }
         }
     }
 
     @Test
     public void testDeleteJoinEntities_MultiProp_IgnoresSelfSuppressionFromRollback() throws SQLException {
-        final TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
-        final TestEntity entity = new TestEntity();
-        final DataSource dataSource = Mockito.mock(DataSource.class);
-        final SqlTransaction tran = Mockito.mock(SqlTransaction.class);
-        final IllegalStateException primary = new IllegalStateException("same delete and rollback failure");
+        // The overloads of several names check every name against the join metadata (JoinInfo) first; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            final TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            final TestEntity entity = new TestEntity();
+            final DataSource dataSource = Mockito.mock(DataSource.class);
+            final SqlTransaction tran = Mockito.mock(SqlTransaction.class);
+            final IllegalStateException primary = new IllegalStateException("same delete and rollback failure");
 
-        when(dao.dataSource()).thenReturn(dataSource);
-        Mockito.doThrow(primary).when(dao).deleteJoinEntities(entity, "orders");
-        Mockito.doThrow(primary).when(tran).rollbackIfNotCommitted();
+            when(dao.dataSource()).thenReturn(dataSource);
+            Mockito.doThrow(primary).when(dao).deleteJoinEntities(entity, "orders");
+            Mockito.doThrow(primary).when(tran).rollbackIfNotCommitted();
 
-        try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
-            jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
+            try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+                jdbcUtil.when(() -> JdbcUtil.beginTransaction(dataSource)).thenReturn(tran);
 
-            final IllegalStateException thrown = assertThrows(IllegalStateException.class,
-                    () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
+                final IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                        () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses")));
 
-            assertSame(primary, thrown);
-            assertEquals(0, thrown.getSuppressed().length);
+                assertSame(primary, thrown);
+                assertEquals(0, thrown.getSuppressed().length);
+            }
         }
     }
 
@@ -2212,4 +2304,73 @@ public class JoinEntityHelperTest extends TestBase {
 
         Mockito.verifyNoInteractions(cond);
     }
+
+    // Round 15 review: inside a transaction, the executor overloads ran their deletes on the calling thread as futures: a failed
+    // delete was held by its future and the others ran on, and none marked the transaction rollback-only, so a caller that caught
+    // the failure committed the other deletes. They run as the sequential overload does now: in one scope, stopping at the first
+    // failure, which marks the transaction rollback-only.
+    @SuppressWarnings("deprecation")
+    @Test
+    public void testDeleteJoinEntities_WithExecutor_InATransaction_StopsAtTheFirstFailure() throws Exception {
+        // The executor overloads check every name against the join metadata (JoinInfo) before any task runs; this mocked DAO
+        // has none, so the check is stubbed out here.
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class)) {
+            final DataSource dataSource = Mockito.mock(DataSource.class);
+            final java.sql.Connection connection = Mockito.mock(java.sql.Connection.class);
+            when(dataSource.getConnection()).thenReturn(connection);
+            when(connection.getAutoCommit()).thenReturn(true);
+
+            final TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            doReturn(dataSource).when(dao).dataSource();
+            final TestEntity entity = new TestEntity();
+            final SQLException failure = new SQLException("orders are still referenced");
+            Mockito.doThrow(failure).when(dao).deleteJoinEntities(entity, "orders");
+            final List<Runnable> submitted = new ArrayList<>();
+            // Runs what it is given, so that a delete handed to it shows (instead of waiting forever for its future).
+            final Executor executor = command -> {
+                submitted.add(command);
+                command.run();
+            };
+
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                assertSame(failure, assertThrows(SQLException.class, () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses"), executor)));
+                verify(dao, Mockito.never()).deleteJoinEntities(entity, "addresses");
+                assertTrue(submitted.isEmpty(), "no task went to the executor");
+                assertEquals(com.landawn.abacus.jdbc.Transaction.Status.MARKED_ROLLBACK, tran.status());
+
+                // The collection overload too.
+                Mockito.doThrow(failure).when(dao).deleteJoinEntities(List.of(entity), "orders");
+                assertSame(failure, assertThrows(SQLException.class, () -> dao.deleteJoinEntities(List.of(entity), List.of("orders", "addresses"), executor)));
+                verify(dao, Mockito.never()).deleteJoinEntities(List.of(entity), "addresses");
+                assertTrue(submitted.isEmpty());
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+        }
+    }
+
+    // Round 16 review (tests): when it can't be told whether the calling thread runs a transaction on the DAO's data source
+    // (JdbcUtil.isInTransaction throws, e.g. for a Spring connection holder whose ownership can't be determined), the parallel
+    // join tasks run on the calling thread: the safe choice, where they would join a transaction.
+    @Test
+    public void testParallelJoinTasks_RunOnTheCallingThreadWhenATransactionCantBeRuledOut() throws SQLException {
+        try (MockedStatic<JoinInfo> joinInfo = Mockito.mockStatic(JoinInfo.class);
+             MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
+            jdbcUtil.when(() -> JdbcUtil.isInTransaction(ArgumentMatchers.any())).thenThrow(new IllegalStateException("ownership unknown"));
+            final TestJoinDao dao = Mockito.mock(TestJoinDao.class, Mockito.CALLS_REAL_METHODS);
+            doReturn(Mockito.mock(DataSource.class)).when(dao).dataSource();
+            final TestEntity entity = new TestEntity();
+            doNothing().when(dao).loadJoinEntities(eq(entity), ArgumentMatchers.anyString());
+            final List<Runnable> submitted = new ArrayList<>();
+
+            dao.loadJoinEntities(entity, List.of("orders", "addresses"), submitted::add);
+
+            assertTrue(submitted.isEmpty(), "nothing went to the executor");
+            verify(dao).loadJoinEntities(entity, "orders");
+            verify(dao).loadJoinEntities(entity, "addresses");
+        }
+    }
+
 }

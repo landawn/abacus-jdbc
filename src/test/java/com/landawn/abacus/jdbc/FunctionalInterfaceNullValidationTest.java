@@ -245,7 +245,8 @@ public class FunctionalInterfaceNullValidationTest extends TestBase {
         when(connection.getAutoCommit()).thenReturn(true);
         when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
 
-        return new SqlTransaction(dataSource, connection, IsolationLevel.READ_COMMITTED, SqlTransaction.CreatedBy.JDBC_UTIL, false);
+        return new TransactionContext(dataSource, connection, IsolationLevel.READ_COMMITTED, SqlTransaction.CreatedBy.JDBC_UTIL, false, false)
+                .enterScope(IsolationLevel.READ_COMMITTED);
     }
 
     @FunctionalInterface

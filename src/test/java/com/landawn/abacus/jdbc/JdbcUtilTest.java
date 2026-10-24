@@ -24,7 +24,6 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 import com.landawn.abacus.query.ParsedSql;
-import com.landawn.abacus.query.SqlOperation;
 import com.landawn.abacus.util.ContinuableFuture;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.Tuple.Tuple2;
@@ -64,53 +63,6 @@ class JdbcUtilTest extends JdbcUtilTestSupport {
         assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnValue(null, "id", null)).getMessage().contains("rs"));
         assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getColumnValue(mockResultSet, 1, null)).getMessage().contains("targetClass"));
         verifyNoInteractions(mockResultSet);
-    }
-
-    @Test
-    public void testGetSqlOperation_CommonTableExpressionsUseMainOperation() {
-        assertEquals(com.landawn.abacus.query.SqlOperation.SELECT, JdbcUtil.getSqlOperation("-- route query\rSELECT * FROM account"));
-        assertEquals(com.landawn.abacus.query.SqlOperation.UPDATE,
-                JdbcUtil.getSqlOperation("/* outer /* nested */ still comment */ UPDATE account SET active = TRUE"));
-        assertEquals(com.landawn.abacus.query.SqlOperation.SELECT,
-                JdbcUtil.getSqlOperation("WITH cte AS (SELECT ')' AS marker /* ignored ) */) SELECT * FROM cte"));
-        assertEquals(com.landawn.abacus.query.SqlOperation.SELECT, JdbcUtil.getSqlOperation("WITH cte AS (SELECT $tag$)$tag$ AS marker) SELECT * FROM cte"));
-        assertEquals(com.landawn.abacus.query.SqlOperation.UPDATE,
-                JdbcUtil.getSqlOperation("WITH RECURSIVE ids AS (SELECT id FROM account), more_ids AS (SELECT id FROM ids) UPDATE account SET active = TRUE"));
-        assertEquals(com.landawn.abacus.query.SqlOperation.DELETE,
-                JdbcUtil.getSqlOperation("WITH doomed(id) AS (SELECT id FROM account) DELETE FROM account WHERE id IN (SELECT id FROM doomed)"));
-        assertEquals(com.landawn.abacus.query.SqlOperation.UNKNOWN, JdbcUtil.getSqlOperation("WITHDRAW funds"));
-    }
-
-    // getSqlOperation scans past CTE bodies; a positional parameter ($1, $2, ...) directly followed by a
-    // dollar-quoted string must not be misread as a dollar-quote opener, because tags cannot start with a digit.
-    @Test
-    public void testGetSqlOperation_WithPositionalParamBeforeDollarQuote() {
-        assertEquals(SqlOperation.UPDATE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $1$$abc$$) UPDATE t SET a = 1"));
-        assertEquals(SqlOperation.SELECT, JdbcUtil.getSqlOperation("WITH x AS (SELECT $2$$abc$$) SELECT * FROM x"));
-    }
-
-    // Dollar-quoted strings with an empty tag or a letter/underscore-led tag (digits allowed later) are still skipped.
-    @Test
-    public void testGetSqlOperation_WithDollarQuotedStrings() {
-        assertEquals(SqlOperation.UPDATE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $$abc$$) UPDATE t SET a = 1"));
-        assertEquals(SqlOperation.DELETE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $tag$abc$tag$) DELETE FROM t"));
-        assertEquals(SqlOperation.DELETE, JdbcUtil.getSqlOperation("WITH x AS (SELECT $t1$abc$t1$) DELETE FROM t"));
-    }
-
-    @Test
-    public void testGetSqlOperation_RequiresWordBoundary() throws Exception {
-        final java.lang.reflect.Method m = JdbcUtil.class.getDeclaredMethod("getSqlOperation", String.class);
-        m.setAccessible(true);
-
-        // "CREATEX foo" should NOT match CREATE — there is no word boundary after CREATE.
-        assertEquals(com.landawn.abacus.query.SqlOperation.UNKNOWN, m.invoke(null, "CREATEX foo"));
-        assertEquals(com.landawn.abacus.query.SqlOperation.UNKNOWN, m.invoke(null, "CREATE_TABLE foo"));
-
-        // But "CREATE TABLE foo (...)" should match CREATE.
-        assertEquals(com.landawn.abacus.query.SqlOperation.CREATE, m.invoke(null, "CREATE TABLE foo (id INT)"));
-
-        // Punctuation also counts as a boundary.
-        assertEquals(com.landawn.abacus.query.SqlOperation.DROP, m.invoke(null, "DROP(TABLE foo)"));
     }
 
     @Test

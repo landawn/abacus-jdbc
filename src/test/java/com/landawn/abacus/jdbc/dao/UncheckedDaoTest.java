@@ -298,6 +298,7 @@ public class UncheckedDaoTest extends TestBase {
     @Test
     public void testUpsert_Condition_InsertAndUpdatePaths() {
         TestUncheckedDao insertDao = Mockito.mock(TestUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(insertDao).dataSource();
         Condition insertCondition = Mockito.mock(Condition.class);
         TestEntity entityToInsert = new TestEntity();
         entityToInsert.setName("inserted");
@@ -309,6 +310,7 @@ public class UncheckedDaoTest extends TestBase {
         verify(insertDao).save(entityToInsert);
 
         TestUncheckedDao updateDao = Mockito.mock(TestUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(updateDao).dataSource();
         Condition updateCondition = Mockito.mock(Condition.class);
         TestEntity entityToMerge = new TestEntity();
         entityToMerge.setName("new-name");
@@ -331,6 +333,7 @@ public class UncheckedDaoTest extends TestBase {
     @Test
     public void testUpsert_Condition_IgnoresIdProperties() {
         IdentifiedUncheckedDao dao = Mockito.mock(IdentifiedUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         Condition condition = Mockito.mock(Condition.class);
         IdentifiedEntity entityToMerge = new IdentifiedEntity();
         entityToMerge.setId(99L);
@@ -359,6 +362,7 @@ public class UncheckedDaoTest extends TestBase {
     @Test
     public void testUpsert_Condition_WithIdProps_UpdatesByIdCondition() {
         IdentifiedUncheckedDao dao = Mockito.mock(IdentifiedUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
         Condition lookupCondition = Mockito.mock(Condition.class);
         IdentifiedEntity entityToMerge = new IdentifiedEntity();
         entityToMerge.setId(99L);
@@ -384,5 +388,25 @@ public class UncheckedDaoTest extends TestBase {
         String condStr = usedCond.toString();
         assertTrue(condStr.contains("id"), "Expected id-based condition but was: " + condStr);
         assertTrue(condStr.contains("1"), "Expected condition bound to db entity id (1) but was: " + condStr);
+    }
+
+    /**
+     * A data source for the DAO's {@code dataSource()}: upsert and batchUpsert ask whether a transaction is active on it (they
+     * run their lookup and writes in one scope inside a transaction, and batchUpsert of several entities outside one too), and
+     * its connections let such a scope begin and complete.
+     */
+    private static javax.sql.DataSource transactionDataSource() {
+        try {
+            final java.sql.Connection connection = Mockito.mock(java.sql.Connection.class);
+            Mockito.when(connection.getAutoCommit()).thenReturn(true);
+            Mockito.when(connection.getTransactionIsolation()).thenReturn(java.sql.Connection.TRANSACTION_READ_COMMITTED);
+
+            final javax.sql.DataSource dataSource = Mockito.mock(javax.sql.DataSource.class);
+            Mockito.when(dataSource.getConnection()).thenReturn(connection);
+
+            return dataSource;
+        } catch (final java.sql.SQLException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

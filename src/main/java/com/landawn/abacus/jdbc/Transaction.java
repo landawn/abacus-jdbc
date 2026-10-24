@@ -139,10 +139,13 @@ public interface Transaction {
      * For implementations with nested scopes, such as {@link SqlTransaction}, an inner commit
      * only completes that scope; the enclosing scope still controls the database commit.
      *
-     * <p>If the commit fails, the transaction transitions to {@link Status#FAILED_COMMIT}
+     * <p>If the commit fails, the transaction passes through {@link Status#FAILED_COMMIT}
      * and an exception is thrown. Implementations may additionally attempt an automatic
-     * rollback after a failed commit ({@link SqlTransaction} does). A transaction marked rollback-only
-     * ({@link Status#MARKED_ROLLBACK}) is rolled back instead of committed.</p>
+     * rollback after a failed commit ({@link SqlTransaction} does, so the caller sees {@link Status#ROLLED_BACK} or
+     * {@link Status#FAILED_ROLLBACK}, unless it participates in a Spring-managed transaction, where
+     * {@link Status#FAILED_COMMIT} is final). A transaction marked rollback-only
+     * ({@link Status#MARKED_ROLLBACK}) is rolled back instead of committed; {@link SqlTransaction} then throws
+     * {@link RollbackOnlyException}.</p>
      *
      * <p>A {@link SqlTransaction} that participates in a Spring-managed transaction issues no database commit:
      * the commit completes its scope, and Spring commits the work when its own transaction completes.</p>
@@ -159,8 +162,10 @@ public interface Transaction {
      * }</pre>
      *
      * @throws IllegalStateException if called from a thread other than the transaction owner, or if the transaction is not in a valid state for
-     *         committing. Note: {@link SqlTransaction} (the built-in implementation) does not throw for a transaction that has already completed — the
-     *         call is logged and ignored.
+     *         committing. Note: {@link SqlTransaction} (the built-in implementation) throws for a scope that has completed: commit() may
+     *         be called only once per scope, also after a successful one, and a scope that ended without a commit (rolled back, its commit
+     *         failed, or exited by an enclosing scope) can't commit its work; it throws {@link RollbackOnlyException} (an
+     *         {@code IllegalStateException}) when the outermost scope finds the transaction marked rollback-only and rolls it back.
      * @throws UncheckedSQLException if an SQL error occurs during commit, rollback of a rollback-only transaction, or restoration of a nested scope's
      *         isolation level
      */
@@ -183,22 +188,32 @@ public interface Transaction {
      * <pre>{@code
      * try {
      *     performRiskyOperation();
+     *
+     *     if (!isStillWanted()) {
+     *         transaction.rollback(); // only on a scope that has not completed
+     *         return;
+     *     }
+     *
      *     transaction.commit();
-     * } catch (Exception e) {
-     *     transaction.rollback();
-     *     logger.warn(e, "Transaction rolled back");
      * } finally {
+     *     // Rolls back if the work or the commit failed; a no-op after the rollback() or commit() above.
      *     transaction.rollbackIfNotCommitted();
      * }
      * }</pre>
+     *
+     * <p>Don't call it after a failed {@code commit()}: the commit completes the scope also when it fails, so
+     * {@link SqlTransaction} throws {@link IllegalStateException} there, and a {@code rollback()} in a {@code catch} block hid
+     * the commit's own failure.</p>
      *
      * <p>Note: the {@link SqlTransaction} implementation deprecates direct calls to this method
      * in favor of {@link #rollbackIfNotCommitted()}.</p>
      *
      * @throws IllegalStateException if called from a thread other than the transaction owner, or if the transaction is not in a valid state for
-     *         rollback. Note: {@link SqlTransaction} (the built-in implementation) does not throw for a transaction that has already completed — the
-     *         call is logged and ignored.
-     * @throws UncheckedSQLException if an SQL error occurs during rollback or restoration of a nested scope's isolation level
+     *         rollback. Note: {@link SqlTransaction} (the built-in implementation) throws it for a scope that has already completed,
+     *         as Spring does (it used to log and ignore the call); its {@code rollbackIfNotCommitted()} and {@code close()}
+     *         stay no-ops on a completed scope.
+     * @throws UncheckedSQLException if an SQL error occurs during the rollback (an implementation may also report a failure to restore a nested
+     *         scope's isolation level; {@link SqlTransaction} logs it, and exits the scope all the same)
      */
     void rollback() throws IllegalStateException, UncheckedSQLException;
 
@@ -206,9 +221,9 @@ public interface Transaction {
      * Rolls back the transaction if it has not been committed successfully.
      * Once the transaction has completed (committed or rolled back), further calls are no-ops;
      * a rollback is only performed while the transaction is still active, marked for rollback,
-     * or in a failed-commit state. Implementations that support nested/re-entrant scopes (such as
-     * {@link SqlTransaction}) treat each call as closing one scope — pair exactly one call with
-     * each begun scope rather than invoking it repeatedly within the same scope.
+     * or in a failed-commit state. For implementations with nested scopes, such as {@link SqlTransaction}
+     * (where every {@code beginTransaction} call returns its own scope handle), the call ends the scope it is
+     * invoked on: a no-op once that scope has committed or rolled back, and on any further call.
      *
      * <p>This method is particularly useful in finally blocks or cleanup code
      * where you want to ensure a transaction is not left in an active state.</p>
@@ -217,7 +232,9 @@ public interface Transaction {
      * <ul>
      *   <li>{@link Status#ACTIVE} - Normal rollback</li>
      *   <li>{@link Status#MARKED_ROLLBACK} - Completes the rollback</li>
-     *   <li>{@link Status#FAILED_COMMIT} - Attempts to rollback after failed commit</li>
+     *   <li>{@link Status#FAILED_COMMIT} - Attempts to rollback after failed commit (an implementation that rolls back
+     *       automatically after a failed commit, as {@link SqlTransaction} does, has completed by then: the call is a
+     *       no-op)</li>
      * </ul>
      *
      * <p><b>Usage Examples:</b></p>
@@ -233,7 +250,9 @@ public interface Transaction {
      *
      * @throws IllegalStateException if called from a thread other than the transaction owner, or if the transaction is in an unexpected status (other
      *         than {@link Status#ACTIVE}, {@link Status#MARKED_ROLLBACK}, or {@link Status#FAILED_COMMIT}) when the rollback is actually performed
-     * @throws UncheckedSQLException if an SQL error occurs during rollback or restoration of a nested scope's isolation level
+     *         ({@link SqlTransaction}: if the rollback of a transaction participating in a Spring-managed one can't mark it rollback-only)
+     * @throws UncheckedSQLException if an SQL error occurs during the rollback (an implementation may also report a failure to restore a nested
+     *         scope's isolation level; {@link SqlTransaction} logs it, and exits the scope all the same)
      */
     void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException;
 
@@ -249,11 +268,16 @@ public interface Transaction {
      * FAILED_COMMIT → ROLLED_BACK / FAILED_ROLLBACK (on automatic rollback after a failed commit)
      * </pre>
      *
-     * <p>For a {@link SqlTransaction} with nested scopes, the status changes from {@code ACTIVE} only when a nested scope
-     * rolls back ({@code MARKED_ROLLBACK}) or when the outermost scope completes. For one that participates in a
+     * <p>A {@link SqlTransaction} participating in a Spring-managed transaction ends {@code FAILED_COMMIT} for good, with no
+     * rollback, when the Spring transaction has completed before its outermost commit (see {@link #FAILED_COMMIT}).</p>
+     *
+     * <p>For a {@link SqlTransaction} with nested scopes, the status changes from {@code ACTIVE} only when the transaction is
+     * marked rollback-only ({@code MARKED_ROLLBACK}: a nested scope rolled back or was never completed, or its isolation level
+     * could not be restored) or when the outermost scope completes. For one that participates in a
      * Spring-managed transaction, {@code COMMITTED} and {@code ROLLED_BACK} describe the completion of its scope (the
-     * Spring transaction decides the outcome of the work), and {@code FAILED_ROLLBACK} means that the Spring transaction
-     * could not be marked rollback-only.</p>
+     * Spring transaction decides the outcome of the work), {@code FAILED_ROLLBACK} means that the Spring transaction
+     * could not be marked rollback-only, and {@code FAILED_COMMIT} that it had completed (or begun to complete) before the
+     * outermost commit, deciding the outcome of the work without it.</p>
      */
     enum Status {
         /**
@@ -269,7 +293,9 @@ public interface Transaction {
          * This state indicates that the transaction cannot be committed
          * and must be rolled back. For {@link SqlTransaction}, it occurs when a nested
          * scope rolls back (for example, a nested scope whose work threw an exception): the
-         * outermost scope then rolls back even if it calls {@link Transaction#commit()}.
+         * outermost scope then rolls back even if it calls {@link Transaction#commit()}, which throws
+         * {@link RollbackOnlyException}. Scopes begun meanwhile join the transaction, and their work is
+         * rolled back with it.
          */
         MARKED_ROLLBACK,
 
@@ -288,7 +314,10 @@ public interface Transaction {
          * This state indicates that an attempt to commit the transaction
          * encountered an error. The transaction may need to be rolled back
          * to clean up any partial changes; {@link SqlTransaction} rolls it back automatically,
-         * so this state is followed by {@link #ROLLED_BACK} or {@link #FAILED_ROLLBACK}.
+         * so this state is followed by {@link #ROLLED_BACK} or {@link #FAILED_ROLLBACK}. For a {@link SqlTransaction}
+         * that participates in a Spring-managed transaction, the state is final: the Spring transaction had completed (or
+         * begun to complete, in its completion callbacks) before the outermost commit, and decided the outcome of the
+         * work without it, so nothing is rolled back.
          */
         FAILED_COMMIT,
 

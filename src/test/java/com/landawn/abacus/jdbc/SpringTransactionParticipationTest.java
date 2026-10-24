@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import javax.sql.DataSource;
@@ -36,6 +37,9 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentMatchers;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
 import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DataSourceUtils;
@@ -43,6 +47,7 @@ import org.springframework.jdbc.datasource.DelegatingDataSource;
 import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.UnexpectedRollbackException;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -527,7 +532,7 @@ class SpringTransactionParticipationTest extends TestBase {
                     assertEquals(isolation, spring.getTransactionIsolation(), "the requested isolation level is ignored");
 
                     final SqlTransaction nested = JdbcUtil.beginTransaction(dataSourceA);
-                    assertSame(tran, nested);
+                    assertSame(tran.context(), nested.context());
 
                     try {
                         insertItem(dataSourceA, "inside");
@@ -627,6 +632,36 @@ class SpringTransactionParticipationTest extends TestBase {
         assertEquals(0, countItems(keeperA));
     }
 
+    // External review (tests): a batch of several parameter sets that fails in a Spring-managed transaction marks it rollback-only,
+    // also when the caller catches the failure, so Spring rolls back the work done before the batch and the batch's own
+    // statements instead of committing them.
+    @ParameterizedTest(name = "large={0}")
+    @ValueSource(booleans = { false, true })
+    void aFailingBatchInASpringTransaction_marksItRollbackOnly(final boolean large) {
+        final String sql = "INSERT INTO spring_item (id, name) VALUES (?, ?)";
+        final List<Object[]> rows = List.of(new Object[] { 100L, "a" }, new Object[] { 101L, "b" }, new Object[] { 100L, "dup" });
+
+        assertThrows(UnexpectedRollbackException.class, () -> transactionTemplate().executeWithoutResult(status -> {
+            try {
+                insertItem(dataSourceA, "before");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            assertThrows(SQLException.class, () -> {
+                if (large) {
+                    JdbcUtil.executeLargeBatchUpdate(dataSourceA, sql, rows, 2);
+                } else {
+                    JdbcUtil.executeBatchUpdate(dataSourceA, sql, rows, 2);
+                }
+            });
+
+            assertTrue(status.isRollbackOnly(), "the batch's failure marked the Spring transaction");
+        }));
+
+        assertEquals(0, countItems(keeperA), "Spring rolled back the work before the batch and the batch's first chunk");
+    }
+
     // isInTransaction applies the ownership rule (a connection bound for synchronization, or a transaction on another data source,
     // is not a transaction of this data source) and looks through TransactionAwareDataSourceProxy layers to the target's binding.
     @Test
@@ -688,6 +723,1489 @@ class SpringTransactionParticipationTest extends TestBase {
         });
 
         assertEquals(0, countItems(keeperA));
+    }
+
+    // Transaction review, High #3: work run outside the Spring transaction (DAO REQUIRES_NEW and NOT_SUPPORTED,
+    // callOutsideTransaction, callIgnoringSpringTransaction, and the instance methods of a transaction participating in it) took
+    // its connection from the TransactionAwareDataSourceProxy, which hands out the Spring transaction's own connection: a
+    // REQUIRES_NEW commit committed the Spring transaction's earlier work too, and work meant to commit on its own was rolled
+    // back with the Spring transaction. It takes a connection of the proxy's target data source now.
+    @ParameterizedTest
+    @ValueSource(strings = { "REQUIRES_NEW", "NOT_SUPPORTED", "callOutsideTransaction", "callIgnoringSpringTransaction",
+            "SqlTransaction.callOutsideTransaction", "SqlTransaction.runOutsideTransaction" })
+    void workOutsideTheSpringTransaction_behindATransactionAwareProxy_runsOnAConnectionOfItsOwn(final String route) {
+        final DataSource proxy = new TransactionAwareDataSourceProxy(dataSourceA);
+        final ItemDao dao = JdbcUtil.createDao(ItemDao.class, proxy);
+        final Throwables.Supplier<Integer, SQLException> ownWork = () -> insertItem(proxy, "own");
+
+        assertThrows(IllegalStateException.class, () -> transactionTemplate().executeWithoutResult(status -> {
+            try {
+                insertItem(proxy, "outer");
+
+                switch (route) {
+                    case "REQUIRES_NEW" -> dao.requiresNew(ownWork);
+                    case "NOT_SUPPORTED" -> dao.notSupported(ownWork);
+                    case "callOutsideTransaction" -> JdbcUtil.callOutsideTransaction(proxy, ownWork::get);
+                    case "callIgnoringSpringTransaction" -> JdbcUtil.callIgnoringSpringTransaction(ownWork::get);
+                    default -> {
+                        final SqlTransaction tran = JdbcUtil.beginTransaction(proxy); // participates in the Spring transaction
+
+                        try {
+                            if (route.equals("SqlTransaction.callOutsideTransaction")) {
+                                tran.callOutsideTransaction(ownWork::get);
+                            } else {
+                                tran.runOutsideTransaction(ownWork::get);
+                            }
+
+                            tran.commit();
+                        } finally {
+                            tran.rollbackIfNotCommitted();
+                        }
+                    }
+                }
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            throw new IllegalStateException("the Spring transaction rolls back");
+        }));
+
+        assertEquals(List.of("own"), itemNames(), "the outer work rolled back, the work outside it committed on its own");
+    }
+
+    // The instance runOutsideTransaction/callOutsideTransaction of a transaction of its own (one that does not participate in a
+    // Spring transaction) left this library's use of Spring transactions on. While Spring's transaction synchronization is
+    // active (a SUPPORTS scope, or a Spring transaction on another data source), Spring binds the transaction's connection to
+    // the thread when it is acquired, so the work meant to run outside the transaction got that connection back, ran in the
+    // transaction and rolled back with it. Spring's transactions are left now, as JdbcUtil.callOutsideTransaction does.
+    @ParameterizedTest(name = "springScope={0}, call={1}")
+    @MethodSource("synchronizedSpringScopes")
+    void outsideOfATransactionOfItsOwn_whileSpringSynchronizes_commitsOnItsOwn(final String springScope, final boolean call) {
+        final TransactionTemplate template = "SUPPORTS".equals(springScope) ? supportsTemplate(dataSourceA)
+                : new TransactionTemplate(new DataSourceTransactionManager(dataSourceB));
+
+        template.executeWithoutResult(status -> {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                // Not a participating transaction, but Spring synchronizes its connection with the thread.
+                assertSame(tran.connection(), ((ConnectionHolder) TransactionSynchronizationManager.getResource(dataSourceA)).getConnection());
+
+                insertItem(dataSourceA, "inside");
+
+                if (call) {
+                    assertEquals(42, (int) tran.callOutsideTransaction(() -> insertItem(dataSourceA, "own")));
+                } else {
+                    tran.runOutsideTransaction(() -> insertItem(dataSourceA, "own"));
+                }
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+        });
+
+        assertEquals(List.of("own"), itemNames(), "the transaction rolled back, the work outside it committed on its own");
+    }
+
+    // Transaction review, low-severity finding: a transaction released its connection according to the thread's Spring setting
+    // when it completed, not to how it had acquired it. Begun while Spring synchronized connections (a SUPPORTS scope) and
+    // completed inside runIgnoringSpringTransaction, it closed the connection Spring had bound to the thread, which Spring's
+    // synchronization still held. It is released to Spring now, as it was acquired from it.
+    @Test
+    void aTransactionCompletedWhileSpringIsIgnored_releasesItsConnectionTheWayItWasAcquired() throws SQLException {
+        final Connection[] acquired = new Connection[1];
+
+        supportsTemplate(dataSourceA).executeWithoutResult(status -> {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                acquired[0] = tran.connection();
+                assertSame(acquired[0], ((ConnectionHolder) TransactionSynchronizationManager.getResource(dataSourceA)).getConnection());
+
+                insertItem(dataSourceA, "inside");
+                JdbcUtil.runIgnoringSpringTransaction(tran::commit);
+
+                assertFalse(acquired[0].isClosed(), "Spring's synchronization still holds the connection");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+        });
+
+        assertTrue(acquired[0].isClosed(), "released by Spring's synchronization");
+        assertEquals(List.of("inside"), itemNames());
+    }
+
+    // Transaction review, finding 5: work run outside a transaction on one data source (JdbcUtil.callOutsideTransaction and
+    // runOutsideTransaction, DAO REQUIRES_NEW and NOT_SUPPORTED, SqlTransaction.callOutsideTransaction) turned this library's use
+    // of Spring transactions off for the whole thread: work there on another data source ignored that data source's Spring
+    // transaction, ran on a connection of its own and committed on its own. It is suspended for the first data source only now.
+    @ParameterizedTest
+    @ValueSource(strings = { "callOutsideTransaction", "runOutsideTransaction", "REQUIRES_NEW", "NOT_SUPPORTED", "SqlTransaction.callOutsideTransaction" })
+    void workOutsideATransactionOnOneDataSource_onAnother_joinsItsSpringTransaction(final String route) {
+        final Throwables.Supplier<Integer, SQLException> work = () -> {
+            insertItem(dataSourceA, "own");
+            return insertItem(dataSourceB, "b");
+        };
+
+        assertThrows(IllegalStateException.class, () -> new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(status -> {
+            try {
+                switch (route) {
+                    case "callOutsideTransaction" -> JdbcUtil.callOutsideTransaction(dataSourceA, work::get);
+                    case "runOutsideTransaction" -> JdbcUtil.runOutsideTransaction(dataSourceA, () -> {
+                        work.get();
+                    });
+                    case "REQUIRES_NEW" -> itemDaoA.requiresNew(work);
+                    case "NOT_SUPPORTED" -> itemDaoA.notSupported(work);
+                    default -> {
+                        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
+
+                        try {
+                            tran.callOutsideTransaction(work::get);
+                            tran.commit();
+                        } finally {
+                            tran.rollbackIfNotCommitted();
+                        }
+                    }
+                }
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            throw new IllegalStateException("the Spring transaction on data source B rolls back");
+        }));
+
+        assertEquals(List.of("own"), itemNames(), "the work on data source A committed on its own");
+        assertEquals(0, countItems(keeperB), "the work on data source B joined its Spring transaction and rolled back with it");
+    }
+
+    // Transaction review, finding 9: a JdbcUtil transaction participating in a Spring transaction took the work of a Spring
+    // scope begun inside it: work in a REQUIRES_NEW scope ran on the connection of the suspended outer transaction and rolled back
+    // with it, and the work of a NOT_SUPPORTED scope joined it too. While Spring binds another transaction to the data source, or
+    // none, the participating transaction is hidden now (a transaction begun there is one of its own), and it is joined again
+    // once Spring resumes the transaction it participates in.
+    @ParameterizedTest
+    @ValueSource(ints = { TransactionDefinition.PROPAGATION_REQUIRES_NEW, TransactionDefinition.PROPAGATION_NOT_SUPPORTED })
+    void aSpringScopeBegunInsideAParticipatingTransaction_takesItsOwnWork(final int propagation) {
+        assertThrows(IllegalStateException.class, () -> transactionTemplate().executeWithoutResult(status -> {
+            final SqlTransaction outer = JdbcUtil.beginTransaction(dataSourceA); // participates in the Spring transaction
+
+            try {
+                insertItem(dataSourceA, "outer");
+
+                final TransactionTemplate inner = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
+                inner.setPropagationBehavior(propagation);
+                inner.executeWithoutResult(innerStatus -> {
+                    assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL), "the participating transaction is hidden");
+
+                    final SqlTransaction nested = JdbcUtil.beginTransaction(dataSourceA);
+
+                    try {
+                        assertNotSame(outer.context(), nested.context());
+                        insertItem(dataSourceA, "inner");
+                        nested.commit();
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    } finally {
+                        nested.rollbackIfNotCommitted();
+                    }
+                });
+
+                // Spring has resumed the outer transaction: the participating transaction is joined again.
+                assertSame(outer.context(), TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL));
+
+                final SqlTransaction joined = JdbcUtil.beginTransaction(dataSourceA);
+                assertSame(outer.context(), joined.context());
+                insertItem(dataSourceA, "joined");
+                joined.commit();
+                outer.commit();
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            } finally {
+                outer.rollbackIfNotCommitted();
+            }
+
+            throw new IllegalStateException("the outer Spring transaction rolls back");
+        }));
+
+        assertEquals(List.of("inner"), itemNames(), "the inner work committed on its own, the outer work rolled back");
+    }
+
+    // Transaction review, finding 10: work begun from a Spring transaction's completion callbacks participated in it, though it
+    // had committed (or rolled back) by then: a failed scope's rollback-only mark had no effect, and Spring's cleanup, restoring
+    // auto-commit, committed the work. Such work runs in a transaction of its own now, on a connection of its own (Round 14: it
+    // ran on Spring's connection, see the test below). afterCompletion callbacks are always recognized; afterCommit callbacks in
+    // a Spring transaction this library already participates in.
+    @ParameterizedTest(name = "afterCommit={0}, fails={1}")
+    @MethodSource("completionCallbacks")
+    void workBegunFromASpringTransactionsCompletionCallbacks_completesOnItsOwn(final boolean afterCommit, final boolean fails) {
+        transactionTemplate().executeWithoutResult(status -> {
+            if (afterCommit) {
+                final SqlTransaction participating = JdbcUtil.beginTransaction(dataSourceA);
+                participating.commit();
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    if (afterCommit) {
+                        runCallbackWork(fails);
+                    }
+                }
+
+                @Override
+                public void afterCompletion(final int completionStatus) {
+                    if (!afterCommit) {
+                        runCallbackWork(fails);
+                    }
+                }
+            });
+        });
+
+        assertEquals(fails ? List.of() : List.of("callback"), itemNames());
+    }
+
+    private void runCallbackWork(final boolean fails) {
+        assertFalse(JdbcUtil.isInTransaction(dataSourceA), "the Spring transaction is completing");
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
+
+        try {
+            insertItem(dataSourceA, "callback");
+
+            if (!fails) {
+                tran.commit();
+            }
+        } catch (final SQLException e) {
+            throw new IllegalArgumentException(e);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // Round 14 review: Spring exposes the completion of the innermost transaction on the thread only. In the completion callbacks
+    // of a transaction that another transaction manager began inside the Spring transaction owning data source A, that one
+    // counted as completing too, and a transaction begun there took Spring's connection of A and committed it, with the work the
+    // enclosing transaction had done so far, which then could not roll back. Such a transaction runs on a connection of its own
+    // now, as REQUIRES_NEW would.
+    @ParameterizedTest(name = "afterCommit={0}")
+    @ValueSource(booleans = { false, true })
+    void workBegunFromTheCompletionCallbacksOfAnInnerTransactionOfAnotherManager_leavesTheEnclosingOneAlone(final boolean afterCommit) {
+        assertThrows(IllegalStateException.class, () -> transactionTemplate().executeWithoutResult(status -> {
+            try {
+                insertItem(dataSourceA, "outer");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(innerStatus -> {
+                if (afterCommit) {
+                    // Participating in the transaction of A registers this library's synchronization with the inner transaction.
+                    JdbcUtil.beginTransaction(dataSourceA).commit();
+                }
+
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        if (afterCommit) {
+                            runCallbackWork(false);
+                        }
+                    }
+
+                    @Override
+                    public void afterCompletion(final int completionStatus) {
+                        if (!afterCommit) {
+                            runCallbackWork(false);
+                        }
+                    }
+                });
+            });
+
+            throw new IllegalStateException("the outer Spring transaction rolls back");
+        }));
+
+        assertEquals(List.of("callback"), itemNames(), "the outer work rolled back; the callback's committed on its own");
+    }
+
+    // Round 15 review: the afterCommit callbacks of a Spring transaction were recognized only once this library had begun a scope
+    // in it. After a statement run through JdbcUtil alone, a transaction begun there joined the committed transaction, and
+    // Spring's cleanup (restoring auto-commit) committed its work although it rolled back. Taking a connection of the Spring
+    // transaction registers this library's synchronization with it now.
+    @Test
+    void aTransactionBegunInTheAfterCommitCallbacksOfATransactionUsedByPlainStatements_isOneOfItsOwn() {
+        transactionTemplate().executeWithoutResult(status -> {
+            try {
+                insertItem(dataSourceA, "work"); // a plain statement: no scope is begun
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    runCallbackWork(true); // rolls back
+                }
+            });
+        });
+
+        assertEquals(List.of("work"), itemNames(), "the callback's work rolled back");
+    }
+
+    // Round 16 review: the synchronization that sees a Spring transaction completing was registered once per connection holder,
+    // remembered as the last holder seen on the thread. A holder first seen inside another transaction manager's transaction
+    // begun in the one owning it registered the synchronization with that inner transaction only: back in the outer one, its
+    // statements found the holder seen, and a transaction begun in its afterCommit callbacks joined the committed transaction,
+    // whose cleanup then committed the work that transaction rolled back. The holders watched are kept per synchronization,
+    // and forgotten when Spring suspends, resumes or completes those synchronizations.
+    @ParameterizedTest(name = "firstSeenInAnInnerTransaction={0}")
+    @ValueSource(booleans = { false, true })
+    void aTransactionBegunInTheAfterCommitCallbacks_isOneOfItsOwn_whereverTheConnectionWasFirstTaken(final boolean firstSeenInAnInnerTransaction) {
+        transactionTemplate().executeWithoutResult(status -> {
+            try {
+                if (firstSeenInAnInnerTransaction) {
+                    new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
+                        try {
+                            assertEquals(0, JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").queryForInt().orElseThrow());
+                        } catch (final SQLException e) {
+                            throw new IllegalArgumentException(e);
+                        }
+                    });
+                }
+
+                insertItem(dataSourceA, "work"); // a plain statement: no scope is begun
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    runCallbackWork(true); // rolls back
+                }
+            });
+        });
+
+        assertEquals(List.of("work"), itemNames(), "the callback's work rolled back");
+    }
+
+    // As above, for the afterCommit callbacks of the inner transaction, which count as the completion of the transaction owning
+    // data source A (Spring exposes the innermost transaction only): a transaction begun there is one of its own, also when its
+    // connection was first taken in the outer transaction.
+    @ParameterizedTest(name = "firstSeenInTheOuterTransaction={0}")
+    @ValueSource(booleans = { false, true })
+    void aTransactionBegunInTheAfterCommitCallbacksOfAnInnerTransaction_isOneOfItsOwn_whereverTheConnectionWasFirstTaken(
+            final boolean firstSeenInTheOuterTransaction) {
+        transactionTemplate().executeWithoutResult(outer -> {
+            try {
+                if (firstSeenInTheOuterTransaction) {
+                    insertItem(dataSourceA, "outer");
+                }
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
+                try {
+                    assertNotNull(JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").queryForInt());
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                }
+
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        runCallbackWork(false); // commits
+                    }
+                });
+            });
+
+            outer.setRollbackOnly();
+        });
+
+        assertEquals(List.of("callback"), itemNames(), "committed on its own, though the outer transaction rolled back");
+    }
+
+    // Round 16 review: the Error of a rollback action that Spring's transaction synchronization ran once a participating rollback
+    // had marked the Spring transaction rollback-only was only logged, while one from an action the transaction recorded itself
+    // propagated. It propagates from the rollback as well, once the scope has completed; the other actions still run.
+    @Test
+    void anErrorFromARollbackActionRunWhenAParticipatingRollbackMarksTheSpringTransaction_propagates() {
+        final AssertionError actionError = new AssertionError("action failed");
+        final List<String> ran = new ArrayList<>();
+
+        assertThrows(UnexpectedRollbackException.class, () -> transactionTemplate().executeWithoutResult(status -> {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
+            assertTrue(tran.context().isSpringParticipating());
+            assertNotNull(JdbcUtil.registerEnclosingTransactionRollbackAction(dataSourceA, () -> () -> ran.add("older")));
+            assertNotNull(JdbcUtil.registerEnclosingTransactionRollbackAction(dataSourceA, () -> () -> {
+                throw actionError;
+            }));
+            assertEquals(0, tran.context().rollbackActionCount(), "registered with Spring's synchronization");
+
+            assertSame(actionError, assertThrows(AssertionError.class, tran::rollbackIfNotCommitted));
+            assertEquals(Transaction.Status.ROLLED_BACK, tran.status());
+            assertEquals(List.of("older"), ran);
+            assertDoesNotThrow(tran::close);
+        }));
+    }
+
+    // Round 16 review: the commit of a participating scope left open past the Spring transaction it participates in returned
+    // normally, with the status COMMITTED, while Spring had decided the outcome of its work without it (here: rolled it back).
+    // It throws, as its rollback does (see the Completion scenarios of SqlTransaction), and ends FAILED_COMMIT.
+    @Test
+    void theCommitOfAParticipatingScopeLeftOpenPastTheSpringTransaction_fails() {
+        final SqlTransaction[] leaked = new SqlTransaction[1];
+
+        transactionTemplate().executeWithoutResult(status -> {
+            leaked[0] = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                insertItem(dataSourceA, "work");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            status.setRollbackOnly();
+        });
+
+        assertEquals(0, countItems(keeperA));
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, leaked[0]::commit);
+        assertTrue(thrown.getMessage().contains("has completed"), thrown.getMessage());
+        assertEquals(Transaction.Status.FAILED_COMMIT, leaked[0].status());
+
+        // Round 17 review: a later commit() said that the transaction "is marked for rollback", which it never was.
+        final IllegalStateException again = assertThrows(IllegalStateException.class, leaked[0]::commit);
+        assertTrue(again.getMessage().contains("had completed before its commit"), again.getMessage());
+        assertFalse(again.getMessage().contains("is marked for rollback"), again.getMessage());
+        assertDoesNotThrow(leaked[0]::close);
+        assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL));
+    }
+
+    // Round 16 review: a query prepared in a participating transaction was not checked for completion at all, so it ran after the
+    // Spring transaction had completed, on the connection Spring had released by then. It is refused once the Spring
+    // transaction has completed (while it runs, also after the participating scope has, the query runs on its connection).
+    @Test
+    void aQueryPreparedInAParticipatingTransaction_isRefusedOnceTheSpringTransactionHasCompleted() throws SQLException {
+        final PreparedQuery[] query = new PreparedQuery[1];
+
+        transactionTemplate().executeWithoutResult(status -> {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                query[0] = JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").closeAfterExecution(false);
+                assertEquals(0, query[0].queryForInt().orElseThrow());
+                tran.commit();
+                assertEquals(0, query[0].queryForInt().orElseThrow(), "the Spring transaction still runs");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+        });
+
+        try {
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> query[0].queryForInt());
+            assertTrue(thrown.getMessage().contains("has completed"), thrown.getMessage());
+        } finally {
+            query[0].close();
+        }
+    }
+
+    // Round 17 review: a participating scope left open into the completion callbacks of the Spring transaction, where Spring still
+    // binds its connection (and the holder is still transaction-active), was not taken for completed: its commit() in
+    // afterCompletion returned normally, with COMMITTED, after Spring had rolled the work back; its rollback in afterCommit
+    // reported ROLLED_BACK after Spring had committed the work; and a query prepared in it ran on the connection, in a new
+    // transaction of the connection that Spring's cleanup then committed whatever its outcome. The synchronization registered
+    // when the scope began records that the completion has started.
+    @Test
+    void aParticipatingScopeLeftOpenIntoTheCompletionCallbacks_canNeitherCommitNorRollBackThere() throws SQLException {
+        final SqlTransaction[] leaked = new SqlTransaction[2];
+        final PreparedQuery[] query = new PreparedQuery[1];
+        final RuntimeException[] failures = new RuntimeException[3];
+        final Transaction.Status[] statuses = new Transaction.Status[2];
+
+        transactionTemplate().executeWithoutResult(status -> {
+            leaked[0] = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                insertItem(dataSourceA, "discarded");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(final int completionStatus) {
+                    failures[0] = thrownBy(leaked[0]::commit);
+                    statuses[0] = leaked[0].status();
+                }
+            });
+
+            status.setRollbackOnly();
+        });
+
+        assertEquals(0, countItems(keeperA), "Spring rolled the work back");
+        assertTrue(failures[0] instanceof IllegalStateException, String.valueOf(failures[0]));
+        assertTrue(failures[0].getMessage().contains("runs its completion callbacks"), failures[0].getMessage());
+        assertEquals(Transaction.Status.FAILED_COMMIT, statuses[0]);
+
+        transactionTemplate().executeWithoutResult(status -> {
+            leaked[1] = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                insertItem(dataSourceA, "committed");
+                query[0] = JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").closeAfterExecution(false);
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    failures[1] = thrownBy(() -> {
+                        try {
+                            query[0].queryForInt();
+                        } catch (final SQLException e) {
+                            throw new UncheckedSQLException(e);
+                        }
+                    });
+                    failures[2] = thrownBy(leaked[1]::rollbackIfNotCommitted);
+                    statuses[1] = leaked[1].status();
+                }
+            });
+        });
+
+        try {
+            assertEquals(1, countItems(keeperA), "Spring committed the work");
+            assertTrue(failures[1] instanceof IllegalStateException, String.valueOf(failures[1]));
+            assertTrue(failures[2] instanceof IllegalStateException, String.valueOf(failures[2]));
+            assertTrue(failures[2].getMessage().contains("runs its completion callbacks"), failures[2].getMessage());
+            assertEquals(Transaction.Status.FAILED_ROLLBACK, statuses[1]);
+            assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL));
+        } finally {
+            query[0].close();
+        }
+    }
+
+    // External review: a scope begun inside another transaction manager's transaction, participating in the enclosing one
+    // through its data source, recorded the inner transaction's synchronization, and the completion of that inner one counted as
+    // that of the enclosing one for good: once it had completed, a query prepared in the scope was refused, and a commit of the
+    // scope failed, although the enclosing transaction and its connection were still in use. The completion counts only while
+    // its callbacks run; after them, the connection holder of the transaction participated in tells.
+    @ParameterizedTest(name = "innerRollsBack={0}")
+    @ValueSource(booleans = { false, true })
+    void aScopeBegunInsideAnotherManagersTransaction_remainsUsableUntilTheTransactionItParticipatesInCompletes(final boolean innerRollsBack)
+            throws SQLException {
+        final PreparedQuery[] query = new PreparedQuery[1];
+        final SqlTransaction[] leftOpen = new SqlTransaction[1];
+
+        transactionTemplate().executeWithoutResult(outer -> {
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
+                final SqlTransaction committed = JdbcUtil.beginTransaction(dataSourceA); // participates in the outer transaction
+
+                try {
+                    insertItem(dataSourceA, "committed");
+                    query[0] = JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").closeAfterExecution(false);
+                    committed.commit();
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                } finally {
+                    committed.rollbackIfNotCommitted();
+                }
+
+                leftOpen[0] = JdbcUtil.beginTransaction(dataSourceA);
+
+                if (innerRollsBack) {
+                    inner.setRollbackOnly();
+                }
+            });
+
+            try {
+                assertEquals(1, query[0].queryForInt().orElseThrow(), "the transaction it participates in still runs");
+                insertItem(dataSourceA, "left open");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            leftOpen[0].commit();
+            assertEquals(Transaction.Status.COMMITTED, leftOpen[0].status());
+        });
+
+        try {
+            assertEquals(List.of("committed", "left open"), itemNames(), "the outer transaction committed the work");
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class, () -> query[0].queryForInt());
+            assertTrue(thrown.getMessage().contains("has completed"), thrown.getMessage());
+        } finally {
+            query[0].close();
+        }
+    }
+
+    // Round 17 review, a documented limit (see JdbcUtil.beginTransaction): Spring exposes the synchronizations of the innermost
+    // transaction on the thread only, so a transaction this library used only inside another transaction manager's transaction
+    // begun in it has none of this library's: its afterCommit callbacks are not recognized as its completion, a transaction
+    // begun there joins it, and Spring's cleanup commits that work although it was rolled back. No Spring API reaches the
+    // suspended synchronizations of the enclosing transaction. Pinned, so that a change is noticed (and the docs updated).
+    @Test
+    void aTransactionUsedOnlyInsideAnotherManagersTransaction_isNotRecognizedAsCompletingInItsAfterCommitCallbacks() {
+        final Boolean[] participated = new Boolean[1];
+
+        transactionTemplate().executeWithoutResult(outer -> {
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
+                final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA); // participates in the outer transaction
+
+                try {
+                    insertItem(dataSourceA, "outer work");
+                    tran.commit();
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+            });
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    final SqlTransaction callback = JdbcUtil.beginTransaction(dataSourceA);
+
+                    try {
+                        participated[0] = callback.context().isSpringParticipating();
+                        insertItem(dataSourceA, "callback");
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    } finally {
+                        callback.rollbackIfNotCommitted();
+                    }
+                }
+            });
+        });
+
+        assertEquals(Boolean.TRUE, participated[0], "the limit: it joined the committed transaction");
+        assertEquals(List.of("outer work", "callback"), itemNames(), "and Spring's cleanup committed the work it rolled back");
+    }
+
+    // Round 17 review: a nested runOutsideTransaction of a participating transaction (not the call that unregistered it)
+    // dropped the participating transaction it hid once the command had completed it, so the outer call registered nothing again,
+    // and later work in the enclosing Spring transaction began a transaction of its own instead of joining the open one.
+    @Test
+    void aNestedRunOutsideTransactionCompletingTheTransaction_keepsTheParticipatingTransactionItHid() {
+        transactionTemplate().executeWithoutResult(outer -> {
+            final SqlTransaction hidden = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                final TransactionTemplate requiresNew = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
+                requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                requiresNew.executeWithoutResult(inner -> {
+                    final SqlTransaction hiding = JdbcUtil.beginTransaction(dataSourceA); // participates in the inner transaction
+                    assertNotSame(hidden.context(), hiding.context());
+
+                    hiding.runOutsideTransaction(() -> hiding.runOutsideTransaction(hiding::commit));
+                    assertEquals(Transaction.Status.COMMITTED, hiding.status());
+                });
+
+                final SqlTransaction joined = JdbcUtil.beginTransaction(dataSourceA);
+
+                try {
+                    assertSame(hidden.context(), joined.context(), "the transaction it hid is registered again");
+                    joined.commit();
+                } finally {
+                    joined.rollbackIfNotCommitted();
+                }
+
+                hidden.commit();
+            } finally {
+                hidden.rollbackIfNotCommitted();
+            }
+        });
+
+        assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL));
+    }
+
+    // External review: the same with three levels and two contexts (H, P hiding H, Q hiding P): P's callOutsideTransaction,
+    // run inside Q's (where P is not registered), dropped the link to H once P had completed, so Q's re-registration reached
+    // only P, completed, and H was never found again: later work in H's Spring transaction began a transaction of its own.
+    @Test
+    void aCallOutsideTransactionNestedInAnotherContextsOne_keepsTheTransactionsHiddenBelow() {
+        final TransactionTemplate requiresNew = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
+        requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        transactionTemplate().executeWithoutResult(outer -> {
+            final SqlTransaction h = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                // P's rollback marks its Spring transaction, which then fails to commit.
+                assertThrows(UnexpectedRollbackException.class, () -> requiresNew.executeWithoutResult(middle -> {
+                    final SqlTransaction p = JdbcUtil.beginTransaction(dataSourceA);
+
+                    requiresNew.executeWithoutResult(inner -> {
+                        final SqlTransaction q = JdbcUtil.beginTransaction(dataSourceA);
+
+                        try {
+                            q.callOutsideTransaction(() -> p.callOutsideTransaction(() -> {
+                                p.rollbackIfNotCommitted();
+                                return null;
+                            }));
+                            q.commit();
+                        } finally {
+                            q.rollbackIfNotCommitted();
+                        }
+                    });
+                }));
+
+                final SqlTransaction joined = JdbcUtil.beginTransaction(dataSourceA);
+
+                try {
+                    assertSame(h.context(), joined.context(), "H is registered again and joined");
+                    joined.commit();
+                } finally {
+                    joined.rollbackIfNotCommitted();
+                }
+
+                h.commit();
+            } finally {
+                h.rollbackIfNotCommitted();
+            }
+        });
+
+        assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL));
+    }
+
+    // Round 17 review: the synchronization that sees the afterCommit callbacks of a transaction was registered for a connection
+    // holder that a transaction owns only, so every connection taken from a holder Spring bound for synchronization only (a
+    // SUPPORTS scope, or another data source's while a Spring transaction runs) looked the holder's ownership up reflectively
+    // again. It is registered for such a holder too, once per synchronization list.
+    @Test
+    void connectionsTakenInASupportsScope_registerTheSynchronizationOnce() {
+        supportsTemplate(dataSourceA).executeWithoutResult(status -> {
+            try {
+                for (int i = 0; i < 2; i++) {
+                    try (PreparedQuery query = JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item")) {
+                        assertEquals(0, query.queryForInt().orElseThrow());
+                    }
+                }
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            assertEquals(1,
+                    TransactionSynchronizationManager.getSynchronizations()
+                            .stream()
+                            .filter(synchronization -> synchronization.getClass().getSimpleName().equals("SpringRollbackActions"))
+                            .count());
+        });
+    }
+
+    // Round 17 review (tests): upsert inside a Spring-managed transaction runs its lookup and write in a scope participating in
+    // it, so a failure (here: more than one row matches) marks the Spring transaction rollback-only, also when the caller
+    // catches it; in a SUPPORTS scope (no transaction) it opens no scope, and its write commits as any single write does.
+    @Test
+    void upsert_participatesInASpringTransactionAndOpensNoScopeInASupportsScope() throws SQLException {
+        assertThrows(UnexpectedRollbackException.class, () -> transactionTemplate().executeWithoutResult(status -> {
+            try {
+                itemDaoA.insert(item(null, "dup"));
+                itemDaoA.insert(item(null, "dup"));
+
+                assertThrows(com.landawn.abacus.exception.DuplicateResultException.class,
+                        () -> itemDaoA.upsert(item(null, "dup"), com.landawn.abacus.query.Filters.eq("name", "dup")));
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+        }));
+
+        assertEquals(0, countItems(keeperA), "the Spring transaction was rolled back");
+
+        supportsTemplate(dataSourceA).executeWithoutResult(status -> {
+            try {
+                assertFalse(JdbcUtil.isInTransaction(dataSourceA));
+                assertNotNull(itemDaoA.upsert(item(null, "supports"), com.landawn.abacus.query.Filters.eq("name", "supports")));
+                assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL), "no scope was opened");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            status.setRollbackOnly(); // no transaction: nothing to roll back
+        });
+
+        assertEquals(List.of("supports"), itemNames());
+    }
+
+    private static RuntimeException thrownBy(final Runnable action) {
+        try {
+            action.run();
+            return null;
+        } catch (final RuntimeException e) {
+            return e;
+        }
+    }
+
+    // Round 15 review: inside runIgnoringSpringTransaction, an action to run after the commit of the participating transaction
+    // ran right away, before the Spring commit (and so did a DAO cache's second invalidation). It waits for the Spring commit.
+    @Test
+    void anActionToRunAfterTheCommitInsideRunIgnoringSpringTransaction_waitsForTheSpringCommit() {
+        final List<String> events = new ArrayList<>();
+
+        transactionTemplate().executeWithoutResult(status -> {
+            final SqlTransaction participating = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                JdbcUtil.runIgnoringSpringTransaction(() -> JdbcUtil.runAfterCommit(dataSourceA, null, () -> events.add("action")));
+                participating.commit();
+            } finally {
+                participating.rollbackIfNotCommitted();
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void beforeCommit(final boolean readOnly) {
+                    events.add("before the commit");
+                }
+            });
+        });
+
+        assertEquals(List.of("before the commit", "action"), events);
+    }
+
+    // Round 15 review: when Spring reports an unknown outcome (a commit failure it couldn't resolve, such as a connection lost
+    // during the commit: the work may have committed), the actions to run after the commit (DAO cache invalidations) were
+    // dropped. They run.
+    @Test
+    void anActionToRunAfterTheCommit_runsWhenSpringReportsAnUnknownOutcome() {
+        final List<String> ran = new ArrayList<>();
+        final DataSourceTransactionManager commitThenFail = new DataSourceTransactionManager(dataSourceA) {
+            @Override
+            protected void doCommit(final org.springframework.transaction.support.DefaultTransactionStatus status) {
+                super.doCommit(status);
+                throw new org.springframework.transaction.TransactionSystemException("connection lost during the commit");
+            }
+        };
+
+        assertThrows(org.springframework.transaction.TransactionSystemException.class, () -> new TransactionTemplate(commitThenFail)
+                .executeWithoutResult(status -> JdbcUtil.runAfterCommit(dataSourceA, null, () -> ran.add("action"))));
+        assertEquals(List.of("action"), ran);
+    }
+
+    // External review (P2): the documented limits of observing a Spring commit, pinned. With Spring's transaction synchronization
+    // disabled, the commit can't be observed: an action to run after it runs right away. For work on the data source of an
+    // enclosing transaction while another transaction manager's transaction runs inside it, only the inner transaction's
+    // synchronizations are visible: the action runs at the inner commit, before the enclosing one.
+    @Test
+    void actionsToRunAfterTheCommit_followTheDocumentedLimits() {
+        final List<String> events = new ArrayList<>();
+
+        unsynchronizedTemplate().executeWithoutResult(status -> {
+            JdbcUtil.runAfterCommit(dataSourceA, null, () -> events.add("unsynchronized action"));
+            events.add("end of the unsynchronized transaction");
+        });
+
+        transactionTemplate().executeWithoutResult(outer -> {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void beforeCommit(final boolean readOnly) {
+                    events.add("enclosing commit");
+                }
+            });
+
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB))
+                    .executeWithoutResult(inner -> JdbcUtil.runAfterCommit(dataSourceA, null, () -> events.add("action of the enclosing data source")));
+        });
+
+        assertEquals(List.of("unsynchronized action", "end of the unsynchronized transaction", "action of the enclosing data source", "enclosing commit"),
+                events);
+    }
+
+    // External review (P3): an Error thrown by one action to run after a Spring commit stopped the others, which were lost (they
+    // had been discarded first). All of them run. Round 16 review: the first Error is thrown from afterCompletion, where Spring
+    // logs it: thrown from afterCommit by this library's synchronization, which runs first (see SpringRollbackActions.getOrder),
+    // it skipped the afterCommit callbacks of every other synchronization, the application's own included.
+    @Test
+    void anErrorFromAnActionToRunAfterTheSpringCommit_doesNotStopTheOthers() {
+        final List<String> ran = new ArrayList<>();
+        final AssertionError actionError = new AssertionError("action failed");
+
+        assertDoesNotThrow(() -> transactionTemplate().executeWithoutResult(status -> {
+            JdbcUtil.runAfterCommit(dataSourceA, null, () -> {
+                throw actionError;
+            });
+            JdbcUtil.runAfterCommit(dataSourceA, null, () -> ran.add("after the commit"));
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    ran.add("the application's afterCommit");
+                }
+            });
+        }));
+
+        final DataSourceTransactionManager commitThenFail = new DataSourceTransactionManager(dataSourceA) {
+            @Override
+            protected void doCommit(final org.springframework.transaction.support.DefaultTransactionStatus status) {
+                super.doCommit(status);
+                throw new org.springframework.transaction.TransactionSystemException("connection lost during the commit");
+            }
+        };
+
+        assertThrows(org.springframework.transaction.TransactionSystemException.class,
+                () -> new TransactionTemplate(commitThenFail).executeWithoutResult(status -> {
+                    JdbcUtil.runAfterCommit(dataSourceA, null, () -> {
+                        throw actionError;
+                    });
+                    JdbcUtil.runAfterCommit(dataSourceA, null, () -> ran.add("after the unknown outcome"));
+                }));
+
+        assertEquals(List.of("after the commit", "the application's afterCommit", "after the unknown outcome"), ran);
+    }
+
+    // Round 16 review: after an unknown outcome, the Error of an action to run after the commit kept the rollback actions of the
+    // work on a connection marked rollback-only (which can't have committed) from running: the IDs they put back were kept.
+    @Test
+    void anErrorFromAnActionToRunAfterAnUnknownOutcome_doesNotStopTheRollbackActions() {
+        final List<String> ran = new ArrayList<>();
+        // Commits despite the rollback-only mark, as JpaTransactionManager does, then reports an unknown outcome.
+        final DataSourceTransactionManager commitThenFail = new DataSourceTransactionManager(dataSourceA) {
+            @Override
+            protected boolean shouldCommitOnGlobalRollbackOnly() {
+                return true;
+            }
+
+            @Override
+            protected void doCommit(final org.springframework.transaction.support.DefaultTransactionStatus status) {
+                super.doCommit(status);
+                throw new org.springframework.transaction.TransactionSystemException("connection lost during the commit");
+            }
+        };
+
+        assertThrows(org.springframework.transaction.TransactionSystemException.class,
+                () -> new TransactionTemplate(commitThenFail).executeWithoutResult(status -> {
+                    assertTrue(JdbcUtil.registerSpringRollbackAction(dataSourceA, () -> ran.add("rollback action")));
+                    ((ConnectionHolder) TransactionSynchronizationManager.getResource(dataSourceA)).setRollbackOnly();
+                    JdbcUtil.runAfterCommit(dataSourceA, null, () -> {
+                        throw new AssertionError("action failed");
+                    });
+                }));
+
+        assertEquals(List.of("rollback action"), ran);
+    }
+
+    // Round 15 review: only the innermost suspension of a data source was consulted. Spring binding, inside a nested suspension,
+    // the transaction an enclosing one had left (a programmatic commit of the transaction begun between them), the work there
+    // joined that transaction and rolled back with it.
+    @Test
+    void aNestedSuspension_keepsTheEnclosingOneWhenSpringBindsItsTransactionAgain() {
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
+
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            try {
+                JdbcUtil.runOutsideTransaction(dataSourceA, () -> {
+                    final org.springframework.transaction.TransactionStatus inner = transactionManager.getTransaction(
+                            new org.springframework.transaction.support.DefaultTransactionDefinition(TransactionDefinition.PROPAGATION_REQUIRES_NEW));
+
+                    JdbcUtil.runOutsideTransaction(dataSourceA, () -> {
+                        transactionManager.commit(inner); // Spring binds the enclosing transaction again
+                        assertFalse(JdbcUtil.isInTransaction(dataSourceA), "the enclosing suspension applies to it");
+                        insertItem(dataSourceA, "own");
+                    });
+                });
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            status.setRollbackOnly();
+        });
+
+        assertEquals(List.of("own"), itemNames(), "the work committed on its own");
+    }
+
+    // Round 14 review: a participating transaction completed while Spring binds another transaction to its data source
+    // (REQUIRES_NEW) or none (NOT_SUPPORTED) marked the bound transaction rollback-only (or failed) instead of the one it
+    // participates in, which then committed the work rolled back, and released its connection through DataSourceUtils, which
+    // closed it: the connection of the suspended transaction, whose commit then failed. It marks the transaction it
+    // participates in now, and leaves the connection to it.
+    @ParameterizedTest(name = "propagation={0}, commit={1}")
+    @MethodSource("springScopesAndOutcomes")
+    void aParticipatingTransactionCompletedInsideASpringScopeBegunInIt_completesTheOneItParticipatesIn(final int propagation, final boolean commit) {
+        final Runnable outerWork = () -> transactionTemplate().executeWithoutResult(status -> {
+            final SqlTransaction participating = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                insertItem(dataSourceA, "outer");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            final TransactionTemplate inner = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
+            inner.setPropagationBehavior(propagation);
+            inner.executeWithoutResult(innerStatus -> {
+                if (commit) {
+                    participating.commit();
+                } else {
+                    participating.rollbackIfNotCommitted();
+                }
+
+                assertFalse(innerStatus.isRollbackOnly(), "the inner scope is not marked");
+            });
+
+            assertEquals(commit ? Transaction.Status.COMMITTED : Transaction.Status.ROLLED_BACK, participating.status());
+            assertEquals(!commit, status.isRollbackOnly(), "the transaction participated in is marked");
+        });
+
+        if (commit) {
+            outerWork.run();
+            assertEquals(List.of("outer"), itemNames(), "its connection was left open to it");
+        } else {
+            assertThrows(UnexpectedRollbackException.class, outerWork::run);
+            assertEquals(List.of(), itemNames());
+        }
+    }
+
+    // A transaction that has completed, or one deciding from a JPA transaction (a holder with a connection handle of its own),
+    // can't be marked while Spring doesn't bind it: the rollback fails, and leaves the outcome to Spring.
+    @Test
+    void markUnboundSpringTransactionRollbackOnly_failsForACompletedOrJpaTransaction() {
+        final ConnectionHolder completed = new ConnectionHolder(Mockito.mock(Connection.class)); // not transaction-active
+        assertThrows(IllegalStateException.class, () -> JdbcUtil.markUnboundSpringTransactionRollbackOnly(completed));
+        assertFalse(completed.isRollbackOnly());
+
+        final ConnectionHolder jpa = new ConnectionHolder(() -> Mockito.mock(Connection.class));
+        assertThrows(IllegalStateException.class, () -> JdbcUtil.markUnboundSpringTransactionRollbackOnly(jpa));
+    }
+
+    // Round 14 review: an action registered to run after the commit from an afterCommit callback was lost: once this library's
+    // synchronization had run its afterCommit, the action was added to it, and a synchronization it registered there got no
+    // afterCommit call. It runs now: right away once this library's synchronization has seen the commit, or else when the
+    // transaction completes.
+    @ParameterizedTest(name = "participated={0}")
+    @ValueSource(booleans = { false, true })
+    void anActionToRunAfterTheCommitRegisteredFromAnAfterCommitCallback_runs(final boolean participated) {
+        final List<String> ran = new ArrayList<>();
+        final List<Boolean> ranRightAway = new ArrayList<>();
+
+        transactionTemplate().executeWithoutResult(status -> {
+            if (participated) {
+                JdbcUtil.beginTransaction(dataSourceA).commit();
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    JdbcUtil.runAfterCommit(dataSourceA, null, () -> ran.add("action"));
+                    ranRightAway.add(!ran.isEmpty());
+                }
+            });
+        });
+
+        assertEquals(List.of("action"), ran);
+        assertEquals(List.of(participated), ranRightAway);
+    }
+
+    // Round 14 review: after a failed rollback, a transaction of its own aborts its connection. When Spring had bound that
+    // connection to the thread for synchronization (a SUPPORTS scope), later work in the scope got the aborted connection from
+    // Spring and failed on it. The connection is taken from Spring's holder now (and closed), so that work gets a new one; with
+    // a TransactionAwareDataSourceProxy, the target connection is taken from the target data source's holder too.
+    @ParameterizedTest(name = "proxy={0}")
+    @ValueSource(booleans = { false, true })
+    void workAfterAFailedRollbackInASupportsScope_getsANewConnection(final boolean proxy) {
+        final java.util.concurrent.atomic.AtomicBoolean rollbackFails = new java.util.concurrent.atomic.AtomicBoolean();
+        final List<Connection> opened = new ArrayList<>();
+        final DataSource failing = failingRollbackDataSource(dataSourceA, rollbackFails, opened);
+        final DataSource dataSource = proxy ? new TransactionAwareDataSourceProxy(failing) : failing;
+
+        supportsTemplate(failing).executeWithoutResult(status -> {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                insertItem(dataSource, "failed");
+                rollbackFails.set(true);
+                assertThrows(UncheckedSQLException.class, tran::rollbackIfNotCommitted);
+                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+                rollbackFails.set(false);
+
+                insertItem(dataSource, "later"); // auto-commit, on a new connection
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+        });
+
+        assertEquals(List.of("later"), itemNames(), "the aborted work is gone, the later work committed");
+        assertEquals(2, opened.size(), "the later work ran on a new connection");
+        assertTrue(opened.stream().allMatch(connection -> {
+            try {
+                return connection.isClosed();
+            } catch (final SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        }), "both connections were closed");
+    }
+
+    /**
+     * Wraps {@code target}: a connection's rollback fails while {@code rollbackFails} is set, and its abort closes it (H2's
+     * own abort leaves it open). The connections handed out are added to {@code opened}.
+     */
+    private static DataSource failingRollbackDataSource(final DataSource target, final java.util.concurrent.atomic.AtomicBoolean rollbackFails,
+            final List<Connection> opened) {
+        return (DataSource) Proxy.newProxyInstance(SpringTransactionParticipationTest.class.getClassLoader(), new Class<?>[] { DataSource.class },
+                (dataSourceProxy, dataSourceMethod, dataSourceArgs) -> {
+                    final Object result = invokeOn(target, dataSourceMethod, dataSourceArgs);
+
+                    if (!(result instanceof final Connection connection)) {
+                        return result;
+                    }
+
+                    final Connection failingConnection = (Connection) Proxy.newProxyInstance(SpringTransactionParticipationTest.class.getClassLoader(),
+                            new Class<?>[] { Connection.class }, (connectionProxy, method, args) -> {
+                                if ("rollback".equals(method.getName()) && method.getParameterCount() == 0 && rollbackFails.get()) {
+                                    throw new SQLException("rollback failed");
+                                } else if ("abort".equals(method.getName())) {
+                                    connection.close();
+                                    return null;
+                                }
+
+                                return invokeOn(connection, method, args);
+                            });
+
+                    opened.add(failingConnection);
+
+                    return failingConnection;
+                });
+    }
+
+    private static Object invokeOn(final Object target, final java.lang.reflect.Method method, final Object[] args) throws Throwable {
+        try {
+            return method.invoke(target, args);
+        } catch (final InvocationTargetException e) {
+            throw e.getCause();
+        }
+    }
+
+    // Actions to run after the commit of a Spring transaction: once per key, discarded if it rolls back.
+    @ParameterizedTest(name = "commit={0}")
+    @ValueSource(booleans = { true, false })
+    void actionsToRunAfterTheCommitOfASpringTransaction_runOncePerKey(final boolean commit) {
+        final List<String> ran = new ArrayList<>();
+
+        final Runnable work = () -> transactionTemplate().executeWithoutResult(status -> {
+            JdbcUtil.runAfterCommit(dataSourceA, "key", () -> ran.add("first"));
+            JdbcUtil.runAfterCommit(dataSourceA, "key", () -> ran.add("same key"));
+            JdbcUtil.runAfterCommit(dataSourceA, null, () -> ran.add("no key"));
+            JdbcUtil.runAfterCommit(dataSourceA, null, () -> ran.add("no key"));
+            assertEquals(List.of(), ran);
+
+            if (!commit) {
+                status.setRollbackOnly();
+            }
+        });
+
+        work.run();
+        assertEquals(commit ? List.of("first", "no key", "no key") : List.of(), ran);
+    }
+
+    // Round 14 review: work run outside the transaction ignored every Spring transaction on its data source, also one begun
+    // inside it: the work of a REQUIRES_NEW scope there ran on a connection of its own and committed, whatever that scope's
+    // outcome. A suspension applies to the Spring binding it found; a nested one ends without ending the enclosing one.
+    @Test
+    void aSpringTransactionBegunInWorkRunOutsideTheTransaction_isJoined() {
+        transactionTemplate().executeWithoutResult(status -> {
+            try {
+                JdbcUtil.runOutsideTransaction(dataSourceA, () -> {
+                    assertFalse(JdbcUtil.isInTransaction(dataSourceA));
+
+                    final TransactionTemplate requiresNew = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
+                    requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                    requiresNew.executeWithoutResult(innerStatus -> {
+                        assertTrue(JdbcUtil.isInTransaction(dataSourceA), "the Spring transaction begun inside is used");
+
+                        try {
+                            JdbcUtil.runOutsideTransaction(dataSourceA, () -> assertFalse(JdbcUtil.isInTransaction(dataSourceA)));
+                            assertTrue(JdbcUtil.isInTransaction(dataSourceA), "the nested suspension has ended");
+
+                            insertItem(dataSourceA, "discarded");
+                        } catch (final SQLException e) {
+                            throw new IllegalArgumentException(e);
+                        }
+
+                        innerStatus.setRollbackOnly();
+                    });
+
+                    assertFalse(JdbcUtil.isInTransaction(dataSourceA), "the enclosing suspension applies again");
+                    insertItem(dataSourceA, "own");
+                });
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            status.setRollbackOnly();
+        });
+
+        assertEquals(List.of("own"), itemNames());
+        assertTrue(JdbcUtil.isSpringTransactionalUsed(dataSourceA), "the suspension has ended");
+    }
+
+    // A suspension ends when its work fails, too.
+    @Test
+    void aSuspensionEndsWhenTheWorkRunOutsideTheTransactionFails() {
+        transactionTemplate().executeWithoutResult(status -> {
+            assertThrows(IllegalStateException.class, () -> JdbcUtil.runOutsideTransaction(dataSourceA, () -> {
+                assertFalse(JdbcUtil.isSpringTransactionalUsed(dataSourceA));
+                throw new IllegalStateException("failed");
+            }));
+
+            assertTrue(JdbcUtil.isSpringTransactionalUsed(dataSourceA));
+            assertTrue(JdbcUtil.isInTransaction(dataSourceA));
+        });
+    }
+
+    private static Stream<Arguments> springScopesAndOutcomes() {
+        return Stream.of(TransactionDefinition.PROPAGATION_REQUIRES_NEW, TransactionDefinition.PROPAGATION_NOT_SUPPORTED)
+                .flatMap(propagation -> Stream.of(true, false).map(commit -> Arguments.of(propagation, commit)));
+    }
+
+    // Transaction review, finding 13: the parallel join loads and deletes (the executor overloads) ran their tasks on other
+    // threads, outside the transaction of the calling thread, each on a connection of its own: a load missed the transaction's
+    // uncommitted rows, and a delete committed on its own, so a rollback of the transaction left the joins deleted. Inside a
+    // transaction on the DAO's data source (a JdbcUtil transaction, or a Spring-managed one) the tasks run on the calling
+    // thread, in the transaction.
+    @SuppressWarnings("deprecation")
+    @ParameterizedTest(name = "spring={0}")
+    @ValueSource(booleans = { false, true })
+    void parallelJoinTasksInsideATransaction_runOnTheCallingThreadInIt(final boolean spring) throws SQLException {
+        try (Statement statement = keeperA.createStatement()) {
+            statement.executeUpdate("INSERT INTO spring_owner (id) VALUES (1)");
+            statement.executeUpdate("INSERT INTO spring_note (id, owner_id) VALUES (10, 1)");
+        }
+
+        final AtomicInteger submitted = new AtomicInteger();
+        final java.util.concurrent.Executor executor = task -> {
+            submitted.incrementAndGet();
+            new Thread(task).start();
+        };
+
+        final Runnable work = () -> {
+            try {
+                JdbcUtil.executeUpdate(dataSourceA, "INSERT INTO spring_tag (id, owner_id) VALUES (20, 1)"); // not committed
+
+                final Owner owner = new Owner();
+                owner.setId(1L);
+                ownerDao.loadJoinEntities(owner, List.of("notes", "tags"), executor);
+
+                assertEquals(1, owner.getNotes().size());
+                assertEquals(1, owner.getTags().size(), "the uncommitted tag is loaded too");
+
+                // Round 14 review: the IfAbsent overload for one entity (also reached by loadAllJoinEntitiesIfAbsent and the
+                // inParallel overloads) still ran its loads on the executor.
+                final Owner absent = new Owner();
+                absent.setId(1L);
+                ownerDao.loadAllJoinEntitiesIfAbsent(absent, executor);
+                assertEquals(1, absent.getTags().size(), "the uncommitted tag is loaded too");
+
+                final Owner uncheckedAbsent = new Owner();
+                uncheckedAbsent.setId(1L);
+                uncheckedOwnerDao.loadJoinEntitiesIfAbsent(uncheckedAbsent, List.of("notes", "tags"), executor);
+                assertEquals(1, uncheckedAbsent.getTags().size(), "the uncommitted tag is loaded too");
+                assertEquals(2, ownerDao.deleteJoinEntities(owner, List.of("notes", "tags"), executor));
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            throw new IllegalStateException("the transaction rolls back");
+        };
+
+        if (spring) {
+            assertThrows(IllegalStateException.class, () -> transactionTemplate().executeWithoutResult(status -> work.run()));
+        } else {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                assertThrows(IllegalStateException.class, work::run);
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+        }
+
+        assertEquals(0, submitted.get(), "no task was handed to the executor");
+        assertEquals(1, count(keeperA, "SELECT COUNT(*) FROM spring_note"), "the deleted note is back after the rollback");
+        assertEquals(0, count(keeperA, "SELECT COUNT(*) FROM spring_tag"));
+    }
+
+    private static Stream<Arguments> completionCallbacks() {
+        return Stream.of(true, false).flatMap(afterCommit -> Stream.of(false, true).map(fails -> Arguments.of(afterCommit, fails)));
+    }
+
+    private static Stream<Arguments> synchronizedSpringScopes() {
+        return Stream.of("SUPPORTS", "another data source").flatMap(scope -> Stream.of(false, true).map(call -> Arguments.of(scope, call)));
+    }
+
+    // The same for DBLock, which changes its lock table on an auto-commit connection of its own: through the proxy it took the
+    // Spring transaction's connection and switched it to auto-commit, which committed the transaction's earlier work.
+    @Test
+    void dbLock_behindATransactionAwareProxy_leavesTheSpringTransactionAlone() {
+        final DataSource proxy = new TransactionAwareDataSourceProxy(dataSourceA);
+        final DBLock dbLock = JdbcUtil.createDBLock(proxy, "spring_lock");
+
+        try {
+            assertThrows(IllegalStateException.class, () -> transactionTemplate().executeWithoutResult(status -> {
+                try {
+                    insertItem(proxy, "outer");
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                }
+
+                final String code = dbLock.tryLock("item");
+                assertNotNull(code);
+                assertTrue(dbLock.unlock("item", code));
+
+                throw new IllegalStateException("the Spring transaction rolls back");
+            }));
+        } finally {
+            dbLock.close();
+        }
+
+        assertEquals(List.of(), itemNames());
+    }
+
+    // External review (tests): the same in a scope that Spring runs without a transaction but with synchronization (SUPPORTS),
+    // where the proxy hands out the connection Spring bound for synchronization, which the application may use in a transaction
+    // of its own: the lock-table changes run on a connection of their own, so they neither commit nor see its pending work.
+    @Test
+    void dbLock_behindATransactionAwareProxyInASupportsScope_usesAConnectionOfItsOwn() {
+        final DataSource proxy = new TransactionAwareDataSourceProxy(dataSourceA);
+        final DBLock dbLock = JdbcUtil.createDBLock(proxy, "spring_lock");
+
+        try {
+            supportsTemplate(dataSourceA).executeWithoutResult(status -> {
+                try (Connection conn = proxy.getConnection()) { // the connection Spring bound for synchronization
+                    conn.setAutoCommit(false);
+
+                    try (Statement statement = conn.createStatement()) {
+                        statement.executeUpdate("INSERT INTO spring_item (name) VALUES ('pending')");
+                    }
+
+                    final String code = dbLock.tryLock("item");
+                    assertNotNull(code);
+                    assertTrue(dbLock.unlock("item", code));
+
+                    conn.rollback();
+                    conn.setAutoCommit(true);
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                }
+            });
+        } finally {
+            dbLock.close();
+        }
+
+        assertEquals(List.of(), itemNames(), "the lock committed none of the application's pending work");
+    }
+
+    // A LinkageError thrown by one data source while JdbcUtil acquired a connection through Spring (its driver's native library
+    // or a driver class that fails to load: DataSourceUtils passes such errors on) turned this library's Spring support off for
+    // the whole JVM, and the connection was taken from that data source directly. From then on, on every thread and for every
+    // data source, Spring transactions were ignored: JdbcUtil work ran and committed on connections of its own, a transaction
+    // begun through a TransactionAwareDataSourceProxy committed the Spring transaction's connection with its earlier work, and
+    // work meant to run outside the Spring transaction (DAO REQUIRES_NEW, callOutsideTransaction, DBLock) took its connection
+    // from the proxy again, so it ran in the Spring transaction. The error propagates now, and Spring support stays on.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("rolledBackSpringTransactionRoutes")
+    void afterADriverLinkageErrorOfAnotherDataSource_springTransactionsAreStillHonored(final String route, final List<String> committed) {
+        final UnsatisfiedLinkError driverFailure = new UnsatisfiedLinkError("no native driver library");
+        final AtomicInteger acquisitions = new AtomicInteger();
+        final DataSource broken = new DelegatingDataSource(dataSourceB) {
+            @Override
+            public Connection getConnection() {
+                acquisitions.incrementAndGet();
+                throw driverFailure;
+            }
+        };
+
+        assertSame(driverFailure, assertThrows(UnsatisfiedLinkError.class, () -> JdbcUtil.getConnection(broken)));
+        assertEquals(1, acquisitions.get(), "not retried on the data source directly");
+
+        runInRolledBackSpringTransaction(route);
+
+        assertEquals(committed, itemNames());
+    }
+
+    // The same for a Spring class that fails to link while JdbcUtil releases a connection to Spring (Spring's releaseConnection
+    // handles any failure of closing the connection itself): the connection is closed directly, and Spring support stays on.
+    @ParameterizedTest(name = "springManaged={0}")
+    @ValueSource(booleans = { false, true })
+    void afterALinkageErrorReleasingAConnection_springTransactionsAreStillHonored(final boolean springManaged) throws SQLException {
+        final Connection conn = Mockito.mock(Connection.class);
+
+        try (MockedStatic<DataSourceUtils> dataSourceUtils = Mockito.mockStatic(DataSourceUtils.class)) {
+            dataSourceUtils.when(() -> DataSourceUtils.releaseConnection(ArgumentMatchers.same(conn), ArgumentMatchers.same(dataSourceA)))
+                    .thenThrow(new NoClassDefFoundError("org/springframework/jdbc/datasource/ConnectionHolder"));
+
+            if (springManaged) {
+                JdbcUtil.releaseSpringManagedConnection(conn, dataSourceA);
+            } else {
+                JdbcUtil.releaseConnection(conn, dataSourceA);
+            }
+        }
+
+        Mockito.verify(conn).close();
+
+        runInRolledBackSpringTransaction("participating transaction");
+
+        assertEquals(List.of(), itemNames());
+    }
+
+    private static Stream<Arguments> rolledBackSpringTransactionRoutes() {
+        return Stream.of(Arguments.of("plain data source", List.of()), Arguments.of("participating transaction", List.of()),
+                Arguments.of("REQUIRES_NEW", List.of("own")), Arguments.of("callOutsideTransaction", List.of("own")), Arguments.of("DBLock", List.of()));
+    }
+
+    /**
+     * Runs the work of {@code route} in a Spring transaction on {@code dataSourceA}, through a
+     * {@code TransactionAwareDataSourceProxy} except for the plain data source, and rolls the Spring transaction back.
+     */
+    private void runInRolledBackSpringTransaction(final String route) {
+        final DataSource proxy = new TransactionAwareDataSourceProxy(dataSourceA);
+        final ItemDao dao = JdbcUtil.createDao(ItemDao.class, proxy);
+        // Created outside the Spring transaction: creating its lock table is DDL, which H2 commits.
+        final DBLock dbLock = route.equals("DBLock") ? JdbcUtil.createDBLock(proxy, "spring_lock") : null;
+
+        try {
+            assertThrows(IllegalStateException.class, () -> transactionTemplate().executeWithoutResult(status -> {
+                try {
+                    switch (route) {
+                        case "plain data source" -> insertItem(dataSourceA, "outer"); // joins the Spring transaction
+                        case "participating transaction" -> {
+                            insertItem(proxy, "outer");
+                            final SqlTransaction tran = JdbcUtil.beginTransaction(proxy);
+
+                            try {
+                                insertItem(proxy, "inner");
+                                tran.commit(); // leaves the commit to Spring
+                            } finally {
+                                tran.rollbackIfNotCommitted();
+                            }
+                        }
+                        case "REQUIRES_NEW" -> {
+                            insertItem(proxy, "outer");
+                            dao.requiresNew(() -> insertItem(proxy, "own"));
+                        }
+                        case "callOutsideTransaction" -> {
+                            insertItem(proxy, "outer");
+                            JdbcUtil.callOutsideTransaction(proxy, () -> insertItem(proxy, "own"));
+                        }
+                        default -> {
+                            insertItem(proxy, "outer");
+                            final String code = dbLock.tryLock("item");
+                            assertNotNull(code);
+                            assertTrue(dbLock.unlock("item", code));
+                        }
+                    }
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                }
+
+                throw new IllegalStateException("the Spring transaction rolls back");
+            }));
+        } finally {
+            if (dbLock != null) {
+                dbLock.close();
+            }
+        }
     }
 
     // A query run by callAsync on a Spring-bound connection was closed on the executor thread, where Spring finds no binding:
@@ -1076,6 +2594,53 @@ class SpringTransactionParticipationTest extends TestBase {
         assertEquals(1, countItems(keeperA));
         assertNull(inside.getId());
         assertNotNull(outer.getId(), "its row committed");
+    }
+
+    // Transaction review, low-severity finding: a Spring older than 6.2 reports no savepoints to its synchronizations, so the
+    // rollback actions held no savepoint mark, and a participating rollback inside a PROPAGATION_NESTED scope put back the IDs
+    // of every insert on the data source at once, also that of the enclosing transaction's insert, whose row it then committed.
+    // Without savepoint reports the IDs follow the transaction's outcome now. A Spring before 6.2 is simulated here: the
+    // savepoint callbacks of Spring 7 are ignored, as an older Spring makes none.
+    @Test
+    void participatingRollback_insideANestedTransaction_withoutSavepointReports_keepsTheIdOfTheEnclosingInsertThatCommits() throws Exception {
+        final java.lang.reflect.Field reported = Class.forName(JdbcUtil.class.getName() + "$SpringRollbackActions").getDeclaredField("savepointsReported");
+        reported.setAccessible(true);
+        final Object original = reported.get(null);
+        reported.set(null, false);
+
+        try {
+            final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
+            final Item outer = item(null, "outer");
+            final Item inside = item(null, "inside");
+
+            new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                try {
+                    assertNotNull(itemDaoA.insert(outer));
+                } catch (final SQLException e) {
+                    throw new IllegalStateException(e);
+                }
+
+                assertThrows(UnexpectedRollbackException.class, () -> nestedTemplate(transactionManager).executeWithoutResult(nestedStatus -> {
+                    final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
+
+                    try {
+                        assertNotNull(itemDaoA.insert(inside));
+                    } catch (final SQLException e) {
+                        throw new IllegalStateException(e);
+                    } finally {
+                        tran.rollbackIfNotCommitted();
+                    }
+                }));
+
+                assertNotNull(outer.getId(), "not put back by the participating rollback");
+            });
+
+            assertEquals(1, countItems(keeperA));
+            assertNotNull(outer.getId(), "its row committed");
+            assertNotNull(inside.getId(), "kept although its row is gone: without savepoint reports, the rollback to the savepoint is not seen");
+        } finally {
+            reported.set(null, original);
+        }
     }
 
     // A participating rollback inside a nested scope of a nested scope: the IDs come back stage by stage, each with the scope
@@ -1506,7 +3071,7 @@ class SpringTransactionParticipationTest extends TestBase {
 
             try {
                 final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
-                assertSame(tran, SqlTransaction.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL));
+                assertSame(tran.context(), TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL));
 
                 try {
                     assertNotNull(itemDaoA.insert(item));
@@ -1524,7 +3089,7 @@ class SpringTransactionParticipationTest extends TestBase {
 
                 assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
                 assertEquals(id, item.getId(), "the ID is kept: Spring may still commit the row");
-                assertNull(SqlTransaction.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL), "the scope is completed");
+                assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL), "the scope is completed");
                 assertFalse(spring.isClosed());
                 assertFalse(status.isRollbackOnly());
 
@@ -1546,6 +3111,166 @@ class SpringTransactionParticipationTest extends TestBase {
         assertEquals(1, countItems(keeperA), "Spring committed the row");
         assertNotNull(item.getId());
         assertEquals("kept", queryName(item.getId()));
+    }
+
+    // External review (P1): without synchronization, a participating transaction records the ID restoration itself. A nested
+    // scope that rolled back, or was never completed, ran it right away, before the outermost scope tried to mark the Spring
+    // transaction rollback-only: when that mark failed, Spring committed the row of an entity that had lost its ID. The
+    // restoration now waits for the outermost scope's mark: done once the mark is set (Spring then rolls back), dropped when it
+    // fails (Spring then commits the row, and the entity keeps its ID).
+    @ParameterizedTest(name = "innerLeaked={0}, outermostEnd={1}, markable={2}")
+    @MethodSource("unsynchronizedNestedRollbackCases")
+    void nestedRollback_inUnsynchronizedSpringTransaction_putsBackTheIdOnlyOnceTheSpringTransactionIsMarked(final boolean innerLeaked,
+            final OutermostEnd outermostEnd, final boolean markable) throws SQLException {
+        final Item item = item(null, "nested");
+
+        final Runnable springTransaction = () -> unsynchronizedTemplate().executeWithoutResult(status -> {
+            final ConnectionHolder springHolder = (ConnectionHolder) TransactionSynchronizationManager.getResource(dataSourceA);
+
+            if (!markable) {
+                // Replaced by a holder that can't be marked while the scopes run, as in the test above.
+                TransactionSynchronizationManager.unbindResource(dataSourceA);
+                TransactionSynchronizationManager.bindResource(dataSourceA, new ConnectionHolder(springHolder.getConnection(), true) {
+                    @Override
+                    public void setRollbackOnly() {
+                        throw new IllegalStateException("cannot mark");
+                    }
+                });
+            }
+
+            try {
+                final SqlTransaction outer = JdbcUtil.beginTransaction(dataSourceA);
+
+                try {
+                    final SqlTransaction inner = JdbcUtil.beginTransaction(dataSourceA);
+
+                    try {
+                        assertNotNull(itemDaoA.insert(item));
+                    } catch (final SQLException e) {
+                        throw new UncheckedSQLException(e);
+                    }
+
+                    final Long id = item.getId();
+                    assertNotNull(id);
+
+                    if (!innerLeaked) {
+                        inner.rollbackIfNotCommitted();
+                        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+                        assertEquals(id, item.getId(), "Spring decides the outcome until the outermost scope has marked its transaction");
+                    }
+
+                    if (markable) {
+                        if (outermostEnd == OutermostEnd.COMMIT) {
+                            assertThrows(RollbackOnlyException.class, () -> outermostEnd.complete(outer));
+                        } else {
+                            outermostEnd.complete(outer);
+                        }
+
+                        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+                        assertNull(item.getId(), "put back once the Spring transaction is marked");
+                    } else {
+                        final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> outermostEnd.complete(outer));
+                        assertEquals("cannot mark", failure.getMessage());
+                        assertEquals(Transaction.Status.FAILED_ROLLBACK, outer.status());
+                        assertEquals(id, item.getId(), "kept: Spring may still commit the row");
+                    }
+
+                    assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL));
+                } finally {
+                    // An assertion that failed before the outermost scope completed must not leave its transaction on the thread.
+                    if (!outer.isCompleted()) {
+                        try {
+                            outer.close();
+                        } catch (final RuntimeException e) {
+                            // the failed assertion is the one to report
+                        }
+                    }
+                }
+            } finally {
+                if (!markable) {
+                    TransactionSynchronizationManager.unbindResource(dataSourceA);
+                    TransactionSynchronizationManager.bindResource(dataSourceA, springHolder);
+                }
+            }
+        });
+
+        if (markable) {
+            assertThrows(UnexpectedRollbackException.class, springTransaction::run);
+            assertEquals(0, countItems(keeperA));
+            assertNull(item.getId());
+        } else {
+            springTransaction.run();
+            assertEquals(1, countItems(keeperA), "Spring committed the row");
+            assertNotNull(item.getId());
+            assertEquals("nested", queryName(item.getId()));
+        }
+    }
+
+    private static Stream<Arguments> unsynchronizedNestedRollbackCases() {
+        return Stream.of(false, true)
+                .flatMap(innerLeaked -> Stream.of(OutermostEnd.values())
+                        .flatMap(outermostEnd -> Stream.of(false, true).map(markable -> Arguments.of(innerLeaked, outermostEnd, markable))));
+    }
+
+    // The mark returns normally only once the transaction can only end rolled back. No connection holder is bound to the data
+    // source once its transaction was suspended or has completed: nothing would make it roll back, so the mark fails (it used to
+    // be logged only, and the participating rollback reported as done).
+    @Test
+    void markSpringTransactionRollbackOnly_failsWhenNoConnectionHolderIsBound() {
+        final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> JdbcUtil.markSpringTransactionRollbackOnly(dataSourceA));
+        assertTrue(failure.getMessage().contains("no connection holder is bound"), failure.getMessage());
+
+        assertThrows(UnexpectedRollbackException.class, () -> transactionTemplate().executeWithoutResult(status -> {
+            JdbcUtil.markSpringTransactionRollbackOnly(dataSourceA);
+            assertTrue(status.isRollbackOnly());
+        }));
+    }
+
+    // A participating transaction left open past the Spring transaction it joined (no cleanup call before the Spring transaction
+    // completed): Spring committed its work. Its rollback can no longer mark the Spring transaction, and used to be reported as
+    // done all the same (ROLLED_BACK, no exception; without synchronization, the generated ID was put back too, then kept). It
+    // fails now: FAILED_ROLLBACK, the ID of the committed row is kept, and the scope is completed.
+    @ParameterizedTest(name = "synchronization={0}")
+    @ValueSource(booleans = { true, false })
+    void rollbackOfParticipatingTransactionLeftOpenPastTheSpringTransaction_failsAndKeepsTheIdOfTheCommittedRow(final boolean synchronization)
+            throws SQLException {
+        final TransactionTemplate template = synchronization ? transactionTemplate() : unsynchronizedTemplate();
+        final Item item = item(null, "leaked");
+        final SqlTransaction[] leaked = new SqlTransaction[1];
+
+        template.executeWithoutResult(status -> {
+            leaked[0] = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                assertNotNull(itemDaoA.insert(item));
+            } catch (final SQLException e) {
+                throw new UncheckedSQLException(e);
+            }
+        });
+
+        try {
+            assertEquals(1, countItems(keeperA), "Spring committed the row");
+            final Long id = item.getId();
+            assertNotNull(id);
+
+            final IllegalStateException failure = assertThrows(IllegalStateException.class, leaked[0]::rollbackIfNotCommitted);
+            assertTrue(failure.getMessage().contains("it has completed"), failure.getMessage());
+            assertEquals(Transaction.Status.FAILED_ROLLBACK, leaked[0].status());
+            assertEquals(id, item.getId(), "the row is committed: its ID is kept");
+            assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL), "the scope is completed");
+            assertDoesNotThrow(leaked[0]::close);
+        } finally {
+            if (!leaked[0].isCompleted()) {
+                try {
+                    leaked[0].close();
+                } catch (final RuntimeException e) {
+                    // the failed assertion is the one to report
+                }
+            }
+        }
+
+        assertEquals(1, countItems(keeperA));
+        assertEquals("leaked", queryName(item.getId()));
     }
 
     private static Stream<Arguments> markFailureCases() {
@@ -1617,6 +3342,21 @@ class SpringTransactionParticipationTest extends TestBase {
         }
     }
 
+    private List<String> itemNames() {
+        final List<String> names = new ArrayList<>();
+
+        try (Statement statement = keeperA.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT name FROM spring_item ORDER BY id")) {
+            while (resultSet.next()) {
+                names.add(resultSet.getString(1));
+            }
+        } catch (final SQLException e) {
+            throw new IllegalStateException(e);
+        }
+
+        return names;
+    }
+
     private static int countItems(final Connection connection) {
         return count(connection, "SELECT COUNT(*) FROM spring_item");
     }
@@ -1660,6 +3400,20 @@ class SpringTransactionParticipationTest extends TestBase {
                 case JPA_CONNECTION_HANDLE -> new ConnectionHolder(() -> connection);
                 case SYNCHRONIZATION_ONLY -> new ConnectionHolder(connection);
             };
+        }
+    }
+
+    /** How the outermost scope of a participating transaction completes. */
+    private enum OutermostEnd {
+        COMMIT, ROLLBACK, CLOSE;
+
+        @SuppressWarnings("deprecation")
+        void complete(final SqlTransaction tran) {
+            switch (this) {
+                case COMMIT -> tran.commit();
+                case ROLLBACK -> tran.rollback();
+                case CLOSE -> tran.close();
+            }
         }
     }
 
@@ -1754,6 +3508,16 @@ class SpringTransactionParticipationTest extends TestBase {
 
         @Transactional(propagation = Propagation.REQUIRED, isolationLevel = IsolationLevel.SERIALIZABLE)
         default int requiredSerializable(final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+
+        @Transactional(propagation = Propagation.REQUIRES_NEW)
+        default int requiresNew(final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+
+        @Transactional(propagation = Propagation.NOT_SUPPORTED)
+        default int notSupported(final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
             return work.get();
         }
 

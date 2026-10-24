@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.h2.jdbcx.JdbcDataSource;
@@ -39,11 +40,14 @@ import org.mockito.Mockito;
 import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
+import com.landawn.abacus.exception.DuplicateResultException;
+import com.landawn.abacus.jdbc.annotation.NonDBOperation;
 import com.landawn.abacus.jdbc.annotation.PerfLog;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.SqlLogEnabled;
 import com.landawn.abacus.jdbc.annotation.Transactional;
 import com.landawn.abacus.jdbc.dao.CrudDao;
+import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.util.Throwables;
 
 @Tag("integration")
@@ -364,7 +368,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
                 })));
 
                 assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
-                outer.commit();
+                assertThrows(RollbackOnlyException.class, outer::commit);
                 assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
                 assertTrue(status.isRollbackOnly());
             } finally {
@@ -617,6 +621,662 @@ class DaoImplTransactionIntegrationTest extends TestBase {
         return Stream.of(GeneratedInsert.values()).flatMap(insert -> Stream.of(false, true).map(outerCommits -> Arguments.of(insert, outerCommits)));
     }
 
+    // A @Transactional(REQUIRED) DAO method whose body catches the failure of a nested @Transactional call: the transaction is
+    // rollback-only, so the method's own commit rolls back and throws RollbackOnlyException instead of returning normally
+    // (it used to return as if its work had been committed). Both wrapper variants (with and without SQL/perf logging).
+    @Test
+    void transactional_required_throwsRollbackOnlyAfterACaughtNestedFailure() throws SQLException {
+        for (final Logging logging : Logging.values()) {
+            final TransactionDao<?> dao = daos.get(logging);
+            final SQLException nestedFailure = new SQLException("nested work failed");
+
+            assertThrows(RollbackOnlyException.class, () -> dao.required(() -> {
+                try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "INSERT INTO transaction_record (id) VALUES (1)")) {
+                    assertEquals(1, query.update());
+                }
+
+                assertSame(nestedFailure, assertThrows(SQLException.class, () -> dao.required(() -> {
+                    throw nestedFailure;
+                })), logging.name());
+
+                return 1; // the nested failure was handled: the method goes on
+            }), logging.name());
+
+            assertEquals(0, countRecords(keeper), logging.name());
+            assertFalse(JdbcUtil.isInTransaction(dataSource), logging.name());
+        }
+    }
+
+    // Transaction review, finding 8: a @Transactional(REQUIRED) DAO method or callInTransaction called after a caught nested
+    // failure joins the rollback-only transaction, as in Spring: its work runs and is rolled back with the transaction, whose
+    // outermost commit throws RollbackOnlyException. Such a call used to throw IllegalStateException before its work ran, while
+    // plain statements on the data source kept running in the transaction.
+    @Test
+    void transactional_required_joinsATransactionMarkedRollbackOnly() throws SQLException {
+        for (final Logging logging : Logging.values()) {
+            final TransactionDao<?> dao = daos.get(logging);
+            final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                assertThrows(SQLException.class, () -> dao.required(() -> {
+                    throw new SQLException("nested work failed");
+                }), logging.name());
+                assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status(), logging.name());
+
+                assertEquals(42, dao.required(() -> {
+                    assertEquals(2, outer.context().depth());
+
+                    try (PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "INSERT INTO transaction_record (id) VALUES (1)")) {
+                        assertEquals(1, query.update());
+                    }
+
+                    return 42;
+                }), logging.name());
+                assertEquals(43, (int) JdbcUtil.callInTransaction(dataSource, () -> 43), logging.name());
+
+                assertThrows(RollbackOnlyException.class, outer::commit, logging.name());
+            } finally {
+                outer.rollbackIfNotCommitted();
+            }
+
+            assertEquals(0, countRecords(keeper), logging.name());
+            assertFalse(JdbcUtil.isInTransaction(dataSource), logging.name());
+        }
+    }
+
+    // Transaction review, finding 14: upsert looked the row up before and apart from the write, on a connection of its own
+    // outside a transaction, and batchUpsert ran its writes in a transaction only when both inserts and updates were needed
+    // (or either set was large). Inside a transaction, the lookup and the writes run in one scope of it now, on its connection,
+    // and batchUpsert of more than one entity in a transaction of its own outside one. Round 16 review: outside a transaction,
+    // an upsert (and a batchUpsert of one entity) began a transaction of its own, whose commit failed on a connection a JTA
+    // transaction manages (it rejects commit()), where it used to work: they run as statements of their own there again.
+    @Test
+    void upsert_looksUpAndWritesInOneTransactionScopeInsideATransaction() throws SQLException {
+        final AtomicInteger acquired = new AtomicInteger();
+        final AtomicInteger commits = new AtomicInteger();
+        final javax.sql.DataSource counting = new org.springframework.jdbc.datasource.DelegatingDataSource(dataSource) {
+            @Override
+            public Connection getConnection() throws SQLException {
+                acquired.incrementAndGet();
+                final Connection conn = super.getConnection();
+
+                return (Connection) java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(), new Class<?>[] { Connection.class },
+                        (proxy, method, args) -> {
+                            if (method.getName().equals("commit")) {
+                                commits.incrementAndGet();
+                            }
+
+                            try {
+                                return method.invoke(conn, args);
+                            } catch (final java.lang.reflect.InvocationTargetException e) {
+                                throw e.getCause();
+                            }
+                        });
+            }
+        };
+        final GeneratedDao dao = JdbcUtil.createDao(GeneratedDao.class, counting);
+        acquired.set(0);
+
+        // Outside a transaction: the lookup and the write of each upsert run as statements of their own; nothing is committed
+        // by an upsert itself.
+        assertEquals("a", dao.upsert(generated(1L, "a")).getName()); // inserted
+        assertEquals("b", dao.upsert(generated(1L, "b")).getName()); // updated
+        assertEquals(4, acquired.get(), "a connection for the lookup and one for the write of each upsert");
+        assertEquals(1, dao.batchUpsert(List.of(generated(1L, "b2"))).size()); // a single entity, as upsert
+        assertEquals(0, commits.get(), "no transaction of its own");
+
+        // Inside a transaction: in a scope of it, on its connection.
+        acquired.set(0);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(counting);
+
+        try {
+            assertEquals("c", dao.upsert(generated(1L, "c")).getName());
+            assertEquals("e", dao.upsert(generated(3L, "e")).getName());
+            tran.commit();
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(1, acquired.get(), "the transaction's connection");
+        assertEquals(1, commits.get(), "committed by the transaction");
+
+        // batchUpsert of more than one entity outside a transaction: a transaction of its own, on one connection.
+        acquired.set(0);
+        commits.set(0);
+        assertEquals(2, dao.batchUpsert(List.of(generated(1L, "d"), generated(2L, "f"))).size()); // one update, one insert
+        assertEquals(1, acquired.get(), "one connection for the lookups and the writes of batchUpsert");
+        assertEquals(1, commits.get());
+        assertEquals(3, count(keeper, "SELECT COUNT(*) FROM generated_record"));
+        assertEquals(1, count(keeper, "SELECT COUNT(*) FROM generated_record WHERE id = 1 AND name = 'd'"));
+    }
+
+    // Round 16 review (tests): batchUpsert inside a transaction runs in a scope of it: a failure (here the duplicate rows its
+    // lookup finds) marks the transaction rollback-only, and when the transaction rolls back, the IDs batchUpsert wrote onto the
+    // entities it inserted are put back.
+    @Test
+    void batchUpsert_insideATransaction_marksItRollbackOnlyOnFailure_andItsRollbackPutsTheIdsBack() throws SQLException {
+        // Generated IDs: an explicit one could be the next one the identity column hands out.
+        generatedDao.insert(generated("same"));
+        generatedDao.insert(generated("same"));
+        final GeneratedRecord inserted = generated("new");
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            assertEquals(1, generatedDao.batchUpsert(List.of(inserted), List.of("name")).size());
+            assertNotNull(inserted.getId(), "inserted");
+
+            assertThrows(IllegalStateException.class, () -> generatedDao.batchUpsert(List.of(generated("same"), generated("other")), List.of("name")));
+            assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status());
+            assertThrows(RollbackOnlyException.class, tran::commit);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertNull(inserted.getId(), "the ID of the rolled-back insert is put back");
+        assertEquals(2, count(keeper, "SELECT COUNT(*) FROM generated_record"));
+    }
+
+    // Round 16 review (tests): the upsert of a DAO that is not a CrudDao has its own copy of the scope handling: inside a
+    // transaction, its failure marks the transaction rollback-only too.
+    @ParameterizedTest(name = "unchecked={0}")
+    @org.junit.jupiter.params.provider.ValueSource(booleans = { false, true })
+    void upsertOfANonCrudDao_failingInsideATransaction_marksItRollbackOnly(final boolean unchecked) throws SQLException {
+        generatedDao.insert(generated(1L, "same"));
+        generatedDao.insert(generated(2L, "same"));
+
+        final PlainGeneratedDao checkedDao = JdbcUtil.createDao(PlainGeneratedDao.class, dataSource);
+        final UncheckedPlainGeneratedDao uncheckedDao = JdbcUtil.createDao(UncheckedPlainGeneratedDao.class, dataSource);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            if (unchecked) {
+                assertThrows(DuplicateResultException.class, () -> uncheckedDao.upsert(generated(3L, "new"), Filters.eq("name", "same")));
+            } else {
+                assertThrows(DuplicateResultException.class, () -> checkedDao.upsert(generated(3L, "new"), Filters.eq("name", "same")));
+            }
+
+            assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status());
+            assertThrows(RollbackOnlyException.class, tran::commit);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        // Outside a transaction it upserts as statements of its own.
+        assertEquals("x",
+                (unchecked ? uncheckedDao.upsert(generated(4L, "x"), Filters.eq("name", "x")) : checkedDao.upsert(generated(4L, "x"), Filters.eq("name", "x")))
+                        .getName());
+        assertEquals(1, count(keeper, "SELECT COUNT(*) FROM generated_record WHERE name = 'x'"));
+    }
+
+    // Inside a transaction, the scope of a failed upsert marks the transaction rollback-only, as the failure of any
+    // transactional DAO operation does: it can't commit work the failed upsert may have left half done.
+    @Test
+    void upsert_failingInsideATransaction_marksItRollbackOnly() throws SQLException {
+        generatedDao.insert(generated(1L, "same"));
+        generatedDao.insert(generated(2L, "same"));
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            assertThrows(DuplicateResultException.class, () -> generatedDao.upsert(generated(3L, "new"), Filters.eq("name", "same")));
+            assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status());
+            assertThrows(RollbackOnlyException.class, tran::commit);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // Transaction review, low-severity finding: @Transactional on a @NonDBOperation method had no effect (the method is not run
+    // as a DB operation); DAO creation rejects it now.
+    @Test
+    void transactional_onANonDBOperationMethod_isRejected() {
+        final UnsupportedOperationException thrown = assertThrows(UnsupportedOperationException.class,
+                () -> JdbcUtil.createDao(NonDbTransactionalDao.class, dataSource));
+        assertTrue(thrown.getMessage().contains("@NonDBOperation"), thrown.getMessage());
+    }
+
+    // A default method overriding a @Transactional one inherits its transaction, as in Spring: Java does not inherit method
+    // annotations, so the override ran without one.
+    @Test
+    void transactional_isInheritedByAnOverridingDefaultMethod() throws SQLException {
+        final OverridingDao dao = JdbcUtil.createDao(OverridingDao.class, dataSource);
+
+        assertEquals(1, dao.required(() -> {
+            assertTrue(JdbcUtil.isInTransaction(dataSource));
+            return 1;
+        }));
+        assertFalse(JdbcUtil.isInTransaction(dataSource));
+    }
+
+    // Round 16 review (tests): an abstract re-declaration of a @Transactional method (here a @Query method re-declared without
+    // the annotation) inherits its annotation as a default override does: REQUIRES_NEW commits the insert on its own, though the
+    // enclosing transaction rolls back.
+    @Test
+    void transactional_isInheritedByAnAbstractRedeclaration() throws SQLException {
+        final RedeclaringDao dao = JdbcUtil.createDao(RedeclaringDao.class, dataSource);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            dao.insertOnItsOwn(7L);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(1, count(keeper, "SELECT COUNT(*) FROM transaction_record WHERE id = 7"), "committed on its own (REQUIRES_NEW)");
+    }
+
+    // Round 14 review: an override of a method of a generic super-interface (save(String) for save(T) of Base<T>) was not found,
+    // as it was looked up by its erased parameter types (save(Object)): only the bridge method javac adds inherited the
+    // annotation, and the override ran without a transaction. An overload is no override.
+    @Test
+    void transactional_isInheritedByAnOverrideOfAGenericMethod() throws SQLException {
+        final GenericOverridingDao dao = JdbcUtil.createDao(GenericOverridingDao.class, dataSource);
+
+        assertEquals(1, dao.requiredWith("override", () -> {
+            assertTrue(JdbcUtil.isInTransaction(dataSource));
+            return 1;
+        }));
+        assertEquals(2, dao.requiredWith(2, () -> {
+            assertFalse(JdbcUtil.isInTransaction(dataSource), "an overload");
+            return 2;
+        }));
+
+        // Through the generic super-interface (the bridge method, which calls the override).
+        final GenericTransactionalBase<String> base = dao;
+        assertEquals(3, base.requiredWith("base", () -> {
+            assertTrue(JdbcUtil.isInTransaction(dataSource));
+            return 3;
+        }));
+    }
+
+    // External review (tests): the annotation is that of the nearest overridden method that declares one, as in Spring: an
+    // override in between that declares none does not stop the search. An override opts out with SUPPORTS.
+    @Test
+    void transactional_isInheritedPastAnUnannotatedOverrideInBetween_andAnOverrideOptsOutWithSupports() throws SQLException {
+        final IntermediateOverridingDao dao = JdbcUtil.createDao(IntermediateOverridingDao.class, dataSource);
+
+        assertEquals(1, dao.required(() -> {
+            assertTrue(JdbcUtil.isInTransaction(dataSource), "REQUIRED of TransactionDao, past UnannotatedMiddleDao's override");
+            return 1;
+        }));
+
+        final OptingOutDao optingOut = JdbcUtil.createDao(OptingOutDao.class, dataSource);
+
+        assertEquals(2, optingOut.required(() -> {
+            assertFalse(JdbcUtil.isInTransaction(dataSource), "SUPPORTS: no transaction of its own");
+            return 2;
+        }));
+    }
+
+    // Round 15 review: a @NonDBOperation override of a @Transactional method was rejected at DAO creation, for the annotation it
+    // inherited: such an override could not be declared at all. Only a @Transactional it declares is rejected; one it would
+    // inherit is ignored, as the method is not run as a DB operation.
+    @Test
+    void transactional_inheritedByANonDBOperationOverride_isIgnored() throws SQLException {
+        final NonDbOverridingDao dao = JdbcUtil.createDao(NonDbOverridingDao.class, dataSource);
+
+        assertEquals(1, dao.required(() -> {
+            assertFalse(JdbcUtil.isInTransaction(dataSource));
+            return 1;
+        }));
+    }
+
+    // Round 15 review: a query prepared in a transaction and used after the transaction completed was rejected but left open,
+    // with its statement and close handlers. It is closed first now, unless closeAfterExecution(false) is set; on another thread,
+    // where the owner thread may be using it, it is not.
+    @Test
+    void aQueryUsedAfterItsTransactionCompleted_isClosed() throws Exception {
+        final AtomicInteger closed = new AtomicInteger();
+        final PreparedQuery closing;
+        final PreparedQuery kept;
+        final PreparedQuery otherThread;
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            closing = JdbcUtil.prepareQuery(dataSource, "SELECT id FROM transaction_record").onClose(closed::incrementAndGet);
+            kept = JdbcUtil.prepareQuery(dataSource, "SELECT id FROM transaction_record").closeAfterExecution(false).onClose(closed::incrementAndGet);
+            otherThread = JdbcUtil.prepareQuery(dataSource, "SELECT id FROM transaction_record").onClose(closed::incrementAndGet);
+
+            final java.util.concurrent.CompletableFuture<Throwable> elsewhere = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                try {
+                    otherThread.list(Long.class);
+                    return null;
+                } catch (final Throwable e) {
+                    return e;
+                }
+            });
+            assertTrue(elsewhere.get() instanceof IllegalStateException);
+            assertFalse(otherThread.isClosed, "not closed on another thread");
+
+            tran.commit();
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertThrows(IllegalStateException.class, () -> closing.list(Long.class));
+        assertTrue(closing.isClosed);
+        assertEquals(1, closed.get(), "its close handler ran");
+
+        assertThrows(IllegalStateException.class, () -> kept.list(Long.class));
+        assertFalse(kept.isClosed, "kept open with closeAfterExecution(false)");
+        kept.close();
+        otherThread.close();
+        assertEquals(3, closed.get());
+    }
+
+    // Round 14 review: a parallel stream of a query prepared in a transaction failed with IllegalStateException: the stream
+    // starts the query's deferred execution on one of its worker threads, which the check binding the query to the transaction's
+    // thread refused. The deferred execution only checks that the transaction has not completed.
+    @Test
+    void aParallelStreamOfAQueryPreparedInATransaction_runs() throws SQLException {
+        try (Statement statement = keeper.createStatement()) {
+            statement.executeUpdate("INSERT INTO transaction_record (id) VALUES (1), (2), (3)");
+        }
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            JdbcUtil.executeUpdate(dataSource, "INSERT INTO transaction_record (id) VALUES (4)"); // not committed
+
+            final List<Long> ids = JdbcUtil.prepareQuery(dataSource, "SELECT id FROM transaction_record")
+                    .stream(Long.class)
+                    .parallel(4)
+                    .map(id -> id * 10)
+                    .sorted()
+                    .toList();
+            assertEquals(List.of(10L, 20L, 30L, 40L), ids, "the uncommitted row is read too");
+
+            // Executed once the transaction has completed, the stream fails: its connection has been released.
+            try (com.landawn.abacus.util.stream.Stream<Long> stream = JdbcUtil.prepareQuery(dataSource, "SELECT id FROM transaction_record")
+                    .stream(Long.class)) {
+                tran.commit();
+                assertThrows(IllegalStateException.class, stream::toList);
+            }
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+    }
+
+    // Transaction review, low-severity finding: a rollback put back the ID an insert had written even after the application had
+    // set another ID since. Only an ID that still holds the written value is put back now.
+    @Test
+    void anIdSetAfterTheInsert_isKeptByARollback() throws SQLException {
+        final GeneratedRecord changed = generated("changed");
+        final GeneratedRecord kept = generated("kept");
+        final List<GeneratedRecord> batch = List.of(generated("b1"), generated("b2"));
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            generatedDao.insert(changed);
+            generatedDao.insert(kept);
+            generatedDao.batchInsert(batch);
+            assertNotNull(changed.getId());
+
+            changed.setId(99L);
+            batch.get(0).setId(98L);
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(99L, changed.getId(), "the ID the application set is kept");
+        assertNull(kept.getId(), "the written ID is put back");
+        assertEquals(98L, batch.get(0).getId());
+        assertNull(batch.get(1).getId());
+    }
+
+    // Round 16 review: when the ID generation of an insert failed in a transaction, the snapshot taken before it recorded no
+    // write, so a rollback put back every ID it had captured, also one the application set after the failure to retry the insert.
+    // The restored values count as written now: an ID set since is kept.
+    @Test
+    void aFailedIdGeneration_keepsAnIdTheApplicationSetsAfterIt() throws SQLException {
+        final FailingIdGeneratorDao dao = JdbcUtil.createDao(FailingIdGeneratorDao.class, dataSource);
+        final GeneratedRecord record = generated("retried");
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            FailingIdGeneratorDao.FAIL_NEXT.set(true);
+            assertThrows(IllegalStateException.class, () -> dao.insert(record));
+            assertNull(record.getId(), "nothing was inserted: the ID is put back");
+
+            record.setId(42L); // the application retries with an ID of its own
+            dao.insert(record);
+            assertEquals(42L, record.getId());
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(42L, record.getId(), "the ID the application set is kept");
+    }
+
+    // External review: a key setter that failed after assigning the key the database generated (a custom setter, through
+    // @AccessFieldByMethod; in a batch, the setter of a later entity, after those of the earlier ones) recorded no write, so a
+    // rollback put back every captured ID, also one the application had set since. The values the failed setter left count
+    // as written now: an ID the application sets afterwards is kept, one still holding the written key is put back.
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("failingSetterInserts")
+    void aKeySetterFailingAfterAssigning_recordsTheKeyAsWritten(final String insert, final int entities) throws SQLException {
+        final FailingSetterDao dao = JdbcUtil.createDao(FailingSetterDao.class, dataSource);
+
+        for (final boolean reassigned : new boolean[] { false, true }) {
+            final List<FailingSetterRecord> records = new java.util.ArrayList<>();
+
+            for (int i = 0; i < entities; i++) {
+                records.add(FailingSetterRecord.named("r" + i));
+            }
+
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                FailingSetterRecord.FAIL_AT.set(entities - 1); // the setter of the last entity fails, after assigning its key
+                assertThrows(IllegalStateException.class, () -> insertFailingSetterRecords(dao, insert, records));
+                records.forEach(record -> assertNotNull(record.id, "every key was assigned"));
+
+                if (reassigned) {
+                    for (int i = 0; i < entities; i++) {
+                        records.get(i).id = 90L + i; // the application sets IDs of its own
+                    }
+                }
+            } finally {
+                FailingSetterRecord.FAIL_AT.set(-1);
+                tran.rollbackIfNotCommitted();
+            }
+
+            for (int i = 0; i < entities; i++) {
+                assertEquals(reassigned ? Long.valueOf(90L + i) : null, records.get(i).id, insert + ", reassigned=" + reassigned + ", entity " + i);
+            }
+        }
+
+        assertEquals(0, count(keeper, "SELECT COUNT(*) FROM generated_record"));
+    }
+
+    private static Stream<Arguments> failingSetterInserts() {
+        return Stream.of(Arguments.of("insert", 1), Arguments.of("batchInsert", 2), Arguments.of("@Query insert", 1), Arguments.of("@Query batch insert", 2));
+    }
+
+    private static void insertFailingSetterRecords(final FailingSetterDao dao, final String insert, final List<FailingSetterRecord> records)
+            throws SQLException {
+        switch (insert) {
+            case "insert" -> dao.insert(records.get(0));
+            case "batchInsert" -> dao.batchInsert(records);
+            case "@Query insert" -> dao.insertOne(records.get(0));
+            default -> dao.insertAll(records);
+        }
+    }
+
+    // Round 17 review (tests): the batch path of that fix. A batchInsert whose ID generation fails for a later entity puts back
+    // the IDs generated for the entities before it (nothing was inserted), and the restored values count as written: the IDs
+    // the application sets afterwards to retry the batch are kept by a later rollback.
+    @Test
+    void aFailedIdGenerationInABatchInsert_keepsIdsTheApplicationSetsAfterIt() throws SQLException {
+        final FailingIdGeneratorDao dao = JdbcUtil.createDao(FailingIdGeneratorDao.class, dataSource);
+        final GeneratedRecord first = generated("first");
+        final GeneratedRecord second = generated("second");
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            FailingIdGeneratorDao.FAIL_AFTER.set(1); // the generation for the second entity fails
+            assertThrows(IllegalStateException.class, () -> dao.batchInsert(List.of(first, second)));
+            assertNull(first.getId(), "nothing was inserted: the generated ID is put back");
+            assertNull(second.getId());
+
+            first.setId(42L); // the application retries with IDs of its own
+            second.setId(43L);
+            assertEquals(2, dao.batchInsert(List.of(first, second)).size());
+        } finally {
+            FailingIdGeneratorDao.FAIL_AFTER.set(-1);
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(42L, first.getId(), "the IDs the application set are kept");
+        assertEquals(43L, second.getId());
+        assertEquals(0, count(keeper, "SELECT COUNT(*) FROM generated_record"));
+    }
+
+    // Round 17 review (tests): a DAO whose interface overrides dataSource() runs its statements on that data source, and puts
+    // back the IDs of its inserts when the transaction there rolls back (round 16 fixed the checks, which used the DAO's own
+    // data source; only the cache side was tested).
+    @Test
+    void anInsertThroughADaoOverridingItsDataSource_putsBackItsIdWhenTheTransactionThereRollsBack() throws SQLException {
+        final JdbcDataSource own = new JdbcDataSource();
+        own.setURL("jdbc:h2:mem:dao_transaction_own_" + UUID.randomUUID());
+        OverridingDataSourceGeneratedDao.TARGET.set(dataSource);
+
+        try {
+            final OverridingDataSourceGeneratedDao dao = JdbcUtil.createDao(OverridingDataSourceGeneratedDao.class, own);
+            final GeneratedRecord record = generated("overriding");
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                dao.insert(record);
+                assertNotNull(record.getId());
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+
+            assertNull(record.getId(), "the transaction on the overriding data source rolled the row back: its ID is put back");
+            assertEquals(0, count(keeper, "SELECT COUNT(*) FROM generated_record"));
+        } finally {
+            OverridingDataSourceGeneratedDao.TARGET.set(null);
+        }
+    }
+
+    // Transaction review, low-severity finding: an insert that writes no ID (its entities carry their IDs, and the driver returns
+    // no keys for them, as MySQL does for a table without an auto-increment column) took a snapshot of its entities in a
+    // transaction all the same: a batch of a million entities cost a million weak references. The snapshot is taken right before
+    // the first ID write now.
+    @Test
+    void anInsertWritingNoId_takesNoSnapshotInATransaction() throws SQLException {
+        final javax.sql.DataSource keyless = withoutGeneratedKeys(dataSource);
+        final GeneratedDao dao = JdbcUtil.createDao(GeneratedDao.class, keyless);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(keyless);
+
+        try {
+            dao.insert(generated(1L, "a"));
+            assertEquals(2, dao.batchInsert(List.of(generated(2L, "b"), generated(3L, "c"))).size());
+            assertEquals(0, tran.context().rollbackActionCount(), "no ID was written");
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        final SqlTransaction generating = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            generatedDao.insert(generated("d"));
+            assertEquals(1, generating.context().rollbackActionCount(), "a generated ID was written");
+        } finally {
+            generating.rollbackIfNotCommitted();
+        }
+    }
+
+    // Round 14 review: H2, PostgreSQL and Oracle return the explicit IDs an insert was given as its generated keys. Writing them
+    // back changed nothing, but inside a transaction it took a snapshot of every entity's ID first, kept until the transaction
+    // ended, and recorded the values written. An entity that already holds the returned ID is left alone now; one inserted
+    // without an ID still gets its key, and a rollback still puts that back.
+    @Test
+    void anInsertWhoseKeysAreTheEntitiesOwnIds_takesNoSnapshotInATransaction() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+        final GeneratedRecord generatedOne = generated("g");
+
+        try {
+            final GeneratedRecord single = generated(1001L, "a");
+            assertEquals(1001L, generatedDao.insert(single));
+            assertEquals(List.of(1002L, 1003L), generatedDao.batchInsert(List.of(generated(1002L, "b"), generated(1003L, "c"))));
+            assertEquals(List.of(1004L, 1005L), generatedDao.batchInsert(List.of(generated(1004L, "d"), generated(1005L, "e")), 1));
+            assertEquals(1006L, generatedDao.insert(generated(1006L, "f"), List.of("id", "name")));
+            assertEquals(List.of(1007L, 1008L), generatedDao.batchInsert(List.of(generated(1007L, "g"), generated(1008L, "h")), List.of("id", "name"), 10));
+            assertEquals(1009L, generatedDao.insertOneWithId(generated(1009L, "i")));
+            assertEquals(List.of(1010L, 1011L), generatedDao.insertAllWithIds(List.of(generated(1010L, "j"), generated(1011L, "k"))));
+            assertEquals(0, tran.context().rollbackActionCount(), "the returned keys are the entities' own IDs");
+            assertEquals(1001L, single.getId());
+
+            generatedDao.insert(generatedOne);
+            assertNotNull(generatedOne.getId());
+            assertEquals(1, tran.context().rollbackActionCount(), "a generated ID was written");
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertNull(generatedOne.getId(), "the generated ID is put back");
+    }
+
+    // A batch mixing entities with explicit IDs and without: a rollback puts back the generated IDs only.
+    @Test
+    void aMixedBatchRolledBack_keepsTheExplicitIds() throws SQLException {
+        final GeneratedRecord explicit = generated(1101L, "x");
+        final GeneratedRecord generatedOne = generated("y");
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            assertEquals(2, generatedDao.batchInsert(List.of(explicit, generatedOne)).size());
+            assertNotNull(generatedOne.getId());
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(1101L, explicit.getId());
+        assertNull(generatedOne.getId());
+    }
+
+    /** Wraps {@code target}: its statements return no generated keys. */
+    private static javax.sql.DataSource withoutGeneratedKeys(final javax.sql.DataSource target) {
+        return (javax.sql.DataSource) java.lang.reflect.Proxy.newProxyInstance(DaoImplTransactionIntegrationTest.class.getClassLoader(),
+                new Class<?>[] { javax.sql.DataSource.class }, (proxy, method, args) -> {
+                    final Object result = invoke(target, method, args);
+
+                    return result instanceof final Connection connection ? withoutGeneratedKeys(Connection.class, connection) : result;
+                });
+    }
+
+    private static <T> T withoutGeneratedKeys(final Class<T> type, final T target) {
+        return type.cast(java.lang.reflect.Proxy.newProxyInstance(DaoImplTransactionIntegrationTest.class.getClassLoader(), new Class<?>[] { type },
+                (proxy, method, args) -> {
+                    if ("getGeneratedKeys".equals(method.getName())) {
+                        return ((java.sql.Statement) target).getConnection().createStatement().executeQuery("SELECT id FROM generated_record WHERE 1 = 0");
+                    }
+
+                    final Object result = invoke(target, method, args);
+
+                    return result instanceof final java.sql.PreparedStatement statement && !(result instanceof java.sql.CallableStatement)
+                            ? withoutGeneratedKeys(java.sql.PreparedStatement.class, statement)
+                            : result;
+                }));
+    }
+
+    private static Object invoke(final Object target, final java.lang.reflect.Method method, final Object[] args) throws Throwable {
+        try {
+            return method.invoke(target, args);
+        } catch (final java.lang.reflect.InvocationTargetException e) {
+            throw e.getCause();
+        }
+    }
+
+    private static GeneratedRecord generated(final Long id, final String name) {
+        final GeneratedRecord record = generated(name);
+        record.setId(id);
+        return record;
+    }
+
     private static int count(final Connection connection, final String sql) {
         try (Statement statement = connection.createStatement();
              ResultSet resultSet = statement.executeQuery(sql)) {
@@ -808,7 +1468,169 @@ class DaoImplTransactionIntegrationTest extends TestBase {
     interface PlainDao extends TransactionDao<PlainDao> {
     }
 
+    interface UnannotatedMiddleDao<D extends UnannotatedMiddleDao<D>> extends TransactionDao<D> {
+        @Override
+        default int required(final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+    }
+
+    interface IntermediateOverridingDao extends UnannotatedMiddleDao<IntermediateOverridingDao> {
+        @Override
+        default int required(final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+    }
+
+    interface OptingOutDao extends TransactionDao<OptingOutDao> {
+        @Override
+        @Transactional(propagation = Propagation.SUPPORTS)
+        default int required(final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+    }
+
+    interface NonDbTransactionalDao extends CrudDao<Record, Long, NonDbTransactionalDao> {
+        @NonDBOperation
+        @Transactional
+        default int helper() {
+            return 1;
+        }
+    }
+
+    interface OverridingDao extends TransactionDao<OverridingDao> {
+        @Override
+        default int required(final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+    }
+
+    interface GenericTransactionalBase<V> {
+        @Transactional(propagation = Propagation.REQUIRED)
+        default int requiredWith(final V value, final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+    }
+
+    // The type argument reaches the base through a type variable of its own.
+    interface GenericTransactionalMiddle<W> extends GenericTransactionalBase<W> {
+    }
+
+    interface GenericOverridingDao extends CrudDao<Record, Long, GenericOverridingDao>, GenericTransactionalMiddle<String> {
+        @Override
+        default int requiredWith(final String value, final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+
+        default int requiredWith(final Integer value, final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+    }
+
+    interface NonDbOverridingDao extends TransactionDao<NonDbOverridingDao> {
+        @Override
+        @NonDBOperation
+        default int required(final Throwables.Supplier<Integer, SQLException> work) throws SQLException {
+            return work.get();
+        }
+    }
+
+    interface TransactionalInsertDao<D extends TransactionalInsertDao<D>> extends CrudDao<Record, Long, D> {
+        @Transactional(propagation = Propagation.REQUIRES_NEW)
+        @Query("INSERT INTO transaction_record (id) VALUES (:id)")
+        void insertOnItsOwn(@com.landawn.abacus.jdbc.annotation.Bind("id") long id) throws SQLException;
+    }
+
+    interface RedeclaringDao extends TransactionalInsertDao<RedeclaringDao> {
+        @Override
+        @Query("INSERT INTO transaction_record (id) VALUES (:id)")
+        void insertOnItsOwn(@com.landawn.abacus.jdbc.annotation.Bind("id") long id) throws SQLException;
+    }
+
+    @com.landawn.abacus.jdbc.annotation.DaoConfig(callGenerateIdForInsertIfIdNotSet = true)
+    interface FailingIdGeneratorDao extends CrudDao<GeneratedRecord, Long, FailingIdGeneratorDao> {
+        AtomicBoolean FAIL_NEXT = new AtomicBoolean();
+        // The number of generateId() calls that succeed before one fails; negative: none fails.
+        AtomicInteger FAIL_AFTER = new AtomicInteger(-1);
+
+        @Override
+        default Long generateId() {
+            if (FAIL_NEXT.getAndSet(false) || FAIL_AFTER.getAndDecrement() == 0) {
+                throw new IllegalStateException("no ID available");
+            }
+
+            return 1000L;
+        }
+    }
+
+    interface FailingSetterDao extends CrudDao<FailingSetterRecord, Long, FailingSetterDao> {
+        @Query("INSERT INTO generated_record (name) VALUES (:name)")
+        Long insertOne(FailingSetterRecord record) throws SQLException;
+
+        @Query(value = "INSERT INTO generated_record (name) VALUES (:name)", batch = true)
+        List<Long> insertAll(List<FailingSetterRecord> records) throws SQLException;
+    }
+
+    /** Read and written through its methods, whose ID setter fails once armed, after assigning the ID. */
+    @Table("generated_record")
+    @com.landawn.abacus.annotation.AccessFieldByMethod
+    public static class FailingSetterRecord {
+        /** The number of non-null IDs set before the setter fails; negative: it does not fail. */
+        static final AtomicInteger FAIL_AT = new AtomicInteger(-1);
+
+        @Id
+        Long id;
+        private String name;
+
+        static FailingSetterRecord named(final String name) {
+            final FailingSetterRecord record = new FailingSetterRecord();
+            record.name = name;
+            return record;
+        }
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+
+            if (id != null && FAIL_AT.get() >= 0 && FAIL_AT.getAndDecrement() == 0) {
+                throw new IllegalStateException("the ID setter failed after assigning the ID");
+            }
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    interface OverridingDataSourceGeneratedDao extends CrudDao<GeneratedRecord, Long, OverridingDataSourceGeneratedDao> {
+        java.util.concurrent.atomic.AtomicReference<javax.sql.DataSource> TARGET = new java.util.concurrent.atomic.AtomicReference<>();
+
+        @Override
+        default javax.sql.DataSource dataSource() {
+            return TARGET.get();
+        }
+    }
+
+    interface PlainGeneratedDao extends com.landawn.abacus.jdbc.dao.Dao<GeneratedRecord, PlainGeneratedDao> {
+    }
+
+    interface UncheckedPlainGeneratedDao extends com.landawn.abacus.jdbc.dao.UncheckedDao<GeneratedRecord, UncheckedPlainGeneratedDao> {
+    }
+
     interface GeneratedDao extends CrudDao<GeneratedRecord, Long, GeneratedDao> {
+        @Query("INSERT INTO generated_record (id, name) VALUES (:id, :name)")
+        Long insertOneWithId(GeneratedRecord record) throws SQLException;
+
+        @Query(value = "INSERT INTO generated_record (id, name) VALUES (:id, :name)", batch = true)
+        List<Long> insertAllWithIds(List<GeneratedRecord> records) throws SQLException;
+
         @Query("INSERT INTO generated_record (name) VALUES (:name)")
         Long insertOne(GeneratedRecord record) throws SQLException;
 

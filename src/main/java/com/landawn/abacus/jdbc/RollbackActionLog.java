@@ -69,10 +69,19 @@ final class RollbackActionLog {
      * @param action the action to run if the transaction rolls back; must not be {@code null}
      */
     void add(final Object tag, final Runnable action) {
+        purgeIfNeeded();
+
+        entries.add(new Entry(tag, action));
+    }
+
+    /**
+     * Drops the obsolete entries once the log has reached the purge threshold.
+     */
+    private void purgeIfNeeded() {
         if (entries.size() >= purgeThreshold) {
             // A snapshot of entities that nothing references any more has nothing left to restore. Dropping such snapshots keeps
             // a long transaction that inserts many short-lived entities from retaining one entry per insert; the threshold
-            // doubles with the entries that remain, so the purges cost amortized constant time per action.
+            // doubles with the entries that remain, so the purges cost amortized constant time per entry.
             // WHY the marks go too: a savepoint is released without notice (Spring reports no release), so a transaction that
             // loops over nested scopes kept one mark per scope for its whole life. A mark whose savepoint object has been
             // garbage collected can't be rolled back to any more (see SavepointMark) and is dropped with the snapshots.
@@ -80,8 +89,6 @@ final class RollbackActionLog {
             marks = countMarks();
             purgeThreshold = Math.max(MIN_PURGE_THRESHOLD, entries.size() * 2);
         }
-
-        entries.add(new Entry(tag, action));
     }
 
     /**
@@ -96,6 +103,10 @@ final class RollbackActionLog {
      */
     void mark(final Object savepoint) {
         N.checkArgNotNull(savepoint, cs.savepoint);
+
+        // Purged here too: a transaction that loops over nested scopes without inserting anything only adds marks, which grew
+        // without limit, as the purge ran only when an action was added.
+        purgeIfNeeded();
 
         entries.add(new Entry(null, new SavepointMark(new WeakReference<>(savepoint))));
         marks++;
@@ -198,7 +209,8 @@ final class RollbackActionLog {
      *
      * <p>For a participating transaction rolled back inside an open savepoint scope: the savepoint scope is doomed, so the
      * work since the savepoint is undone right away, while the enclosing transaction may still commit the work before the
-     * savepoint (a rollback to the savepoint clears the rollback-only mark it set), whose actions therefore wait.</p>
+     * savepoint (a rollback to the savepoint clears the rollback-only mark it set, except on a JPA transaction), whose actions
+     * therefore wait.</p>
      *
      * @param tag the tag of the actions to run
      * @param failureHandler receives the failure of each action that throws
@@ -312,7 +324,9 @@ final class RollbackActionLog {
      * Captures the current ID property values of {@code entities} and returns an action that puts back every captured value
      * that has changed since: an insert writes generated IDs onto its entities as soon as its statements run, and if the
      * transaction it runs in rolls back, those rows no longer exist. Register the action with the transaction before the
-     * insert runs. The entities are only weakly referenced: an entity that nothing references any more needs no restore.
+     * insert first writes an ID (a generated one before the statement runs, or the database's keys after it), and record the
+     * values each write leaves ({@link IdSnapshot#recordWrittenValues()}). The entities are only weakly referenced: an entity
+     * that nothing references any more needs no restore.
      *
      * @param entities the entities whose ID values are captured
      * @param idPropNameList the ID property names of the entity class
@@ -320,7 +334,7 @@ final class RollbackActionLog {
      * @return the action that restores the captured ID values
      * @throws IllegalArgumentException if an element of {@code entities} is {@code null}
      */
-    static Runnable captureIdValues(final Collection<?> entities, final List<String> idPropNameList, final BeanInfo entityInfo) {
+    static IdSnapshot captureIdValues(final Collection<?> entities, final List<String> idPropNameList, final BeanInfo entityInfo) {
         return new IdSnapshot(entities, idPropNameList, entityInfo);
     }
 
@@ -331,6 +345,11 @@ final class RollbackActionLog {
         private final PropInfo[] idPropInfos;
         private final WeakReference<?>[] entityRefs;
         private final Object[][] idValues;
+
+        /**
+         * The ID values the insert wrote, per entity, once recorded (see {@link #recordWrittenValues()}); {@code null} before.
+         */
+        private Object[][] writtenValues;
 
         IdSnapshot(final Collection<?> entities, final List<String> idPropNameList, final BeanInfo entityInfo) {
             idPropInfos = new PropInfo[idPropNameList.size()];
@@ -375,15 +394,41 @@ final class RollbackActionLog {
         }
 
         /**
+         * Records the current ID values of the entities as those the insert wrote: {@link #run()} then leaves an entity alone
+         * whose ID values have changed since (the application set another ID after the insert).
+         */
+        void recordWrittenValues() {
+            final Object[][] written = new Object[entityRefs.length][];
+
+            for (int i = 0; i < entityRefs.length; i++) {
+                final Object entity = entityRefs[i].get();
+
+                if (entity != null) {
+                    final Object[] values = new Object[idPropInfos.length];
+
+                    for (int j = 0; j < values.length; j++) {
+                        values[j] = idPropInfos[j].getPropValue(entity);
+                    }
+
+                    written[i] = values;
+                }
+            }
+
+            writtenValues = written;
+        }
+
+        /**
          * Puts back every captured ID value that has changed since the capture. An unchanged value is not written, so an
-         * immutable entity whose ID was not changed does not fail.
+         * immutable entity whose ID was not changed does not fail. Once the written values are recorded, an entity whose ID
+         * values no longer equal them is left alone: the application has set another ID since, which putting back the captured
+         * one overwrote.
          */
         @Override
         public void run() {
             for (int i = 0; i < entityRefs.length; i++) {
                 final Object entity = entityRefs[i].get();
 
-                if (entity == null) {
+                if (entity == null || (writtenValues != null && writtenValues[i] != null && !holdsValues(entity, writtenValues[i]))) {
                     continue;
                 }
 
@@ -395,6 +440,16 @@ final class RollbackActionLog {
                     }
                 }
             }
+        }
+
+        private boolean holdsValues(final Object entity, final Object[] values) {
+            for (int j = 0; j < values.length; j++) {
+                if (!N.equals(idPropInfos[j].getPropValue(entity), values[j])) {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

@@ -20,18 +20,10 @@
       "ReadOnlyDao",
       "NonUpdateDao"
     ],
-    "ForUpdateOnlyNonSelectFastPathTest": [
-      "JdbcUtil",
-      "SqlTransaction"
-    ],
     "FunctionalInterfaceNullValidationTest": [
       "Jdbc",
       "JdbcUtil",
       "AbstractQuery"
-    ],
-    "H2BracketTransactionTest": [
-      "JdbcUtil",
-      "SqlTransaction"
     ],
     "JavadocCodeExampleTest": [
       "Jdbc",

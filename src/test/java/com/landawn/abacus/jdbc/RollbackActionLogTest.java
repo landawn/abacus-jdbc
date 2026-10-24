@@ -80,6 +80,54 @@ class RollbackActionLogTest extends TestBase {
         assertDoesNotThrow(() -> RollbackActionLog.captureIdValues(List.of(immutable), KEY_ID_PROPS, recordInfo).run());
     }
 
+    // Once the values an insert wrote are recorded, a restore leaves an entity alone whose ID has changed since (the application
+    // set another one); a later record replaces the earlier one, and an entity collected meanwhile needs nothing.
+    @Test
+    void idSnapshotLeavesAnIdChangedSinceTheRecordedWrite() {
+        final Key changed = key(null, 0);
+        final Key kept = key(null, 0);
+        final RollbackActionLog.IdSnapshot snapshot = RollbackActionLog.captureIdValues(List.of(changed, kept), KEY_ID_PROPS, KEY_INFO);
+
+        changed.setOrderId(1L);
+        kept.setOrderId(2L);
+        snapshot.recordWrittenValues();
+        kept.setOrderId(3L); // a second write by the same insert (e.g. the database's keys after generated ones)
+        snapshot.recordWrittenValues();
+        changed.setOrderId(99L); // set by the application since
+
+        snapshot.run();
+
+        assertEquals(99L, changed.getOrderId(), "the ID the application set is kept");
+        assertNull(kept.getOrderId(), "the written ID is put back");
+
+        // Without a recorded write (an ID setter that failed part-way), every captured value is put back.
+        final Key partial = key(null, 0);
+        final RollbackActionLog.IdSnapshot unrecorded = RollbackActionLog.captureIdValues(List.of(partial), KEY_ID_PROPS, KEY_INFO);
+        partial.setOrderId(5L);
+        unrecorded.run();
+        assertNull(partial.getOrderId());
+    }
+
+    // Two snapshots of one entity (inserted twice in a transaction), run newest first, put back the ID it had before each insert.
+    @Test
+    void idSnapshotsOfOneEntityRunNewestFirst() {
+        final Key entity = key(null, 0);
+        final RollbackActionLog log = new RollbackActionLog();
+
+        final RollbackActionLog.IdSnapshot first = RollbackActionLog.captureIdValues(List.of(entity), KEY_ID_PROPS, KEY_INFO);
+        log.add(first);
+        entity.setOrderId(1L);
+        first.recordWrittenValues();
+
+        final RollbackActionLog.IdSnapshot second = RollbackActionLog.captureIdValues(List.of(entity), KEY_ID_PROPS, KEY_INFO);
+        log.add(second);
+        entity.setOrderId(2L);
+        second.recordWrittenValues();
+
+        log.runNewestFirst(e -> fail(e));
+        assertNull(entity.getOrderId());
+    }
+
     // A null entity failed with a NullPointerException while its ID values were read; it is an invalid argument.
     @Test
     void captureIdValuesRejectsANullEntity() {
@@ -385,6 +433,32 @@ class RollbackActionLogTest extends TestBase {
 
         log.runNewestFirstSinceNewestMark("ds", e -> fail(e));
         assertEquals(List.of("since released", "before"), ran, "no live mark: every action with the tag runs");
+        assertEquals(0, log.size());
+    }
+
+    // Transaction review, low-severity finding: only an added action purged the log, so a transaction that looped over nested
+    // scopes without inserting anything kept the mark of every savepoint: the marks grew without limit. A mark purges too now.
+    @Test
+    void marksAlonePurgeTheLogToo() throws InterruptedException {
+        final RollbackActionLog log = new RollbackActionLog();
+        final List<WeakReference<Object>> released = new ArrayList<>();
+
+        for (int i = 0; i < RollbackActionLog.MIN_PURGE_THRESHOLD; i++) {
+            released.add(markAnUnreferencedSavepoint(log));
+        }
+
+        assertEquals(RollbackActionLog.MIN_PURGE_THRESHOLD, log.markCount());
+
+        for (int attempt = 0; attempt < 100 && released.stream().anyMatch(ref -> ref.get() != null); attempt++) {
+            System.gc();
+            Thread.sleep(10);
+        }
+
+        assertTrue(released.stream().allMatch(ref -> ref.get() == null), "the unreferenced savepoints were not collected");
+
+        final Object live = new Object();
+        log.mark(live); // triggers the purge
+        assertEquals(1, log.markCount(), "only the live mark stays");
         assertEquals(0, log.size());
     }
 

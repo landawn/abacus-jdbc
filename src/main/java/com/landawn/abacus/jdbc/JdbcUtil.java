@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
 import java.io.StringReader;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.math.BigDecimal;
@@ -44,6 +45,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,8 +62,6 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import com.landawn.abacus.annotation.Beta;
 import com.landawn.abacus.annotation.Internal;
@@ -98,7 +98,6 @@ import com.landawn.abacus.query.QueryUtil;
 import com.landawn.abacus.query.SqlDialect;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.query.SqlMapper;
-import com.landawn.abacus.query.SqlOperation;
 import com.landawn.abacus.type.AsciiStreamType;
 import com.landawn.abacus.type.BinaryStreamType;
 import com.landawn.abacus.type.BlobInputStreamType;
@@ -461,9 +460,24 @@ public final class JdbcUtil {
 
     /**
      * Per-thread flag that, when {@code true}, disables participation in Spring-managed transactions
-     * for JDBC operations on the current thread.
+     * for JDBC operations on the current thread, on every data source (see {@link #runIgnoringSpringTransaction(Throwables.Runnable)}).
      */
     static final ThreadLocal<Boolean> isSpringTransactionalDisabled_TL = ThreadLocal.withInitial(() -> false);
+
+    /**
+     * The data sources for which participation in Spring-managed transactions is suspended on the current thread, by
+     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)} and its siblings, compared by identity after
+     * unwrapping Spring {@code TransactionAwareDataSourceProxy} layers; {@code null} when there is none.
+     */
+    private static final ThreadLocal<Map<javax.sql.DataSource, SpringSuspension>> springSuspendedDataSources_TL = new ThreadLocal<>();
+
+    /**
+     * A suspension of this library's use of Spring-managed transactions for a data source (see
+     * {@link #suspendSpringTransactional(javax.sql.DataSource)}): the resource Spring bound to it then (the connection holder
+     * of the transaction left, or {@code null}), and the enclosing suspension of the same data source, if any.
+     */
+    private record SpringSuspension(Object resource, SpringSuspension enclosing) {
+    }
 
     /**
      * Global master switch for SQL logging; when {@code false}, SQL logging is disabled regardless of per-thread settings.
@@ -482,9 +496,11 @@ public final class JdbcUtil {
     static volatile boolean isDaoMethodPerfLogAllowed = true;
 
     /**
-     * Whether Spring JDBC ({@code org.springframework.jdbc}) is present on the classpath; detected once during class initialization.
+     * Whether Spring's JDBC transaction support can be used: decided once, during class initialization, by initializing Spring's
+     * {@code DataSourceUtils}, and never changed afterwards. A {@link LinkageError} thrown at run time, typically by a JDBC
+     * driver that fails to load, propagates instead of turning Spring support off.
      */
-    static volatile boolean isInSpring = true;
+    static final boolean isInSpring = isSpringTransactionSupportLoadable();
 
     /**
      * Optional global callback invoked after each statement execution with the SQL text, the start time in
@@ -531,11 +547,33 @@ public final class JdbcUtil {
      */
     private static final ThreadLocal<DaoCacheScope> daoCacheScope_TL = new ThreadLocal<>();
 
-    static {
+    /**
+     * Returns whether Spring's {@code DataSourceUtils} can be loaded and initialized through this class's class loader, which
+     * resolves this class's references to Spring. Spring is an optional ({@code provided}) dependency. Initializing
+     * {@code DataSourceUtils} links it against the rest of Spring it needs (spring-tx and spring-core, through its exception
+     * types), so a partial installation counts as absent, with a warning, instead of failing when a connection is acquired.
+     *
+     * @return {@code true} if Spring's JDBC transaction support can be used
+     */
+    private static boolean isSpringTransactionSupportLoadable() {
+        final ClassLoader classLoader = JdbcUtil.class.getClassLoader();
+        final String className = "org.springframework.jdbc.datasource.DataSourceUtils";
+
         try {
-            isInSpring = ClassUtil.forName("org.springframework.jdbc.datasource.DataSourceUtils") != null;
+            Class.forName(className, false, classLoader);
         } catch (final Exception | LinkageError e) {
-            isInSpring = false;
+            return false; // Spring JDBC is not on the class path.
+        }
+
+        try {
+            Class.forName(className, true, classLoader);
+
+            return true;
+        } catch (final Exception | LinkageError e) {
+            logger.warn("Spring JDBC is on the class path, but its transaction support cannot be loaded ({}): Spring-managed transactions are ignored",
+                    e.toString());
+
+            return false;
         }
     }
 
@@ -1024,9 +1062,15 @@ public final class JdbcUtil {
     /**
      * Retrieves a {@link Connection} from the specified {@link javax.sql.DataSource}.
      * This method is aware of Spring-managed transactions. If Spring JDBC is on the classpath (and its
-     * integration is not disabled for the current thread, e.g. by {@link #runIgnoringSpringTransaction(Throwables.Runnable)}),
+     * integration is neither disabled for the current thread, e.g. by {@link #runIgnoringSpringTransaction(Throwables.Runnable)},
+     * nor suspended for {@code ds}, e.g. by {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}),
      * the connection is obtained through Spring's {@code DataSourceUtils}, so a connection bound to an active Spring
-     * transaction is returned. Otherwise, it retrieves a new connection from the DataSource.
+     * transaction is returned. Otherwise, it retrieves a new connection from the DataSource; from the target data source of a
+     * Spring {@code TransactionAwareDataSourceProxy}, whose own connections are those of the current Spring transaction.
+     *
+     * <p>Whether Spring is on the classpath is decided once, when this class is initialized: an error thrown by the data
+     * source, such as a {@link LinkageError} from a JDBC driver that cannot be loaded, propagates as it is and does not change
+     * how connections are obtained.</p>
      *
      * <p>A {@link SqlTransaction} started by {@link #beginTransaction(javax.sql.DataSource)} is <i>not</i> consulted
      * here; use {@link SqlTransaction#connection()} to work with that transaction's connection.</p>
@@ -1052,31 +1096,67 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} from which to obtain a connection. Must not be {@code null}.
      * @return A {@link Connection} object.
      * @throws IllegalArgumentException if {@code ds} is {@code null}.
-     * @throws UncheckedSQLException if acquiring a connection directly from {@code ds} fails outside the Spring acquisition path.
+     * @throws UncheckedSQLException if acquiring a connection directly from {@code ds} fails outside the Spring acquisition path;
+     *         on the Spring path, such a failure propagates as Spring's unchecked {@code CannotGetJdbcConnectionException}
+     *         (not declared, so that this class does not name a Spring type).
      * @see #releaseConnection(Connection, javax.sql.DataSource)
      * @see org.springframework.jdbc.datasource.DataSourceUtils#getConnection(javax.sql.DataSource)
      */
     public static Connection getConnection(final javax.sql.DataSource ds) throws IllegalArgumentException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
-            try {
-                return org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
-            } catch (final LinkageError e) {
-                isInSpring = false;
+        if (isSpringTransactionalUsed(ds)) {
+            // A LinkageError is not caught: DataSourceUtils was initialized with this class (isInSpring), so it comes from ds or
+            // its driver (a native library or a driver class that fails to load), which DataSourceUtils passes on. Caught, it
+            // turned Spring support off for the whole JVM, and the connection was taken from ds directly: from then on, on every
+            // thread and for every data source, JdbcUtil work in a Spring transaction ran on connections of its own, a transaction
+            // begun through a TransactionAwareDataSourceProxy committed the Spring transaction's connection, and work meant to
+            // run outside the Spring transaction ran in it.
+            final Connection conn = org.springframework.jdbc.datasource.DataSourceUtils.getConnection(ds);
 
-                try {
-                    return ds.getConnection();
-                } catch (final SQLException e1) {
-                    throw new UncheckedSQLException(e1);
-                }
-            }
+            // So that the Spring transaction's afterCommit callbacks see it completing (see isSpringTransactionCompleting): only a
+            // transaction this library had begun a scope in was recognized, and a transaction begun in its afterCommit callbacks
+            // joined it, after a statement run through JdbcUtil, and was committed by Spring's cleanup also when it rolled back.
+            // Given ds, not its unwrapped key: unwrapping links TransactionAwareDataSourceProxy, whose superclass needs spring-beans,
+            // so it is unwrapped inside watchCompletion's catch. (Without spring-beans, Spring's own transaction synchronization
+            // fails in DataSourceUtils.getConnection: no transaction manager can run there anyway.)
+            SpringRollbackActions.watchCompletion(ds);
+
+            return conn;
         } else {
             try {
-                return ds.getConnection();
+                return dataSourceOutsideSpringTransaction(ds).getConnection();
             } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             }
+        }
+    }
+
+    /**
+     * Returns the data source to take a connection from when it must not be the connection of a Spring-managed transaction:
+     * {@code ds}, or the target of Spring {@code TransactionAwareDataSourceProxy} layers, whose connections delegate to the
+     * connection bound to the current Spring transaction. Used while Spring participation is disabled on the thread (work
+     * outside the transaction, {@link #runIgnoringSpringTransaction(Throwables.Runnable)}, DAO {@code REQUIRES_NEW} and
+     * {@code NOT_SUPPORTED}): through the proxy, such work ran in the Spring transaction, so a nested commit committed the
+     * Spring transaction's earlier work, and work meant to commit on its own was rolled back with it.
+     *
+     * <p>{@code isInSpring} is decided once, when this class is initialized, so a failure elsewhere (a JDBC driver that fails
+     * to load) cannot make this method skip the unwrapping. A {@link LinkageError} while checking for the proxy means that
+     * Spring's proxy class cannot be loaded, so {@code ds} cannot be such a proxy: it is returned as it is.</p>
+     *
+     * @param ds the data source
+     * @return the data source that hands out connections of their own
+     */
+    static javax.sql.DataSource dataSourceOutsideSpringTransaction(final javax.sql.DataSource ds) {
+        if (!isInSpring) {
+            return ds;
+        }
+
+        try {
+            return unwrapSpringDataSource(ds);
+        } catch (final LinkageError e) {
+            // TransactionAwareDataSourceProxy cannot be loaded (a partial Spring installation), so ds is not one.
+            return ds;
         }
     }
 
@@ -1088,8 +1168,10 @@ public final class JdbcUtil {
      *
      * <p>Close failures are logged, never thrown. Spring binds a transaction's connection to the thread that
      * started the transaction: release a connection on the thread that obtained it, and not inside a
-     * {@link #runIgnoringSpringTransaction(Throwables.Runnable)} scope unless it was obtained there too. Otherwise a
-     * transaction-bound connection is closed instead of being left to its transaction.</p>
+     * {@link #runIgnoringSpringTransaction(Throwables.Runnable)} scope, or work run outside the transaction on {@code ds}
+     * ({@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}, {@link SqlTransaction#callOutsideTransaction},
+     * a DAO {@code @Transactional(REQUIRES_NEW)} or {@code NOT_SUPPORTED} method), unless it was obtained there too.
+     * Otherwise a transaction-bound connection is closed instead of being left to its transaction.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1114,11 +1196,12 @@ public final class JdbcUtil {
             return;
         }
 
-        if (isInSpring && ds != null && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
+        if (ds != null && isSpringTransactionalUsed(ds)) {
             try {
                 org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(conn, ds);
             } catch (final LinkageError e) {
-                isInSpring = false;
+                // Spring's releaseConnection handles any failure of closing the connection, so this is a Spring class that fails
+                // to link (a mismatched installation): the connection is closed directly. Spring support stays on (see isInSpring).
                 JdbcUtil.closeQuietly(conn);
             }
         } else {
@@ -1142,8 +1225,67 @@ public final class JdbcUtil {
         try {
             org.springframework.jdbc.datasource.DataSourceUtils.releaseConnection(conn, ds);
         } catch (final LinkageError e) {
-            isInSpring = false;
+            // As in releaseConnection: a Spring class that fails to link. Spring support stays on.
             JdbcUtil.closeQuietly(conn);
+        }
+    }
+
+    /**
+     * Releases the connection of a transaction participating in a Spring-managed transaction while Spring binds another
+     * resource to the data source, or none: that transaction is suspended ({@code REQUIRES_NEW}, {@code NOT_SUPPORTED}) or
+     * has completed. The connection is left to that transaction, whose completion releases it: released through
+     * {@code DataSourceUtils}, which finds another holder (or none) bound, it was closed while that transaction still used it.
+     * Only the request this library made of the transaction's connection holder is released, as {@code DataSourceUtils}
+     * would.
+     *
+     * @param ds the data source the connection was obtained from
+     * @param participatedResource the connection holder of the transaction participated in
+     */
+    static void releaseUnboundParticipatingConnection(final javax.sql.DataSource ds, final Object participatedResource) {
+        try {
+            // Through a TransactionAwareDataSourceProxy, DataSourceUtils requested the connection of a holder bound for the proxy,
+            // which Spring's completion releases.
+            if (unwrapSpringDataSource(ds) == ds && participatedResource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder) {
+                holder.released();
+            }
+        } catch (final LinkageError e) {
+            // A Spring class that fails to link: nothing to release then, the transaction's completion releases the connection.
+        }
+    }
+
+    /**
+     * Takes {@code conn}, which a transaction of its own aborted after its rollback failed, from the connection holder Spring
+     * bound to {@code ds} for synchronization when the connection was acquired (in a {@code SUPPORTS} scope, or while a Spring
+     * transaction runs on another data source), and closes it, as Spring no longer releases it at the end of its scope; for a
+     * {@code TransactionAwareDataSourceProxy}, the proxy's target connection is taken from the holder bound to the target data
+     * source too. Spring handed the aborted connection to later work in its scope, which failed on it: the holder fetches a
+     * new connection for that work now. The holder of a Spring-managed transaction is left alone, and so is everything when
+     * Spring's holder can't be changed (its {@code setConnection} is not accessible): the later work then fails as before.
+     *
+     * @param conn the aborted connection, as {@link #getConnection(javax.sql.DataSource)} returned it
+     * @param ds the data source it was acquired from
+     */
+    static void detachAbortedSpringConnection(final Connection conn, final javax.sql.DataSource ds) {
+        if (!isInSpring || conn == null || ds == null) {
+            return;
+        }
+
+        try {
+            final javax.sql.DataSource target = unwrapSpringDataSource(ds);
+            // Read before the proxy is closed, which releases its target connection.
+            final Connection targetConn = target != ds && conn instanceof final org.springframework.jdbc.datasource.ConnectionProxy proxy
+                    ? proxy.getTargetConnection()
+                    : null;
+
+            if (SpringConnectionHolderAccess.detachSynchronizedConnection(ds, conn)) {
+                closeQuietly(conn);
+            }
+
+            if (targetConn != null && SpringConnectionHolderAccess.detachSynchronizedConnection(target, targetConn)) {
+                closeQuietly(targetConn);
+            }
+        } catch (final LinkageError | RuntimeException e) {
+            logger.warn(e, "Cannot take an aborted connection from the holder Spring bound to the data source: later work in the Spring scope gets it");
         }
     }
 
@@ -1154,15 +1296,16 @@ public final class JdbcUtil {
      * obtained is released only on that thread. Released from another thread (e.g. after {@code callAsync}/{@code runAsync}),
      * Spring finds no binding there and would close the connection while its transaction still uses it; it is left to
      * Spring's transaction completion, which releases it. On the acquiring thread it is released to Spring even inside a
-     * {@link #runIgnoringSpringTransaction(Throwables.Runnable)} scope: it is Spring's connection, whatever the thread's
-     * setting at close time.</p>
+     * {@link #runIgnoringSpringTransaction(Throwables.Runnable)} scope, or work run outside the transaction on {@code ds}
+     * ({@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}): it is Spring's connection, whatever the
+     * thread's setting at close time.</p>
      *
      * @param conn The database Connection to release.
      * @param ds The DataSource from which the connection was obtained.
      * @return A Runnable that releases the connection back to the DataSource.
      */
     static Runnable createCloseHandler(final Connection conn, final javax.sql.DataSource ds) {
-        if (isInSpring && conn != null && ds != null && !isSpringTransactionalDisabled_TL.get() && isBoundBySpring(conn, ds)) { //NOSONAR
+        if (conn != null && ds != null && isSpringTransactionalUsed(ds) && isBoundBySpring(conn, ds)) {
             final Thread acquiringThread = Thread.currentThread();
 
             return () -> {
@@ -3120,1115 +3263,15 @@ public final class JdbcUtil {
     }
 
     /**
-     * Determines the {@link SqlOperation} type from a given SQL string by analyzing its leading keyword.
-     * Leading parentheses and comments are ignored. For a common-table expression introduced by
-     * {@code WITH} (optionally {@code RECURSIVE}), the operation following the CTE definitions is used;
-     * this distinguishes, for example, a {@code WITH ... SELECT} from a {@code WITH ... UPDATE}.
-     * Matching is case-insensitive and requires a token boundary.
-     *
-     * <p><b>Usage Examples:</b></p>
-     * <pre>{@code
-     * SqlOperation op1 = JdbcUtil.getSqlOperation("SELECT * FROM users");
-     * // op1 is SqlOperation.SELECT
-     *
-     * SqlOperation op2 = JdbcUtil.getSqlOperation("  insert into accounts (id, name) values (1, 'test')");
-     * // op2 is SqlOperation.INSERT
-     *
-     * SqlOperation op3 = JdbcUtil.getSqlOperation("CREATE TABLE new_table (id BIGINT PRIMARY KEY)");
-     * // op3 is SqlOperation.CREATE
-     *
-     * SqlOperation op4 = JdbcUtil.getSqlOperation("CREATEX foo");
-     * // op4 is SqlOperation.UNKNOWN (no SqlOperation token matches the leading keyword)
-     * }</pre>
-     *
-     * @param sql The SQL statement to analyze.
-     * @return The identified {@link SqlOperation}, or {@link SqlOperation#UNKNOWN} if the operation cannot be determined.
-     * @see SqlOperation
-     */
-    static SqlOperation getSqlOperation(final String sql) {
-        return getSqlOperation(sql, false);
-    }
-
-    /** Classifies a statement using the target dialect's bracket rules when scanning CTE bodies. */
-    private static SqlOperation getSqlOperation(final String sql, final boolean bracketIdentifiers) {
-        return getSqlOperation(sql, bracketIdentifiers, true, true);
-    }
-
-    /**
-     * @param backslashEscapes whether ordinary quoted text interprets backslashes as escapes
-     * @param escapeStrings whether an {@code E'...'} prefix marks a PostgreSQL escape string; {@code false} except for
-     *        PostgreSQL-family products and Vertica (see {@link ScanDialect#escapeStrings()}), elsewhere {@code e'...'} is a
-     *        name followed by an ordinary string
-     */
-    private static SqlOperation getSqlOperation(final String sql, final boolean bracketIdentifiers, final boolean backslashEscapes,
-            final boolean escapeStrings) {
-        String trimmedSql = sql.trim();
-
-        // Skip leading parentheses and comments so queries like "(SELECT ...) UNION ALL (SELECT ...)",
-        // "/* hint */ SELECT ..." or "-- note\nSELECT ..." are classified by their real leading keyword.
-        while (!trimmedSql.isEmpty()) {
-            if (trimmedSql.charAt(0) == '(') {
-                trimmedSql = trimmedSql.substring(1).trim();
-            } else if (trimmedSql.startsWith("/*")) {
-                trimmedSql = trimmedSql.substring(skipBlockComment(trimmedSql, 2)).trim();
-            } else if (trimmedSql.startsWith("--")) {
-                trimmedSql = trimmedSql.substring(skipLineComment(trimmedSql, 2)).trim();
-            } else {
-                break;
-            }
-        }
-
-        if (startsWithSqlToken(trimmedSql, "with")) {
-            final int operationStart = findOperationAfterWith(trimmedSql, bracketIdentifiers, backslashEscapes, escapeStrings);
-
-            if (operationStart >= 0) {
-                trimmedSql = trimmedSql.substring(operationStart);
-            }
-        }
-
-        if (Strings.startsWithIgnoreCase(trimmedSql, "select ")) {
-            return SqlOperation.SELECT;
-        } else if (Strings.startsWithIgnoreCase(trimmedSql, "update ")) {
-            return SqlOperation.UPDATE;
-        } else if (Strings.startsWithIgnoreCase(trimmedSql, "insert ")) {
-            return SqlOperation.INSERT;
-        } else if (Strings.startsWithIgnoreCase(trimmedSql, "delete ")) {
-            return SqlOperation.DELETE;
-        } else if (Strings.startsWithIgnoreCase(trimmedSql, "merge ")) {
-            return SqlOperation.MERGE;
-        } else {
-            // Use sqlToken() rather than name() so multi-word operations match SQL syntax
-            // (e.g., BEGIN_TRANSACTION -> "BEGIN TRANSACTION"), and require a word boundary so
-            // "CREATEX..." doesn't falsely match CREATE.
-            for (final SqlOperation so : SqlOperation.values()) {
-                if (so == SqlOperation.UNKNOWN) {
-                    continue;
-                }
-
-                final String token = so.sqlToken();
-
-                if (Strings.startsWithIgnoreCase(trimmedSql, token) //
-                        && (trimmedSql.length() == token.length() || !isSqlIdentifierPart(trimmedSql.charAt(token.length())))) {
-                    return so;
-                }
-            }
-        }
-
-        return SqlOperation.UNKNOWN;
-    }
-
-    /**
-     * Returns {@code true} if {@code sql} starts with {@code token} (case-insensitive) followed by a word boundary,
-     * so that, e.g., {@code "CREATED ..."} does not match the token {@code "CREATE"}.
-     *
-     * @param sql The SQL text to test.
-     * @param token The leading token to look for.
-     * @return {@code true} if {@code sql} begins with {@code token} as a whole word.
-     */
-    private static boolean startsWithSqlToken(final String sql, final String token) {
-        return Strings.startsWithIgnoreCase(sql, token) //
-                && (sql.length() == token.length() || !isSqlIdentifierPart(sql.charAt(token.length())));
-    }
-
-    /**
-     * Finds the top-level operation following one or more CTE definitions. Tokens inside the CTE
-     * query bodies, quoted text/identifiers, and comments are ignored. Comments follow the standard rules
-     * ({@code --} and nested block comments; a MySQL {@code #} comment is read as code), so
-     * {@link #isDataModifyingSelect(String, ScanDialect, boolean, boolean)} finds the operation again with the
-     * dialect's own comment rules. A completed top-level
-     * parenthesized section is required before an operation is accepted, preventing a CTE whose
-     * name happens to resemble an operation from being misclassified.
-     */
-    private static int findOperationAfterWith(final String sql, final boolean bracketIdentifiers, final boolean backslashEscapes, final boolean escapeStrings) {
-        int parenthesisDepth = 0;
-        int arrayDepth = 0;
-        int previousTokenStart = -1;
-        int previousTokenEnd = -1;
-        boolean completedParenthesizedSection = false;
-
-        for (int i = 4, len = sql.length(); i < len;) {
-            final char ch = sql.charAt(i);
-
-            if (Character.isWhitespace(ch)) {
-                i++;
-                continue;
-            } else if (ch == '-' && i + 1 < len && sql.charAt(i + 1) == '-') {
-                i = skipLineComment(sql, i + 2);
-                continue;
-            } else if (ch == '/' && i + 1 < len && sql.charAt(i + 1) == '*') {
-                i = skipBlockComment(sql, i + 2);
-                continue;
-            }
-
-            final int tokenStart = i;
-            if (ch == '\'' || ch == '"' || ch == '`') {
-                i = skipQuotedSqlText(sql, i, ch, backslashEscapes, escapeStrings);
-            } else if (ch == '[') {
-                // Consecutive array closers are nesting, not the escaped ']' of a bracketed name.
-                // Share the codegen distinction to retain aliases and escaped SQL Server identifiers.
-                if (arrayDepth > 0 || JdbcCodeGenerationUtil.startsArrayExpression(sql, i, previousTokenStart, previousTokenEnd,
-                        JdbcCodeGenerationUtil.SqlCommentStyle.NESTED_BLOCKS, bracketIdentifiers, backslashEscapes, escapeStrings)) {
-                    arrayDepth++;
-                    i++;
-                } else {
-                    i = skipBracketQuotedSqlText(sql, i);
-                }
-            } else if (ch == ']' && arrayDepth > 0) {
-                arrayDepth--;
-                i++;
-            } else if (ch == '$') {
-                final int end = skipDollarQuotedSqlText(sql, i);
-                i = end > i ? end : i + 1;
-            } else if (ch == '(') {
-                parenthesisDepth++;
-                i++;
-            } else if (ch == ')') {
-                if (parenthesisDepth > 0 && --parenthesisDepth == 0) {
-                    completedParenthesizedSection = true;
-                }
-
-                i++;
-            } else if (isSqlIdentifierPart(ch)) {
-                int end = i + 1;
-
-                while (end < len && isSqlIdentifierPart(sql.charAt(end))) {
-                    end++;
-                }
-
-                final String token = sql.substring(i, end);
-
-                if (parenthesisDepth == 0 && arrayDepth == 0 && completedParenthesizedSection
-                        && (token.equalsIgnoreCase("select") || token.equalsIgnoreCase("update") || token.equalsIgnoreCase("insert")
-                                || token.equalsIgnoreCase("delete") || token.equalsIgnoreCase("merge"))) {
-                    return i;
-                }
-
-                i = end;
-            } else {
-                i++;
-            }
-            previousTokenStart = tokenStart;
-            previousTokenEnd = i;
-        }
-
-        return -1;
-    }
-
-    /**
-     * Returns {@code true} if the character can appear in a non-delimited SQL identifier:
-     * a letter, a digit, {@code '_'}, or {@code '$'}.
-     */
-    private static boolean isSqlIdentifierPart(final char ch) {
-        return Character.isLetterOrDigit(ch) || ch == '_' || ch == '$';
-    }
-
-    /**
-     * Advances past the remainder of a line comment.
-     *
-     * @param sql The SQL text being scanned.
-     * @param index The position just after the opening {@code --}.
-     * @return The index just past the line-break character that ends the comment (for a CRLF terminator,
-     *         the index of the {@code '\n'}), or the end of the string.
-     */
-    private static int skipLineComment(final String sql, int index) {
-        final int len = sql.length();
-
-        while (index < len) {
-            final char ch = sql.charAt(index++);
-
-            if (ch == '\n' || ch == '\r') {
-                break;
-            }
-        }
-
-        return index;
-    }
-
-    /**
-     * Advances past a block comment, honoring nested block comments.
-     *
-     * @param sql The SQL text being scanned.
-     * @param index The position just after the opening comment delimiter.
-     * @return The index of the first character after the matching closing delimiter,
-     *         or the end of the string if the comment is unterminated.
-     */
-    private static int skipBlockComment(final String sql, int index) {
-        final int len = sql.length();
-        int depth = 1;
-
-        while (index < len && depth > 0) {
-            if (index + 1 < len && sql.charAt(index) == '/' && sql.charAt(index + 1) == '*') {
-                depth++;
-                index += 2;
-            } else if (index + 1 < len && sql.charAt(index) == '*' && sql.charAt(index + 1) == '/') {
-                depth--;
-                index += 2;
-            } else {
-                index++;
-            }
-        }
-
-        return index;
-    }
-
-    /**
-     * Skips quoted text using doubled delimiters and, when enabled, backslash escapes.
-     * Transaction routing checks both interpretations because connection metadata does not
-     * describe session settings such as MySQL's NO_BACKSLASH_ESCAPES. PostgreSQL's explicit
-     * E-string prefix enables backslash escapes independently of the session interpretation,
-     * including subsequent segments of a newline-continued string. {@code escapeStrings} is
-     * {@code false} except for PostgreSQL-family products and Vertica: elsewhere {@code e'...'} is a name
-     * followed by an ordinary string.
-     */
-    private static int skipQuotedSqlText(final String sql, int index, final char quote, final boolean backslashEscapes, final boolean escapeStrings) {
-        final int len = sql.length();
-        final boolean escapeBackslashes = backslashEscapes || (escapeStrings && quote == '\'' && JdbcCodeGenerationUtil.startsEscapeString(sql, index));
-        index++;
-
-        while (index < len) {
-            final char ch = sql.charAt(index++);
-
-            if (escapeBackslashes && ch == '\\' && index < len) {
-                index++;
-            } else if (ch == quote) {
-                if (index < len && sql.charAt(index) == quote) {
-                    index++;
-                } else {
-                    // Only an explicit E-string needs to carry its escape mode into a continuation:
-                    // ordinary strings already use the same mode whenever the scanner reaches them.
-                    final int continuation = escapeBackslashes && !backslashEscapes ? JdbcCodeGenerationUtil.findStringLiteralContinuation(sql, index) : -1;
-                    if (continuation < 0) {
-                        break;
-                    }
-                    index = continuation + 1;
-                }
-            }
-        }
-
-        return index;
-    }
-
-    /**
-     * Advances past a bracket-delimited identifier ({@code [...]}), treating a doubled closing bracket as an escape.
-     *
-     * @param sql The SQL text being scanned.
-     * @param index The position of the opening bracket.
-     * @return The index of the first character after the closing bracket, or the end of the string if unterminated.
-     */
-    private static int skipBracketQuotedSqlText(final String sql, int index) {
-        final int len = sql.length();
-        index++;
-
-        while (index < len) {
-            if (sql.charAt(index++) == ']') {
-                if (index < len && sql.charAt(index) == ']') {
-                    index++;
-                } else {
-                    break;
-                }
-            }
-        }
-
-        return index;
-    }
-
-    /**
-     * Advances past a PostgreSQL dollar-quoted string ({@code $tag$...$tag$}).
-     *
-     * @param sql The SQL text being scanned.
-     * @param index The position of the opening {@code $}.
-     * @return The index just past the closing delimiter; {@code index} unchanged if this is not a valid
-     *         dollar-quote opener, or the end of the string if the closing delimiter is missing.
-     */
-    private static int skipDollarQuotedSqlText(final String sql, final int index) {
-        final int len = sql.length();
-        int tagEnd = index + 1;
-
-        // A dollar-quote tag follows unquoted-identifier rules, so it cannot start with a digit;
-        // $1, $2, ... are positional parameter references, not dollar-quote openers.
-        if (tagEnd < len && Character.isDigit(sql.charAt(tagEnd))) {
-            return index;
-        }
-
-        while (tagEnd < len && (Character.isLetterOrDigit(sql.charAt(tagEnd)) || sql.charAt(tagEnd) == '_')) {
-            tagEnd++;
-        }
-
-        if (tagEnd >= len || sql.charAt(tagEnd) != '$') {
-            return index;
-        }
-
-        final String delimiter = sql.substring(index, tagEnd + 1);
-        final int closingDelimiter = sql.indexOf(delimiter, tagEnd + 1);
-
-        return closingDelimiter < 0 ? len : closingDelimiter + delimiter.length();
-    }
-
-    /**
-     * Splits {@code sql} into its statements at each {@code ';'} that is not inside quoted text, a quoted or bracket-delimited
-     * identifier, a dollar-quoted string, a {@code #{name}}/{@code ${name}} placeholder or a comment, read with the same rules
-     * as {@link #isDataModifyingSelect(String, ScanDialect, boolean, boolean)} (on MySQL/MariaDB the content of an executable
-     * comment is code, so a {@code ';'} there separates statements too). A {@code ';'} inside parentheses or an array
-     * separates statements as well: drivers that accept several statements reject such SQL or split it there, and reading
-     * it as one statement could hide a write. Each statement starts at its first token, and statements without one (only
-     * whitespace and comments, such as the text after a trailing {@code ';'}) are dropped.
-     *
-     * @param sql The SQL text.
-     * @param dialect The dialect facts the comment and bracket rules depend on.
-     * @param backslashEscapes Whether ordinary quoted text interprets backslashes as escapes.
-     * @return The statements, or {@code null} if {@code sql} contains at most one statement.
-     */
-    private static List<String> splitStatements(final String sql, final ScanDialect dialect, final boolean backslashEscapes) {
-        final boolean mySqlDialect = dialect.mySql();
-        final boolean escapeStrings = dialect.escapeStrings();
-        List<String> statements = null;
-        int statementStart = 0;
-        // The first statement is only extracted once a second one is found: a single statement with a trailing ';' is common.
-        int firstStatementStart = -1;
-        int firstStatementEnd = -1;
-        boolean significant = false;
-        int arrayDepth = 0;
-        int previousTokenStart = -1;
-        int previousTokenEnd = -1;
-        boolean inExecutableComment = false;
-
-        for (int i = 0, len = sql.length(); i < len;) {
-            final char ch = sql.charAt(i);
-
-            if (Character.isWhitespace(ch)) {
-                i++;
-                continue;
-            }
-
-            if (ch == '-' && i + 1 < len && sql.charAt(i + 1) == '-' && (!mySqlDialect || i + 2 >= len || isMySqlDashCommentSeparator(sql.charAt(i + 2)))) {
-                i = skipLineComment(sql, i + 2);
-                continue;
-            }
-
-            if (ch == '/' && i + 1 < len && sql.charAt(i + 1) == '*') {
-                final int executableContentStart = mySqlDialect && !inExecutableComment ? executableCommentContentStart(sql, i, dialect) : -1;
-
-                if (executableContentStart >= 0) {
-                    inExecutableComment = true;
-                    i = executableContentStart;
-                } else if (mySqlDialect) {
-                    final int closing = sql.indexOf("*/", i + 2);
-                    i = closing < 0 ? len : closing + 2;
-                } else {
-                    i = skipBlockComment(sql, i + 2);
-                }
-
-                continue;
-            }
-
-            if (inExecutableComment && ch == '*' && i + 1 < len && sql.charAt(i + 1) == '/') {
-                inExecutableComment = false;
-                i += 2;
-                continue;
-            }
-
-            if (mySqlDialect && ch == '#' && !(i + 1 < len && sql.charAt(i + 1) == '{')) {
-                i = skipLineComment(sql, i + 1);
-                continue;
-            }
-
-            if (ch == ';') {
-                if (significant) {
-                    if (firstStatementEnd < 0) {
-                        firstStatementStart = statementStart;
-                        firstStatementEnd = i;
-                    } else {
-                        if (statements == null) {
-                            statements = new ArrayList<>();
-                            statements.add(sql.substring(firstStatementStart, firstStatementEnd));
-                        }
-
-                        statements.add(sql.substring(statementStart, i));
-                    }
-                }
-
-                // A new statement starts: an open array or a preceding token does not carry over.
-                significant = false;
-                arrayDepth = 0;
-                previousTokenStart = -1;
-                previousTokenEnd = -1;
-                i++;
-                continue;
-            }
-
-            if (!significant) {
-                // A statement starts at its first token: getSqlOperation reads a leading MySQL '#' comment as code.
-                significant = true;
-                statementStart = i;
-            }
-
-            final int tokenStart = i;
-            // Where a dollar-quoted string starting here ends, scanned once (i itself if none starts here).
-            final int dollarQuoteEnd = ch == '$' ? skipDollarQuotedSqlText(sql, i) : i;
-
-            if (ch == '\'' || ch == '"' || ch == '`') {
-                i = skipQuotedSqlText(sql, i, ch, backslashEscapes, escapeStrings);
-            } else if (ch == '[') {
-                if (arrayDepth > 0 || JdbcCodeGenerationUtil.startsArrayExpression(sql, i, previousTokenStart, previousTokenEnd,
-                        mySqlDialect ? JdbcCodeGenerationUtil.SqlCommentStyle.MYSQL : JdbcCodeGenerationUtil.SqlCommentStyle.NESTED_BLOCKS,
-                        dialect.bracketIdentifiers(), backslashEscapes, escapeStrings)) {
-                    arrayDepth++;
-                    i++;
-                } else {
-                    i = skipBracketQuotedSqlText(sql, i);
-                }
-            } else if (ch == ']' && arrayDepth > 0) {
-                arrayDepth--;
-                i++;
-            } else if (dollarQuoteEnd > i) {
-                i = dollarQuoteEnd;
-            } else if ((ch == '#' || ch == '$') && i + 1 < len && sql.charAt(i + 1) == '{') {
-                final int closingBrace = sql.indexOf('}', i + 2);
-                i = closingBrace < 0 ? len : closingBrace + 1;
-            } else if (isSqlIdentifierPart(ch)) {
-                i++;
-
-                while (i < len && isSqlIdentifierPart(sql.charAt(i))) {
-                    i++;
-                }
-            } else {
-                i++;
-            }
-
-            previousTokenStart = tokenStart;
-            previousTokenEnd = i;
-        }
-
-        if (significant && firstStatementEnd >= 0) {
-            if (statements == null) {
-                statements = new ArrayList<>();
-                statements.add(sql.substring(firstStatementStart, firstStatementEnd));
-            }
-
-            statements.add(sql.substring(statementStart));
-        }
-
-        return statements;
-    }
-
-    /**
-     * Returns {@code true} if {@code sql} writes data although it may be classified as a {@code SELECT}: a parenthesized
-     * section starts with {@code INSERT}, {@code UPDATE}, {@code DELETE} or {@code MERGE}, as in a PostgreSQL
-     * data-modifying CTE ({@code WITH u AS (UPDATE ... RETURNING ...) SELECT ...}) or a DB2/H2 data-change delta
-     * table ({@code SELECT ... FROM FINAL TABLE (UPDATE ...)}), or the statement has an {@code INTO} clause
-     * ({@code SELECT ... INTO new_table FROM ...} creates a table on PostgreSQL and SQL Server; MySQL's
-     * {@code SELECT ... INTO @var} sets a session variable). Quoted text/identifiers, comments, parameter placeholders
-     * ({@code :name}, {@code #{name}}, {@code ${name}}), variables ({@code @name}) and qualified name parts (also when
-     * whitespace or comments follow the qualifier {@code .}, as in {@code a. into}) are ignored, and so is a call of the
-     * {@code INSERT(str, pos, len, newstr)} string function. The statement itself, and the statement following a top-level
-     * {@code WITH} clause, also count when they begin with one of these keywords: the caller classified the statement with
-     * the standard comment rules, under which the words of a MySQL {@code #} comment read as code.
-     *
-     * <p>On MySQL/MariaDB ({@link ScanDialect#mySql()}) their rules apply: {@code #} starts a line comment;
-     * {@code --} starts one only when followed by whitespace or a control character ({@code 5--3} is arithmetic);
-     * block comments don't nest; and the content of an executable comment ({@code /*! ... *}{@code /}, optionally
-     * version-gated, or MariaDB's {@code /*M! ... *}{@code /}) is scanned as code when the server runs it (see
-     * {@link #executableCommentContentStart(String, int, ScanDialect)}). Otherwise {@code --} always starts a line comment
-     * and block comments nest. A {@code .} after a number is a decimal point; besides plain digits, digit groups separated
-     * by single underscores ({@code 1_000}) are a number (PostgreSQL 16), except on MySQL/MariaDB, where {@code 1_000} is an
-     * identifier. Elsewhere {@code #} is part of a name (SQL Server {@code #temp} tables) or an operator (PostgreSQL
-     * {@code #}, {@code #>}), not a comment.</p>
-     *
-     * <p>With {@code lockingReads}, a row-locking clause counts too, at any nesting level (PostgreSQL and MySQL lock the rows
-     * of a locking subquery): {@code FOR UPDATE}, {@code FOR NO KEY UPDATE}, {@code FOR SHARE} and {@code FOR KEY SHARE}
-     * (PostgreSQL, MySQL 8, Oracle, DB2, H2; any {@code OF ...}, {@code NOWAIT} or {@code SKIP LOCKED} that follows does not
-     * matter), MySQL/MariaDB {@code LOCK IN SHARE MODE}, DB2 {@code USE AND KEEP SHARE|UPDATE|EXCLUSIVE LOCKS}, and a SQL
-     * Server table hint list {@code WITH (...)} naming {@code UPDLOCK}, {@code XLOCK}, {@code HOLDLOCK}, {@code SERIALIZABLE},
-     * {@code REPEATABLEREAD}, {@code ROWLOCK}, {@code PAGLOCK}, {@code TABLOCK} or {@code TABLOCKX}. The same words in quoted
-     * text, comments, placeholders, variables or qualified names are ignored like an {@code INTO}.</p>
-     *
-     * @param sql The SQL text to scan.
-     * @param dialect The dialect facts the scan depends on.
-     * @param backslashEscapes Whether ordinary quoted text interprets backslashes as escapes.
-     * @param lockingReads Whether a row-locking clause counts as well.
-     * @return {@code true} if the statement, the statement following its {@code WITH} clause, or a parenthesized section begins
-     *         with a data-modifying keyword, or an {@code INTO} keyword (or, with {@code lockingReads}, a row-locking clause)
-     *         occurs.
-     */
-    private static boolean isDataModifyingSelect(final String sql, final ScanDialect dialect, final boolean backslashEscapes, final boolean lockingReads) {
-        final boolean mySqlDialect = dialect.mySql();
-        final boolean escapeStrings = dialect.escapeStrings();
-        int arrayDepth = 0;
-        int parenthesisDepth = 0;
-        List<Integer> arrayParenthesisDepths = null;
-        int previousTokenStart = -1;
-        int previousTokenEnd = -1;
-        // The statement start is checked like a parenthesized section: the caller classified the statement with the
-        // standard comment rules, under which the words of a MySQL '#' comment (or text after a flat block comment's end)
-        // read as code, so with this dialect's rules the statement can begin with a different keyword.
-        boolean atSectionStart = true;
-        // For the same reason, the statement that follows a top-level WITH clause is found again here: it is the first
-        // top-level SELECT/INSERT/UPDATE/DELETE/MERGE after a completed top-level parenthesized section, as in
-        // findOperationAfterWith. On MySQL "WITH c AS (...) # select ids\nUPDATE ..." was classified as a SELECT.
-        boolean inWithClause = false;
-        boolean completedWithSection = false;
-        // Whether the last significant token (whitespace and comments don't count) can be qualified by a following '.'
-        // (an identifier, a quoted identifier or a closing parenthesis, but not a number), and whether it is such a '.'.
-        boolean lastTokenIsName = false;
-        boolean afterQualifierDot = false;
-        // An INSERT that starts a parenthesized section is an INSERT statement unless the next significant token is '(':
-        // INSERT(str, pos, len, newstr) is a string function (MySQL, H2), and an INSERT statement never continues with '('.
-        boolean pendingInsert = false;
-        // Inside a MySQL executable comment ("/*! ... */"), whose content the server runs as code.
-        boolean inExecutableComment = false;
-        // With lockingReads: how far the last keyword-position words match a row-locking clause (see nextLockingClauseStep),
-        // and bit d is set while the parenthesized group at depth d (below 64) follows WITH, as a SQL Server table hint list.
-        int lockingClauseStep = LOCKING_CLAUSE_NONE;
-        long tableHintGroupDepths = 0;
-
-        for (int i = 0, len = sql.length(); i < len;) {
-            final char ch = sql.charAt(i);
-
-            if (Character.isWhitespace(ch)) {
-                i++;
-                continue;
-            }
-
-            if (ch == '-' && i + 1 < len && sql.charAt(i + 1) == '-' && (!mySqlDialect || i + 2 >= len || isMySqlDashCommentSeparator(sql.charAt(i + 2)))) {
-                i = skipLineComment(sql, i + 2);
-                continue;
-            }
-
-            if (ch == '/' && i + 1 < len && sql.charAt(i + 1) == '*') {
-                final int executableContentStart = mySqlDialect && !inExecutableComment ? executableCommentContentStart(sql, i, dialect) : -1;
-
-                if (executableContentStart >= 0) {
-                    // The server runs the content of this "/*! ... */", so it is scanned as code (an INTO there is a real
-                    // clause). A comment the server ignores (MariaDB-only, or gated on a newer version) is a plain comment.
-                    inExecutableComment = true;
-                    i = executableContentStart;
-                } else if (mySqlDialect) {
-                    // MySQL block comments don't nest: "/* a /* b */ INTO @x" ends the comment at the first "*/".
-                    final int closing = sql.indexOf("*/", i + 2);
-                    i = closing < 0 ? len : closing + 2;
-                } else {
-                    i = skipBlockComment(sql, i + 2);
-                }
-
-                continue;
-            }
-
-            if (inExecutableComment && ch == '*' && i + 1 < len && sql.charAt(i + 1) == '/') {
-                inExecutableComment = false;
-                i += 2;
-                continue;
-            }
-
-            if (mySqlDialect && ch == '#' && !(i + 1 < len && sql.charAt(i + 1) == '{')) {
-                // A MySQL/MariaDB '#' line comment (a #{name} placeholder is not one).
-                i = skipLineComment(sql, i + 1);
-                continue;
-            }
-
-            // A significant token starts here.
-            if (pendingInsert) {
-                if (ch != '(') {
-                    return true;
-                }
-
-                pendingInsert = false;
-            }
-
-            if (ch == '(') {
-                parenthesisDepth++;
-
-                if (lockingClauseStep == LOCKING_CLAUSE_AFTER_WITH && parenthesisDepth < 64) {
-                    tableHintGroupDepths |= 1L << parenthesisDepth;
-                }
-
-                lockingClauseStep = LOCKING_CLAUSE_NONE;
-                atSectionStart = true;
-                lastTokenIsName = false;
-                afterQualifierDot = false;
-                previousTokenStart = i;
-                previousTokenEnd = i + 1;
-                i++;
-                continue;
-            }
-
-            boolean isName = false;
-            boolean isQualifierDot = false;
-            int nextLockingClauseStep = LOCKING_CLAUSE_NONE;
-            final int tokenStart = i;
-            // Where a dollar-quoted string starting here ends, scanned once (i itself if none starts here).
-            final int dollarQuoteEnd = ch == '$' ? skipDollarQuotedSqlText(sql, i) : i;
-
-            if (ch == '\'') {
-                i = skipQuotedSqlText(sql, i, ch, backslashEscapes, escapeStrings);
-            } else if (ch == '"' || ch == '`') {
-                i = skipQuotedSqlText(sql, i, ch, backslashEscapes, escapeStrings);
-                isName = true;
-            } else if (ch == '[') {
-                // Scan array contents as code: skipping them as a quoted name can swallow a later
-                // INTO or FINAL TABLE write and incorrectly route it outside the active transaction.
-                if (arrayDepth > 0 || JdbcCodeGenerationUtil.startsArrayExpression(sql, i, previousTokenStart, previousTokenEnd,
-                        mySqlDialect ? JdbcCodeGenerationUtil.SqlCommentStyle.MYSQL : JdbcCodeGenerationUtil.SqlCommentStyle.NESTED_BLOCKS,
-                        dialect.bracketIdentifiers(), backslashEscapes, escapeStrings)) {
-                    if (arrayParenthesisDepths == null) {
-                        arrayParenthesisDepths = new ArrayList<>();
-                    }
-                    arrayParenthesisDepths.add(parenthesisDepth);
-                    arrayDepth++;
-                    i++;
-                } else {
-                    i = skipBracketQuotedSqlText(sql, i);
-                    isName = true;
-                }
-            } else if (ch == ']' && arrayDepth > 0) {
-                arrayParenthesisDepths.remove(arrayDepth - 1);
-                arrayDepth--;
-                i++;
-                isName = true;
-            } else if (dollarQuoteEnd > i) {
-                i = dollarQuoteEnd;
-            } else if ((ch == '#' || ch == '$') && i + 1 < len && sql.charAt(i + 1) == '{') {
-                // A #{name} / ${name} placeholder names a parameter, never a keyword.
-                final int closingBrace = sql.indexOf('}', i + 2);
-                i = closingBrace < 0 ? len : closingBrace + 1;
-            } else if (isSqlIdentifierPart(ch)) {
-                int end = i + 1;
-
-                while (end < len && isSqlIdentifierPart(sql.charAt(end))) {
-                    end++;
-                }
-
-                // A word directly after ':' (a named parameter such as ":into", or a "::type" cast) or '@' (a variable),
-                // or after a qualifier '.' (which may be separated from it by whitespace or comments, e.g. "a. into"), is
-                // a name, not a keyword: reading it as an INTO clause made an ordinary SELECT join the for-update-only
-                // transaction (prepareNamedQuery passes the original named SQL). A '.' after a number is a decimal point,
-                // so "SELECT 1. INTO @x" still has an INTO clause.
-                final char prev = i > 0 ? sql.charAt(i - 1) : ' ';
-                final boolean isKeywordPosition = !(afterQualifierDot || prev == ':' || prev == '@');
-
-                // A bare word inside an array element/subscript is not an INTO clause. This also
-                // preserves ambiguous bracket aliases such as "SELECT abs(1) [into]". A nested
-                // parenthesized query is still scanned for writes, including FINAL TABLE updates.
-                final boolean inArrayElement = arrayDepth > 0 && parenthesisDepth == arrayParenthesisDepths.get(arrayDepth - 1);
-                if (isKeywordPosition && !inArrayElement && end - i == 4 && sql.regionMatches(true, i, "into", 0, 4)) {
-                    return true;
-                }
-
-                if (lockingReads && isKeywordPosition && !inArrayElement) {
-                    nextLockingClauseStep = nextLockingClauseStep(lockingClauseStep, sql, i, end);
-
-                    if (nextLockingClauseStep == LOCKING_CLAUSE_FOUND
-                            || (parenthesisDepth < 64 && (tableHintGroupDepths & (1L << parenthesisDepth)) != 0 && isLockingTableHint(sql, i, end))) {
-                        return true;
-                    }
-                }
-
-                if (isKeywordPosition && atSectionStart) {
-                    final String token = sql.substring(i, end);
-
-                    // UPDATE/DELETE/MERGE count even when '(' follows: "UPDATE (SELECT ...) SET ..." updates a subquery on
-                    // Oracle/DB2, and missing a write is worse than a read joining. INSERT is decided by the next token.
-                    if (token.equalsIgnoreCase("update") || token.equalsIgnoreCase("delete") || token.equalsIgnoreCase("merge")) {
-                        return true;
-                    }
-
-                    pendingInsert = token.equalsIgnoreCase("insert");
-
-                    if (parenthesisDepth == 0 && token.equalsIgnoreCase("with")) {
-                        inWithClause = true;
-                        completedWithSection = false;
-                    }
-                } else if (isKeywordPosition && inWithClause && completedWithSection && parenthesisDepth == 0 && arrayDepth == 0) {
-                    final String token = sql.substring(i, end);
-
-                    if (token.equalsIgnoreCase("update") || token.equalsIgnoreCase("delete") || token.equalsIgnoreCase("merge")
-                            || token.equalsIgnoreCase("insert")) {
-                        return true;
-                    }
-
-                    inWithClause = !token.equalsIgnoreCase("select");
-                }
-
-                // Only an integer literal is followed by a decimal point; MySQL identifiers may start with a digit ("1a"),
-                // and such a qualifier still qualifies the next word. "1_000" is a number on PostgreSQL 16 but an
-                // identifier on MySQL.
-                isName = !isIntegerLiteral(sql, i, end, mySqlDialect);
-                i = end;
-            } else {
-                isQualifierDot = ch == '.' && lastTokenIsName;
-                isName = ch == ')';
-                if (ch == ')' && parenthesisDepth > 0) {
-                    if (parenthesisDepth < 64) {
-                        tableHintGroupDepths &= ~(1L << parenthesisDepth);
-                    }
-
-                    if (--parenthesisDepth == 0 && inWithClause) {
-                        completedWithSection = true;
-                    }
-                }
-                i++;
-            }
-
-            lockingClauseStep = nextLockingClauseStep;
-            atSectionStart = false;
-            lastTokenIsName = isName;
-            afterQualifierDot = isQualifierDot;
-            previousTokenStart = tokenStart;
-            previousTokenEnd = i;
-        }
-
-        // A trailing INSERT keyword is not a function call.
-        return pendingInsert;
-    }
-
-    // Steps of nextLockingClauseStep: the keyword-position words read so far that start a row-locking clause.
-    private static final int LOCKING_CLAUSE_NONE = 0;
-    private static final int LOCKING_CLAUSE_FOUND = 1;
-    private static final int LOCKING_CLAUSE_FOR = 2; // FOR
-    private static final int LOCKING_CLAUSE_FOR_NO = 3; // FOR NO
-    private static final int LOCKING_CLAUSE_FOR_NO_KEY = 4; // FOR NO KEY
-    private static final int LOCKING_CLAUSE_FOR_KEY = 5; // FOR KEY
-    private static final int LOCKING_CLAUSE_LOCK = 6; // LOCK
-    private static final int LOCKING_CLAUSE_LOCK_IN = 7; // LOCK IN
-    private static final int LOCKING_CLAUSE_LOCK_IN_SHARE = 8; // LOCK IN SHARE
-    private static final int LOCKING_CLAUSE_KEEP = 9; // KEEP
-    private static final int LOCKING_CLAUSE_KEEP_MODE = 10; // KEEP SHARE|UPDATE|EXCLUSIVE
-    private static final int LOCKING_CLAUSE_AFTER_WITH = 11; // WITH, which a SQL Server table hint list "(...)" may follow
-
-    /**
-     * Advances the recognition of a row-locking clause by the keyword-position word {@code sql.substring(start, end)}:
-     * {@code FOR [NO KEY] UPDATE}, {@code FOR [KEY] SHARE}, {@code LOCK IN SHARE MODE} and {@code KEEP SHARE|UPDATE|EXCLUSIVE
-     * LOCKS}. Any other significant token ends the recognition, so {@code FOR :update} or {@code FOR 3} (as in
-     * {@code SUBSTRING(s FROM 1 FOR 3)}) is not a clause.
-     *
-     * @param step The step reached by the previous significant token.
-     * @param sql The SQL text.
-     * @param start The start index of the word, inclusive.
-     * @param end The end index of the word, exclusive.
-     * @return The step reached, {@code LOCKING_CLAUSE_FOUND} if the word completes a clause.
-     */
-    private static int nextLockingClauseStep(final int step, final String sql, final int start, final int end) {
-        final int next = switch (step) {
-            case LOCKING_CLAUSE_FOR -> isSqlWord(sql, start, end, "update") || isSqlWord(sql, start, end, "share") ? LOCKING_CLAUSE_FOUND
-                    : isSqlWord(sql, start, end, "no") ? LOCKING_CLAUSE_FOR_NO
-                            : isSqlWord(sql, start, end, "key") ? LOCKING_CLAUSE_FOR_KEY : LOCKING_CLAUSE_NONE;
-            case LOCKING_CLAUSE_FOR_NO -> isSqlWord(sql, start, end, "key") ? LOCKING_CLAUSE_FOR_NO_KEY : LOCKING_CLAUSE_NONE;
-            case LOCKING_CLAUSE_FOR_NO_KEY -> isSqlWord(sql, start, end, "update") ? LOCKING_CLAUSE_FOUND : LOCKING_CLAUSE_NONE;
-            case LOCKING_CLAUSE_FOR_KEY -> isSqlWord(sql, start, end, "share") ? LOCKING_CLAUSE_FOUND : LOCKING_CLAUSE_NONE;
-            case LOCKING_CLAUSE_LOCK -> isSqlWord(sql, start, end, "in") ? LOCKING_CLAUSE_LOCK_IN : LOCKING_CLAUSE_NONE;
-            case LOCKING_CLAUSE_LOCK_IN -> isSqlWord(sql, start, end, "share") ? LOCKING_CLAUSE_LOCK_IN_SHARE : LOCKING_CLAUSE_NONE;
-            case LOCKING_CLAUSE_LOCK_IN_SHARE -> isSqlWord(sql, start, end, "mode") ? LOCKING_CLAUSE_FOUND : LOCKING_CLAUSE_NONE;
-            case LOCKING_CLAUSE_KEEP -> isSqlWord(sql, start, end, "share") || isSqlWord(sql, start, end, "update") || isSqlWord(sql, start, end, "exclusive")
-                    ? LOCKING_CLAUSE_KEEP_MODE
-                    : LOCKING_CLAUSE_NONE;
-            case LOCKING_CLAUSE_KEEP_MODE -> isSqlWord(sql, start, end, "locks") ? LOCKING_CLAUSE_FOUND : LOCKING_CLAUSE_NONE;
-            default -> LOCKING_CLAUSE_NONE;
-        };
-
-        if (next != LOCKING_CLAUSE_NONE) {
-            return next;
-        }
-
-        // The word does not continue a clause, but may start one.
-        return isSqlWord(sql, start, end, "for") ? LOCKING_CLAUSE_FOR
-                : isSqlWord(sql, start, end, "lock") ? LOCKING_CLAUSE_LOCK
-                        : isSqlWord(sql, start, end, "keep") ? LOCKING_CLAUSE_KEEP
-                                : isSqlWord(sql, start, end, "with") ? LOCKING_CLAUSE_AFTER_WITH : LOCKING_CLAUSE_NONE;
-    }
-
-    /**
-     * Returns whether the word {@code sql.substring(start, end)} of a SQL Server table hint list makes the read take locks
-     * that last until the transaction ends ({@code UPDLOCK}, {@code XLOCK}, {@code HOLDLOCK} and its synonym
-     * {@code SERIALIZABLE}, {@code REPEATABLEREAD}), or takes row, page or table locks explicitly ({@code ROWLOCK},
-     * {@code PAGLOCK}, {@code TABLOCK}, {@code TABLOCKX}).
-     *
-     * @param sql The SQL text.
-     * @param start The start index of the word, inclusive.
-     * @param end The end index of the word, exclusive.
-     * @return {@code true} if the word is such a table hint.
-     */
-    private static boolean isLockingTableHint(final String sql, final int start, final int end) {
-        return isSqlWord(sql, start, end, "updlock") || isSqlWord(sql, start, end, "xlock") || isSqlWord(sql, start, end, "holdlock")
-                || isSqlWord(sql, start, end, "serializable") || isSqlWord(sql, start, end, "repeatableread") || isSqlWord(sql, start, end, "rowlock")
-                || isSqlWord(sql, start, end, "paglock") || isSqlWord(sql, start, end, "tablock") || isSqlWord(sql, start, end, "tablockx");
-    }
-
-    /**
-     * Returns whether {@code sql.substring(start, end)} equals {@code word}, ignoring case.
-     *
-     * @param sql The SQL text.
-     * @param start The start index of the token, inclusive.
-     * @param end The end index of the token, exclusive.
-     * @param word The lower-case word.
-     * @return {@code true} if the token is {@code word}.
-     */
-    private static boolean isSqlWord(final String sql, final int start, final int end, final String word) {
-        return end - start == word.length() && sql.regionMatches(true, start, word, 0, word.length());
-    }
-
-    /**
-     * Returns whether {@code ch}, following {@code --}, makes it a MySQL/MariaDB line comment: MySQL requires whitespace
-     * or a control character there, so {@code 5--3} is {@code 5 - (-3)}.
-     *
-     * @param ch The character after {@code --}.
-     * @return {@code true} if {@code ch} is whitespace or a control character.
-     */
-    private static boolean isMySqlDashCommentSeparator(final char ch) {
-        return ch <= ' ' || Character.isWhitespace(ch) || Character.isISOControl(ch);
-    }
-
-    /**
-     * Returns the index where the content of an executable comment starting at {@code index} begins, if the server runs
-     * that content: {@code /*!} (MySQL and MariaDB) or {@code /*M!} (MariaDB only), optionally followed by a 5- or 6-digit
-     * version {@code Mmmpp}/{@code MMmmpp}, below which the server ignores the comment. A comment is treated as ignored
-     * only when that is certain ({@code /*M!} on a server known not to be MariaDB, a version above a known server version,
-     * or, on a server known to be MariaDB, a MySQL-style {@code /*!} version in {@code 50700..99999}, which MariaDB
-     * ignores): skipping content the server does run could hide a write.
-     *
-     * @param sql The SQL text.
-     * @param index The position of {@code /*}.
-     * @param dialect The dialect facts (vendor and server version, where known).
-     * @return The index after the opener and its version number, or {@code -1} if no executable comment starts there or the
-     *         server ignores it.
-     */
-    private static int executableCommentContentStart(final String sql, final int index, final ScanDialect dialect) {
-        final boolean mariaDbOnly;
-        final int afterOpener;
-
-        if (sql.startsWith("/*!", index)) {
-            mariaDbOnly = false;
-            afterOpener = index + 3;
-        } else if (sql.startsWith("/*M!", index)) {
-            mariaDbOnly = true;
-            afterOpener = index + 4;
-        } else {
-            return -1;
-        }
-
-        if (mariaDbOnly && Boolean.FALSE.equals(dialect.mariaDb())) {
-            return -1; // MySQL ignores MariaDB-only comments.
-        }
-
-        int versionEnd = afterOpener;
-
-        while (versionEnd < sql.length() && sql.charAt(versionEnd) >= '0' && sql.charAt(versionEnd) <= '9') {
-            versionEnd++;
-        }
-
-        final int versionLength = versionEnd - afterOpener;
-
-        if (versionLength != 5 && versionLength != 6) {
-            return afterOpener; // no version: everything after the opener is code
-        }
-
-        final int requiredVersion = Integer.parseInt(sql, afterOpener, versionEnd, 10);
-
-        // MariaDB ignores MySQL-style comments gated on 5.7+ ("/*!50700" .. "/*!99999", MySQL-only features), but still runs
-        // its own "/*M!" comments in that range.
-        if (!mariaDbOnly && versionLength == 5 && requiredVersion >= 50700 && Boolean.TRUE.equals(dialect.mariaDb())) {
-            return -1;
-        }
-
-        return dialect.serverVersion() >= 0 && requiredVersion > dialect.serverVersion() ? -1 : versionEnd;
-    }
-
-    /**
-     * The database facts {@link #isDataModifyingSelect(String, ScanDialect, boolean, boolean)} depends on.
-     *
-     * @param mySql Whether MySQL/MariaDB rules apply.
-     * @param mariaDb Whether the server is MariaDB, or {@code null} if unknown; MariaDB-only executable comments run only
-     *        there.
-     * @param serverVersion The server version as {@code major * 10000 + minor * 100 + patch}, or {@code -1} if unknown.
-     * @param bracketIdentifiers Whether brackets always delimit identifiers rather than array expressions.
-     * @param checkBracketAlternatives Whether compatibility modes can also interpret brackets as identifiers.
-     * @param escapeStrings Whether an {@code E'...'} prefix marks a PostgreSQL escape string, which uses backslash escapes
-     *        regardless of the session setting. Only PostgreSQL-family products and Vertica have them; elsewhere (MySQL,
-     *        SQL Server, H2, Oracle, ...) {@code e'...'} is a name followed by an ordinary string.
-     */
-    record ScanDialect(boolean mySql, Boolean mariaDb, int serverVersion, boolean bracketIdentifiers, boolean checkBracketAlternatives, boolean escapeStrings) {
-        /** Standard rules with array expressions and context-dependent bracket identifiers, without escape strings. */
-        static final ScanDialect STANDARD = new ScanDialect(false, false, -1, false, false, false);
-
-        /** PostgreSQL-family (and Vertica) rules: the standard rules plus {@code E'...'} escape strings. */
-        static final ScanDialect POSTGRESQL = new ScanDialect(false, false, -1, false, false, true);
-
-        /** H2 reports the same product name in all modes; MSSQLServer mode interprets brackets as identifiers. */
-        static final ScanDialect H2 = new ScanDialect(false, false, -1, false, true, false);
-
-        /** SQL Server/ASE: bracket-delimited names are opaque regardless of their contents or preceding token. */
-        static final ScanDialect BRACKET_IDENTIFIERS = new ScanDialect(false, false, -1, true, false, false);
-
-        /** MySQL/MariaDB rules with unknown vendor and version: every executable comment counts as run. */
-        static final ScanDialect MYSQL_UNKNOWN_SERVER = new ScanDialect(true, null, -1, false, false, false);
-    }
-
-    /** Leading {@code major.minor[.patch]} of a database product version. */
-    private static final Pattern SERVER_VERSION_PATTERN = Pattern.compile("^\\s*(\\d{1,3})\\.(\\d{1,2})(?:\\.(\\d{1,2}))?(?!\\d)");
-
-    /**
-     * Returns whether the scan of {@code sql} can depend on the database: on its comment rules ({@code #}, {@code --},
-     * {@code /*}), bracket delimiters, whether a digit-leading word with underscores ({@code 1_000}) is a number or an identifier,
-     * or whether an {@code E'...'} prefix marks a PostgreSQL escape string. The database product only needs to be looked up for such SQL.
-     *
-     * @param sql The SQL text.
-     * @return {@code true} if the SQL contains {@code [}, {@code #}, {@code --}, {@code /*}, a digit followed by {@code _},
-     *         or both a backslash and an {@code e'} / {@code E'} prefix.
-     */
-    private static boolean dependsOnDialect(final String sql) {
-        if (sql.indexOf('[') >= 0 || sql.indexOf('#') >= 0 || sql.contains("--") || sql.contains("/*")) {
-            return true;
-        }
-
-        // Only PostgreSQL-family products and Vertica read e'\' as an escape string; elsewhere it is a name followed by
-        // an ordinary string. The difference only matters to the no-backslash-escape pass (see requiresTransaction).
-        if (sql.indexOf('\\') >= 0 && (sql.contains("e'") || sql.contains("E'"))) {
-            return true;
-        }
-
-        for (int i = sql.indexOf('_'); i > 0; i = sql.indexOf('_', i + 1)) {
-            final char prev = sql.charAt(i - 1);
-
-            if (prev >= '0' && prev <= '9') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Returns the scan dialect of the database {@code conn} is connected to. Called at most once per transaction (see
-     * {@link SqlTransaction#scanDialect(java.util.function.Function)}).
-     *
-     * @param conn The connection the SQL runs on.
-     * @return The dialect, or {@code null} if the database product name cannot be read.
-     */
-    private static ScanDialect scanDialectOf(final Connection conn) {
-        final DatabaseMetaData metadata;
-        final String productName;
-
-        try {
-            metadata = conn.getMetaData();
-            productName = metadata.getDatabaseProductName();
-        } catch (final SQLException | RuntimeException e) {
-            logger.debug(e, "Failed to read the database product name to apply SQL dialect rules");
-            return null;
-        }
-
-        if (Strings.isBlank(productName)) {
-            return null;
-        }
-
-        if (SqlIdentifierUtil.usesBracketQuotes(productName)) {
-            return ScanDialect.BRACKET_IDENTIFIERS;
-        }
-
-        if ("H2".equalsIgnoreCase(productName)) {
-            return ScanDialect.H2;
-        }
-
-        if (!Strings.containsAnyIgnoreCase(productName, "MySQL", "MariaDB")) {
-            return readsEscapeStrings(productName) ? ScanDialect.POSTGRESQL : ScanDialect.STANDARD;
-        }
-
-        final String productVersion;
-
-        try {
-            productVersion = metadata.getDatabaseProductVersion();
-        } catch (final SQLException | RuntimeException e) {
-            logger.debug(e, "Failed to read the database product version");
-            return new ScanDialect(true, Strings.containsIgnoreCase(productName, "MariaDB") ? Boolean.TRUE : null, -1, false, false, false);
-        }
-
-        // A MariaDB server may report itself as "MySQL" (through the MySQL driver), but its version says "...-MariaDB".
-        final Boolean mariaDb = Strings.containsIgnoreCase(productName, "MariaDB") || Strings.containsIgnoreCase(productVersion, "MariaDB") ? Boolean.TRUE
-                : productVersion == null ? null : Boolean.FALSE;
-
-        return new ScanDialect(true, mariaDb, parseServerVersion(productVersion, Boolean.TRUE.equals(mariaDb)), false, false, false);
-    }
-
-    /**
      * Returns whether a database product name denotes PostgreSQL or a derivative sharing its transaction semantics:
      * a failed statement aborts the enclosing transaction. CockroachDB, YugabyteDB, Aurora PostgreSQL and Greenplum
      * report "PostgreSQL" through pgjdbc.
-     *
-     * <p>This is deliberately narrower than {@link #readsEscapeStrings(String)}: Vertica shares PostgreSQL's string
-     * lexer but is not known to abort the transaction on a failed statement.</p>
      *
      * @param productName The product name reported by the driver.
      * @return {@code true} if the product is PostgreSQL-compatible.
      */
     private static boolean isPostgreSqlFamily(final String productName) {
         return Strings.containsAnyIgnoreCase(productName, "PostgreSQL", "EnterpriseDB", "Redshift", "Greenplum");
-    }
-
-    /**
-     * Returns whether a database product reads {@code E'...'} as an escape-string literal in which a backslash escapes
-     * the next character. That is the PostgreSQL family plus Vertica (reported as "Vertica Database"), whose SQL lexer
-     * derives from PostgreSQL's and which also accepts {@code SELECT ... INTO TABLE}, so missing the prefix would let a
-     * write such as {@code SELECT E'\'' ... INTO TABLE archive} scan as a plain SELECT.
-     *
-     * @param productName The product name reported by the driver.
-     * @return {@code true} if the product treats an {@code E} prefix as starting an escape string.
-     */
-    private static boolean readsEscapeStrings(final String productName) {
-        return isPostgreSqlFamily(productName) || Strings.containsIgnoreCase(productName, "Vertica");
-    }
-
-    /**
-     * Parses a database product version into {@code major * 10000 + minor * 100 + patch}, the form executable comments are
-     * gated on. A missing patch counts as {@code 99}: overestimating the version only treats more comments as run.
-     *
-     * @param productVersion The version reported by the driver, e.g. {@code 8.0.33}, {@code 10.6.12-MariaDB-1:10.6.12} or
-     *        {@code 5.5.5-10.6.12-MariaDB} (MariaDB's compatibility prefix for MySQL clients).
-     * @param mariaDb Whether the server is MariaDB.
-     * @return The version number, or {@code -1} if it cannot be parsed.
-     */
-    private static int parseServerVersion(final String productVersion, final boolean mariaDb) {
-        if (productVersion == null) {
-            return -1;
-        }
-
-        final String version = mariaDb && productVersion.startsWith("5.5.5-") ? productVersion.substring(6) : productVersion;
-        final Matcher matcher = SERVER_VERSION_PATTERN.matcher(version);
-
-        if (!matcher.find()) {
-            return -1;
-        }
-
-        final int major = Integer.parseInt(matcher.group(1));
-        final int minor = Integer.parseInt(matcher.group(2));
-        final int patch = matcher.group(3) == null ? 99 : Integer.parseInt(matcher.group(3));
-
-        return major * 10000 + minor * 100 + patch;
-    }
-
-    /**
-     * Returns whether {@code sql.substring(fromIndex, toIndex)} is an unsigned integer literal, so that a {@code .} after
-     * it is a decimal point: ASCII digits, which (except on MySQL/MariaDB) may be grouped by single underscores between
-     * digits, as PostgreSQL 16 accepts in {@code 1_000}. On MySQL/MariaDB {@code 1_000} is an identifier.
-     *
-     * @param sql The SQL text.
-     * @param fromIndex The start index of the token, inclusive.
-     * @param toIndex The end index of the token, exclusive.
-     * @param mySqlDialect Whether the SQL runs on MySQL/MariaDB.
-     * @return {@code true} if the token is an unsigned integer literal.
-     */
-    private static boolean isIntegerLiteral(final String sql, final int fromIndex, final int toIndex, final boolean mySqlDialect) {
-        boolean afterDigit = false;
-
-        for (int i = fromIndex; i < toIndex; i++) {
-            final char ch = sql.charAt(i);
-
-            if (ch >= '0' && ch <= '9') {
-                afterDigit = true;
-            } else if (ch == '_' && !mySqlDialect && afterDigit && i + 1 < toIndex) {
-                afterDigit = false; // a single underscore between digits
-            } else {
-                return false;
-            }
-        }
-
-        return afterDigit;
     }
 
     /**
@@ -4271,12 +3314,7 @@ public final class JdbcUtil {
      * <p>This method intelligently manages connections: if a transaction is active on the current thread
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
-     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
-     * A {@code SqlTransaction} begun with {@code isForUpdateOnly = true} is not used for a {@code SELECT} statement,
-     * unless the statement embeds a data-modifying {@code INSERT}/{@code UPDATE}/{@code DELETE}/{@code MERGE} section
-     * (for example, {@code WITH u AS (UPDATE ... RETURNING ...) SELECT ...}), has an {@code INTO} clause, or locks rows
-     * ({@code FOR UPDATE}, {@code FOR SHARE}, {@code LOCK IN SHARE MODE}, a SQL Server {@code WITH (UPDLOCK)} hint, ...).
-     * SQL with several statements separated by {@code ';'} uses it unless every statement is such a plain {@code SELECT}.</p>
+     * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.</p>
      *
      * <p><b>Key Features:</b></p>
      * <ul>
@@ -4365,10 +3403,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareQuery(tran.connection(), sql);
+            return inTransaction(tran, prepareQuery(tran.connection(), sql));
         } else {
             PreparedQuery result = null;
             Connection conn = null;
@@ -4424,10 +3462,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareQuery(tran.connection(), sql, autoGeneratedKeys);
+            return inTransaction(tran, prepareQuery(tran.connection(), sql, autoGeneratedKeys));
         } else {
             PreparedQuery result = null;
             Connection conn = null;
@@ -4486,10 +3524,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareQuery(tran.connection(), sql, generatedKeyColumnIndexes);
+            return inTransaction(tran, prepareQuery(tran.connection(), sql, generatedKeyColumnIndexes));
         } else {
             PreparedQuery result = null;
             Connection conn = null;
@@ -4547,10 +3585,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareQuery(tran.connection(), sql, generatedKeyColumnNames);
+            return inTransaction(tran, prepareQuery(tran.connection(), sql, generatedKeyColumnNames));
         } else {
             PreparedQuery result = null;
             Connection conn = null;
@@ -4577,8 +3615,6 @@ public final class JdbcUtil {
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
-     * A transaction begun with {@code isForUpdateOnly = true} is not used for a plain {@code SELECT}; see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -4606,10 +3642,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareQuery(tran.connection(), sql, stmtCreator);
+            return inTransaction(tran, prepareQuery(tran.connection(), sql, stmtCreator));
         } else {
             PreparedQuery result = null;
             Connection conn = null;
@@ -4811,8 +3847,6 @@ public final class JdbcUtil {
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code PreparedQuery} is closed.
-     * A transaction begun with {@code isForUpdateOnly = true} is not used for a plain {@code SELECT}; see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -4886,8 +3920,6 @@ public final class JdbcUtil {
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
-     * A transaction begun with {@code isForUpdateOnly = true} is not used for a plain {@code SELECT}; see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -4916,10 +3948,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         final ParsedSql parsedSql = parseNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), parsedSql);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), parsedSql));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -4979,10 +4011,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(namedSql, cs.namedSql);
         final ParsedSql parsedSql = parseNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), parsedSql, autoGeneratedKeys);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), parsedSql, autoGeneratedKeys));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -5045,10 +4077,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
         final ParsedSql parsedSql = parseNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), parsedSql, generatedKeyColumnIndexes);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), parsedSql, generatedKeyColumnIndexes));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -5110,10 +4142,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
         final ParsedSql parsedSql = parseNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), parsedSql, generatedKeyColumnNames);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), parsedSql, generatedKeyColumnNames));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -5139,8 +4171,6 @@ public final class JdbcUtil {
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
-     * A transaction begun with {@code isForUpdateOnly = true} is not used for a plain {@code SELECT}; see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -5174,10 +4204,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
         final ParsedSql parsedSql = parseNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), parsedSql, stmtCreator);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), parsedSql, stmtCreator));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -5400,8 +4430,6 @@ public final class JdbcUtil {
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
-     * A transaction begun with {@code isForUpdateOnly = true} is not used for a plain {@code SELECT}; see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -5433,10 +4461,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(namedSql, cs.namedSql);
         validateNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql.parameterizedSql(), CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), namedSql);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), namedSql));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -5491,10 +4519,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(namedSql, cs.namedSql);
         validateNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql.parameterizedSql(), CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), namedSql, autoGeneratedKeys);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), namedSql, autoGeneratedKeys));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -5554,10 +4582,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(generatedKeyColumnIndexes, cs.generatedKeyColumnIndexes);
         validateNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql.parameterizedSql(), CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), namedSql, generatedKeyColumnIndexes);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), namedSql, generatedKeyColumnIndexes));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -5617,10 +4645,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(generatedKeyColumnNames, cs.generatedKeyColumnNames);
         validateNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql.parameterizedSql(), CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), namedSql, generatedKeyColumnNames);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), namedSql, generatedKeyColumnNames));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -5646,8 +4674,6 @@ public final class JdbcUtil {
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
-     * A transaction begun with {@code isForUpdateOnly = true} is not used for a plain {@code SELECT}; see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -5680,10 +4706,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
         validateNamedSql(namedSql);
 
-        final SqlTransaction tran = getTransaction(ds, namedSql.parameterizedSql(), CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareNamedQuery(tran.connection(), namedSql, stmtCreator);
+            return inTransaction(tran, prepareNamedQuery(tran.connection(), namedSql, stmtCreator));
         } else {
             NamedQuery result = null;
             Connection conn = null;
@@ -5895,8 +4921,6 @@ public final class JdbcUtil {
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
-     * A transaction begun with {@code isForUpdateOnly = true} is not used for a plain {@code SELECT}; see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -5936,8 +4960,6 @@ public final class JdbcUtil {
      * (started via {@link #beginTransaction(javax.sql.DataSource)} or Spring's transactional support),
      * the transactional connection is used. Otherwise, a new connection is obtained from the
      * {@code DataSource} and will be automatically closed when the {@code NamedQuery} is closed.
-     * A transaction begun with {@code isForUpdateOnly = true} is not used for a plain {@code SELECT}; see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
      * </p>
      *
      * <p><b>Usage Examples:</b></p>
@@ -6060,10 +5082,10 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareCallableQuery(tran.connection(), sql);
+            return inTransaction(tran, prepareCallableQuery(tran.connection(), sql));
         } else {
             CallableQuery result = null;
             Connection conn = null;
@@ -6139,10 +5161,10 @@ public final class JdbcUtil {
         N.checkArgNotEmpty(sql, cs.sql);
         N.checkArgNotNull(stmtCreator, cs.stmtCreator);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return prepareCallableQuery(tran.connection(), sql, stmtCreator);
+            return inTransaction(tran, prepareCallableQuery(tran.connection(), sql, stmtCreator));
         } else {
             CallableQuery result = null;
             Connection conn = null;
@@ -6708,148 +5730,6 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns the transaction active on the current thread for the given {@link javax.sql.DataSource} and
-     * eligible for the given SQL statement, or {@code null} if there is none (or the transaction is for
-     * update operations only and the SQL is a plain read: a {@code SELECT} that neither writes data nor locks rows, or
-     * several statements separated by {@code ';'} that are all such reads).
-     *
-     * @param ds The {@link javax.sql.DataSource} whose transaction to look up.
-     * @param sql The SQL statement to be executed within the transaction.
-     * @param createdBy The component that would have created the transaction.
-     * @return The active transaction, or {@code null} if none applies.
-     */
-    static SqlTransaction getTransaction(final javax.sql.DataSource ds, final String sql, final CreatedBy createdBy) {
-        final SqlTransaction tran = SqlTransaction.getTransaction(ds, createdBy);
-
-        if (tran == null || !tran.isForUpdateOnly()) {
-            return tran;
-        }
-
-        // A SELECT that embeds an INSERT/UPDATE/DELETE/MERGE (PostgreSQL data-modifying CTE, DB2/H2
-        // "FINAL TABLE (UPDATE ...)") or has an INTO clause (SELECT ... INTO new_table / @var) writes data: running it on
-        // a separate auto-commit connection would let the write escape a for-update-only transaction's rollback (or block
-        // on the transaction's own row locks, or leave a temp table/session variable on the wrong connection). A locking read
-        // (SELECT ... FOR UPDATE, LOCK IN SHARE MODE, WITH (UPDLOCK)) joins too: on a separate auto-commit connection its
-        // locks are released as soon as it completes, so they would protect nothing. SQL with several statements joins when
-        // any of them is not a plain read: the driver may run them all (pgjdbc, SQL Server, MySQL allowMultiQueries).
-        // Comment rules (MySQL: '#' comments, "--" only before whitespace, flat and executable block comments) and whether
-        // "1_000" is a number or '[' starts an identifier depend on the database, which is only looked up for SQL where they
-        // can matter, and at most once per transaction. If it can't be read, any interpretation that could write joins:
-        // quotes inside a MySQL '#' comment or a SQL Server bracketed alias must not hide a real INTO clause.
-        // Statement classification only depends on the dialect through '[' (bracket identifier vs. array): without one, a
-        // non-SELECT always joins, so return before looking up the dialect or rescanning under every rule set.
-        if (sql.indexOf('[') < 0 && getSqlOperation(sql, false) != SqlOperation.SELECT) {
-            return tran;
-        }
-
-        if (!dependsOnDialect(sql)) {
-            return requiresTransaction(sql, ScanDialect.STANDARD, true) ? tran : null;
-        }
-
-        final ScanDialect dialect = tran.scanDialect(JdbcUtil::scanDialectOf);
-        final boolean joins = dialect == null ? mayRequireTransactionUnderAnyDialect(sql, true) : requiresTransaction(sql, dialect, true);
-
-        return joins ? tran : null;
-    }
-
-    /**
-     * Returns whether a statement that {@link com.landawn.abacus.query.SqlParser#isSelectQuery(String)} classifies as a
-     * {@code SELECT} may still write data under the rules of any supported dialect: a data-modifying CTE, a data-change delta table
-     * ({@code SELECT ... FROM FINAL TABLE (UPDATE ...)}), an {@code INTO} clause, or a further statement after a {@code ';'} that
-     * is not a plain read, read with every interpretation of quotes, comments and brackets that the dialects differ on. A
-     * row-locking clause ({@code FOR UPDATE}) does not count: it locks, but does not write. Used when the dialect is unknown
-     * (DaoImpl checks a query at DAO creation without a connection) and a write must not be missed.
-     *
-     * @param sql a statement already classified as a {@code SELECT}; for SQL without {@code '['} that classification is reused
-     *        under backslash-escape rules
-     * @return {@code true} if any dialect's reading of {@code sql} writes data
-     */
-    static boolean mayWriteUnderAnyDialect(final String sql) {
-        return mayRequireTransactionUnderAnyDialect(sql, false);
-    }
-
-    /**
-     * Returns whether any supported dialect's reading of {@code sql} requires a for-update-only transaction (see
-     * {@link #requiresTransaction(String, ScanDialect, boolean)}).
-     *
-     * @param sql a statement already classified as a {@code SELECT}
-     * @param lockingReads whether a row-locking clause requires the transaction too
-     * @return {@code true} if any dialect's reading of {@code sql} writes data (or, with {@code lockingReads}, locks rows)
-     */
-    private static boolean mayRequireTransactionUnderAnyDialect(final String sql, final boolean lockingReads) {
-        return requiresTransaction(sql, ScanDialect.MYSQL_UNKNOWN_SERVER, lockingReads) || requiresTransaction(sql, ScanDialect.STANDARD, lockingReads)
-                || requiresTransaction(sql, ScanDialect.POSTGRESQL, lockingReads) || requiresTransaction(sql, ScanDialect.BRACKET_IDENTIFIERS, lockingReads);
-    }
-
-    /**
-     * Uses the same bracket interpretation for CTE classification and SELECT write detection. H2 can change compatibility
-     * mode without changing its product metadata, even after this transaction's dialect has been cached. Check its
-     * bracket-identifier interpretation too before allowing a SELECT to run outside the transaction.
-     *
-     * <p>Callers pass SQL already classified as a SELECT: {@link #getTransaction(javax.sql.DataSource, String, CreatedBy)}
-     * after its non-SELECT fast path (classified under backslash-escape rules), and {@link #mayWriteUnderAnyDialect(String)},
-     * whose callers classify it first (DaoImpl uses {@link com.landawn.abacus.query.SqlParser#isSelectQuery(String)}). For SQL
-     * without {@code '['} that classification is reused for the backslash-escape scan; the alternate escape interpretation
-     * rechecks CTE classification too.</p>
-     *
-     * <p>SQL with a {@code ';'} followed by another statement (anything but whitespace and comments, see
-     * {@link #splitStatements(String, ScanDialect, boolean)}) requires the transaction when any of its statements does: every
-     * statement after the first is classified again, and is not a plain read unless it is a {@code SELECT}.</p>
-     *
-     * @param lockingReads whether a row-locking clause ({@code FOR UPDATE}, ...) requires the transaction too
-     */
-    private static boolean requiresTransaction(final String sql, final ScanDialect dialect, final boolean lockingReads) {
-        // Backslash escaping depends on the database and session settings (and on PostgreSQL's
-        // E-string prefix). A write visible under either interpretation must stay in the transaction.
-        return requiresTransaction(sql, dialect, lockingReads, true) || (sql.indexOf('\\') >= 0 && requiresTransaction(sql, dialect, lockingReads, false));
-    }
-
-    private static boolean requiresTransaction(final String sql, final ScanDialect dialect, final boolean lockingReads, final boolean backslashEscapes) {
-        final boolean hasBracket = sql.indexOf('[') >= 0;
-        // Only PostgreSQL-family products and Vertica have E'...' escape strings; elsewhere e'\' is a name followed by an
-        // ordinary string.
-        final boolean escapeStrings = dialect.escapeStrings();
-        // Statement boundaries depend on the same lexical rules as the scan (a ';' in a comment or quoted text separates
-        // nothing), so the SQL is split under each interpretation that is scanned.
-        final List<String> statements = sql.indexOf(';') < 0 ? null : splitStatements(sql, dialect, backslashEscapes);
-
-        if (statements == null) {
-            if (((hasBracket || !backslashEscapes)
-                    && getSqlOperation(sql, dialect.bracketIdentifiers(), backslashEscapes, escapeStrings) != SqlOperation.SELECT)
-                    || isDataModifyingSelect(sql, dialect, backslashEscapes, lockingReads)) {
-                return true;
-            }
-        } else {
-            for (final String statement : statements) {
-                if (getSqlOperation(statement, dialect.bracketIdentifiers(), backslashEscapes, escapeStrings) != SqlOperation.SELECT
-                        || isDataModifyingSelect(statement, dialect, backslashEscapes, lockingReads)) {
-                    return true;
-                }
-            }
-        }
-
-        if (!dialect.checkBracketAlternatives() || !hasBracket) {
-            return false;
-        }
-
-        // The first pass identified only SELECTs. The alternate CTE scan may be indeterminate for nested arrays (whose
-        // consecutive ']' characters look like an identifier escape), so only a recognized write overrides that result.
-        final List<String> bracketStatements = sql.indexOf(';') < 0 ? null : splitStatements(sql, ScanDialect.BRACKET_IDENTIFIERS, backslashEscapes);
-
-        for (final String statement : bracketStatements == null ? List.of(sql) : bracketStatements) {
-            final SqlOperation bracketOperation = getSqlOperation(statement, true, backslashEscapes, escapeStrings);
-
-            if (bracketOperation == SqlOperation.INSERT || bracketOperation == SqlOperation.UPDATE || bracketOperation == SqlOperation.DELETE
-                    || bracketOperation == SqlOperation.MERGE
-                    || isDataModifyingSelect(statement, ScanDialect.BRACKET_IDENTIFIERS, backslashEscapes, lockingReads)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Executes a SQL query immediately with the provided parameters and returns all results as a {@link Dataset}.
      * This is a convenience method for one-time query execution where the result set is loaded entirely into memory.
      * For reusable queries or streaming large result sets, consider using {@link #prepareQuery(javax.sql.DataSource, String)} instead.
@@ -6923,7 +5803,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
             return executeQuery(tran.connection(), sql, parameters);
@@ -7077,7 +5957,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
             return executeUpdate(tran.connection(), sql, parameters);
@@ -7146,10 +6026,10 @@ public final class JdbcUtil {
      * Executes a batch SQL update using the provided DataSource with default batch size.
      * The default batch size is {@link #DEFAULT_BATCH_SIZE}.
      *
-     * <p>Connection and transaction handling follow {@link #executeBatchUpdate(javax.sql.DataSource, String, List, int)}: an
-     * active transaction for {@code ds} on this thread is joined (a plain read that a for-update-only transaction does not
-     * accept runs on a separate connection); otherwise more than one parameter set runs in a transaction that this method
-     * begins and commits.</p>
+     * <p>Connection and transaction handling follow {@link #executeBatchUpdate(javax.sql.DataSource, String, List, int)}: more
+     * than one parameter set runs in a transaction scope (a nested scope of the transaction for {@code ds} active on this
+     * thread, whose failure marks that transaction rollback-only, or else a transaction that this method begins and commits); a
+     * single parameter set joins the active transaction, if there is one.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7170,11 +6050,12 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not
      *         empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot
-     *         satisfy the SQL's required positional or named parameters.
+     *         satisfy the SQL's required positional or named parameters
+     *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot
-     *         accept another scope, or the batch transaction cannot be committed because it is not active.
+     * @throws IllegalStateException if more than one parameter set is given and the transaction scope of the batch cannot be
+     *         begun (see {@link #beginTransaction(javax.sql.DataSource)}).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
@@ -7189,18 +6070,18 @@ public final class JdbcUtil {
      * Executes a batch SQL update using the provided DataSource with specified batch size.
      * Large lists will be automatically split into smaller batches for optimal performance.
      *
-     * <p>If a transaction is already active on the current thread for {@code ds}, its connection is used and
-     * no new transaction is started. Otherwise, more than one parameter set runs in a transaction that this method begins
-     * and commits, even if all of them fit in one batch, so that all of them commit or roll back together; inside a
-     * Spring-managed transaction that owns {@code ds}, that transaction participates in it (see
-     * {@link #beginTransaction(javax.sql.DataSource)}) and Spring commits the work. A single parameter set is executed on a
-     * newly acquired connection, and so is, whatever the number of parameter sets, a plain {@code SELECT} that a transaction
-     * begun with {@code isForUpdateOnly = true} does not accept (see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}): it runs outside that transaction, with
-     * auto-commit disabled around several parameter sets so that they still commit or roll back together. Inside a
-     * Spring-managed transaction, however, the connection acquired for that read is the one Spring bound to {@code ds} (see
-     * {@link #getConnection(javax.sql.DataSource)}), so the read runs on the Spring transaction's connection, whose
-     * auto-commit mode is left alone.</p>
+     * <p>More than one parameter set runs in a transaction scope, even if all of them fit in one batch, so that all of them
+     * commit or roll back together: if a transaction for {@code ds} is already active on the current thread, a nested scope of
+     * it (see {@link #beginTransaction(javax.sql.DataSource)}), so a failure marks that transaction rollback-only and its
+     * outermost {@code commit()} then rolls back and throws {@link RollbackOnlyException}; otherwise a transaction that this
+     * method begins and commits (inside a Spring-managed transaction that owns {@code ds}, it participates in it and Spring
+     * commits the work). A single parameter set runs on the connection of the transaction for {@code ds} active on the current
+     * thread, if there is one, and otherwise on a newly acquired connection (see {@link #getConnection(javax.sql.DataSource)}:
+     * inside a Spring-managed transaction, the connection Spring bound to {@code ds}, so the statement runs in that transaction);
+     * as for any single statement, its failure does not mark the active transaction rollback-only. Every parameter set is
+     * checked against the SQL's parameters before a connection is acquired or the scope begins, so a set that can't satisfy
+     * them throws {@code IllegalArgumentException} without marking anything (a value the driver rejects when it is bound
+     * fails in the scope, as a statement does).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7237,11 +6118,12 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or,
      *         when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter
-     *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters
+     *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot
-     *         accept another scope, or the batch transaction cannot be committed because it is not active.
+     * @throws IllegalStateException if more than one parameter set is given and the transaction scope of the batch cannot be
+     *         begun (see {@link #beginTransaction(javax.sql.DataSource)}).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
@@ -7258,39 +6140,42 @@ public final class JdbcUtil {
             return 0;
         }
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        // Every parameter set is checked before a connection is taken or the scope begins. WHY: a set that can't satisfy the
+        // SQL was found only when it was bound, inside the scope of a batch of several sets, whose failure then marked the
+        // caller's transaction rollback-only although no statement had run (DAO batch operations check their entities first).
+        final ParsedSql parsedSql = ParsedSql.parse(sql);
+        checkBatchParameters(parsedSql, listOfParameters);
 
-        if (tran != null) {
-            return executeBatchUpdate(tran.connection(), sql, listOfParameters, batchSize);
-        } else if (listOfParameters.size() == 1 || SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
-            // No transaction for the SQL although one created here is active: it is for update operations only and the SQL a
-            // plain read, which runs on a separate connection whatever the number of parameter sets. The transaction begun
-            // below for several of them joined that for-update-only transaction instead (a nested scope on its connection), so
-            // the read ran on the write transaction's connection after all, and a failure marked that transaction rollback-only
-            // and ran its rollback actions. Several parameter sets still commit or roll back together: the Connection overload
-            // disables auto-commit around them. Inside a Spring-managed transaction getConnection(ds) hands back the connection
-            // Spring bound to ds (the participating for-update-only transaction's own connection), so the read then runs on
-            // that connection with its auto-commit mode left alone; the Connection overload neither commits nor rolls it back.
+        if (listOfParameters.size() == 1) {
+            final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
+            if (tran != null) {
+                return runBatchUpdate(tran.connection(), parsedSql, listOfParameters, batchSize);
+            }
+
             final Connection conn = JdbcUtil.getConnection(ds);
 
             try {
-                return executeBatchUpdate(conn, sql, listOfParameters, batchSize);
+                return runBatchUpdate(conn, parsedSql, listOfParameters, batchSize);
             } finally {
                 JdbcUtil.releaseConnection(conn, ds);
             }
         } else {
-            final SqlTransaction tran2 = JdbcUtil.beginTransaction(ds);
+            // A nested scope of the thread's transaction, if there is one, as for DAO batch operations: its failure marks that
+            // transaction rollback-only. The batch used to run on the transaction's connection without a scope, so a caller that
+            // caught its failure went on to commit the rows of the statements that had run, and the commit returned normally.
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
             int ret = 0;
             Throwable failure = null;
 
             try {
-                ret = executeBatchUpdate(tran2.connection(), sql, listOfParameters, batchSize);
-                tran2.commit();
+                ret = runBatchUpdate(tran.connection(), parsedSql, listOfParameters, batchSize);
+                tran.commit();
             } catch (final Throwable e) { //NOSONAR
                 failure = e;
                 throw e;
             } finally {
-                rollbackAfterTransactionCommand(tran2, failure);
+                rollbackAfterTransactionCommand(tran, failure);
             }
 
             return ret;
@@ -7328,7 +6213,8 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is
      *         not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set
-     *         cannot satisfy the SQL's required positional or named parameters.
+     *         cannot satisfy the SQL's required positional or named parameters
+     *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
@@ -7375,7 +6261,8 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or,
      *         when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter
-     *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters
+     *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
      * @throws ArithmeticException if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for
      *         large batch results).
@@ -7392,6 +6279,16 @@ public final class JdbcUtil {
         }
 
         final ParsedSql parsedSql = ParsedSql.parse(sql);
+        checkBatchParameters(parsedSql, listOfParameters);
+
+        return runBatchUpdate(conn, parsedSql, listOfParameters, batchSize);
+    }
+
+    /**
+     * Runs the batch of {@link #executeBatchUpdate(Connection, String, List, int)} once its arguments have been checked.
+     */
+    private static int runBatchUpdate(final Connection conn, final ParsedSql parsedSql, final List<?> listOfParameters, final int batchSize)
+            throws SQLException, ArithmeticException {
         final boolean originalAutoCommit = conn.getAutoCommit();
         PreparedStatement stmt = null;
         boolean noException = false;
@@ -7500,10 +6397,10 @@ public final class JdbcUtil {
      * {@code long} sum of affected rows, suitable for updates whose total row counts may exceed
      * {@link Integer#MAX_VALUE}.</p>
      *
-     * <p>Connection and transaction handling follow {@link #executeLargeBatchUpdate(javax.sql.DataSource, String, List, int)}: an
-     * active transaction for {@code ds} on this thread is joined (a plain read that a for-update-only transaction does not
-     * accept runs on a separate connection); otherwise more than one parameter set runs in a transaction that this method
-     * begins and commits.</p>
+     * <p>Connection and transaction handling follow {@link #executeLargeBatchUpdate(javax.sql.DataSource, String, List, int)}: more
+     * than one parameter set runs in a transaction scope (a nested scope of the transaction for {@code ds} active on this
+     * thread, whose failure marks that transaction rollback-only, or else a transaction that this method begins and commits); a
+     * single parameter set joins the active transaction, if there is one.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7526,11 +6423,12 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not
      *         empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot
-     *         satisfy the SQL's required positional or named parameters.
+     *         satisfy the SQL's required positional or named parameters
+     *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot
-     *         accept another scope, or the batch transaction cannot be committed because it is not active.
+     * @throws IllegalStateException if more than one parameter set is given and the transaction scope of the batch cannot be
+     *         begun (see {@link #beginTransaction(javax.sql.DataSource)}).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or
      *         restoring an owned transaction fails.
      * @throws UnsupportedOperationException if the JDBC driver does not implement
@@ -7549,18 +6447,18 @@ public final class JdbcUtil {
      * Executes a large batch SQL update using the provided DataSource with specified batch size.
      * This method returns a {@code long} value to support updates affecting more than {@link Integer#MAX_VALUE} rows.
      *
-     * <p>If a transaction is already active on the current thread for {@code ds}, its connection is used and
-     * no new transaction is started. Otherwise, more than one parameter set runs in a transaction that this method begins
-     * and commits, even if all of them fit in one batch, so that all of them commit or roll back together; inside a
-     * Spring-managed transaction that owns {@code ds}, that transaction participates in it (see
-     * {@link #beginTransaction(javax.sql.DataSource)}) and Spring commits the work. A single parameter set is executed on a
-     * newly acquired connection, and so is, whatever the number of parameter sets, a plain {@code SELECT} that a transaction
-     * begun with {@code isForUpdateOnly = true} does not accept (see
-     * {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}): it runs outside that transaction, with
-     * auto-commit disabled around several parameter sets so that they still commit or roll back together. Inside a
-     * Spring-managed transaction, however, the connection acquired for that read is the one Spring bound to {@code ds} (see
-     * {@link #getConnection(javax.sql.DataSource)}), so the read runs on the Spring transaction's connection, whose
-     * auto-commit mode is left alone.</p>
+     * <p>More than one parameter set runs in a transaction scope, even if all of them fit in one batch, so that all of them
+     * commit or roll back together: if a transaction for {@code ds} is already active on the current thread, a nested scope of
+     * it (see {@link #beginTransaction(javax.sql.DataSource)}), so a failure marks that transaction rollback-only and its
+     * outermost {@code commit()} then rolls back and throws {@link RollbackOnlyException}; otherwise a transaction that this
+     * method begins and commits (inside a Spring-managed transaction that owns {@code ds}, it participates in it and Spring
+     * commits the work). A single parameter set runs on the connection of the transaction for {@code ds} active on the current
+     * thread, if there is one, and otherwise on a newly acquired connection (see {@link #getConnection(javax.sql.DataSource)}:
+     * inside a Spring-managed transaction, the connection Spring bound to {@code ds}, so the statement runs in that transaction);
+     * as for any single statement, its failure does not mark the active transaction rollback-only. Every parameter set is
+     * checked against the SQL's parameters before a connection is acquired or the scope begins, so a set that can't satisfy
+     * them throws {@code IllegalArgumentException} without marking anything (a value the driver rejects when it is bound
+     * fails in the scope, as a statement does).</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7586,11 +6484,12 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code ds} is {@code null}; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or,
      *         when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter
-     *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters
+     *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws UncheckedSQLException if acquiring a connection fails, or if transaction setup or completion fails.
      *         Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)}.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot
-     *         accept another scope, or the batch transaction cannot be committed because it is not active.
+     * @throws IllegalStateException if more than one parameter set is given and the transaction scope of the batch cannot be
+     *         begun (see {@link #beginTransaction(javax.sql.DataSource)}).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or
      *         restoring an owned transaction fails.
      * @throws UnsupportedOperationException if the JDBC driver does not implement
@@ -7609,39 +6508,42 @@ public final class JdbcUtil {
             return 0;
         }
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        // Every parameter set is checked before a connection is taken or the scope begins. WHY: a set that can't satisfy the
+        // SQL was found only when it was bound, inside the scope of a batch of several sets, whose failure then marked the
+        // caller's transaction rollback-only although no statement had run (DAO batch operations check their entities first).
+        final ParsedSql parsedSql = ParsedSql.parse(sql);
+        checkBatchParameters(parsedSql, listOfParameters);
 
-        if (tran != null) {
-            return executeLargeBatchUpdate(tran.connection(), sql, listOfParameters, batchSize);
-        } else if (listOfParameters.size() == 1 || SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
-            // No transaction for the SQL although one created here is active: it is for update operations only and the SQL a
-            // plain read, which runs on a separate connection whatever the number of parameter sets. The transaction begun
-            // below for several of them joined that for-update-only transaction instead (a nested scope on its connection), so
-            // the read ran on the write transaction's connection after all, and a failure marked that transaction rollback-only
-            // and ran its rollback actions. Several parameter sets still commit or roll back together: the Connection overload
-            // disables auto-commit around them. Inside a Spring-managed transaction getConnection(ds) hands back the connection
-            // Spring bound to ds (the participating for-update-only transaction's own connection), so the read then runs on
-            // that connection with its auto-commit mode left alone; the Connection overload neither commits nor rolls it back.
+        if (listOfParameters.size() == 1) {
+            final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
+            if (tran != null) {
+                return runLargeBatchUpdate(tran.connection(), parsedSql, listOfParameters, batchSize);
+            }
+
             final Connection conn = JdbcUtil.getConnection(ds);
 
             try {
-                return executeLargeBatchUpdate(conn, sql, listOfParameters, batchSize);
+                return runLargeBatchUpdate(conn, parsedSql, listOfParameters, batchSize);
             } finally {
                 JdbcUtil.releaseConnection(conn, ds);
             }
         } else {
-            final SqlTransaction tran2 = JdbcUtil.beginTransaction(ds);
+            // A nested scope of the thread's transaction, if there is one, as for DAO batch operations: its failure marks that
+            // transaction rollback-only. The batch used to run on the transaction's connection without a scope, so a caller that
+            // caught its failure went on to commit the rows of the statements that had run, and the commit returned normally.
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
             long ret = 0;
             Throwable failure = null;
 
             try {
-                ret = executeLargeBatchUpdate(tran2.connection(), sql, listOfParameters, batchSize);
-                tran2.commit();
+                ret = runLargeBatchUpdate(tran.connection(), parsedSql, listOfParameters, batchSize);
+                tran.commit();
             } catch (final Throwable e) { //NOSONAR
                 failure = e;
                 throw e;
             } finally {
-                rollbackAfterTransactionCommand(tran2, failure);
+                rollbackAfterTransactionCommand(tran, failure);
             }
 
             return ret;
@@ -7675,7 +6577,8 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is
      *         not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set
-     *         cannot satisfy the SQL's required positional or named parameters.
+     *         cannot satisfy the SQL's required positional or named parameters
+     *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or
      *         restoring an owned transaction fails.
      * @throws UnsupportedOperationException if the JDBC driver does not implement
@@ -7722,7 +6625,8 @@ public final class JdbcUtil {
      *         (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
      * @throws IllegalArgumentException if {@code conn} is {@code null}; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or,
      *         when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter
-     *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     *         placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters
+     *         (every parameter set is checked before any of them is bound or a statement runs).
      * @throws SQLException if preparing, binding, or executing a batch, reading connection state, or completing or
      *         restoring an owned transaction fails.
      * @throws UnsupportedOperationException if the JDBC driver does not implement
@@ -7742,6 +6646,16 @@ public final class JdbcUtil {
         }
 
         final ParsedSql parsedSql = ParsedSql.parse(sql);
+        checkBatchParameters(parsedSql, listOfParameters);
+
+        return runLargeBatchUpdate(conn, parsedSql, listOfParameters, batchSize);
+    }
+
+    /**
+     * Runs the batch of {@link #executeLargeBatchUpdate(Connection, String, List, int)} once its arguments have been checked.
+     */
+    private static long runLargeBatchUpdate(final Connection conn, final ParsedSql parsedSql, final List<?> listOfParameters, final int batchSize)
+            throws SQLException, UnsupportedOperationException, ArithmeticException {
         final boolean originalAutoCommit = conn.getAutoCommit();
         PreparedStatement stmt = null;
         boolean noException = false;
@@ -7930,7 +6844,7 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
 
-        final SqlTransaction tran = getTransaction(ds, sql, CreatedBy.JDBC_UTIL);
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
             return execute(tran.connection(), sql, parameters);
@@ -8642,6 +7556,79 @@ public final class JdbcUtil {
                     Type.<Object> of(parameters[i].getClass()).set(stmt, i + 1, parameters[i]);
                 }
             }
+        }
+    }
+
+    /**
+     * Checks, before a batch runs anything, that every parameter set in {@code listOfParameters} can satisfy the parameters of
+     * {@code parsedSql}, as {@link #setParameters(ParsedSql, PreparedStatement, Object[])} checks each one when it binds it: a
+     * positional set (an {@code Object[]} or a {@code Collection}, or else a single value) supplies enough values, and an entity,
+     * {@code Map} or {@link EntityId} bound by name has a property, or an entry, for every named parameter. No value is read: a
+     * bean getter need not be idempotent, and a stream can be read only once (the values are read when the set is bound).
+     *
+     * @param parsedSql the parsed SQL of the batch
+     * @param listOfParameters the parameter sets, one per batch entry
+     * @throws IllegalArgumentException if a parameter set can't satisfy the SQL's parameters
+     */
+    static void checkBatchParameters(final ParsedSql parsedSql, final List<?> listOfParameters) throws IllegalArgumentException {
+        final int parameterCount = parsedSql.parameterCount();
+
+        if (parameterCount == 0) {
+            return;
+        }
+
+        final List<String> namedParameters = parsedSql.namedParameters();
+        final Object[] parameters = new Object[1];
+        // The properties of a bean class are checked once: the sets of a batch are usually of one class.
+        Class<?> checkedBeanClass = null;
+        int index = 0;
+
+        for (final Object parameter : listOfParameters) {
+            parameters[0] = parameter;
+
+            if (isEntityOrMapParameter(parsedSql, parameters)) {
+                final Class<?> cls = parameter.getClass();
+
+                if (Beans.isBeanClass(cls) || Beans.isRecordClass(cls)) {
+                    if (cls != checkedBeanClass) {
+                        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
+
+                        for (final String name : namedParameters) {
+                            if (entityInfo.getPropInfo(name) == null && getNestedParameterPropPath(entityInfo, name) == null) {
+                                throw new IllegalArgumentException("No property found with name: " + name + " in class: " + ClassUtil.getCanonicalClassName(cls)
+                                        + " (the parameter set at index " + index + ")");
+                            }
+                        }
+
+                        checkedBeanClass = cls;
+                    }
+                } else if (parameter instanceof final Map<?, ?> m) {
+                    for (final String name : namedParameters) {
+                        if (m.get(name) == null && !m.containsKey(name)) {
+                            throw new IllegalArgumentException("Missing parameter for property: '" + name + "' (the parameter set at index " + index + ")");
+                        }
+                    }
+                } else {
+                    final EntityId entityId = (EntityId) parameter;
+
+                    for (final String name : namedParameters) {
+                        if (entityId.get(name) == null && !entityId.containsKey(name)) {
+                            throw new IllegalArgumentException("Missing parameter for property: '" + name + "' (the parameter set at index " + index + ")");
+                        }
+                    }
+                }
+            } else if (parameterCount > 1) {
+                // As getParameterValues: an array or a collection supplies its elements if it has enough of them, any other
+                // value (or a shorter array or collection) is a single value.
+                final int supplied = parameter instanceof final Object[] a ? a.length : parameter instanceof final Collection<?> c ? c.size() : 1;
+
+                if (supplied < parameterCount) {
+                    throw new IllegalArgumentException(
+                            "SQL requires " + parameterCount + " parameter(s), but the parameter set at index " + index + " specifies only " + supplied);
+                }
+            }
+
+            index++;
         }
     }
 
@@ -14322,8 +13309,10 @@ public final class JdbcUtil {
      *   <li>Transactions started by this library via {@link #beginTransaction(javax.sql.DataSource)}
      *       (or {@link #runInTransaction} / {@link #callInTransaction}).</li>
      *   <li>Spring-managed transactions that own the connection bound to {@code ds}, when Spring is on the classpath and
-     *       Spring transaction participation is not disabled on this thread (see
-     *       {@link #runIgnoringSpringTransaction(Throwables.Runnable)}).</li>
+     *       Spring transaction participation is neither disabled on this thread (see
+     *       {@link #runIgnoringSpringTransaction(Throwables.Runnable)}) nor suspended for {@code ds} (see
+     *       {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), unless the transaction has started to
+     *       complete, as far as that can be recognized (see {@link #beginTransaction(javax.sql.DataSource)}).</li>
      * </ul>
      *
      * <p>A Spring-managed transaction owns the connection bound to {@code ds} on this thread when the bound connection has
@@ -14364,11 +13353,11 @@ public final class JdbcUtil {
     public static boolean isInTransaction(final javax.sql.DataSource ds) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
 
-        if (SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
+        if (TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
             return true;
         }
 
-        return isInSpring && !isSpringTransactionalDisabled_TL.get() && isOwnedBySpringTransaction(ds); //NOSONAR
+        return isSpringTransactionalUsed(ds) && isOwnedBySpringTransaction(ds);
     }
 
     /**
@@ -14377,7 +13366,7 @@ public final class JdbcUtil {
      * until it is committed or rolled back. This provides ACID guarantees for multi-statement operations.
      *
      * <p>See the {@link SqlTransaction} class documentation for how transactions work in this library: thread and data
-     * source binding, which operations enlist, nested scopes, for-update-only transactions, DAO {@code @Transactional}
+     * source binding, which operations enlist, nested scopes, DAO {@code @Transactional}
      * propagation, Spring-managed transactions, and rollback actions.</p>
      *
      * <p>The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back
@@ -14391,15 +13380,16 @@ public final class JdbcUtil {
      * enabling transactional behavior across method boundaries.</p>
      *
      * <p>If a transaction for {@code ds} is already active on the current thread, no new transaction is started:
-     * this call joins it as a nested scope and returns that same {@code SqlTransaction}. A nested scope's
+     * this call joins it as a nested scope and returns a new {@code SqlTransaction} handle for that scope. A nested scope's
      * {@code commit()} only exits the scope; the connection is committed when the outermost scope commits.</p>
      *
      * <p><b>Spring Integration:</b></p>
      * <p>Connection acquisition uses {@link #getConnection(javax.sql.DataSource)}, which can return a
      * Spring-bound connection. If no {@code JdbcUtil} transaction exists for {@code ds} on the current thread and a
      * Spring-managed transaction owns the connection bound to {@code ds} (the rule is described on
-     * {@link #isInTransaction(javax.sql.DataSource)}; Spring participation must not be disabled on this thread, see
-     * {@link #runIgnoringSpringTransaction(Throwables.Runnable)}), the returned transaction participates in the Spring
+     * {@link #isInTransaction(javax.sql.DataSource)}; Spring participation must be neither disabled on this thread, see
+     * {@link #runIgnoringSpringTransaction(Throwables.Runnable)}, nor suspended for {@code ds}, see
+     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), the returned transaction participates in the Spring
      * transaction: it runs on Spring's connection without changing its auto-commit mode or isolation level (a requested
      * isolation level is ignored), its outermost {@code commit()} does not commit the connection (Spring commits the work
      * when its transaction completes), and its rollback - including a failed scope - does not roll back the connection but
@@ -14407,8 +13397,9 @@ public final class JdbcUtil {
      * {@code PROPAGATION_NESTED} scope the mark applies to the whole Spring transaction, not only to the nested savepoint
      * scope (as for a Spring participating scope that fails inside a nested one): the nested scope's commit then rolls
      * back to its savepoint and fails with {@code UnexpectedRollbackException}, which rolls the enclosing transaction back
-     * too unless its code handles it (the rollback to the savepoint clears the mark, so the enclosing transaction can still
-     * commit then). The rollback actions of the work on {@code ds} since the newest open savepoint (the innermost nested
+     * too unless its code handles it (with {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}, the rollback
+     * to the savepoint clears the mark, so the enclosing transaction can still commit then; with {@code JpaTransactionManager}
+     * it can't, as the mark set on the JPA transaction stays and its commit rolls back). The rollback actions of the work on {@code ds} since the newest open savepoint (the innermost nested
      * scope, which can only roll back) run when the mark is set: the IDs of its inserts are put back right away, while those
      * of the enclosing transaction's earlier inserts follow the transaction's outcome - kept if it commits their rows, put
      * back when it completes rolled back. Outside any savepoint scope, the actions of all work on {@code ds} run when the
@@ -14418,12 +13409,32 @@ public final class JdbcUtil {
      * connection holder ({@code DataSourceTransactionManager}, {@code JdbcTransactionManager}) and on the JPA transaction
      * identified as the owner of the connection ({@code JpaTransactionManager}: by its entity manager factory's data source,
      * or by the entity manager the connection's handle keeps; if the JPA provider fails to mark it, which can't be checked in
-     * advance, the failure is logged and the Spring transaction decides the outcome); a Spring transaction that neither mark
+     * advance, the rollback fails with an {@code IllegalStateException} and the Spring transaction decides the outcome, see
+     * {@link SqlTransaction#rollbackIfNotCommitted()}); a Spring transaction that neither mark
      * would reach (its transaction manager exposes the connection through a handle of its own, and no such JPA transaction can
      * be identified) is refused with an {@code IllegalStateException} before any work runs. Nested scopes and
      * queries on {@code ds} on this thread join the participating transaction as usual. A connection Spring binds merely
      * for synchronization (for example in a {@code SUPPORTS} scope without a transaction) is not a transaction: the
-     * returned transaction then commits and rolls back that connection itself. See {@link SqlTransaction}.</p>
+     * returned transaction then commits and rolls back that connection itself. Neither is a Spring transaction whose
+     * completion has started, in its {@code afterCommit} callbacks (recognized in a Spring transaction this library has taken a
+     * connection of, or begun a scope in, while its synchronizations were the ones Spring runs: not in one whose work all went
+     * through other code, such as JPA or a {@code JdbcTemplate}, nor in one this library used only inside another transaction
+     * manager's transaction begun in it, whose own synchronizations Spring runs meanwhile; a transaction begun from the
+     * {@code afterCommit} callbacks of such a transaction still joins it, so begin it there with
+     * {@code PROPAGATION_REQUIRES_NEW} or inside {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)})
+     * or {@code afterCompletion} callbacks: it has committed or rolled back, and work joining it would be
+     * committed by Spring's cleanup (which restores auto-commit), whatever its outcome; the returned transaction is then a
+     * transaction of its own on a connection of its own, taken from {@code ds} outside Spring (the target of a
+     * {@code TransactionAwareDataSourceProxy}), as {@code PROPAGATION_REQUIRES_NEW} would begin it, which Spring advises for
+     * transactional work started from such callbacks. Spring exposes the completion of the innermost transaction on the
+     * thread only: in the completion callbacks of a transaction that another transaction manager began inside the one
+     * owning {@code ds}, that one counts as completing too, so the returned transaction does not join it either.</p>
+     *
+     * <p>While a participating transaction is open, Spring may bind another transaction to {@code ds} (a
+     * {@code REQUIRES_NEW} scope) or none (it suspends its transaction for a {@code NOT_SUPPORTED} scope):
+     * until Spring binds the participated transaction again, operations and {@code beginTransaction} calls on {@code ds}
+     * follow Spring's binding instead of joining the participating transaction (a transaction begun then is a transaction of
+     * its own, which participates in the new Spring transaction if one owns {@code ds}). See {@link SqlTransaction}.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -14489,15 +13500,15 @@ public final class JdbcUtil {
      * }</pre>
      *
      * @param ds The {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null}.
-     * @return A {@link SqlTransaction} object representing the new transaction that must be committed or rolled back.
+     * @return The {@link SqlTransaction} handle of the scope this call opened (the outermost scope of a new transaction, or a nested scope of
+     *         the current one), which must be committed or rolled back.
      * @throws IllegalArgumentException if {@code ds} is {@code null}.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot accept another scope, if the ownership of a
+     * @throws IllegalStateException if the ownership of a
      *         Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes
      *         the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
      * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
      * @see SqlTransaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel)
-     * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
      * @see SqlTransaction#commit()
      * @see SqlTransaction#rollback()
      * @see SqlTransaction#rollbackIfNotCommitted()
@@ -14511,7 +13522,7 @@ public final class JdbcUtil {
      * The transaction must be explicitly committed or rolled back.
      *
      * <p>If a transaction for {@code ds} is already active on the current thread, this call joins it as a nested
-     * scope and returns that same {@code SqlTransaction}; a non-{@link IsolationLevel#DEFAULT} level is applied to
+     * scope and returns a new {@code SqlTransaction} handle for it; a non-{@link IsolationLevel#DEFAULT} level is applied to
      * the shared connection until the nested scope exits, when the enclosing scope's level is restored. Inside a
      * Spring-managed transaction the returned transaction participates in it, and {@code isolationLevel} is ignored (see
      * {@link #beginTransaction(javax.sql.DataSource)}).</p>
@@ -14532,89 +13543,34 @@ public final class JdbcUtil {
      *
      * @param ds The {@link javax.sql.DataSource} for which to begin the transaction.
      * @param isolationLevel The isolation level for the transaction.
-     * @return A {@link SqlTransaction} object representing the new transaction.
+     * @return The {@link SqlTransaction} handle of the scope this call opened.
      * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}, or if
      *         {@code isolationLevel} is {@link IsolationLevel#NONE}, which is not a usable transaction isolation level.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot accept another scope, if the ownership of a
+     * @throws IllegalStateException if the ownership of a
      *         Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes
      *         the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
      * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
      * @see SqlTransaction
-     * @see #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
-     */
-    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel)
-            throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
-        return beginTransaction(ds, isolationLevel, false);
-    }
-
-    /**
-     * Starts a thread-bound transaction scope shared by database queries with the same DataSource
-     * in the same thread. This includes methods like prepareQuery, prepareNamedQuery, and prepareCallableQuery.
-     *
-     * <p>Inside a Spring-managed transaction that owns the connection bound to {@code ds}, the returned transaction
-     * participates in it instead of committing or rolling back that connection, and {@code isolationLevel} is ignored; see
-     * {@link #beginTransaction(javax.sql.DataSource)}.</p>
-     *
-     * <p><b>Example of transaction sharing:</b></p>
-     * <pre>{@code
-     * public void doSomethingA() {
-     *     final SqlTransaction tranA = JdbcUtil.beginTransaction(dataSource1, IsolationLevel.DEFAULT, false);
-     *     try {
-     *         // Operations here share tranA
-     *         doSomethingB();   // Shares tranA (same thread, same dataSource1)
-     *         tranA.commit();
-     *     } finally {
-     *         tranA.rollbackIfNotCommitted();
-     *     }
-     * }
-     *
-     * public void doSomethingB() {
-     *     final SqlTransaction tranB = JdbcUtil.beginTransaction(dataSource1, IsolationLevel.DEFAULT, false);
-     *     try {
-     *         // This reuses tranA from doSomethingA()
-     *         tranB.commit();
-     *     } finally {
-     *         tranB.rollbackIfNotCommitted();
-     *     }
-     * }
-     * }</pre>
-     *
-     * @param ds The {@link javax.sql.DataSource} for which to begin the transaction.
-     * @param isolationLevel The isolation level for the transaction.
-     * @param isForUpdateOnly Whether this transaction is only for update operations. While this scope is the
-     *        innermost one, {@code SELECT} statements prepared from {@code ds} on this thread do not join the
-     *        transaction and run on a separate connection (unless the {@code SELECT} embeds a data-modifying
-     *        {@code INSERT}/{@code UPDATE}/{@code DELETE}/{@code MERGE} section, e.g. a PostgreSQL data-modifying CTE,
-     *        has an {@code INTO} clause, or is a locking read: {@code FOR UPDATE}, {@code FOR NO KEY UPDATE},
-     *        {@code FOR SHARE}, {@code FOR KEY SHARE}, {@code LOCK IN SHARE MODE}, or a SQL Server table hint such as
-     *        {@code WITH (UPDLOCK)}, whose locks would otherwise be released as soon as it completes);
-     *        other statements still use the transaction's connection, and so does SQL with several statements separated
-     *        by {@code ';'} unless every one of them is a {@code SELECT} that would not join on its own.
-     * @return A {@link SqlTransaction} object representing the transaction.
-     * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}, or if
-     *         {@code isolationLevel} is {@link IsolationLevel#NONE}, which is not a usable transaction isolation level.
-     * @throws IllegalStateException if an existing transaction on this thread is no longer active and cannot accept another scope, if the ownership of a
-     *         Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes
-     *         the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
-     * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
-     * @see SqlTransaction
-     * @see JdbcUtil#getConnection(javax.sql.DataSource)
-     * @see JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
      */
     @SuppressWarnings("deprecation")
-    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel, final boolean isForUpdateOnly)
+    public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel)
             throws IllegalArgumentException, IllegalStateException, UncheckedSQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(isolationLevel, cs.isolationLevel);
         N.checkArgument(isolationLevel != IsolationLevel.NONE,
                 "'isolationLevel' must not be NONE because Connection.TRANSACTION_NONE is not a usable transaction isolation level");
 
-        SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+        TransactionContext context = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
+        final SqlTransaction scope;
 
-        if (tran == null) {
+        if (context == null) {
             // Opening an outermost scope on the connection of a Spring-managed transaction would commit (or roll back) Spring's
             // connection when the scope completes: participate in the Spring transaction instead.
-            final boolean springParticipating = isInSpringManagedTransaction(ds);
+            final boolean springOwned = isSpringTransactionalUsed(ds) && isBoundToSpringTransaction(ds);
+            // Unless the completion of that transaction has started (see isOwnedBySpringTransaction): a transaction of its own
+            // then, on a connection of its own.
+            final boolean afterSpringCompletion = springOwned && isSpringTransactionCompleting();
+            final boolean springParticipating = springOwned && !afterSpringCompletion;
 
             if (springParticipating && !SpringRollbackActions.canMarkRollbackOnly(unwrapSpringDataSource(ds))) {
                 // A rollback of this scope reaches the Spring transaction only through a rollback-only mark it consults: without
@@ -14625,44 +13581,56 @@ public final class JdbcUtil {
                         + " a connection handle that keeps the entity manager), so a rollback here could not make the Spring transaction roll back");
             }
 
+            // WHY a connection of its own after the completion has started: Spring's connection belongs to the transaction Spring
+            // binds to ds, which need not be the one completing (see isSpringTransactionCompleting): committing it there committed
+            // that transaction's work, which it could still roll back. As PROPAGATION_REQUIRES_NEW, which Spring advises for
+            // transactional work started from its completion callbacks, would.
+            final boolean outsideSpring = afterSpringCompletion && suspendSpringTransactional(ds);
+
             Connection conn = null;
-            boolean noException = false;
+            SqlTransaction outermostScope = null;
 
             try { //NOSONAR
                 conn = JdbcUtil.getConnection(ds);
-                tran = new SqlTransaction(ds, conn, isolationLevel, CreatedBy.JDBC_UTIL, true, springParticipating); //NOSONAR
-                tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
-
-                noException = true;
+                context = new TransactionContext(ds, conn, isolationLevel, CreatedBy.JDBC_UTIL, true, springParticipating); //NOSONAR
+                outermostScope = context.enterScope(isolationLevel);
             } catch (final SQLException e) {
                 throw new UncheckedSQLException(e);
             } finally {
-                if (!noException) {
-                    if (tran != null) {
-                        // Constructor succeeded (so conn may have been switched to autoCommit=false / the requested
-                        // isolation, unless it already matched) but a later step (incrementAndGetRef) failed — restore
-                        // the connection's original state via SqlTransaction's reset path before it goes back to the pool.
-                        tran.resetAndCloseConnection();
-                    } else {
-                        JdbcUtil.releaseConnection(conn, ds);
+                try {
+                    if (outermostScope == null) {
+                        if (context != null) {
+                            // Constructor succeeded (so conn may have been switched to autoCommit=false / the requested
+                            // isolation, unless it already matched) but opening the outermost scope failed: restore
+                            // the connection's original state via the context's reset path before it goes back to the pool.
+                            context.resetAndCloseConnection();
+                        } else {
+                            JdbcUtil.releaseConnection(conn, ds);
+                        }
+                    }
+                } finally {
+                    if (outsideSpring) {
+                        resumeSpringTransactional(ds);
                     }
                 }
             }
 
-            logger.debug("Created new SqlTransaction(id={})", tran.id());
-            SqlTransaction.putTransaction(tran);
+            logger.debug("Created new SqlTransaction(id={})", context.id());
+            TransactionContext.putTransaction(context);
+            scope = outermostScope;
         } else {
-            logger.debug("Reusing existing SqlTransaction(id={})", tran.id());
-            tran.incrementAndGetRef(isolationLevel, isForUpdateOnly);
+            logger.debug("Reusing existing SqlTransaction(id={})", context.id());
+            scope = context.enterScope(isolationLevel);
         }
 
-        return tran;
+        return scope;
     }
 
     /**
      * Returns whether a transaction begun on {@code ds} now has to participate in a Spring-managed transaction that owns
-     * {@code ds}, instead of completing the connection itself: Spring participation is enabled on this thread (see
-     * {@link #runIgnoringSpringTransaction(Throwables.Runnable)}), no {@code JdbcUtil} transaction is active for {@code ds},
+     * {@code ds}, instead of completing the connection itself: Spring participation is enabled for {@code ds} on this thread
+     * (see {@link #runIgnoringSpringTransaction(Throwables.Runnable)} and
+     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), no {@code JdbcUtil} transaction is active for {@code ds},
      * and a Spring-managed transaction owns the connection bound to {@code ds} (see {@link #isInTransaction(javax.sql.DataSource)}).
      *
      * @param ds the data source the work runs on
@@ -14671,8 +13639,7 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if the auto-commit mode of the bound connection cannot be read
      */
     static boolean isInSpringManagedTransaction(final javax.sql.DataSource ds) throws IllegalStateException, UncheckedSQLException {
-        return isInSpring && !isSpringTransactionalDisabled_TL.get() && SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL) == null //NOSONAR
-                && isOwnedBySpringTransaction(ds);
+        return isSpringTransactionalUsed(ds) && TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL) == null && isOwnedBySpringTransaction(ds);
     }
 
     /**
@@ -14687,6 +13654,28 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if the auto-commit mode of the bound connection cannot be read
      */
     private static boolean isOwnedBySpringTransaction(final javax.sql.DataSource ds) throws IllegalStateException, UncheckedSQLException {
+        // Once the transaction has started to complete (it has committed or rolled back), work joining it ran after the fact: a
+        // participating scope's rollback-only mark had no effect any more, and Spring's cleanup, restoring auto-commit, committed
+        // the work, also that of a failed scope. Spring advises a transaction of its own for transactional work started from
+        // its completion callbacks. Checked only for a bound transaction: it reads the synchronizations (a sorted copy), on
+        // every DAO insert and isInTransaction call.
+        return isBoundToSpringTransaction(ds) && !isSpringTransactionCompleting();
+    }
+
+    /**
+     * Returns whether a Spring-managed transaction owns the connection Spring bound to {@code ds} (or to the target of a
+     * {@code TransactionAwareDataSourceProxy}), whether or not its completion has started (see
+     * {@link #isOwnedBySpringTransaction(javax.sql.DataSource)}).
+     *
+     * @param ds the data source
+     * @return {@code true} if the holder bound to the data source belongs to a transaction and its connection has
+     *         auto-commit off
+     * @throws IllegalStateException if the ownership of the bound connection holder cannot be determined
+     * @throws UncheckedSQLException if the auto-commit mode of the bound connection cannot be read
+     */
+    private static boolean isBoundToSpringTransaction(final javax.sql.DataSource ds) throws IllegalStateException, UncheckedSQLException {
+        final Object holder;
+
         try {
             // A connection holder bound to ds doesn't prove that a transaction owns ds: Spring also binds one merely to
             // synchronize the connection with the thread, which SpringConnectionHolderAccess tells apart. Spring's "actual
@@ -14698,17 +13687,58 @@ public final class JdbcUtil {
             // connections delegate to that binding.
             final Object resource = org.springframework.transaction.support.TransactionSynchronizationManager.getResource(unwrapSpringDataSource(ds));
 
-            if (!(resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder)
-                    || !SpringConnectionHolderAccess.isOwnedByTransaction(holder)) {
+            if (!(resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder ownedHolder)
+                    || !SpringConnectionHolderAccess.isOwnedByTransaction(ownedHolder)) {
                 return false;
             }
 
-            // A transaction keeps auto-commit off. With auto-commit on, the work's own transaction keeps it atomic.
-            return !holder.getConnection().getAutoCommit();
+            holder = ownedHolder;
         } catch (final LinkageError e) {
+            // Spring's transaction classes failing to link (a mismatched installation): no Spring transaction can be seen.
             return false;
+        }
+
+        // WHY outside the catch: the holder of a JPA or Hibernate transaction manager hands out its connection through the ORM's
+        // own handle, which runs provider code. Its LinkageError answered "no transaction", and a transaction begun then took
+        // Spring's still-bound connection as one of its own, whose commit committed the Spring transaction's earlier work.
+        final Connection conn = SpringConnectionHolderAccess.connectionOf(holder);
+
+        try {
+            // A transaction keeps auto-commit off. With auto-commit on, the work's own transaction keeps it atomic. A LinkageError
+            // from the driver propagates, as from getConnection: caught with Spring's own, it answered "no transaction", so
+            // MANDATORY failed, NEVER ran, and the work's rollback actions were never registered.
+            return !conn.getAutoCommit();
         } catch (final SQLException e) {
             throw new UncheckedSQLException(e);
+        }
+    }
+
+    /**
+     * Returns whether the completion of the Spring-managed transaction of the current thread has started: in its
+     * {@code afterCompletion} callbacks Spring has cleared the transaction synchronizations, while the transaction is still
+     * marked active; its {@code afterCommit} callbacks are seen by the synchronization this library registers with the
+     * synchronizations Spring runs when it takes a connection from Spring or begins to participate in a transaction (see
+     * {@code SpringRollbackActions}), which runs before those of a lower precedence. A transaction this library used only while
+     * another transaction manager's transaction ran inside it (whose own synchronizations Spring ran meanwhile) has no such
+     * synchronization: its {@code afterCommit} callbacks are not recognized, as no Spring API reaches its suspended
+     * synchronizations.
+     * It is the innermost transaction on the thread, the only one whose synchronizations Spring exposes: in the completion
+     * callbacks of a transaction that another transaction manager began inside the transaction owning a data source, that
+     * one counts as completing too, although it still runs.
+     *
+     * @return {@code true} if the transaction's completion has started
+     */
+    private static boolean isSpringTransactionCompleting() {
+        try {
+            if (!org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+                return org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive();
+            }
+
+            final SpringRollbackActions synchronization = SpringRollbackActions.registered();
+
+            return synchronization != null && synchronization.completing;
+        } catch (final LinkageError e) {
+            return false;
         }
     }
 
@@ -14740,24 +13770,143 @@ public final class JdbcUtil {
      * completes (a commit attempt then fails with {@code UnexpectedRollbackException}). Marks the connection holder bound to
      * {@code ds}, which {@code DataSourceTransactionManager} and {@code JdbcTransactionManager} consult; the JPA transaction
      * of the {@code JpaTransactionManager} that exposes the connection, which it consults instead. A transaction for which
-     * neither mark works is refused participation by {@link #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)}.
+     * neither mark works is refused participation by {@link #beginTransaction(javax.sql.DataSource)}.
+     * Returns normally only once every transaction that decides the outcome of the work is marked: the Spring-managed
+     * transaction can then only end rolled back. If this method throws, Spring may still commit the work, so the caller must
+     * not treat the rollback as done, and must leave the undo of the in-memory changes tied to the work to Spring's outcome.
+     *
+     * <p>Once marked, the rollback actions registered with Spring's transaction synchronization for work on {@code ds} run
+     * right away (see {@link #registerSpringRollbackAction(javax.sql.DataSource, Runnable)}); the first {@link Error} one of
+     * them throws is returned, for the caller to throw once it has completed the scope.</p>
      *
      * @param ds the data source of the participating transaction
+     * @return the first {@code Error} thrown by a rollback action run right away (later ones attached to it), or {@code null}
+     * @throws IllegalStateException if the mark does not reach every transaction that decides the outcome of the work: no
+     *         connection holder is bound to {@code ds} any more (its transaction was suspended or has completed), or no active
+     *         JPA transaction owning the connection can be identified any more, or one of them refuses the mark (its failure
+     *         is the cause; the others are marked all the same)
      * @throws LinkageError if Spring's transaction classes cannot be loaded or linked (logged first): the transaction is not
-     *         marked, so Spring may still commit the work and the caller must not treat the rollback as done (its undo is left
-     *         to Spring's outcome)
+     *         marked
      */
-    static void markSpringTransactionRollbackOnly(final javax.sql.DataSource ds) throws LinkageError {
+    static Error markSpringTransactionRollbackOnly(final javax.sql.DataSource ds) throws IllegalStateException, LinkageError {
         // The status of the current declarative (@Transactional) transaction is not marked: it is the innermost declarative
         // transaction, which needn't be the one that owns ds (e.g. a programmatic transaction of another transaction manager
         // started inside it), and the marks set here reach the owner.
         try {
-            SpringRollbackActions.markRollbackOnly(unwrapSpringDataSource(ds));
+            return SpringRollbackActions.markRollbackOnly(unwrapSpringDataSource(ds));
         } catch (final LinkageError e) {
             // Swallowed, the error made a rollback that marked nothing look complete: the generated IDs were put back although
             // Spring may commit the rows. Propagate it so that SqlTransaction leaves the undo to Spring's outcome.
             logger.warn("Cannot mark the Spring-managed transaction rollback-only: {}", e.toString());
             throw e;
+        }
+    }
+
+    /**
+     * Marks the Spring-managed transaction whose connection holder is {@code participatedResource} rollback-only while Spring
+     * binds another resource to its data source, or none: Spring runs another transaction on the data source
+     * ({@code REQUIRES_NEW}) or none ({@code NOT_SUPPORTED}), and resumes the suspended one later. The holder of
+     * a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction is marked, which it consults when it
+     * completes. The rollback actions are left to its outcome: its synchronizations are suspended with it, and run when it
+     * completes rolled back.
+     *
+     * @param participatedResource the connection holder of the transaction participated in
+     * @throws IllegalStateException if that transaction can't be marked: it has completed, or it exposes the connection
+     *         through a handle of its own (a JPA transaction, which is suspended with its entity manager), so it may still
+     *         commit the work
+     * @throws LinkageError if Spring's transaction classes cannot be loaded or linked: the transaction is not marked
+     */
+    static void markUnboundSpringTransactionRollbackOnly(final Object participatedResource) throws IllegalStateException, LinkageError {
+        try {
+            SpringRollbackActions.markUnboundRollbackOnly(participatedResource);
+        } catch (final LinkageError e) {
+            // As in markSpringTransactionRollbackOnly: propagated, so that SqlTransaction leaves the undo to Spring's outcome.
+            logger.warn("Cannot mark the Spring-managed transaction rollback-only: {}", e.toString());
+            throw e;
+        }
+    }
+
+    /**
+     * Returns this library's synchronization registered with the synchronizations Spring runs on the current thread, registering
+     * it first if needed, for a {@code SqlTransaction} that begins to participate in the Spring-managed transaction: it records
+     * that the completion of the transaction runs (see {@link #isSpringCompletionInProgress(Object)}).
+     *
+     * @return the synchronization, as an {@code Object} (no Spring type in the members of the caller), or {@code null} if
+     *         Spring's transaction synchronization is not active
+     */
+    static Object participationSynchronization() {
+        try {
+            return SpringRollbackActions.current();
+        } catch (final LinkageError e) {
+            return null;
+        }
+    }
+
+    /**
+     * Returns whether the Spring-managed transaction that {@code synchronization} is registered with runs its completion
+     * callbacks: it has committed and Spring runs its {@code afterCommit} callbacks, or it has completed and Spring runs its
+     * {@code afterCompletion} callbacks (this library's synchronization runs first, see
+     * {@code SpringRollbackActions.getOrder()}, and marks their end last, see {@code SpringRollbackActions.CompletionEnd}).
+     * That is the innermost Spring transaction on the thread when the synchronization was obtained: for a
+     * {@code SqlTransaction} begun inside another transaction manager's transaction, begun in the one it participates in, that
+     * inner one. Once the callbacks have run, {@code false}: whether the transaction participated in has completed is then read
+     * from its connection holder (see {@link #hasSpringTransactionCompleted(Object)}). WHY not for good: the completion of
+     * such an inner transaction counted as that of the one participated in for as long as it ran, so a query prepared in it
+     * was refused (and its scope could not commit) although its transaction and connection were still in use. Readable on any
+     * thread.
+     *
+     * @param synchronization a synchronization from {@link #participationSynchronization()}, or {@code null}
+     * @return {@code true} if its transaction's completion callbacks run; {@code false} for {@code null}
+     */
+    static boolean isSpringCompletionInProgress(final Object synchronization) {
+        // Null checked first: the instanceof would load SpringRollbackActions, which needs Spring.
+        return synchronization != null && synchronization instanceof final SpringRollbackActions actions && actions.completing && !actions.completionEnded;
+    }
+
+    /**
+     * Returns the connection holder Spring binds to {@code ds} (to the target of a {@code TransactionAwareDataSourceProxy}) for
+     * the Spring-managed transaction that owns its connection, if that transaction records its completion on it: the holder of
+     * a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction, which is no longer
+     * transaction-active once the transaction has completed (see {@link #hasSpringTransactionCompleted(Object)}), whatever
+     * transaction's synchronizations Spring runs meanwhile, and whether or not they are active.
+     *
+     * @param ds the data source
+     * @return the holder, as an {@code Object}, or {@code null} if no transaction owns a connection holder bound to {@code ds},
+     *         or its completion can't be read from it (a JPA transaction, whose holder has a handle of its own)
+     */
+    static Object springResourceRecordingCompletion(final javax.sql.DataSource ds) {
+        if (!isInSpring) {
+            return null;
+        }
+
+        try {
+            return SpringRollbackActions.resourceRecordingCompletion(unwrapSpringDataSource(ds));
+        } catch (final RuntimeException | LinkageError e) {
+            // The holder's flag can't be read: its completion can't be followed.
+            return null;
+        }
+    }
+
+    /**
+     * Returns whether the Spring-managed transaction whose connection holder is {@code participatedResource} has completed:
+     * {@code DataSourceTransactionManager} and {@code JdbcTransactionManager} clear the transaction-active flag of their holder
+     * when they clean up after the transaction, while a suspended transaction's holder keeps it. The completion of a
+     * transaction that exposes its connection through a handle of its own (a JPA transaction) can't be told this way: it
+     * counts as not completed.
+     *
+     * @param participatedResource the connection holder of the transaction a {@code SqlTransaction} participates in
+     * @return {@code true} if that transaction is known to have completed
+     */
+    static boolean hasSpringTransactionCompleted(final Object participatedResource) {
+        if (!isInSpring) {
+            return false;
+        }
+
+        try {
+            return SpringRollbackActions.hasCompleted(participatedResource);
+        } catch (final RuntimeException | LinkageError e) {
+            // The holder's flag can't be read: the outcome is unknown, so the transaction is not taken for completed.
+            return false;
         }
     }
 
@@ -14773,14 +13922,16 @@ public final class JdbcUtil {
      * it right away): it runs if the inner transaction rolls back, even if the enclosing one then commits the work. A rollback
      * to a savepoint ({@code PROPAGATION_NESTED}) runs the actions registered since the savepoint was created, with Spring 6.2
      * or later (older versions report no savepoints to their synchronizations: the actions then follow the transaction's
-     * outcome). Spring reports the rollback before performing it and does not report its failure, so the actions have run
-     * even if rolling back to the savepoint then fails. A participating {@code SqlTransaction} rolled back inside a
+     * outcome, and a participating rollback leaves them to it as well instead of running them right away). Spring reports the
+     * rollback before performing it and does not report its failure, so the actions have run even if rolling back to the
+     * savepoint then fails. A participating {@code SqlTransaction} rolled back inside a
      * {@code PROPAGATION_NESTED} scope marks the whole Spring transaction rollback-only (see
      * {@link #beginTransaction(javax.sql.DataSource)}), but only the actions of work on {@code ds} registered since the
      * newest open savepoint run right away - the nested scope can only roll back - while those registered before it are left
      * to the transaction's outcome: they run when the transaction completes rolled back (or on a later rollback to their
      * savepoint), and stay if the enclosing transaction handles the nested scope's {@code UnexpectedRollbackException} and
-     * commits (Spring's rollback to the savepoint clears the mark). Spring reports no savepoint release, so the mark of a
+     * commits (Spring's rollback to the savepoint clears the mark; not that of a {@code JpaTransactionManager}'s JPA
+     * transaction, which can't commit then). Spring reports no savepoint release, so the mark of a
      * nested scope that already committed lingers until its savepoint object has been garbage collected: a participating
      * rollback in the enclosing scope meanwhile runs the actions registered since that mark right away and the earlier
      * ones at transaction completion. Without an open savepoint, all actions of work on {@code ds} run right away.</p>
@@ -14894,7 +14045,161 @@ public final class JdbcUtil {
         private static final MethodValue SET_ROLLBACK_ONLY_BY_TRANSACTION_CLASS = new MethodValue("setRollbackOnly",
                 entityTransactionClass -> entityTransactionType(entityTransactionClass).getMethod("setRollbackOnly"));
 
+        /**
+         * Whether Spring reports savepoints to its transaction synchronizations ({@code TransactionSynchronization.savepoint},
+         * Spring 6.2+): before, the log holds no savepoint marks, so the work confined to a savepoint scope can't be told apart.
+         * Not final: tests simulate a Spring before 6.2, whose savepoint callbacks are then ignored.
+         */
+        private static boolean savepointsReported = isSavepointReported(); //NOSONAR
+
+        private static boolean isSavepointReported() {
+            try {
+                org.springframework.transaction.support.TransactionSynchronization.class.getMethod("savepoint", Object.class);
+                return true;
+            } catch (final NoSuchMethodException | RuntimeException e) {
+                return false;
+            }
+        }
+
         private final RollbackActionLog log = new RollbackActionLog();
+
+        /**
+         * Whether the transaction's completion has started: it has committed and Spring runs its {@code afterCommit} callbacks,
+         * or it has completed and Spring runs its {@code afterCompletion} callbacks. Volatile: read on any thread (see
+         * {@link JdbcUtil#isSpringCompletionInProgress(Object)}).
+         */
+        private volatile boolean completing;
+
+        /**
+         * Whether the transaction's {@code afterCompletion} callbacks have run (see {@link CompletionEnd}). Volatile: read on
+         * any thread.
+         */
+        private volatile boolean completionEnded;
+
+        /**
+         * The actions to run once the transaction has committed, in registration order, by key; {@code null} until the first.
+         */
+        private Map<Object, Runnable> commitActions;
+
+        /**
+         * The first {@link Error} thrown by a commit action in {@link #afterCommit()}, thrown from {@link #afterCompletion(int)}.
+         * Not volatile, as the commit actions are not: Spring calls a synchronization's {@code afterCommit} and then its
+         * {@code afterCompletion} in one call chain, on one thread ({@code AbstractPlatformTransactionManager.processCommit};
+         * for a JTA transaction, whose {@code afterCompletion} may come from another thread, {@code JtaAfterCompletionSynchronization}
+         * calls both from it). Only {@link #completing} is read on other threads.
+         */
+        private Error deferredCommitActionError;
+
+        /**
+         * Adds {@code action} to the actions to run once the Spring-managed transaction of the current thread has committed.
+         *
+         * @param key identifies the action: an action whose key equals that of one registered before is not registered;
+         *        {@code null} to register it in any case
+         * @param action the action
+         * @return {@code true} if it was registered (or one with an equal key was), {@code false} if Spring's transaction
+         *         synchronization is not active, or the transaction has committed already (its {@code afterCommit} callbacks run)
+         */
+        static boolean registerCommitAction(final Object key, final Runnable action) {
+            final SpringRollbackActions synchronization = current();
+
+            // WHY completing: an action added from an afterCommit callback after this synchronization's own afterCommit had run
+            // was never run; the transaction has committed, so the caller runs it right away.
+            if (synchronization == null || synchronization.completing) {
+                return false;
+            }
+
+            if (synchronization.commitActions == null) {
+                synchronization.commitActions = new LinkedHashMap<>(4);
+            }
+
+            synchronization.commitActions.putIfAbsent(key == null ? new Object() : key, action);
+
+            return true;
+        }
+
+        /**
+         * The synchronization {@link #watchCompletion(javax.sql.DataSource)} found or registered among the synchronizations
+         * Spring runs on this thread, with the connection holders it watches ({@link #watchedHolders}); cleared when those
+         * synchronizations are suspended or the transaction completes (see {@link #stopWatching()}). Weakly referenced: Spring
+         * holds the synchronization while its transaction runs.
+         */
+        private static final ThreadLocal<java.lang.ref.WeakReference<SpringRollbackActions>> watching_TL = new ThreadLocal<>();
+
+        /**
+         * The connection holders seen while this synchronization was registered (see {@link #watchCompletion}); {@code null}
+         * until the first. A holder found here needs no lookup of the synchronization: it is registered with the
+         * synchronizations Spring runs now (unless they were replaced without telling it, as by a programmatic
+         * {@code TransactionSynchronizationManager.clearSynchronization()}: a holder of a later transaction is not found here,
+         * and registers it again).
+         */
+        private Set<Object> watchedHolders;
+
+        /**
+         * Registers this library's synchronization with the synchronizations Spring runs on this thread, if it isn't yet, once a
+         * connection is taken from the connection holder bound to {@code ds} (to the target of a
+         * {@code TransactionAwareDataSourceProxy}), so that the {@code afterCommit} callbacks of the transaction see it completing
+         * (see {@code JdbcUtil.isSpringTransactionCompleting()}). Never throws: it only watches.
+         *
+         * <p>Registered for a holder bound for synchronization only too (a {@code SUPPORTS} scope, or a Spring transaction on
+         * another data source): it is harmless there, and a later connection taken from that holder then needs neither the
+         * lookup of the synchronization nor the reflective check of the holder's ownership. WHY: registered for a holder a
+         * transaction owns only, every connection taken from one bound for synchronization paid for that check.</p>
+         *
+         * @param ds the data source the connection was taken from
+         */
+        static void watchCompletion(final javax.sql.DataSource ds) {
+            try {
+                if (!org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()
+                        || !(org.springframework.transaction.support.TransactionSynchronizationManager
+                                .getResource(unwrapSpringDataSource(ds)) instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder)) {
+                    return;
+                }
+
+                // Checked once per holder and synchronization list: looking the synchronization up sorts a copy of the transaction's
+                // synchronizations. WHY the synchronization, not just the last holder seen on the thread: a holder first seen
+                // in another transaction manager's transaction begun inside the one owning it registered the synchronization
+                // there, and once that one completed the holder was still taken for watched, so the owner's afterCommit callbacks
+                // never saw it completing (a scope begun there joined it and Spring's cleanup committed its rolled-back work).
+                // Several holders: one last-seen holder alternated between data sources, looking the synchronization up each time.
+                final SpringRollbackActions watching = watching();
+
+                if (watching != null && watching.watchedHolders != null && watching.watchedHolders.contains(holder)) {
+                    return;
+                }
+
+                final SpringRollbackActions synchronization = current();
+
+                if (synchronization.watchedHolders == null) {
+                    synchronization.watchedHolders = java.util.Collections.newSetFromMap(new IdentityHashMap<>(4));
+                }
+
+                synchronization.watchedHolders.add(holder);
+                watching_TL.set(new java.lang.ref.WeakReference<>(synchronization));
+            } catch (final RuntimeException | LinkageError e) {
+                logger.debug("Cannot watch the completion of the Spring-managed transaction: {}", e.toString());
+            }
+        }
+
+        /**
+         * Returns the synchronization {@link #watchCompletion(javax.sql.DataSource)} recorded for the synchronizations Spring runs
+         * on this thread.
+         *
+         * @return the synchronization, or {@code null} if none is recorded
+         */
+        private static SpringRollbackActions watching() {
+            final java.lang.ref.WeakReference<SpringRollbackActions> ref = watching_TL.get();
+
+            return ref == null ? null : ref.get();
+        }
+
+        /**
+         * Forgets the synchronization {@link #watchCompletion(javax.sql.DataSource)} recorded: the synchronizations Spring runs on
+         * this thread change (they are suspended for another transaction, resumed after it, or cleared at completion), so the
+         * holders it watched must be looked at again. Also releases the thread-local on a pooled thread.
+         */
+        private static void stopWatching() {
+            watching_TL.remove();
+        }
 
         /**
          * Adds {@code action} to the rollback actions of the Spring-managed transaction of the current thread.
@@ -14967,12 +14272,19 @@ public final class JdbcUtil {
          * transaction's actual outcome.
          *
          * @param dataSourceKey the (unwrapped) data source the connection holder is bound to
+         * @return the first {@link Error} thrown by a rollback action run right away (later ones attached to it), or {@code null}:
+         *         the transaction is marked either way
+         * @throws IllegalStateException if no connection holder is bound to {@code dataSourceKey}, or not every identified JPA
+         *         transaction (or none) could be marked: the transaction may still commit the work
          */
-        static void markRollbackOnly(final Object dataSourceKey) {
+        static Error markRollbackOnly(final Object dataSourceKey) throws IllegalStateException {
             final Object resource = org.springframework.transaction.support.TransactionSynchronizationManager.getResource(dataSourceKey);
 
             if (!(resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder)) {
-                return;
+                // The Spring transaction is no longer bound to the thread (suspended or completed): nothing makes it roll back.
+                // This was only logged, and the participating rollback was reported as done (ROLLED_BACK).
+                throw new IllegalStateException("Cannot mark the Spring-managed transaction rollback-only: no connection holder is bound to the"
+                        + " data source any more (its transaction was suspended or has completed), so it may still commit the work");
             }
 
             // DataSourceTransactionManager and JdbcTransactionManager consult the connection holder.
@@ -14988,28 +14300,94 @@ public final class JdbcUtil {
             // synchronizations of the innermost transaction on the thread, which needn't own the connection (another transaction
             // manager's transaction may run inside the owner), so the commit failed could be that of an unrelated transaction.
             // beginTransaction refuses to participate in such a transaction instead (see canMarkRollbackOnly).
-            // Unless every identified JPA transaction was marked, the in-memory changes are left to the transaction's actual
-            // outcome (see afterCompletion): undone now, they would be lost although the transaction may commit the work.
-            if (ormHandle && !markJpaTransactionsRollbackOnly(dataSourceKey, holder.getConnectionHandle())) {
-                logger.warn("Cannot mark the Spring-managed transaction rollback-only: no active JPA transaction owning the connection was identified,"
-                        + " or not every identified one could be marked");
-                return;
+            // Unless every identified JPA transaction was marked (otherwise this throws), the in-memory changes are left to the
+            // transaction's actual outcome (see afterCompletion): undone now, they would be lost although it may commit the work.
+            if (ormHandle) {
+                markJpaTransactionsRollbackOnly(dataSourceKey, holder.getConnectionHandle());
             }
 
             // The transaction that owns the connection can now only end rolled back (DataSourceTransactionManager and
             // JdbcTransactionManager consult the holder; a marked JPA transaction rolls back on commit): undo the in-memory changes
-            // tied to its work right away, as the rollback of a nested JdbcUtil scope does.
+            // tied to its work right away, as a JdbcUtil transaction of its own does once a nested scope marks it rollback-only.
             // WHY only since the newest savepoint mark: inside a PROPAGATION_NESTED scope, Spring's rollback to the savepoint
-            // (which the mark forces on the nested scope's commit) resets the holder's rollback-only flag, so the enclosing
-            // transaction can still commit the rows of its earlier inserts; running every action of the data source here left
-            // those committed entities without their IDs. The work before the savepoint follows the transaction's outcome
-            // (afterCompletion, or a later rollback to its savepoint) instead; the nested scope's own work can only roll back.
-            final SpringRollbackActions synchronization = registered();
+            // (which the mark forces on the nested scope's commit) resets the holder's rollback-only flag (not the mark set on a JPA
+            // transaction: JpaTransactionManager's enclosing transaction can't commit then, and the actions run at its
+            // completion), so the enclosing transaction can still commit the rows of its earlier inserts; running every action of
+            // the data source here left those committed entities without their IDs. The work before the savepoint follows the
+            // transaction's outcome (afterCompletion, or a later rollback to its savepoint) instead; the nested scope's own work
+            // can only roll back.
+            // WHY not before Spring 6.2: it reports no savepoints, so the log holds no mark, and inside a PROPAGATION_NESTED scope
+            // every action of the data source ran here, putting back the IDs of the enclosing transaction's earlier inserts,
+            // whose rows it may still commit. The actions follow the transaction's outcome then (see afterCompletion).
+            final SpringRollbackActions synchronization = savepointsReported ? registered() : null;
 
-            if (synchronization != null) {
-                synchronization.log.runNewestFirstSinceNewestMark(dataSourceKey,
-                        e -> logger.warn(e, "Failed to run a rollback action after marking the Spring-managed transaction rollback-only"));
+            if (synchronization == null) {
+                return null;
             }
+
+            // WHY the Error is returned: it was only logged, while one from an action the transaction ran itself propagates from
+            // the call that completed the scope. The mark is set either way, so it must not count as a failed mark.
+            final Error[] firstError = { null };
+
+            synchronization.log.runNewestFirstSinceNewestMark(dataSourceKey, e -> {
+                logger.warn(e, "Failed to run a rollback action after marking the Spring-managed transaction rollback-only");
+
+                if (e instanceof final Error error) {
+                    firstError[0] = withSuppressed(firstError[0], error);
+                }
+            });
+
+            return firstError[0];
+        }
+
+        /**
+         * Returns whether the transaction whose connection holder is {@code resource} has completed: see
+         * {@link JdbcUtil#hasSpringTransactionCompleted(Object)}.
+         *
+         * @param resource the connection holder of the transaction participated in
+         * @return {@code true} if it is the holder of a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}
+         *         transaction that is no longer transaction-active
+         * @throws IllegalStateException if the holder's transaction-active flag is not accessible
+         */
+        static Object resourceRecordingCompletion(final Object dataSourceKey) throws IllegalStateException {
+            final Object resource = org.springframework.transaction.support.TransactionSynchronizationManager.getResource(dataSourceKey);
+
+            return resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder
+                    && holder.getConnectionHandle() instanceof org.springframework.jdbc.datasource.SimpleConnectionHandle
+                    && SpringConnectionHolderAccess.isOwnedByTransaction(holder) ? holder : null;
+        }
+
+        static boolean hasCompleted(final Object resource) throws IllegalStateException {
+            return resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder
+                    && holder.getConnectionHandle() instanceof org.springframework.jdbc.datasource.SimpleConnectionHandle
+                    && !SpringConnectionHolderAccess.isOwnedByTransaction(holder);
+        }
+
+        /**
+         * Marks the transaction whose connection holder is {@code resource} rollback-only while it is not bound to the thread:
+         * see {@link JdbcUtil#markUnboundSpringTransactionRollbackOnly(Object)}.
+         *
+         * @param resource the connection holder of the transaction participated in
+         * @throws IllegalStateException if the transaction has completed, or exposes the connection through a handle of its own
+         */
+        static void markUnboundRollbackOnly(final Object resource) throws IllegalStateException {
+            // A transaction manager clears the holder when its transaction completes (no longer transaction-active then), while
+            // a suspended transaction's holder is left as it is. Only a holder with Spring's own handle is consulted: a JPA
+            // transaction decides from its EntityTransaction, which is suspended with its entity manager, out of reach here.
+            if (resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder
+                    && holder.getConnectionHandle() instanceof org.springframework.jdbc.datasource.SimpleConnectionHandle) {
+                if (SpringConnectionHolderAccess.isOwnedByTransaction(holder)) {
+                    holder.setRollbackOnly();
+                    return;
+                }
+
+                throw new IllegalStateException("Cannot mark the Spring-managed transaction rollback-only: it has completed (no connection holder"
+                        + " of it is bound to the data source any more), so it may have committed the work");
+            }
+
+            throw new IllegalStateException("Cannot mark the Spring-managed transaction rollback-only: Spring binds another transaction to the data"
+                    + " source, or none, and the transaction participated in decides from a JPA transaction (its connection holder has a handle of"
+                    + " its own), which can't be reached while it is suspended (or has completed), so it may still commit the work");
         }
 
         /**
@@ -15023,26 +14401,41 @@ public final class JdbcUtil {
          *
          * @param dataSourceKey the (unwrapped) data source of the participating transaction
          * @param connectionHandle the handle of the connection holder bound to {@code dataSourceKey}
-         * @return {@code true} if every identified active JPA transaction was marked; {@code false} if none was identified, or
-         *         marking any identified one failed (the others are marked all the same)
+         * @throws IllegalStateException if no active JPA transaction owning the connection is identified, or marking one of them
+         *         fails (the others are marked all the same): the first failure is the cause, later ones are suppressed
          */
-        private static boolean markJpaTransactionsRollbackOnly(final Object dataSourceKey, final Object connectionHandle) {
+        private static void markJpaTransactionsRollbackOnly(final Object dataSourceKey, final Object connectionHandle) throws IllegalStateException {
             final List<Object> entityTransactions = jpaOwnerTransactions(dataSourceKey, connectionHandle);
-            boolean allMarked = !entityTransactions.isEmpty();
+
+            if (entityTransactions.isEmpty()) {
+                // beginTransaction identified one (see canMarkRollbackOnly): it has completed, or was suspended, since.
+                throw new IllegalStateException("Cannot mark the Spring-managed transaction rollback-only: no active JPA transaction owning the"
+                        + " connection of the data source can be identified any more, so it may still commit the work");
+            }
+
+            IllegalStateException failure = null;
 
             for (final Object entityTransaction : entityTransactions) {
                 try {
                     SET_ROLLBACK_ONLY_BY_TRANSACTION_CLASS.methodOf(entityTransaction.getClass()).invoke(entityTransaction);
                 } catch (final ReflectiveOperationException | RuntimeException e) {
-                    // Keep marking the others (each marked one can then only end rolled back), but report the partial mark: the
-                    // transaction that owns the work may be the unmarked one and commit it, so the undo must wait for the actual
-                    // outcome. A partial mark used to count as done and ran the undo right away.
-                    allMarked = false;
-                    logger.warn(e, "Cannot mark the JPA transaction rollback-only");
+                    // Keep marking the others (each marked one can then only end rolled back), but fail the mark: the transaction
+                    // that owns the work may be the unmarked one and commit it. A partial mark used to be logged only, and the
+                    // participating rollback was reported as done (ROLLED_BACK, no exception) while Spring committed the work.
+                    final Throwable providerFailure = e instanceof InvocationTargetException && e.getCause() != null ? e.getCause() : e;
+
+                    if (failure == null) {
+                        failure = new IllegalStateException("Cannot mark the Spring-managed transaction rollback-only: a JPA transaction owning the"
+                                + " connection of the data source refused the mark, so it may still commit the work", providerFailure);
+                    } else {
+                        failure.addSuppressed(providerFailure);
+                    }
                 }
             }
 
-            return allMarked;
+            if (failure != null) {
+                throw failure;
+            }
         }
 
         /**
@@ -15050,7 +14443,7 @@ public final class JdbcUtil {
          * bound to {@code dataSourceKey} can make that transaction roll back, through a rollback-only mark the transaction
          * consults (see {@link #markRollbackOnly(Object)}): its connection holder, bound with Spring's own handle by
          * DataSourceTransactionManager and JdbcTransactionManager, or the JPA transaction identified as its owner. Whether
-         * marking that JPA transaction will succeed can't be checked in advance: if it fails, the rollback is logged and the
+         * marking that JPA transaction will succeed can't be checked in advance: if it fails, the rollback fails, and the
          * Spring transaction decides the outcome.
          *
          * @param dataSourceKey the (unwrapped) data source of the participating transaction
@@ -15204,13 +14597,17 @@ public final class JdbcUtil {
             // null savepoint here, from inside its nested begin, which has no safety net; Spring itself then runs the nested
             // scope without a savepoint (hasSavepoint() is false), and so must we - rejecting it failed that begin with our
             // IllegalArgumentException. Nothing can roll back to such a savepoint, so there is no position to mark.
-            if (savepoint != null) {
+            if (savepointsReported && savepoint != null) {
                 log.mark(savepoint);
             }
         }
 
         @Override
         public void savepointRollback(final Object savepoint) {
+            if (!savepointsReported) {
+                return; // a Spring before 6.2 does not call it (only simulated by tests)
+            }
+
             // WHY: the completion callbacks report the enclosing transaction's outcome only, so the IDs of an insert in a nested
             // transaction rolled back to its savepoint were kept although its rows were gone (committed with the enclosing
             // transaction). Invoked right before Spring rolls back to the savepoint (a failure of that rollback is not reported
@@ -15220,16 +14617,159 @@ public final class JdbcUtil {
                     e -> logger.warn(e, "Failed to run a rollback action after the Spring-managed transaction was rolled back to a savepoint"));
         }
 
+        /**
+         * Runs before the synchronizations of a lower precedence (those registered with the same, before it, run first), so
+         * that their {@code afterCommit} callbacks see the transaction as completing (see
+         * {@code JdbcUtil.isSpringTransactionCompleting()}).
+         */
+        @Override
+        public int getOrder() {
+            return org.springframework.core.Ordered.HIGHEST_PRECEDENCE;
+        }
+
+        @Override
+        public void afterCommit() {
+            completing = true;
+
+            // WHY deferred: this synchronization runs first (see getOrder), and Spring calls the afterCommit callbacks without
+            // catching, so an Error thrown here skipped the afterCommit callbacks of every other synchronization, the
+            // application's own (such as @TransactionalEventListener(AFTER_COMMIT)) included, for a failure of a cache
+            // invalidation. Thrown from afterCompletion instead, where Spring logs it.
+            deferredCommitActionError = runCommitActions();
+        }
+
+        /**
+         * Registers the {@link CompletionEnd} of this synchronization: called for a commit and for a rollback, while the
+         * synchronizations are still active.
+         */
+        @Override
+        public void beforeCompletion() {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(new CompletionEnd(this));
+        }
+
+        /**
+         * Marks the end of the completion callbacks of a synchronization's transaction (see
+         * {@link JdbcUtil#isSpringCompletionInProgress(Object)}): it runs after the synchronizations registered before it, of
+         * any precedence, in {@code afterCompletion}.
+         */
+        private static final class CompletionEnd implements org.springframework.transaction.support.TransactionSynchronization {
+            private final SpringRollbackActions synchronization;
+
+            CompletionEnd(final SpringRollbackActions synchronization) {
+                this.synchronization = synchronization;
+            }
+
+            @Override
+            public int getOrder() {
+                return org.springframework.core.Ordered.LOWEST_PRECEDENCE;
+            }
+
+            @Override
+            public void afterCompletion(final int status) {
+                synchronization.completionEnded = true;
+            }
+        }
+
+        @Override
+        public void suspend() {
+            // Another transaction's synchronizations take over (or none): the holders watched must be looked at again there.
+            stopWatching();
+        }
+
+        @Override
+        public void resume() {
+            stopWatching();
+        }
+
+        /**
+         * Runs (and discards) the commit actions, in registration order. A failing action does not stop the others, as in
+         * {@code TransactionContext.runCommitActions()} (an Error used to stop the remaining actions, which were lost, as they
+         * had been discarded first). A {@code RuntimeException} is logged; an {@link Error} is returned for the caller to throw,
+         * and not logged here: Spring logs it when {@code afterCompletion} throws it (it was logged twice).
+         *
+         * @return the first {@link Error} thrown by an action (later ones attached to it), for the caller to throw once it has
+         *         done its own work, or {@code null}
+         */
+        private Error runCommitActions() {
+            final Map<Object, Runnable> actions = commitActions;
+            commitActions = null;
+
+            if (actions == null) {
+                return null;
+            }
+
+            Error firstError = null;
+
+            for (final Runnable action : actions.values()) {
+                try {
+                    action.run();
+                } catch (final Error e) {
+                    firstError = withSuppressed(firstError, e);
+                } catch (final RuntimeException e) {
+                    logger.warn(e, "Failed to run an action after the Spring-managed transaction committed");
+                }
+            }
+
+            return firstError;
+        }
+
+        /**
+         * Returns {@code first}, with {@code next} attached to it, or {@code next} if {@code first} is {@code null}.
+         */
+        private static Error withSuppressed(final Error first, final Error next) {
+            if (first == null) {
+                return next;
+            }
+
+            if (next != null && next != first) {
+                first.addSuppressed(next);
+            }
+
+            return first;
+        }
+
+        /**
+         * Runs the commit actions left for the transaction's completion and the rollback actions of its outcome. The first
+         * {@link Error} thrown by an action (an {@code afterCommit} one included, see {@link #afterCommit()}) is thrown once all
+         * have run; Spring logs it.
+         */
         @Override
         public void afterCompletion(final int status) {
-            if (status == STATUS_ROLLED_BACK) {
-                log.runNewestFirst(e -> logger.warn(e, "Failed to run a rollback action after the Spring-managed transaction was rolled back"));
+            // Also after a rollback, which calls no afterCommit (see JdbcUtil.isSpringCompletionInProgress).
+            completing = true;
+
+            // The transaction's synchronizations are cleared (or suspended ones resumed in their place).
+            stopWatching();
+
+            Error error = deferredCommitActionError;
+            deferredCommitActionError = null;
+
+            if (status == STATUS_COMMITTED) {
+                // WHY: registered from another synchronization's afterCommit callback, this synchronization gets no afterCommit
+                // call (Spring calls the synchronizations registered before the commit), while it gets this one; its commit
+                // actions were never run.
+                error = withSuppressed(error, runCommitActions());
             } else if (status == STATUS_UNKNOWN) {
+                // The commit failed in a way Spring couldn't resolve (e.g. the connection was lost during the commit): the work may
+                // have committed. The commit actions (cache invalidations) run: they were dropped, and caches kept entries the
+                // commit had made stale. Their Error no longer keeps the rollback actions below from running.
+                error = withSuppressed(error, runCommitActions());
+
                 // A JPA commit of a rollback-only transaction rolls it back and throws a RollbackException, which Spring reports as
                 // an unknown outcome: the work on a connection a participating transaction marked rollback-only (its holder is
                 // still bound until the transaction is cleaned up) can't have committed.
                 log.runNewestFirstWhere(SpringRollbackActions::isMarkedRollbackOnly,
                         e -> logger.warn(e, "Failed to run a rollback action after the Spring-managed transaction was rolled back"));
+            } else {
+                commitActions = null;
+
+                if (status == STATUS_ROLLED_BACK) {
+                    log.runNewestFirst(e -> logger.warn(e, "Failed to run a rollback action after the Spring-managed transaction was rolled back"));
+                }
+            }
+
+            if (error != null) {
+                throw error;
             }
         }
 
@@ -15246,27 +14786,33 @@ public final class JdbcUtil {
     }
 
     /**
-     * Registers the action supplied by {@code actionSupplier} to run if the transaction that encloses work about to run on
-     * {@code ds} is rolled back: the {@code JdbcUtil} transaction active for {@code ds} on this thread (its outermost scope
+     * Registers the action supplied by {@code actionSupplier} to run if the transaction that encloses work on {@code ds} (work
+     * about to run, or running: an insert registers it right before it first writes an ID) is rolled back: the
+     * {@code JdbcUtil} transaction active for {@code ds} on this thread (its outermost scope
      * ending without a successful commit), or else the Spring-managed transaction that owns {@code ds}. Outside any
      * transaction, {@code actionSupplier} is not called. Used to undo in-memory changes, such as generated IDs written back
      * to entities, that refer to work a rollback discards.
      *
+     * @param <A> the action type
      * @param ds the data source the work runs on
      * @param actionSupplier supplies the action (or {@code null} for none); called at most once, before this method returns
+     * @return the action registered, or {@code null} if none was (outside any transaction, or without Spring's transaction
+     *         synchronization)
      */
-    static void registerEnclosingTransactionRollbackAction(final javax.sql.DataSource ds, final Supplier<? extends Runnable> actionSupplier) {
-        final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+    static <A extends Runnable> A registerEnclosingTransactionRollbackAction(final javax.sql.DataSource ds, final Supplier<? extends A> actionSupplier) {
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            tran.addRollbackAction(actionSupplier.get());
+            final A action = actionSupplier.get();
+            tran.addRollbackAction(action);
+            return action;
         } else if (isInSpringManagedTransaction(ds)) {
-            final Runnable action = actionSupplier.get();
+            final A action = actionSupplier.get();
 
-            if (action != null) {
-                registerSpringRollbackAction(ds, action);
-            }
+            return action != null && registerSpringRollbackAction(ds, action) ? action : null;
         }
+
+        return null;
     }
 
     /**
@@ -15278,6 +14824,11 @@ public final class JdbcUtil {
      */
     private static final class SpringConnectionHolderAccess {
         private static final Method IS_TRANSACTION_ACTIVE = findIsTransactionActive();
+
+        // Resolved on first use, by a failed rollback only: a missing one is logged then, not at every class initialization.
+        private static volatile Method setConnection; //NOSONAR
+
+        private static volatile boolean setConnectionResolved; //NOSONAR
 
         private SpringConnectionHolderAccess() {
             // utility class
@@ -15320,6 +14871,64 @@ public final class JdbcUtil {
             return isTransactionActive(holder);
         }
 
+        /**
+         * Returns the connection of {@code holder}, a {@code ConnectionHolder} (through its handle: for an ORM transaction
+         * manager, the provider's code). Typed {@code Object}, so that callers in {@code JdbcUtil} name no Spring type.
+         *
+         * @param holder the connection holder
+         * @return its connection
+         */
+        static Connection connectionOf(final Object holder) {
+            return ((org.springframework.jdbc.datasource.ConnectionHolder) holder).getConnection();
+        }
+
+        /**
+         * Takes {@code conn} from the connection holder Spring bound to {@code dataSource} for synchronization (not for a
+         * transaction), if that holder holds it: the holder then fetches a new connection when the connection is next requested.
+         *
+         * @param dataSource the data source key the holder is bound to
+         * @param conn the connection to take
+         * @return {@code true} if it was taken: the caller closes it, as Spring no longer releases it
+         * @throws IllegalStateException if the ownership of the holder bound to {@code dataSource} cannot be determined
+         */
+        static boolean detachSynchronizedConnection(final javax.sql.DataSource dataSource, final Connection conn) throws IllegalStateException {
+            if (!(org.springframework.transaction.support.TransactionSynchronizationManager
+                    .getResource(dataSource) instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder)
+                    || holder.getConnectionHandle() == null || holder.getConnection() != conn || isOwnedByTransaction(holder)) {
+                return false;
+            }
+
+            final Method method = setConnectionMethod();
+
+            if (method == null) {
+                return false;
+            }
+
+            try {
+                method.invoke(holder, (Object) null);
+                return true;
+            } catch (final ReflectiveOperationException e) {
+                logger.warn(e, "Cannot take a connection from Spring's connection holder");
+                return false;
+            }
+        }
+
+        private static Method setConnectionMethod() {
+            if (!setConnectionResolved) {
+                try {
+                    final Method method = org.springframework.jdbc.datasource.ConnectionHolder.class.getDeclaredMethod("setConnection", Connection.class);
+                    method.setAccessible(true);
+                    setConnection = method;
+                } catch (final ReflectiveOperationException | RuntimeException e) {
+                    logger.warn("Cannot access ConnectionHolder.setConnection(Connection): {}", e.toString());
+                }
+
+                setConnectionResolved = true;
+            }
+
+            return setConnection;
+        }
+
         private static boolean isTransactionActive(final org.springframework.jdbc.datasource.ConnectionHolder holder) throws IllegalStateException {
             if (IS_TRANSACTION_ACTIVE == null) {
                 // Neither answer is safe: joining could leave the work uncommitted, and a transaction of its own could commit
@@ -15349,10 +14958,10 @@ public final class JdbcUtil {
      *
      * <p><b>Nested calls:</b> If a transaction for {@code ds} is already active on the current
      * thread when this method is invoked, the callable participates in that existing transaction
-     * (the reference count is incremented). The underlying {@code Connection} is not actually
+     * (as a nested scope). The underlying {@code Connection} is not actually
      * committed until the outermost transaction scope closes. If {@code cmd} fails in a nested call,
      * the shared transaction is marked rollback-only, so the outermost scope rolls back even if it
-     * later calls {@code commit()} (which then returns normally).</p>
+     * later calls {@code commit()}, which then throws {@link RollbackOnlyException}.</p>
      *
      * <p><b>Spring integration:</b> Inside a Spring-managed transaction that owns the connection bound to {@code ds},
      * this method participates in it (see {@link #beginTransaction(javax.sql.DataSource)}): {@code cmd}'s work is committed
@@ -15394,7 +15003,10 @@ public final class JdbcUtil {
      * @param cmd The callable to execute within the transaction, must not be {@code null}.
      * @return The result returned by {@code cmd}.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
-     * @throws IllegalStateException if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it
+     *         (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the
+     *         outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the
+     *         transaction has been rolled back.
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
@@ -15440,7 +15052,7 @@ public final class JdbcUtil {
      * thread, the function participates in that existing transaction. The connection passed to
      * {@code cmd} is the existing transaction's connection. If {@code cmd} fails in a nested call, the
      * shared transaction is marked rollback-only, so the outermost scope rolls back even if it later
-     * calls {@code commit()}.</p>
+     * calls {@code commit()}, which then throws {@link RollbackOnlyException}.</p>
      *
      * <p><b>Spring integration:</b> Inside a Spring-managed transaction that owns the connection bound to {@code ds},
      * this method participates in it (see {@link #beginTransaction(javax.sql.DataSource)}): {@code cmd}'s work is committed
@@ -15470,7 +15082,10 @@ public final class JdbcUtil {
      *            the connection must not be closed by the caller.
      * @return The result returned by {@code cmd}.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
-     * @throws IllegalStateException if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it
+     *         (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the
+     *         outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the
+     *         transaction has been rolled back.
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
@@ -15512,11 +15127,11 @@ public final class JdbcUtil {
      * level (or, for a nested call, the enclosing scope's level).</p>
      *
      * <p><b>Nested calls:</b> If a transaction for {@code ds} is already active on the current
-     * thread, the runnable participates in that existing transaction (the reference count is
-     * incremented). The underlying {@code Connection} is not actually committed until the
+     * thread, the runnable participates in that existing transaction (as a nested
+     * scope). The underlying {@code Connection} is not actually committed until the
      * outermost transaction scope closes. If {@code cmd} fails in a nested call, the shared
      * transaction is marked rollback-only, so the outermost scope rolls back even if it later
-     * calls {@code commit()} (which then returns normally).</p>
+     * calls {@code commit()}, which then throws {@link RollbackOnlyException}.</p>
      *
      * <p><b>Spring integration:</b> Inside a Spring-managed transaction that owns the connection bound to {@code ds},
      * this method participates in it (see {@link #beginTransaction(javax.sql.DataSource)}): {@code cmd}'s work is committed
@@ -15548,7 +15163,10 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} for the transaction, must not be {@code null}.
      * @param cmd The runnable to execute within the transaction, must not be {@code null}.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
-     * @throws IllegalStateException if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it
+     *         (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the
+     *         outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the
+     *         transaction has been rolled back.
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
@@ -15590,7 +15208,7 @@ public final class JdbcUtil {
      * thread, the consumer participates in that existing transaction. The connection passed to
      * {@code cmd} is the existing transaction's connection. If {@code cmd} fails in a nested call, the
      * shared transaction is marked rollback-only, so the outermost scope rolls back even if it later
-     * calls {@code commit()}.</p>
+     * calls {@code commit()}, which then throws {@link RollbackOnlyException}.</p>
      *
      * <p><b>Spring integration:</b> Inside a Spring-managed transaction that owns the connection bound to {@code ds},
      * this method participates in it (see {@link #beginTransaction(javax.sql.DataSource)}): {@code cmd}'s work is committed
@@ -15618,7 +15236,10 @@ public final class JdbcUtil {
      * @param cmd The consumer to execute with the transaction's {@link Connection}, must not be {@code null};
      *            the connection must not be closed by the caller.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
-     * @throws IllegalStateException if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it
+     *         (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the
+     *         outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the
+     *         transaction has been rolled back.
      * @throws UncheckedSQLException if beginning, committing, or rolling back the transaction fails.
      *         A rollback failure is suppressed when {@code cmd} has already failed.
      * @throws E if {@code cmd} throws an exception (the transaction is rolled back before propagating).
@@ -15688,11 +15309,12 @@ public final class JdbcUtil {
      * flag that should survive even if the outer transaction is later rolled back.</p>
      *
      * <p><b>Spring integration:</b> When running inside a Spring-managed transaction context,
-     * Spring's transaction participation is also temporarily disabled for the duration of
-     * {@code cmd}, so the callable does not join any Spring {@code @Transactional} transaction
-     * through this library's connection-acquisition helpers. This does not suspend Spring's own
-     * transaction synchronization, affect other database libraries, or detach an already acquired
-     * connection. The callback must obtain its connections through the appropriate helpers.</p>
+     * this library's participation in Spring transactions is also suspended for {@code ds} for the duration of
+     * {@code cmd}, so the callable does not join a Spring {@code @Transactional} transaction on {@code ds}
+     * through this library's connection-acquisition helpers, while work on other data sources still joins
+     * theirs. This does not suspend Spring's own transaction synchronization, affect other database
+     * libraries, or detach an already acquired connection. The callback must obtain its connections
+     * through the appropriate helpers.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -15737,27 +15359,22 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
-            doNotUseSpringTransactional(true);
+        // Suspended for ds only: inside a REQUIRES_NEW method on one data source, work on another one used to ignore that data
+        // source's Spring transaction too, so it ran on a connection of its own and committed on its own.
+        final boolean suspended = suspendSpringTransactional(ds);
 
-            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
-            try {
-                if (tran == null) {
-                    return cmd.call();
-                } else {
-                    return tran.callOutsideTransaction(cmd);
-                }
-            } finally {
-                doNotUseSpringTransactional(false);
-            }
-        } else {
-            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+        try {
+            // Looked up inside the try: a failure there left the suspension on the (pooled) thread.
+            final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             if (tran == null) {
                 return cmd.call();
             } else {
                 return tran.callOutsideTransaction(cmd);
+            }
+        } finally {
+            if (suspended) {
+                resumeSpringTransactional(ds);
             }
         }
     }
@@ -15784,9 +15401,9 @@ public final class JdbcUtil {
      * {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid
      * connection-pool leaks.</p>
      *
-     * <p><b>Spring integration:</b> This library's participation in Spring transactions is temporarily
-     * disabled for the duration of {@code cmd}. Spring's own transaction synchronization and other
-     * database libraries are unaffected.</p>
+     * <p><b>Spring integration:</b> This library's participation in Spring transactions is suspended for
+     * {@code ds} for the duration of {@code cmd} (work on other data sources still joins theirs). Spring's
+     * own transaction synchronization and other database libraries are unaffected.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -15831,27 +15448,22 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
-            doNotUseSpringTransactional(true);
+        // Suspended for ds only: inside a REQUIRES_NEW method on one data source, work on another one used to ignore that data
+        // source's Spring transaction too, so it ran on a connection of its own and committed on its own.
+        final boolean suspended = suspendSpringTransactional(ds);
 
-            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
-            try {
-                if (tran == null) {
-                    return cmd.apply(ds);
-                } else {
-                    return tran.callOutsideTransaction(() -> cmd.apply(ds));
-                }
-            } finally {
-                doNotUseSpringTransactional(false);
-            }
-        } else {
-            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+        try {
+            // Looked up inside the try: a failure there left the suspension on the (pooled) thread.
+            final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             if (tran == null) {
                 return cmd.apply(ds);
             } else {
                 return tran.callOutsideTransaction(() -> cmd.apply(ds));
+            }
+        } finally {
+            if (suspended) {
+                resumeSpringTransactional(ds);
             }
         }
     }
@@ -15876,9 +15488,9 @@ public final class JdbcUtil {
      * (e.g., error logs, audit events, distributed-lock releases) and refreshing caches or
      * external systems that should not be deferred until the outer transaction commits.</p>
      *
-     * <p><b>Spring integration:</b> This library's participation in Spring transactions is temporarily
-     * disabled for the duration of {@code cmd}. Spring's own transaction synchronization and other
-     * database libraries are unaffected.</p>
+     * <p><b>Spring integration:</b> This library's participation in Spring transactions is suspended for
+     * {@code ds} for the duration of {@code cmd} (work on other data sources still joins theirs). Spring's
+     * own transaction synchronization and other database libraries are unaffected.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -15917,27 +15529,20 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
-            doNotUseSpringTransactional(true);
+        final boolean suspended = suspendSpringTransactional(ds);
 
-            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
-            try {
-                if (tran == null) {
-                    cmd.run();
-                } else {
-                    tran.runOutsideTransaction(cmd);
-                }
-            } finally {
-                doNotUseSpringTransactional(false);
-            }
-        } else {
-            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+        try {
+            // Looked up inside the try: a failure there left the suspension on the (pooled) thread.
+            final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             if (tran == null) {
                 cmd.run();
             } else {
                 tran.runOutsideTransaction(cmd);
+            }
+        } finally {
+            if (suspended) {
+                resumeSpringTransactional(ds);
             }
         }
     }
@@ -15965,9 +15570,9 @@ public final class JdbcUtil {
      * {@code cmd} must be closed by the caller (e.g., via try-with-resources) to avoid
      * connection-pool leaks.</p>
      *
-     * <p><b>Spring integration:</b> This library's participation in Spring transactions is temporarily
-     * disabled for the duration of {@code cmd}. Spring's own transaction synchronization and other
-     * database libraries are unaffected.</p>
+     * <p><b>Spring integration:</b> This library's participation in Spring transactions is suspended for
+     * {@code ds} for the duration of {@code cmd} (work on other data sources still joins theirs). Spring's
+     * own transaction synchronization and other database libraries are unaffected.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -15998,27 +15603,20 @@ public final class JdbcUtil {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotNull(cmd, cs.cmd);
 
-        if (isInSpring && !isSpringTransactionalDisabled_TL.get()) { //NOSONAR
-            doNotUseSpringTransactional(true);
+        final boolean suspended = suspendSpringTransactional(ds);
 
-            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
-
-            try {
-                if (tran == null) {
-                    cmd.accept(ds);
-                } else {
-                    tran.runOutsideTransaction(() -> cmd.accept(ds));
-                }
-            } finally {
-                doNotUseSpringTransactional(false);
-            }
-        } else {
-            final SqlTransaction tran = SqlTransaction.getTransaction(ds, CreatedBy.JDBC_UTIL);
+        try {
+            // Looked up inside the try: a failure there left the suspension on the (pooled) thread.
+            final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
             if (tran == null) {
                 cmd.accept(ds);
             } else {
                 tran.runOutsideTransaction(() -> cmd.accept(ds));
+            }
+        } finally {
+            if (suspended) {
+                resumeSpringTransactional(ds);
             }
         }
     }
@@ -16184,6 +15782,228 @@ public final class JdbcUtil {
      */
     static boolean isSpringTransactionalNotUsed() {
         return !isInSpring || isSpringTransactionalDisabled_TL.get();
+    }
+
+    /**
+     * Returns whether this library uses Spring-managed transactions for {@code ds} on the current thread: Spring is on the
+     * class path, and their use is neither disabled on the thread ({@link #runIgnoringSpringTransaction(Throwables.Runnable)})
+     * nor suspended for {@code ds} ({@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}; a Spring
+     * transaction begun inside the suspension is used, see {@link #suspendSpringTransactional(javax.sql.DataSource)}).
+     *
+     * @param ds the data source, or {@code null} (only the thread's setting applies)
+     * @return {@code true} if connections for {@code ds} are acquired and released through Spring
+     */
+    static boolean isSpringTransactionalUsed(final javax.sql.DataSource ds) {
+        if (!isInSpring || isSpringTransactionalDisabled_TL.get()) { //NOSONAR
+            return false;
+        }
+
+        final Map<javax.sql.DataSource, SpringSuspension> suspended = springSuspendedDataSources_TL.get();
+
+        if (suspended == null || ds == null) {
+            return true;
+        }
+
+        final javax.sql.DataSource key = dataSourceOutsideSpringTransaction(ds);
+        final SpringSuspension suspension = suspended.get(key);
+
+        if (suspension == null) {
+            return true;
+        }
+
+        // WHY the binding: a Spring transaction begun inside the suspension (a REQUIRES_NEW scope in work run outside the
+        // transaction) binds a resource of its own, and is used. The data source's Spring transactions were all ignored, so the
+        // work in it ran on a connection of its own and committed, whatever that transaction's outcome. WHY every enclosing
+        // suspension: Spring may bind again, inside a nested suspension, the resource an enclosing one ignores (a programmatic
+        // commit of the transaction begun between them), whose work then joined the transaction left by the enclosing one.
+        final Object bound = boundSpringResource(key);
+
+        for (SpringSuspension s = suspension; s != null; s = s.enclosing()) {
+            if (bound == s.resource()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Suspends this library's use of Spring-managed transactions for {@code ds} on the current thread, unless it is not used
+     * for {@code ds} anyway; {@link #resumeSpringTransactional(javax.sql.DataSource)} resumes it. The suspension applies to
+     * what Spring binds to {@code ds} now (the connection holder of its transaction, or none): a Spring transaction begun
+     * while it lasts binds another resource, and is used again until it completes, unless an enclosing suspension of
+     * {@code ds} applies to that resource.
+     *
+     * @param ds the data source
+     * @return {@code true} if it was suspended by this call, so the caller must resume it
+     */
+    static boolean suspendSpringTransactional(final javax.sql.DataSource ds) {
+        if (!isSpringTransactionalUsed(ds)) {
+            return false;
+        }
+
+        Map<javax.sql.DataSource, SpringSuspension> suspended = springSuspendedDataSources_TL.get();
+
+        if (suspended == null) {
+            suspended = new IdentityHashMap<>();
+            springSuspendedDataSources_TL.set(suspended);
+        }
+
+        final javax.sql.DataSource key = dataSourceOutsideSpringTransaction(ds);
+
+        // Within a Spring transaction begun inside an enclosing suspension of ds, which resumes once this one ends.
+        suspended.put(key, new SpringSuspension(boundSpringResource(key), suspended.get(key)));
+
+        logger.debug("Suspended Spring Transactional integration for a data source");
+
+        return true;
+    }
+
+    /**
+     * Resumes this library's use of Spring-managed transactions for {@code ds} on the current thread, after
+     * {@link #suspendSpringTransactional(javax.sql.DataSource)} suspended it: the enclosing suspension of {@code ds}, if any,
+     * applies again.
+     *
+     * @param ds the data source
+     */
+    static void resumeSpringTransactional(final javax.sql.DataSource ds) {
+        final Map<javax.sql.DataSource, SpringSuspension> suspended = springSuspendedDataSources_TL.get();
+
+        if (suspended != null) {
+            final javax.sql.DataSource key = dataSourceOutsideSpringTransaction(ds);
+            final SpringSuspension suspension = suspended.remove(key);
+
+            if (suspension != null && suspension.enclosing() != null) {
+                suspended.put(key, suspension.enclosing());
+            }
+
+            if (suspended.isEmpty()) {
+                springSuspendedDataSources_TL.remove();
+            }
+        }
+    }
+
+    /**
+     * Returns whether work on {@code ds} on the current thread runs in a transaction, as
+     * {@link #isInTransaction(javax.sql.DataSource)} tells, without reading the state of a connection and without throwing: a
+     * Spring connection holder whose ownership can't be determined counts as a transaction. Keeps the DAO result caches out of
+     * transactions.
+     *
+     * @param ds the data source
+     * @return {@code true} if a {@code JdbcUtil} transaction for {@code ds}, or a Spring-managed transaction owning its
+     *         connection, is active on the current thread
+     */
+    static boolean mayRunInTransaction(final javax.sql.DataSource ds) {
+        if (TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL) != null) {
+            return true;
+        }
+
+        if (!isSpringTransactionalUsed(ds)) {
+            return false;
+        }
+
+        try {
+            return boundSpringResource(ds) instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder
+                    && SpringConnectionHolderAccess.isOwnedByTransaction(holder);
+        } catch (final IllegalStateException e) {
+            return true;
+        } catch (final LinkageError e) {
+            return false;
+        }
+    }
+
+    /**
+     * Returns whether work on {@code ds} on the current thread runs in a {@code JdbcUtil} transaction of its own (one that does
+     * not participate in a Spring-managed transaction): its commit is observed exactly, while Spring reports the completion of
+     * the innermost Spring transaction on the thread only, which needn't be the one the work runs in (see
+     * {@link #runAfterCommit(javax.sql.DataSource, Object, Runnable)}).
+     *
+     * @param ds the data source
+     * @return {@code true} if such a transaction is active for {@code ds} on the current thread
+     */
+    static boolean isInTransactionOfItsOwn(final javax.sql.DataSource ds) {
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
+        return tran != null && !tran.isSpringParticipating();
+    }
+
+    /**
+     * Runs {@code action} once the transaction that work on {@code ds} on the current thread runs in may have committed: the
+     * {@code JdbcUtil} transaction for {@code ds}, or else the Spring-managed transaction of the thread, through its
+     * transaction synchronization (also for a {@code JdbcUtil} transaction participating in it). It runs after a commit, and
+     * also when a commit's outcome is unknown: a {@code JdbcUtil} commit that failed (the database may have committed, the
+     * acknowledgement lost) or an unknown outcome Spring reports. It is discarded if the transaction rolls back without
+     * attempting a commit. Only for actions that are safe to run once too often, such as cache invalidations: not for work
+     * that needs a confirmed commit. Without such a transaction, or when its commit can't be observed (Spring's transaction
+     * synchronization is not active, or the transaction has committed already), {@code action} runs right away. As for
+     * rollback actions (see {@link #registerSpringRollbackAction(javax.sql.DataSource, Runnable)}), the Spring transaction is
+     * the innermost one on the thread: for work on the data source of an enclosing transaction while another transaction
+     * manager's transaction runs inside it, the action follows the inner transaction (it runs when that one commits).
+     *
+     * @param ds the data source of the work
+     * @param key identifies the action: one whose key equals that of an action registered before with the same transaction is
+     *        not registered (it does the same), and is not run; {@code null} to register it in any case
+     * @param action the action to run after the commit
+     */
+    static void runAfterCommit(final javax.sql.DataSource ds, final Object key, final Runnable action) {
+        final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
+
+        if (tran != null && !tran.isSpringParticipating()) {
+            tran.addCommitAction(key, action);
+            return;
+        }
+
+        // A participating transaction commits with the Spring transaction, also inside runIgnoringSpringTransaction (which still
+        // finds it): the action ran right away there, before the Spring commit.
+        if (tran != null || isSpringTransactionalUsed(ds)) {
+            try {
+                if (SpringRollbackActions.registerCommitAction(key, action)) {
+                    return;
+                }
+            } catch (final LinkageError e) {
+                // Spring's transaction classes can't be used: run it now.
+            }
+        }
+
+        action.run();
+    }
+
+    /**
+     * Binds {@code query}, prepared on the connection of {@code tran}, to that transaction: it then runs only on the
+     * transaction's thread and while the transaction is open, or, for a transaction participating in a Spring-managed one
+     * (whose connection Spring keeps), while that Spring transaction runs (see {@code AbstractQuery.assertNotClosed()}); the
+     * deferred execution of a lazy stream it returned is checked for the latter only (see
+     * {@code TransactionContext.assertDeferredQueryCanRun()}).
+     *
+     * @param <Q> the query type
+     * @param tran the transaction the query was prepared in
+     * @param query the query
+     * @return {@code query}
+     */
+    private static <Q extends AbstractQuery<?, ?>> Q inTransaction(final TransactionContext tran, final Q query) {
+        query.transaction = tran;
+        return query;
+    }
+
+    /**
+     * Returns the resource Spring has bound to {@code ds} (to the target of Spring {@code TransactionAwareDataSourceProxy}
+     * layers) on the current thread, such as the connection holder of the Spring-managed transaction that owns it. Spring
+     * binds another one while another transaction runs on {@code ds} ({@code REQUIRES_NEW}), and none while it suspends its
+     * transaction ({@code NOT_SUPPORTED}).
+     *
+     * @param ds the data source
+     * @return the bound resource, or {@code null} if none is bound (or Spring is not on the class path)
+     */
+    static Object boundSpringResource(final javax.sql.DataSource ds) {
+        if (!isInSpring) {
+            return null;
+        }
+
+        try {
+            return org.springframework.transaction.support.TransactionSynchronizationManager.getResource(unwrapSpringDataSource(ds));
+        } catch (final LinkageError e) {
+            return null;
+        }
     }
 
     /**
@@ -16948,6 +16768,15 @@ public final class JdbcUtil {
      * Closing the returned scope clears that internally created cache and restores the cache that
      * was active before the scope was opened, making this method safe to nest.
      *
+     * <p>Inside a transaction on a DAO's data source (a {@code JdbcUtil} transaction, or a Spring-managed transaction that
+     * owns its connection), the scope's cache is neither read nor filled by that DAO: its results could miss the
+     * transaction's own writes, or hold work the transaction may still roll back. A write there invalidates the scope's cache
+     * once the transaction has committed, and, unless it joins a {@code JdbcUtil} transaction of its own, right away as well
+     * (see {@link com.landawn.abacus.jdbc.annotation.RefreshCache}). Outside a transaction, the scope's cache serves the lookup
+     * of an {@code upsert} as it serves any read, so the upsert decides between insert and update on the rows as they were
+     * read earlier in the scope: the writes of DAOs within the scope invalidate it, other work does not (another thread
+     * outside the scope, or a statement not run through a DAO).</p>
+     *
      * <p><b>Usage Example:</b></p>
      * <pre>{@code
      * try (JdbcUtil.DaoCacheScope scope = JdbcUtil.openDaoCacheScope()) {
@@ -16968,7 +16797,7 @@ public final class JdbcUtil {
      * Closing the returned scope restores the cache that was active before the scope was opened,
      * or removes the thread-local value if there was no previous cache. The scope controls only
      * the thread-local binding; it neither clears nor otherwise manages the lifetime of the supplied
-     * cache.
+     * cache. Transactions: see {@link #openDaoCacheScope()}.
      *
      * @param localThreadCache The cache to use in the scope, must not be {@code null}.
      * @return A scope containing {@code localThreadCache}.

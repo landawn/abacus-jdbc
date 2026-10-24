@@ -357,14 +357,33 @@ public class JdbcUtilIntegrationTest extends TestBase {
         assertEquals(0, count.getAsInt());
     }
 
-    // A for-update-only transaction runs plain SELECTs on a separate connection, but a SELECT that embeds a
-    // data-modifying statement (H2 data-change delta table) writes data: it must join the transaction so that
-    // rolling the transaction back also undoes that write.
+    // Every statement on the data source joins the thread's transaction, a plain SELECT included, so it reads the
+    // transaction's own uncommitted write; a read that must not do so says it with callOutsideTransaction. A for-update-only
+    // transaction used to run the plain SELECT on another connection, which read the committed value.
     @Test
-    public void testForUpdateOnlyTransaction_DataModifyingSelectIsRolledBack() throws SQLException {
+    public void testTransaction_PlainSelectReadsTheTransactionsOwnWrite() throws SQLException {
+        final long id = insertWidget("own-write", 1);
+        final String select = "SELECT qty FROM widget WHERE id = ?";
+
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+        try {
+            assertEquals(1, JdbcUtil.prepareQuery(ds, "UPDATE widget SET qty = 42 WHERE id = ?").setLong(1, id).update());
+
+            assertEquals(42, JdbcUtil.prepareQuery(ds, select).setLong(1, id).queryForInt().getAsInt());
+            assertEquals(1, (int) JdbcUtil.callOutsideTransaction(ds, () -> JdbcUtil.prepareQuery(ds, select).setLong(1, id).queryForInt().getAsInt()));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(1, JdbcUtil.prepareQuery(ds, select).setLong(1, id).queryForInt().getAsInt());
+    }
+
+    // A SELECT that embeds a data-modifying statement (H2 data-change delta table) rolls back with the transaction.
+    @Test
+    public void testTransaction_DataModifyingSelectIsRolledBack() throws SQLException {
         final long id = insertWidget("delta-table", 1);
 
-        final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
         try {
             final OptionalInt updatedQty = JdbcUtil.prepareQuery(ds, "SELECT qty FROM FINAL TABLE (UPDATE widget SET qty = 42 WHERE id = ?)")
                     .setLong(1, id)
@@ -378,62 +397,273 @@ public class JdbcUtilIntegrationTest extends TestBase {
         assertEquals(1, qty.getAsInt(), "the UPDATE embedded in the SELECT must be rolled back with the transaction");
     }
 
-    // BUG FIX: a named parameter spelled like a keyword (":into") must not be read as an INTO clause. The plain SELECT keeps
-    // running outside the for-update-only transaction, so it sees the committed value, not the transaction's uncommitted write.
+    // More than one parameter set of executeBatchUpdate/executeLargeBatchUpdate(DataSource, ...) runs in a nested scope of the
+    // transaction active on the thread, as DAO batch operations do: a failed batch marks it rollback-only, so its outermost
+    // commit rolls back and throws RollbackOnlyException; a further batch joins it and is rolled back with it. The batch used to
+    // run on the transaction's connection without a scope: a caller that caught its failure committed the rows of the statements
+    // that had run (here the first two), and the commit returned normally.
     @Test
-    public void testForUpdateOnlyTransaction_NamedParameterSpelledIntoDoesNotJoin() throws SQLException {
-        final long id = insertWidget("named-into", 1);
+    public void testExecuteBatchUpdate_FailureInsideATransactionMarksItRollbackOnly() throws SQLException {
+        final String sql = "INSERT INTO widget (id, name, qty) VALUES (?, ?, ?)";
+        final List<Object[]> rows = List.of(new Object[] { 1_000_001L, "a", 1 }, new Object[] { 1_000_002L, "b", 2 }, new Object[] { 1_000_002L, "c", 3 });
 
-        final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
-        try {
-            assertEquals(1, JdbcUtil.prepareQuery(ds, "UPDATE widget SET qty = 42 WHERE id = ?").setLong(1, id).update());
+        for (final boolean large : new boolean[] { false, true }) {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
 
-            final OptionalInt qty = JdbcUtil.prepareNamedQuery(ds, "SELECT qty FROM widget WHERE id = :into").setLong("into", id).queryForInt();
-            assertEquals(1, qty.getAsInt(), "the SELECT must run outside the for-update-only transaction");
-        } finally {
-            tran.rollbackIfNotCommitted();
+            try {
+                insertWidget("before", 1);
+
+                assertThrows(SQLException.class, () -> {
+                    if (large) {
+                        JdbcUtil.executeLargeBatchUpdate(ds, sql, rows);
+                    } else {
+                        JdbcUtil.executeBatchUpdate(ds, sql, rows);
+                    }
+                });
+
+                assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status(), "large=" + large);
+                assertEquals(2, JdbcUtil.executeBatchUpdate(ds, sql, List.of(new Object[] { 1_000_003L, "d", 4 }, new Object[] { 1_000_004L, "e", 5 })),
+                        "a further batch joins the rollback-only transaction");
+                assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status(), "large=" + large);
+                assertThrows(RollbackOnlyException.class, tran::commit);
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+
+            assertEquals(0, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget").queryForInt().orElse(-1), "large=" + large);
         }
     }
 
-    // BUG FIX: a qualifier '.' may be followed by whitespace or comments ("k. into" is MySQL's column "into" of "k"), so
-    // the qualified word is a name, not an INTO clause: the plain SELECT keeps running outside the for-update-only
-    // transaction and reads the committed value.
+    // Transaction review, finding 15: a query prepared from the data source in a transaction runs on the transaction's
+    // connection, but it could run asynchronously (callAsync/runAsync: another thread then used that connection alongside the
+    // transaction's own thread), on another thread, or after the transaction had completed and released its connection to the
+    // pool, which may hand it to another thread (with closeAfterExecution(false)). All three fail now; a query prepared outside
+    // a transaction is unaffected.
     @Test
-    public void testForUpdateOnlyTransaction_QualifiedKeywordColumnAfterWhitespaceDoesNotJoin() throws SQLException {
-        final DataSource mysqlModeDs = JdbcUtil.createHikariDataSource("jdbc:h2:mem:qualified_into;MODE=MySQL;DB_CLOSE_DELAY=-1", "sa", "");
-        JdbcUtil.execute(mysqlModeDs, "CREATE TABLE kw_into (id INT PRIMARY KEY, `into` INT)");
-        JdbcUtil.execute(mysqlModeDs, "INSERT INTO kw_into VALUES (1, 1)");
+    public void testQueryPreparedInATransaction_RunsOnlyOnItsThreadWhileItIsOpen() throws Exception {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+        final PreparedQuery reused;
 
-        final SqlTransaction tran = JdbcUtil.beginTransaction(mysqlModeDs, IsolationLevel.DEFAULT, true);
         try {
-            assertEquals(1, JdbcUtil.prepareQuery(mysqlModeDs, "UPDATE kw_into SET `into` = 42 WHERE id = 1").update());
+            final PreparedQuery async = JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget");
+            final IllegalStateException asyncFailure = assertThrows(IllegalStateException.class, () -> async.callAsync(q -> q.queryForInt()));
+            assertTrue(asyncFailure.getMessage().contains("can't run asynchronously"), asyncFailure.getMessage());
+            assertTrue(async.isClosed, "closed, as after a failed submission");
 
-            for (final String sql : List.of("SELECT k. into FROM kw_into k WHERE id = 1", "SELECT k . /* column */ into FROM kw_into k WHERE id = 1")) {
-                assertEquals(1, JdbcUtil.prepareQuery(mysqlModeDs, sql).queryForInt().getAsInt(), sql);
+            final PreparedQuery onAnotherThread = JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget");
+            final java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+            final Thread thread = new Thread(() -> {
+                try {
+                    onAnotherThread.queryForInt();
+                } catch (final Throwable e) {
+                    failure.set(e);
+                }
+            });
+            thread.start();
+            thread.join();
+            assertTrue(failure.get() instanceof IllegalStateException, String.valueOf(failure.get()));
+            onAnotherThread.close();
+
+            reused = JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget").closeAfterExecution(false);
+            assertEquals(0, reused.queryForInt().orElse(-1));
+            tran.commit();
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        try {
+            final IllegalStateException afterCompletion = assertThrows(IllegalStateException.class, reused::queryForInt);
+            assertTrue(afterCompletion.getMessage().contains("has completed"), afterCompletion.getMessage());
+        } finally {
+            reused.close();
+        }
+
+        assertEquals(0, (int) JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget").callAsync(q -> q.queryForInt().orElse(-1)).get());
+    }
+
+    // Round 16 review: the async methods validated their arguments before rejecting a query prepared in a transaction, so a
+    // null argument got IllegalArgumentException instead of the IllegalStateException a closed query gets (ISE before IAE).
+    // Every overload rejects such a query, before its arguments are validated, and closes it.
+    @Test
+    public void testAsyncExecutionOfAQueryPreparedInATransaction_IsRejectedBeforeItsArgumentsAreValidated() throws SQLException {
+        final java.util.concurrent.Executor executor = Runnable::run;
+        final List<java.util.function.Consumer<PreparedQuery>> calls = List.of(q -> q.callAsync(null), q -> q.callAsync(null, executor), q -> q.runAsync(null),
+                q -> q.runAsync(null, executor), q -> q.callAsync(x -> x.queryForInt()), q -> q.callAsync(x -> x.queryForInt(), executor),
+                q -> q.runAsync(x -> x.queryForInt()), q -> q.runAsync(x -> x.queryForInt(), executor));
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+
+        try {
+            for (int i = 0; i < calls.size(); i++) {
+                final PreparedQuery query = JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget");
+                final java.util.function.Consumer<PreparedQuery> call = calls.get(i);
+                final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> call.accept(query), "call " + i);
+                assertTrue(failure.getMessage().contains("can't run asynchronously"), failure.getMessage());
+                assertTrue(query.isClosed, "call " + i);
             }
         } finally {
             tran.rollbackIfNotCommitted();
         }
     }
 
-    // BUG FIX: a parenthesized call of the INSERT(str, pos, len, newstr) string function is not an embedded INSERT statement,
-    // so the plain SELECT keeps running outside the for-update-only transaction and reads the committed value.
+    // Round 16 review (tests): the methods that check whether a query is closed besides its execution methods (setFetchSize,
+    // onClose) refuse a query prepared in a transaction once the transaction has completed, and close it.
     @Test
-    public void testForUpdateOnlyTransaction_InsertStringFunctionDoesNotJoin() throws SQLException {
-        final long id = insertWidget("insert-fn", 1);
+    public void testNonExecutionMethodsOfAQueryPreparedInATransaction_FailOnceTheTransactionHasCompleted() throws SQLException {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+        final PreparedQuery fetchSize;
+        final PreparedQuery onClose;
 
-        final SqlTransaction tran = JdbcUtil.beginTransaction(ds, IsolationLevel.DEFAULT, true);
         try {
-            assertEquals(1, JdbcUtil.prepareQuery(ds, "UPDATE widget SET name = 'changed' WHERE id = ?").setLong(1, id).update());
-
-            final String name = JdbcUtil.prepareQuery(ds, "SELECT (INSERT(name, 1, 1, 'I')) FROM widget WHERE id = ?")
-                    .setLong(1, id)
-                    .queryForString()
-                    .orElseNull();
-            assertEquals("Insert-fn", name, "the SELECT must run outside the for-update-only transaction");
+            fetchSize = JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget");
+            onClose = JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget");
+            tran.commit();
         } finally {
             tran.rollbackIfNotCommitted();
         }
+
+        assertThrows(IllegalStateException.class, () -> fetchSize.setFetchSize(10));
+        assertTrue(fetchSize.isClosed);
+        assertThrows(IllegalStateException.class, () -> onClose.onClose(() -> {
+        }));
+        assertTrue(onClose.isClosed);
+    }
+
+    // A batch that succeeds in a nested scope commits or rolls back with the enclosing transaction.
+    @Test
+    public void testExecuteBatchUpdate_InsideATransactionCompletesWithIt() throws SQLException {
+        final List<Object[]> rows = List.of(new Object[] { "a", 1 }, new Object[] { "b", 2 });
+
+        for (final boolean commit : new boolean[] { false, true }) {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+
+            try {
+                assertEquals(2, JdbcUtil.executeBatchUpdate(ds, "INSERT INTO widget (name, qty) VALUES (?, ?)", rows));
+                assertEquals(2L, JdbcUtil.executeLargeBatchUpdate(ds, "UPDATE widget SET qty = qty + 10 WHERE name = ?",
+                        List.of(new Object[] { "a" }, new Object[] { "b" })));
+                assertTrue(tran.isActive());
+
+                if (commit) {
+                    tran.commit();
+                }
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+
+            assertEquals(commit ? 2 : 0, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget").queryForInt().orElse(-1), "commit=" + commit);
+
+            if (commit) {
+                assertEquals(23, JdbcUtil.prepareQuery(ds, "SELECT SUM(qty) FROM widget").queryForInt().orElse(-1));
+            }
+        }
+    }
+
+    // External review: an argument error of a batch of several parameter sets (a set that can't satisfy the SQL) was
+    // found only when that set was bound, inside the batch's nested scope, so the caller's transaction was marked rollback-only
+    // although nothing had run; on a caller's connection, the sets before it had even run in the caller's transaction (a batch
+    // size of 1). Every set is checked before anything runs now.
+    @Test
+    public void testExecuteBatchUpdate_AnInvalidParameterSet_RunsNothingAndLeavesTheTransactionUntouched() throws SQLException {
+        final String positional = "INSERT INTO widget (name, qty) VALUES (?, ?)";
+        final String named = "INSERT INTO widget (name, qty) VALUES (:name, :qty)";
+        final List<Object[]> shortSet = List.of(new Object[] { "a", 1 }, new Object[] { "b" });
+        final List<Map<String, Object>> missingEntry = List.of(Map.of("name", "a", "qty", 1), Map.of("name", "b"));
+
+        for (final boolean large : new boolean[] { false, true }) {
+            final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+
+            try {
+                final IllegalArgumentException arity = assertThrows(IllegalArgumentException.class, () -> batch(large, positional, shortSet));
+                assertTrue(arity.getMessage().contains("the parameter set at index 1 specifies only 1"), arity.getMessage());
+                final IllegalArgumentException missing = assertThrows(IllegalArgumentException.class, () -> batch(large, named, missingEntry));
+                assertTrue(missing.getMessage().contains("'qty' (the parameter set at index 1)"), missing.getMessage());
+
+                assertEquals(Transaction.Status.ACTIVE, tran.status(), "nothing ran: the transaction is not marked rollback-only");
+                assertEquals(2L, batch(large, positional, List.of(new Object[] { "c", 3 }, new Object[] { "d", 4 })), "it still accepts work");
+                tran.commit();
+            } finally {
+                tran.rollbackIfNotCommitted();
+            }
+
+            assertEquals(2, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget").queryForInt().orElse(-1), "large=" + large);
+            cleanTable();
+        }
+
+        try (Connection conn = ds.getConnection()) {
+            conn.setAutoCommit(false);
+
+            assertThrows(IllegalArgumentException.class, () -> JdbcUtil.executeBatchUpdate(conn, positional, shortSet, 1));
+            assertThrows(IllegalArgumentException.class, () -> JdbcUtil.executeLargeBatchUpdate(conn, positional, shortSet, 1));
+
+            conn.commit();
+            conn.setAutoCommit(true);
+        }
+
+        assertEquals(0, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget").queryForInt().orElse(-1), "the valid set before it did not run");
+    }
+
+    // External review (tests): a single parameter set runs as a single statement does: on the connection of the
+    // transaction active on the thread (it rolls back with it), without a scope of its own, so its failure does not mark the
+    // transaction rollback-only.
+    @Test
+    public void testExecuteBatchUpdate_OneParameterSet_JoinsTheTransactionAsASingleStatement() throws SQLException {
+        final long id = insertWidget("existing", 1);
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+
+        try {
+            assertEquals(1, JdbcUtil.executeBatchUpdate(ds, "INSERT INTO widget (name, qty) VALUES (?, ?)", List.<Object[]> of(new Object[] { "joined", 2 })));
+            assertThrows(SQLException.class, () -> JdbcUtil.executeLargeBatchUpdate(ds, "INSERT INTO widget (id, name, qty) VALUES (?, ?, ?)",
+                    List.<Object[]> of(new Object[] { id, "duplicate", 3 })));
+            assertEquals(Transaction.Status.ACTIVE, tran.status(), "a single statement's failure does not mark the transaction");
+            assertEquals(1, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget WHERE name = 'joined'").queryForInt().orElse(-1));
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(0, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget WHERE name = 'joined'").queryForInt().orElse(-1),
+                "it ran in the transaction, and rolled back with it");
+    }
+
+    // External review (tests): a NamedQuery or CallableQuery prepared from the data source in a transaction is bound to
+    // it as a PreparedQuery is: it runs on the transaction's connection (a rollback discards the named INSERT), and only on the
+    // transaction's thread.
+    @Test
+    public void testNamedAndCallableQueriesPreparedInATransaction_RunOnItsConnectionAndThreadOnly() throws Exception {
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+
+        try {
+            assertEquals(1,
+                    JdbcUtil.prepareNamedQuery(ds, "INSERT INTO widget (name, qty) VALUES (:name, :qty)").setString("name", "named").setInt("qty", 1).update());
+
+            try (CallableQuery callable = JdbcUtil.prepareCallableQuery(ds, "CALL (SELECT COUNT(*) FROM widget)")) {
+                assertEquals(1, callable.queryForInt().orElse(-1), "the transaction's own write");
+            }
+
+            for (final AbstractQuery<?, ?> query : List.<AbstractQuery<?, ?>> of(
+                    JdbcUtil.prepareNamedQuery(ds, "SELECT COUNT(*) FROM widget WHERE name = :name"),
+                    JdbcUtil.prepareCallableQuery(ds, "CALL (SELECT COUNT(*) FROM widget)"))) {
+                final java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+                final Thread thread = new Thread(() -> {
+                    try {
+                        query.queryForInt();
+                    } catch (final Throwable e) {
+                        failure.set(e);
+                    }
+                });
+
+                thread.start();
+                thread.join();
+                assertTrue(failure.get() instanceof IllegalStateException, String.valueOf(failure.get()));
+                query.close();
+            }
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(0, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget").queryForInt().orElse(-1), "the named INSERT rolled back");
+    }
+
+    private long batch(final boolean large, final String sql, final List<?> listOfParameters) throws SQLException {
+        return large ? JdbcUtil.executeLargeBatchUpdate(ds, sql, listOfParameters) : JdbcUtil.executeBatchUpdate(ds, sql, listOfParameters);
     }
 
     // queryForInt on an empty result set is absent (no-row branch).

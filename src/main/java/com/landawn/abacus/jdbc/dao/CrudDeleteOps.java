@@ -87,9 +87,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *
      * @param entities the collection of entities to delete
      * @return the total number of rows deleted; 0, without executing any statement, if {@code entities} is {@code null} or empty
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
@@ -123,9 +121,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
      *         if a {@code null} entity is encountered while reading or binding its ID properties,
      *         or an entity lacks a property required by the generated DELETE statement
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
@@ -150,9 +146,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *
      * @param ids the collection of IDs to delete
      * @return the total number of rows deleted; 0, without executing any statement, if {@code ids} is {@code null} or empty
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
@@ -184,9 +178,7 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @return the total number of rows deleted; 0, without executing any statement, if {@code ids} is {@code null} or empty
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
      *         or if an ID is {@code null} and the entity uses a composite ID whose properties must be read
-     * @throws IllegalStateException if an existing transaction on the current thread is no longer active and cannot accept
-     *         the internally required transaction scope,
-     *         or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})

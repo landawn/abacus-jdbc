@@ -32,6 +32,8 @@ import com.landawn.abacus.annotation.JoinedBy;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.JdbcUtil;
+import com.landawn.abacus.jdbc.SqlTransaction;
+import com.landawn.abacus.jdbc.Transaction;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlDialect;
@@ -576,15 +578,168 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
             }
         }
 
+        // An invalid name is rejected before any task is submitted (Round 16 review: its own task failed, once the task of the
+        // valid name before it had been submitted; that failure was attached to the rejection of the next submission).
         final RejectAfterFirstExecutor executor = new RejectAfterFirstExecutor();
 
         try {
-            final RejectedExecutionException rejected = assertThrows(RejectedExecutionException.class,
+            assertThrows(IllegalArgumentException.class,
                     () -> userDao.loadJoinEntities(userDao.getOrNull(seeded.getId()), List.of("noSuchJoinProp", "orders"), executor));
-            assertEquals(1, rejected.getSuppressed().length);
-            assertTrue(rejected.getSuppressed()[0] instanceof IllegalArgumentException, String.valueOf(rejected.getSuppressed()[0]));
+            assertEquals(0, executor.submitted.get(), "no task was submitted");
         } finally {
             executor.awaitTasks();
+        }
+    }
+
+    // Round 16 review: the parallel join deletes (and loads) checked each property name in its own task only: outside a
+    // transaction, the deletes of the valid names before an invalid one ran, each committing on its own, before the
+    // IllegalArgumentException. Every name is checked before any task runs now.
+    @Test
+    public void testParallelDelete_WithAnInvalidName_DeletesNothing() throws Exception {
+        final JoinUser seeded = seedUser("DeleteChecked", 1.0, 2.0);
+        final CheckedJoinUserDao checkedDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds);
+        final AtomicInteger submitted = new AtomicInteger();
+        final Executor counting = task -> {
+            submitted.incrementAndGet();
+            task.run();
+        };
+
+        assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities(seeded, List.of("orders", "noSuchJoinProp"), counting));
+        assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities(List.of(seeded), List.of("orders", "noSuchJoinProp"), counting));
+        assertThrows(IllegalArgumentException.class, () -> checkedDao.deleteJoinEntities(seeded, List.of("orders", "noSuchJoinProp"), counting));
+        assertThrows(IllegalArgumentException.class, () -> checkedDao.deleteJoinEntities(List.of(seeded), List.of("orders", "noSuchJoinProp"), counting));
+        assertThrows(IllegalArgumentException.class,
+                () -> checkedDao.loadJoinEntitiesIfAbsent(List.of(userDao.getOrNull(seeded.getId())), List.of("orders", "noSuchJoinProp"), counting));
+
+        assertEquals(0, submitted.get(), "no task ran");
+        assertEquals(2, orderCountForUser(seeded.getId()), "nothing was deleted");
+    }
+
+    // Round 17 review: the sequential overloads of several names checked each name only when they reached it: an invalid
+    // later name failed once the deletes of the names before it had run in their scope, which then marked the caller's
+    // transaction rollback-only (a caller catching the exception could not commit), and once the loads had filled in the
+    // properties before it. Every name is checked first now.
+    @Test
+    public void testSequentialJoinOperations_WithAnInvalidLaterName_DoNothing() throws Exception {
+        final JoinUser seeded = seedUser("SequentialChecked", 1.0, 2.0);
+        final CheckedJoinUserDao checkedDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds);
+        final List<String> names = List.of("orders", "noSuchJoinProp");
+        final SqlTransaction tran = JdbcUtil.beginTransaction(ds);
+
+        try {
+            assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities(seeded, names));
+            assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities(List.of(seeded), names));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.deleteJoinEntities(seeded, names));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.deleteJoinEntities(List.of(seeded), names));
+            // In a transaction, the executor overloads delete as the sequential ones do.
+            assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities(seeded, names, DIRECT_EXECUTOR));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.deleteJoinEntities(List.of(seeded), names, DIRECT_EXECUTOR));
+
+            assertEquals(Transaction.Status.ACTIVE, tran.status(), "no delete ran in a nested scope: the transaction is not rollback-only");
+            assertEquals(2, orderCountForUser(seeded.getId()), "nothing was deleted");
+
+            final JoinUser loaded = userDao.getOrNull(seeded.getId());
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntities(loaded, names));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntities(List.of(loaded), names));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntitiesIfAbsent(loaded, names));
+            assertThrows(IllegalArgumentException.class, () -> userDao.loadJoinEntitiesIfAbsent(List.of(loaded), names));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntities(loaded, names));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntities(List.of(loaded), names));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntitiesIfAbsent(loaded, names));
+            assertThrows(IllegalArgumentException.class, () -> checkedDao.loadJoinEntitiesIfAbsent(List.of(loaded), names));
+            assertEquals(null, loaded.getOrders(), "nothing was loaded");
+
+            tran.commit();
+        } finally {
+            tran.rollbackIfNotCommitted();
+        }
+
+        assertEquals(2, orderCountForUser(seeded.getId()));
+    }
+
+    // Round 17 review: the parallel loadJoinEntitiesIfAbsent checked that every name exists before it checked the join
+    // metadata of any, and the elements with another message, so it reported another failure than the sequential overload
+    // (another name, or the message of a null element). It checks name by name, as the sequential overload does.
+    @Test
+    public void testLoadJoinEntitiesIfAbsent_ParallelAndSequential_ReportTheSameFailure() {
+        final CheckedJoinUserDao checkedDao = JdbcUtil.createDao(CheckedJoinUserDao.class, ds);
+        final JoinUser unnamed = new JoinUser(); // "name" is null and no join entity property
+        final List<String> names = List.of("name", "noSuchJoinProp");
+
+        assertSameFailure(() -> userDao.loadJoinEntitiesIfAbsent(List.of(unnamed), names),
+                () -> userDao.loadJoinEntitiesIfAbsent(List.of(unnamed), names, DIRECT_EXECUTOR));
+        assertSameFailure(() -> userDao.loadJoinEntitiesIfAbsent(unnamed, names), () -> userDao.loadJoinEntitiesIfAbsent(unnamed, names, DIRECT_EXECUTOR));
+        assertSameFailure(() -> checkedDao.loadJoinEntitiesIfAbsent(List.of(unnamed), names),
+                () -> checkedDao.loadJoinEntitiesIfAbsent(List.of(unnamed), names, DIRECT_EXECUTOR));
+
+        final List<JoinUser> leadingNull = new ArrayList<>();
+        leadingNull.add(null);
+        leadingNull.add(new JoinUser());
+
+        assertSameFailure(() -> userDao.loadJoinEntitiesIfAbsent(leadingNull, List.of("orders")),
+                () -> userDao.loadJoinEntitiesIfAbsent(leadingNull, List.of("orders"), DIRECT_EXECUTOR));
+        assertSameFailure(() -> userDao.loadJoinEntitiesIfAbsent(leadingNull, List.of("orders", "backupOrders")),
+                () -> userDao.loadJoinEntitiesIfAbsent(leadingNull, List.of("orders", "backupOrders"), DIRECT_EXECUTOR));
+    }
+
+    // Round 17 review (tests): the parallel loadJoinEntitiesIfAbsent against real join metadata: a property that is no join entity
+    // property is no error while it is non-null on every entity (there is nothing to load), and fails before any task runs
+    // once it is null on one of them; only the properties to load get a task.
+    @Test
+    public void testParallelLoadJoinEntitiesIfAbsent_ChecksTheAbsentPropertiesBeforeAnyTask() {
+        final JoinUser seeded = seedUser("Named", 1.0);
+        final AtomicInteger submitted = new AtomicInteger();
+        final Executor counting = task -> {
+            submitted.incrementAndGet();
+            task.run();
+        };
+
+        final JoinUser named = userDao.getOrNull(seeded.getId());
+        userDao.loadJoinEntitiesIfAbsent(List.of(named), List.of("name", "orders"), counting);
+        assertEquals(1, submitted.get(), "a task for the absent join property only");
+        assertEquals(1, named.getOrders().size());
+
+        submitted.set(0);
+        final JoinUser other = userDao.getOrNull(seeded.getId());
+        final JoinUser unnamed = userDao.getOrNull(seeded.getId());
+        unnamed.setName(null);
+
+        final IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class,
+                () -> userDao.loadJoinEntitiesIfAbsent(List.of(other, unnamed), List.of("orders", "name"), counting));
+        assertTrue(thrown.getMessage().contains("name"), thrown.getMessage());
+        assertEquals(0, submitted.get(), "no task ran");
+        assertEquals(null, other.getOrders());
+    }
+
+    private static void assertSameFailure(final org.junit.jupiter.api.function.Executable sequential,
+            final org.junit.jupiter.api.function.Executable parallel) {
+        final IllegalArgumentException expected = assertThrows(IllegalArgumentException.class, sequential);
+        final IllegalArgumentException actual = assertThrows(IllegalArgumentException.class, parallel);
+        assertEquals(expected.getMessage(), actual.getMessage());
+    }
+
+    // Round 16 review (tests): the parallel join tasks run on the calling thread inside a transaction on the DAO's data source
+    // only: inside a transaction on another data source, they go to the executor.
+    @Test
+    public void testParallelLoad_InATransactionOnAnotherDataSource_UsesTheExecutor() throws Exception {
+        final JoinUser seeded = seedUser("OtherTransaction", 1.0, 2.0);
+        final org.h2.jdbcx.JdbcDataSource other = new org.h2.jdbcx.JdbcDataSource();
+        other.setURL("jdbc:h2:mem:join_it_other_" + java.util.UUID.randomUUID());
+        final AtomicInteger submitted = new AtomicInteger();
+        final Executor counting = task -> {
+            submitted.incrementAndGet();
+            task.run();
+        };
+
+        final com.landawn.abacus.jdbc.SqlTransaction tran = JdbcUtil.beginTransaction(other);
+
+        try {
+            final JoinUser user = userDao.getOrNull(seeded.getId());
+            userDao.loadJoinEntities(user, List.of("orders", "backupOrders"), counting);
+            assertEquals(2, submitted.get(), "the tasks went to the executor");
+            assertEquals(2, user.getOrders().size());
+        } finally {
+            tran.rollbackIfNotCommitted();
         }
     }
 

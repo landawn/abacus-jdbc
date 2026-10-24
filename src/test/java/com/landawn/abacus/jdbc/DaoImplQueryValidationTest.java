@@ -147,11 +147,16 @@ class DaoImplQueryValidationTest extends TestBase {
                 Arguments.of(UpdateOperationOnReadOnlyCteDao.class, UnsupportedOperationException.class,
                         "is not supported by the specified queryOperation: update"),
                 Arguments.of(UpdateOperationOnSelectForUpdateDao.class, UnsupportedOperationException.class,
+                        "is not supported by the specified queryOperation: update"),
+                // "into" only in a string literal, a comment or a quoted name is no INTO token: still a plain read.
+                Arguments.of(UpdateOperationOnSelectMentioningIntoDao.class, UnsupportedOperationException.class,
                         "is not supported by the specified queryOperation: update"));
     }
 
     // A SELECT that may write data keeps running as a query whatever its declared operation, so it is not rejected:
-    // a data-modifying CTE, a DB2/H2 data-change delta table (which SqlParser alone does not recognize) and SELECT ... INTO.
+    // a data-modifying CTE, a DB2/H2 data-change delta table and SELECT ... INTO (SqlParser does not accept the first three as a
+    // read). Round 16 review: SqlParser accepts MySQL's trailing INTO (SELECT ... FROM t WHERE ... INTO @v) as a read, so such a
+    // method, accepted before the removed SQL scanner, failed DAO creation: an INTO token keeps it running as before.
     @ParameterizedTest(name = "{0}")
     @MethodSource("updateOperationOnSelectsThatMayWrite")
     void createDao_updateOperationOnSelectThatMayWrite_isNotRejected(final Class<? extends DaoBase> daoType) throws SQLException {
@@ -168,7 +173,7 @@ class DaoImplQueryValidationTest extends TestBase {
 
     private static Stream<Arguments> updateOperationOnSelectsThatMayWrite() {
         return Stream.of(Arguments.of(UpdateOperationOnDataModifyingCteDao.class), Arguments.of(UpdateOperationOnDeltaTableDao.class),
-                Arguments.of(UpdateOperationOnSelectIntoDao.class));
+                Arguments.of(UpdateOperationOnSelectIntoDao.class), Arguments.of(UpdateOperationOnTrailingSelectIntoDao.class));
     }
 
     interface UpdateOperationOnSelectDao extends CrudDao<Record, Long, UpdateOperationOnSelectDao> {
@@ -204,6 +209,16 @@ class DaoImplQueryValidationTest extends TestBase {
     interface UpdateOperationOnSelectIntoDao extends CrudDao<Record, Long, UpdateOperationOnSelectIntoDao> {
         @Query(value = "SELECT id INTO validation_archive FROM validation_record", op = QueryOperation.update)
         int archive() throws SQLException;
+    }
+
+    interface UpdateOperationOnSelectMentioningIntoDao extends CrudDao<Record, Long, UpdateOperationOnSelectMentioningIntoDao> {
+        @Query(value = "SELECT COUNT(*) /* into */ FROM validation_record WHERE name = 'into' AND \"into\" IS NULL", op = QueryOperation.update)
+        int count() throws SQLException;
+    }
+
+    interface UpdateOperationOnTrailingSelectIntoDao extends CrudDao<Record, Long, UpdateOperationOnTrailingSelectIntoDao> {
+        @Query(value = "SELECT name FROM validation_record WHERE id = 1 INTO @last_name", op = QueryOperation.update)
+        int remember() throws SQLException;
     }
 
     interface NegativeCacheLifetimeDao extends NonUpdateCrudDao<Record, Long, NegativeCacheLifetimeDao> {

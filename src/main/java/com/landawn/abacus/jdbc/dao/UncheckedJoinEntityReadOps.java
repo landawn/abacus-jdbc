@@ -16,7 +16,6 @@
 package com.landawn.abacus.jdbc.dao;
 
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -47,8 +46,10 @@ import com.landawn.abacus.util.u.Optional;
  *
  * <p>A {@code null} or empty source-property selection loads all default source properties. Properties used as
  * source join keys are selected automatically and may therefore be populated even when omitted from a
- * selective read. Streams are caller-owned and must be closed. Parallel loaders do not propagate the
- * caller's thread-bound transaction and may partially populate entities before a task fails.</p>
+ * selective read. Streams are caller-owned and must be closed. Parallel loaders may partially populate entities before a
+ * task fails. Inside a transaction on the DAO's data source, their tasks run on the calling thread, in the transaction (on
+ * other threads they would run outside it, each on a connection of its own, and miss its uncommitted writes); outside one,
+ * on the executor.</p>
  *
  * <p><b>Connection acquisition failures:</b> with Spring connection acquisition enabled, Spring reports every failure to
  * obtain a connection as an unchecked runtime exception. Join entities are loaded through a DAO created for the
@@ -803,6 +804,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
+        // Every name is checked first: an invalid one failed once the joins of the names before it had been loaded.
+        JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
+
         for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entity, joinEntityPropName);
         }
@@ -811,6 +815,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     /**
      * Loads multiple join entities for a single entity with optional parallel execution.
      * When parallel execution is enabled, join entities are loaded concurrently for better performance.
+     * Inside a transaction on the DAO's data source, the loads run on the calling thread, in the transaction.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -868,7 +873,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
-     * @param executor the executor to use for parallel loading
+     * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
+     *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is
      *                                  not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
@@ -888,8 +894,13 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
+        // Every name is checked before any task runs: an invalid one failed in its own task, after the tasks of the names before
+        // it had run (and filled in their joins).
+        JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
+
+        final Executor taskExecutor = JoinEntityReadOps.joinTaskExecutor(this, executor);
         final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
-                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), executor));
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entity, joinEntityPropName), taskExecutor));
 
         DaoUtil.uncheckedComplete(futures);
     }
@@ -923,6 +934,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
+        // Every name is checked first: an invalid one failed once the joins of the names before it had been loaded.
+        JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
+
         for (final String joinEntityPropName : joinEntityPropNames) {
             loadJoinEntities(entities, joinEntityPropName);
         }
@@ -931,6 +945,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     /**
      * Loads multiple join entities for a collection of entities with optional parallel execution.
      * When parallel execution is enabled, different join entity types are loaded concurrently.
+     * Inside a transaction on the DAO's data source, the loads run on the calling thread, in the transaction.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -988,7 +1003,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
-     * @param executor the executor to use for parallel loading
+     * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
+     *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
      *                                  {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
@@ -1008,8 +1024,13 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
+        // Every name is checked before any task runs: an invalid one failed in its own task, after the tasks of the names before
+        // it had run (and filled in their joins).
+        JoinEntityReadOps.checkJoinEntityPropNames(this, joinEntityPropNames);
+
+        final Executor taskExecutor = JoinEntityReadOps.joinTaskExecutor(this, executor);
         final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
-                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), executor));
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntities(entities, joinEntityPropName), taskExecutor));
 
         DaoUtil.uncheckedComplete(futures);
     }
@@ -1042,6 +1063,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     /**
      * Loads all join entities for a single entity with optional parallel execution.
      * When parallel execution is enabled, all join entities are loaded concurrently for better performance.
+     * Inside a transaction on the DAO's data source, the loads run on the calling thread, in the transaction.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1089,7 +1111,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entity the entity for which to load all join entities
-     * @param executor the executor to use for parallel loading
+     * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
+     *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
@@ -1139,6 +1162,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     /**
      * Loads all join entities for a collection of entities with optional parallel execution.
      * When parallel execution is enabled, different join entity types are loaded concurrently.
+     * Inside a transaction on the DAO's data source, the loads run on the calling thread, in the transaction.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1186,7 +1210,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entities the collection of entities for which to load all join entities. If {@code null} or empty, this method returns immediately
-     * @param executor the executor to use for parallel loading
+     * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
+     *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
@@ -1544,7 +1569,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
-        for (final String joinEntityPropName : joinEntityPropNames) {
+        // Every name is checked first (see checkJoinEntityPropNamesIfAbsent): an invalid one failed once the joins of the names
+        // before it had been loaded.
+        for (final String joinEntityPropName : JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, List.of(entity), joinEntityPropNames)) {
             loadJoinEntitiesIfAbsent(entity, joinEntityPropName);
         }
     }
@@ -1590,8 +1617,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
     /**
      * Loads multiple join entities for a single entity only if they are currently {@code null},
      * using a custom executor for parallel execution.
-     * Every property name is checked to be non-empty and to exist in the entity class before any task is submitted,
-     * so such an invalid name fails without starting any load.
+     * Every property name is checked before any task is submitted (to be non-empty, to exist in the entity class, and, if
+     * the property is currently {@code null}, to be annotated with {@code @JoinedBy}), so an invalid name fails without
+     * starting any load.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -1611,7 +1639,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entity the entity for which to load join entities
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
-     * @param executor the executor to use for parallel loading
+     * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
+     *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any of the
      *                                  {@code joinEntityPropNames} is {@code null} or empty or does not exist,
      *                                  or names a property that is currently {@code null} and is not annotated with {@code @JoinedBy},
@@ -1635,27 +1664,13 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
         // Validate every name before dispatching any task. Rejecting a bad name part-way through the (lazy) dispatch would
         // throw while the tasks already submitted keep running un-awaited and may still write the entity after the caller
         // has seen the failure.
-        final Class<?> cls = entity.getClass();
-        final ParserUtil.BeanInfo beanInfo = ParserUtil.getBeanInfo(cls);
-        final List<String> absentJoinEntityPropNames = new ArrayList<>(joinEntityPropNames.size());
+        final List<String> absentJoinEntityPropNames = JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, List.of(entity), joinEntityPropNames);
 
-        for (final String joinEntityPropName : joinEntityPropNames) {
-            N.checkArgNotEmpty(joinEntityPropName, cs.joinEntityPropName);
-
-            final PropInfo propInfo = beanInfo.getPropInfo(joinEntityPropName);
-
-            if (propInfo == null) {
-                throw new IllegalArgumentException(
-                        "No property found by name: \"" + joinEntityPropName + "\" in class: " + ClassUtil.getCanonicalClassName(cls));
-            }
-
-            if (propInfo.getPropValue(entity) == null) {
-                absentJoinEntityPropNames.add(joinEntityPropName);
-            }
-        }
-
+        // On the calling thread inside a transaction, as the other parallel overloads: on the executor's threads the loads ran
+        // outside it, each on a connection of its own, and missed its uncommitted writes.
+        final Executor taskExecutor = JoinEntityReadOps.joinTaskExecutor(this, executor);
         final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(absentJoinEntityPropNames,
-                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entity, joinEntityPropName), executor));
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entity, joinEntityPropName), taskExecutor));
 
         DaoUtil.uncheckedComplete(futures);
     }
@@ -1690,7 +1705,9 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
-        for (final String joinEntityPropName : joinEntityPropNames) {
+        // Every name is checked first (see checkJoinEntityPropNamesIfAbsent): an invalid one failed once the joins of the names
+        // before it had been loaded.
+        for (final String joinEntityPropName : JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, entities, joinEntityPropNames)) {
             loadJoinEntitiesIfAbsent(entities, joinEntityPropName);
         }
     }
@@ -1756,7 +1773,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      *
      * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
      * @param joinEntityPropNames the property names of the join entities to load. If {@code null} or empty, this method returns immediately
-     * @param executor the executor to use for parallel loading
+     * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
+     *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code executor} is {@code null}, or if any of the
      *                                  {@code joinEntityPropNames} does not exist,
      *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
@@ -1777,8 +1795,12 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
             return;
         }
 
-        final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(joinEntityPropNames,
-                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entities, joinEntityPropName), executor));
+        // Checked before any task runs, as the sequential overload does (see JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent).
+        final List<String> absentJoinEntityPropNames = JoinEntityReadOps.checkJoinEntityPropNamesIfAbsent(this, entities, joinEntityPropNames);
+
+        final Executor taskExecutor = JoinEntityReadOps.joinTaskExecutor(this, executor);
+        final List<ContinuableFuture<Void>> futures = JoinEntityReadOps.submitJoinTasks(absentJoinEntityPropNames,
+                joinEntityPropName -> ContinuableFuture.run(() -> loadJoinEntitiesIfAbsent(entities, joinEntityPropName), taskExecutor));
 
         DaoUtil.uncheckedComplete(futures);
     }
@@ -1857,7 +1879,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entity the entity for which to load join entities
-     * @param executor the executor to use for parallel loading
+     * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
+     *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
@@ -1953,7 +1976,8 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
      * }</pre>
      *
      * @param entities the collection of entities for which to load join entities. If {@code null} or empty, this method returns immediately
-     * @param executor the executor to use for parallel loading
+     * @param executor the executor to use for parallel loading; not used inside a transaction on the DAO's data source, where the joins
+     *        are loaded on the calling thread, in the transaction
      * @throws IllegalArgumentException if {@code executor} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties

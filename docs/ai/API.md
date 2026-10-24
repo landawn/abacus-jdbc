@@ -1,7 +1,7 @@
-# abacus-jdbc API Index (v4.9.3)
+# abacus-jdbc API Index (v4.9.4)
 - Build: unknown
 - Java: 21
-- Generated: 2026-10-21
+- Generated: 2026-10-24
 
 ## Packages
 - com.landawn.abacus.jdbc — Core JDBC execution, mapping, transaction, data-transfer, and code-generation APIs.
@@ -3041,7 +3041,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `sqlAction` (`Throwables.Function<? super This, ? extends R, SQLException>`) — the SQL action to be executed asynchronously. Must not be {@code null} .
 - **Returns:** A ContinuableFuture representing the result of the asynchronous execution. A failure raised by {@code sqlAction} itself (including {@code SQLException} ) is never thrown by this method; it is held by the returned future and surfaces from it (as an {@code ExecutionException} from {@code get()} ).
 - **Throws:**
-  - `java.lang.IllegalStateException` — if this query is closed, or the default async executor has already been shut down
+  - `java.lang.IllegalStateException` — if this query is closed, or the default async executor has already been shut down, or it was prepared in a transaction (from a data source, on the transaction's connection, which is used only on the transaction's thread)
   - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null}
   - `java.util.concurrent.RejectedExecutionException` — if the executor refuses the task; no future is returned
 - **See also:** #callAsync(Throwables.Function, Executor), #runAsync(Throwables.Consumer)
@@ -3056,7 +3056,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `executor` (`Executor`) — the executor to use for asynchronous execution. Must not be {@code null} .
 - **Returns:** A ContinuableFuture representing the result of the asynchronous execution. A failure raised by {@code sqlAction} itself (including {@code SQLException} ) is never thrown by this method; it is held by the returned future and surfaces from it (as an {@code ExecutionException} from {@code get()} ).
 - **Throws:**
-  - `java.lang.IllegalStateException` — if this query is closed
+  - `java.lang.IllegalStateException` — if this query is closed, or it was prepared in a transaction (from a data source, on the transaction's connection, which is used only on the transaction's thread)
   - `java.lang.IllegalArgumentException` — if {@code sqlAction} or {@code executor} is null
   - `java.util.concurrent.RejectedExecutionException` — if the {@code executor} refuses the task; no future is returned
 - **See also:** #callAsync(Throwables.Function), #runAsync(Throwables.Consumer)
@@ -3070,7 +3070,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `sqlAction` (`Throwables.Consumer<? super This, SQLException>`) — the SQL action to be executed asynchronously. Must not be {@code null} .
 - **Returns:** A ContinuableFuture representing the completion of the asynchronous execution. A failure raised by {@code sqlAction} itself (including {@code SQLException} ) is never thrown by this method; it is held by the returned future and surfaces from it (as an {@code ExecutionException} from {@code get()} ).
 - **Throws:**
-  - `java.lang.IllegalStateException` — if this query is closed, or the default async executor has already been shut down
+  - `java.lang.IllegalStateException` — if this query is closed, or the default async executor has already been shut down, or it was prepared in a transaction (from a data source, on the transaction's connection, which is used only on the transaction's thread)
   - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null}
   - `java.util.concurrent.RejectedExecutionException` — if the executor refuses the task; no future is returned
 - **See also:** #runAsync(Throwables.Consumer, Executor), #callAsync(Throwables.Function)
@@ -3084,7 +3084,7 @@ Abstract base class for JDBC query operations that provides a fluent API for exe
   - `executor` (`Executor`) — the executor to use for asynchronous execution. Must not be {@code null} .
 - **Returns:** A ContinuableFuture representing the completion of the asynchronous execution. A failure raised by {@code sqlAction} itself (including {@code SQLException} ) is never thrown by this method; it is held by the returned future and surfaces from it (as an {@code ExecutionException} from {@code get()} ).
 - **Throws:**
-  - `java.lang.IllegalStateException` — if this query is closed
+  - `java.lang.IllegalStateException` — if this query is closed, or it was prepared in a transaction (from a data source, on the transaction's connection, which is used only on the transaction's thread)
   - `java.lang.IllegalArgumentException` — if {@code sqlAction} or {@code executor} is null
   - `java.util.concurrent.RejectedExecutionException` — if the {@code executor} refuses the task; no future is returned
 - **See also:** #runAsync(Throwables.Consumer), #callAsync(Throwables.Function)
@@ -8089,6 +8089,7 @@ An interface for caching the results of DAO method calls.
   - Typical implementations invalidate every entry whose key references the affected table (parsed from {@code defaultCacheKey} ), or clear the whole cache when the table name cannot be determined.
   - It is called even when that method throws, in which case {@code result} is {@code null} .
   - If the arguments cannot be serialized, {@code defaultCacheKey} ends after the DAO identity ( {@code fullMethodName#tableName#daoId#} ).
+  - </p> <p> It is also called in these cases, which an implementation must treat as invalidations of the table that {@code defaultCacheKey} names: </p> <ul> <li> For a write in a transaction on the DAO's data source, once the transaction has committed (or its commit failed, as it may have committed): with the write's key, result and arguments for a custom cache; once per transaction and table, with the key {@code #tableName#} , a {@code null} result and {@code null} arguments for a built-in one.
 - **Parameters:**
   - `defaultCacheKey` (`String`) — the default cache key from the modification method.
   - `result` (`Object`) — the result of the modification operation (e.g., number of rows affected); {@code null} if the method returns {@code void} or threw.
@@ -9308,13 +9309,14 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static Connection getConnection(final javax.sql.DataSource ds) throws IllegalArgumentException, UncheckedSQLException`
 - **Summary:** Retrieves a {@link Connection} from the specified {@link javax.sql.DataSource} .
 - **Contract:**
-  - If Spring JDBC is on the classpath (and its integration is not disabled for the current thread, e.g.
+  - If Spring JDBC is on the classpath (and its integration is neither disabled for the current thread, e.g.
+  - <p> Whether Spring is on the classpath is decided once, when this class is initialized: an error thrown by the data source, such as a {@link LinkageError} from a JDBC driver that cannot be loaded, propagates as it is and does not change how connections are obtained.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} from which to obtain a connection. Must not be {@code null} .
 - **Returns:** A {@link Connection} object.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} .
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection directly from {@code ds} fails outside the Spring acquisition path.
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection directly from {@code ds} fails outside the Spring acquisition path; on the Spring path, such a failure propagates as Spring's unchecked {@code CannotGetJdbcConnectionException} (not declared, so that this class does not name a Spring type).
 - **See also:** #releaseConnection(Connection, javax.sql.DataSource), org.springframework.jdbc.datasource.DataSourceUtils#getConnection(javax.sql.DataSource)
 ##### releaseConnection(...) -> void
 - **Signature:** `public static void releaseConnection(final Connection conn, final javax.sql.DataSource ds)`
@@ -10245,23 +10247,26 @@ Utility class providing high-level JDBC operations with automatic resource manag
 ##### executeBatchUpdate(...) -> int
 - **Signature:** `public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, SQLException, ArithmeticException`
 - **Summary:** Executes a batch SQL update using the provided DataSource with default batch size.
+- **Contract:**
+  - <p> Connection and transaction handling follow {@link #executeBatchUpdate(javax.sql.DataSource, String, List, int)} : more than one parameter set runs in a transaction scope (a nested scope of the transaction for {@code ds} active on this thread, whose failure marks that transaction rollback-only, or else a transaction that this method begins and commits); a single parameter set joins the active transaction, if there is one.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to use for the batch update.
   - `sql` (`String`) — The SQL statement to execute.
   - `listOfParameters` (`List<?>`) — A list of parameter sets for the batch update.
 - **Returns:** The total number of rows affected by the batch update across all batches (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters (every parameter set is checked before any of them is bound or a statement runs).
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or if transaction setup or completion fails. Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)} .
-  - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, or the batch transaction cannot be committed because it is not active.
+  - `java.lang.IllegalStateException` — if more than one parameter set is given and the transaction scope of the batch cannot be begun (see {@link #beginTransaction(javax.sql.DataSource)} ).
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results).
 - **See also:** PreparedStatement#executeBatch()
 - **Signature:** `public static int executeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, SQLException, ArithmeticException`
 - **Summary:** Executes a batch SQL update using the provided DataSource with specified batch size.
 - **Contract:**
-  - <p> If a transaction is already active on the current thread for {@code ds} , its connection is used and no new transaction is started.
-  - Otherwise, more than one parameter set runs in a transaction that this method begins and commits, even if all of them fit in one batch, so that all of them commit or roll back together; inside a Spring-managed transaction that owns {@code ds} , that transaction participates in it (see {@link #beginTransaction(javax.sql.DataSource)} ) and Spring commits the work.
+  - <p> More than one parameter set runs in a transaction scope, even if all of them fit in one batch, so that all of them commit or roll back together: if a transaction for {@code ds} is already active on the current thread, a nested scope of it (see {@link #beginTransaction(javax.sql.DataSource)} ), so a failure marks that transaction rollback-only and its outermost {@code commit()} then rolls back and throws {@link RollbackOnlyException} ; otherwise a transaction that this method begins and commits (inside a Spring-managed transaction that owns {@code ds} , it participates in it and Spring commits the work).
+  - A single parameter set runs on the connection of the transaction for {@code ds} active on the current thread, if there is one, and otherwise on a newly acquired connection (see {@link #getConnection(javax.sql.DataSource)} : inside a Spring-managed transaction, the connection Spring bound to {@code ds} , so the statement runs in that transaction); as for any single statement, its failure does not mark the active transaction rollback-only.
+  - Every parameter set is checked against the SQL's parameters before a connection is acquired or the scope begins, so a set that can't satisfy them throws {@code IllegalArgumentException} without marking anything (a value the driver rejects when it is bound fails in the scope, as a statement does).
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to use for the batch update, must not be {@code null} .
   - `sql` (`String`) — The SQL statement to execute, must not be {@code null} or empty.
@@ -10269,9 +10274,9 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `batchSize` (`int`) — The size of each batch, must be positive. Smaller batches use less memory but may be slower; larger batches are faster but use more memory.
 - **Returns:** The total number of rows affected by the batch update across all batches (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters (every parameter set is checked before any of them is bound or a statement runs).
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or if transaction setup or completion fails. Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)} .
-  - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, or the batch transaction cannot be committed because it is not active.
+  - `java.lang.IllegalStateException` — if more than one parameter set is given and the transaction scope of the batch cannot be begun (see {@link #beginTransaction(javax.sql.DataSource)} ).
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results).
 - **See also:** PreparedStatement#executeBatch(), #executeBatchUpdate(javax.sql.DataSource, String, List)
@@ -10285,7 +10290,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `listOfParameters` (`List<?>`) — A list of parameter sets for the batch update; may be empty (no-op returning {@code 0} ).
 - **Returns:** The total number of rows affected by the batch update across all batches (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} ; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} ; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters (every parameter set is checked before any of them is bound or a statement runs).
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results).
 - **See also:** PreparedStatement#executeBatch(), #executeBatchUpdate(Connection, String, List, int)
@@ -10301,22 +10306,24 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `batchSize` (`int`) — The size of each batch, must be positive.
 - **Returns:** The total number of rows affected by the batch update across all batches (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} ; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} ; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters (every parameter set is checked before any of them is bound or a statement runs).
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Integer#MAX_VALUE} (use {@code executeLargeBatchUpdate} for large batch results).
 - **See also:** PreparedStatement#executeBatch()
 ##### executeLargeBatchUpdate(...) -> long
 - **Signature:** `public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, SQLException, UnsupportedOperationException, ArithmeticException`
 - **Summary:** Executes a large batch SQL update using the supplied DataSource and the default batch size ( {@link #DEFAULT_BATCH_SIZE} ).
+- **Contract:**
+  - </p> <p> Connection and transaction handling follow {@link #executeLargeBatchUpdate(javax.sql.DataSource, String, List, int)} : more than one parameter set runs in a transaction scope (a nested scope of the transaction for {@code ds} active on this thread, whose failure marks that transaction rollback-only, or else a transaction that this method begins and commits); a single parameter set joins the active transaction, if there is one.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — the {@link javax.sql.DataSource} to use for the batch update; must not be {@code null} .
   - `sql` (`String`) — the SQL statement to execute; must not be {@code null} or empty.
   - `listOfParameters` (`List<?>`) — a list of parameter sets; each element supplies one set of parameter values for one batch entry; may be empty (no-op returning {@code 0} ).
 - **Returns:** the total number of rows affected by the batch update across all batches (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters (every parameter set is checked before any of them is bound or a statement runs).
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or if transaction setup or completion fails. Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)} .
-  - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, or the batch transaction cannot be committed because it is not active.
+  - `java.lang.IllegalStateException` — if more than one parameter set is given and the transaction scope of the batch cannot be begun (see {@link #beginTransaction(javax.sql.DataSource)} ).
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.UnsupportedOperationException` — if the JDBC driver does not implement {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it); no batch is executed in that case, so use {@link #executeBatchUpdate(javax.sql.DataSource, String, List)} with such a driver.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Long#MAX_VALUE} .
@@ -10324,8 +10331,9 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static long executeLargeBatchUpdate(final javax.sql.DataSource ds, final String sql, final List<?> listOfParameters, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, SQLException, UnsupportedOperationException, ArithmeticException`
 - **Summary:** Executes a large batch SQL update using the provided DataSource with specified batch size.
 - **Contract:**
-  - <p> If a transaction is already active on the current thread for {@code ds} , its connection is used and no new transaction is started.
-  - Otherwise, more than one parameter set runs in a transaction that this method begins and commits, even if all of them fit in one batch, so that all of them commit or roll back together; inside a Spring-managed transaction that owns {@code ds} , that transaction participates in it (see {@link #beginTransaction(javax.sql.DataSource)} ) and Spring commits the work.
+  - <p> More than one parameter set runs in a transaction scope, even if all of them fit in one batch, so that all of them commit or roll back together: if a transaction for {@code ds} is already active on the current thread, a nested scope of it (see {@link #beginTransaction(javax.sql.DataSource)} ), so a failure marks that transaction rollback-only and its outermost {@code commit()} then rolls back and throws {@link RollbackOnlyException} ; otherwise a transaction that this method begins and commits (inside a Spring-managed transaction that owns {@code ds} , it participates in it and Spring commits the work).
+  - A single parameter set runs on the connection of the transaction for {@code ds} active on the current thread, if there is one, and otherwise on a newly acquired connection (see {@link #getConnection(javax.sql.DataSource)} : inside a Spring-managed transaction, the connection Spring bound to {@code ds} , so the statement runs in that transaction); as for any single statement, its failure does not mark the active transaction rollback-only.
+  - Every parameter set is checked against the SQL's parameters before a connection is acquired or the scope begins, so a set that can't satisfy them throws {@code IllegalArgumentException} without marking anything (a value the driver rejects when it is bound fails in the scope, as a statement does).
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Suitable when the total affected-row count may exceed Integer.MAX_VALUE.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} to use for the batch update.
@@ -10334,9 +10342,9 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `batchSize` (`int`) — The size of each batch, must be positive.
 - **Returns:** The total number of rows affected by the batch update across all batches, as a long value (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+  - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} ; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters (every parameter set is checked before any of them is bound or a statement runs).
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or if transaction setup or completion fails. Connection acquisition follows the Spring integration behavior of {@link #getConnection(javax.sql.DataSource)} .
-  - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, or the batch transaction cannot be committed because it is not active.
+  - `java.lang.IllegalStateException` — if more than one parameter set is given and the transaction scope of the batch cannot be begun (see {@link #beginTransaction(javax.sql.DataSource)} ).
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.UnsupportedOperationException` — if the JDBC driver does not implement {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it); no batch is executed in that case, so use {@link #executeBatchUpdate(javax.sql.DataSource, String, List, int)} with such a driver.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Long#MAX_VALUE} .
@@ -10351,7 +10359,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `listOfParameters` (`List<?>`) — A list of parameter sets for the batch update.
 - **Returns:** The total number of rows affected by the batch update across all batches, as a long value (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} ; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} ; {@code sql} is {@code null} or empty; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters (every parameter set is checked before any of them is bound or a statement runs).
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.UnsupportedOperationException` — if the JDBC driver does not implement {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it); no batch is executed in that case, so use {@link #executeBatchUpdate(Connection, String, List)} with such a driver.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Long#MAX_VALUE} .
@@ -10369,7 +10377,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `batchSize` (`int`) — The size of each batch, must be positive.
 - **Returns:** The total number of rows affected by the batch update across all batches, as a long value (batch entries for which the driver reports {@code Statement.SUCCESS_NO_INFO} contribute 0 to this total).
 - **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} ; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+  - `java.lang.IllegalArgumentException` — if {@code conn} is {@code null} ; {@code sql} is {@code null} or empty; {@code batchSize} is not positive; or, when {@code listOfParameters} is not empty, {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder, or a supplied parameter set cannot satisfy the SQL's required positional or named parameters (every parameter set is checked before any of them is bound or a statement runs).
   - `java.sql.SQLException` — if preparing, binding, or executing a batch, reading connection state, or completing or restoring an owned transaction fails.
   - `java.lang.UnsupportedOperationException` — if the JDBC driver does not implement {@link Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it); no batch is executed in that case, so use {@link #executeBatchUpdate(Connection, String, List, int)} with such a driver.
   - `java.lang.ArithmeticException` — if the total number of affected rows exceeds {@link Long#MAX_VALUE} .
@@ -11200,7 +11208,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Signature:** `public static boolean isInTransaction(final javax.sql.DataSource ds) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException`
 - **Summary:** Returns whether an active transaction exists for the given {@link javax.sql.DataSource} on the current thread.
 - **Contract:**
-  - </li> <li> Spring-managed transactions that own the connection bound to {@code ds} , when Spring is on the classpath and Spring transaction participation is not disabled on this thread (see {@link #runIgnoringSpringTransaction(Throwables.Runnable)} ).
+  - </li> <li> Spring-managed transactions that own the connection bound to {@code ds} , when Spring is on the classpath and Spring transaction participation is neither disabled on this thread (see {@link #runIgnoringSpringTransaction(Throwables.Runnable)} ) nor suspended for {@code ds} (see {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)} ), unless the transaction has started to complete, as far as that can be recognized (see {@link #beginTransaction(javax.sql.DataSource)} ).
   - </li> </ul> <p> A Spring-managed transaction owns the connection bound to {@code ds} on this thread when the bound connection has auto-commit off and its connection holder belongs to a transaction (also when the transaction manager's transaction synchronization is disabled): {@code DataSourceTransactionManager} and {@code JdbcTransactionManager} mark the holder they bind transaction-active, and JPA/Hibernate transaction managers that expose their JDBC connection bind a holder with a {@code ConnectionHandle} of their own.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (JdbcUtil.isInTransaction(dataSource)) { // Execute operations within the existing transaction } else { // Start a new transaction try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) { // Execute operations in the new transaction tran.commit(); } } } </pre>
 - **Parameters:**
@@ -11210,60 +11218,50 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} .
   - `java.lang.IllegalStateException` — if the ownership of a Spring connection holder bound to {@code ds} has to be determined but its {@code isTransactionActive()} flag is not accessible to this library.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if the auto-commit mode of a connection Spring bound to {@code ds} cannot be read.
+- **See also:** SqlTransaction
 ##### beginTransaction(...) -> SqlTransaction
 - **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource ds) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException`
 - **Summary:** Begins a new database transaction with the default isolation level for the specified DataSource.
 - **Contract:**
-  - <p> The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back via {@code rollback()} or {@code rollbackIfNotCommitted()} to discard changes.
+  - </p> <p> The transaction must be explicitly committed via {@code commit()} to persist changes, or rolled back via {@code rollback()} or {@code rollbackIfNotCommitted()} to discard changes.
   - Always use a try-finally block to ensure the transaction is properly completed even if exceptions occur.
-  - </p> <p> If a transaction for {@code ds} is already active on the current thread, no new transaction is started: this call joins it as a nested scope and returns that same {@code SqlTransaction} .
+  - </p> <p> If a transaction for {@code ds} is already active on the current thread, no new transaction is started: this call joins it as a nested scope and returns a new {@code SqlTransaction} handle for that scope.
   - A nested scope's {@code commit()} only exits the scope; the connection is committed when the outermost scope commits.
-  - If no {@code JdbcUtil} transaction exists for {@code ds} on the current thread and a Spring-managed transaction owns the connection bound to {@code ds} (the rule is described on {@link #isInTransaction(javax.sql.DataSource)} ; Spring participation must not be disabled on this thread, see {@link #runIgnoringSpringTransaction(Throwables.Runnable)} ), the returned transaction participates in the Spring transaction: it runs on Spring's connection without changing its auto-commit mode or isolation level (a requested isolation level is ignored), its outermost {@code commit()} does not commit the connection (Spring commits the work when its transaction completes), and its rollback - including a failed scope - does not roll back the connection but marks the Spring transaction rollback-only, so Spring rolls everything back when it completes.
+  - If no {@code JdbcUtil} transaction exists for {@code ds} on the current thread and a Spring-managed transaction owns the connection bound to {@code ds} (the rule is described on {@link #isInTransaction(javax.sql.DataSource)} ; Spring participation must be neither disabled on this thread, see {@link #runIgnoringSpringTransaction(Throwables.Runnable)} , nor suspended for {@code ds} , see {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)} ), the returned transaction participates in the Spring transaction: it runs on Spring's connection without changing its auto-commit mode or isolation level (a requested isolation level is ignored), its outermost {@code commit()} does not commit the connection (Spring commits the work when its transaction completes), and its rollback - including a failed scope - does not roll back the connection but marks the Spring transaction rollback-only, so Spring rolls everything back when it completes.
   - The rollback actions of the work on {@code ds} since the newest open savepoint (the innermost nested scope, which can only roll back) run when the mark is set: the IDs of its inserts are put back right away, while those of the enclosing transaction's earlier inserts follow the transaction's outcome - kept if it commits their rows, put back when it completes rolled back.
   - Outside any savepoint scope, the actions of all work on {@code ds} run when the mark is set.
-  - The mark is set on the connection holder ( {@code DataSourceTransactionManager} , {@code JdbcTransactionManager} ) and on the JPA transaction identified as the owner of the connection ( {@code JpaTransactionManager} : by its entity manager factory's data source, or by the entity manager the connection's handle keeps; if the JPA provider fails to mark it, which can't be checked in advance, the failure is logged and the Spring transaction decides the outcome); a Spring transaction that neither mark would reach (its transaction manager exposes the connection through a handle of its own, and no such JPA transaction can be identified) is refused with an {@code IllegalStateException} before any work runs.
+  - The mark is set on the connection holder ( {@code DataSourceTransactionManager} , {@code JdbcTransactionManager} ) and on the JPA transaction identified as the owner of the connection ( {@code JpaTransactionManager} : by its entity manager factory's data source, or by the entity manager the connection's handle keeps; if the JPA provider fails to mark it, which can't be checked in advance, the rollback fails with an {@code IllegalStateException} and the Spring transaction decides the outcome, see {@link SqlTransaction#rollbackIfNotCommitted()} ); a Spring transaction that neither mark would reach (its transaction manager exposes the connection through a handle of its own, and no such JPA transaction can be identified) is refused with an {@code IllegalStateException} before any work runs.
+  - </p> <p> While a participating transaction is open, Spring may bind another transaction to {@code ds} (a {@code REQUIRES_NEW} scope) or none (it suspends its transaction for a {@code NOT_SUPPORTED} scope): until Spring binds the participated transaction again, operations and {@code beginTransaction} calls on {@code ds} follow Spring's binding instead of joining the participating transaction (a transaction begun then is a transaction of its own, which participates in the new Spring transaction if one owns {@code ds} ).
   - AND balance >= ?", amount, accountId, amount); if (updatedRows == 0) { throw new InsufficientFundsException("Insufficient balance"); } JdbcUtil.executeUpdate(dataSource, "INSERT INTO transactions (account_id, amount, type) VALUES (?, ?, ?)", accountId, amount, "DEBIT"); conditionalTran.commit(); } catch (Exception e) { // Transaction automatically rolled back in finally block logger.error("Transaction failed: " + e.getMessage()); throw e; } finally { conditionalTran.rollbackIfNotCommitted(); } // Transaction shared across method calls public void processOrder(Order order) { SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { createOrder(order); // Shares this transaction updateInventory(order); // Shares this transaction writeOrderAudit(order); // Database writes use the same DataSource and transaction tran.commit(); } finally { tran.rollbackIfNotCommitted(); } } private void createOrder(Order order) { // This automatically uses the transaction from processOrder() JdbcUtil.executeUpdate(dataSource, "INSERT INTO orders (id, customer_id, total) VALUES (?, ?, ?)", order.getId(), order.getCustomerId(), order.getTotal()); } } </pre>
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} for which to begin the transaction, must not be {@code null} .
-- **Returns:** A {@link SqlTransaction} object representing the new transaction that must be committed or rolled back.
+- **Returns:** The {@link SqlTransaction} handle of the scope this call opened (the outermost scope of a new transaction, or a nested scope of the current one), which must be committed or rolled back.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} is {@code null} .
-  - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, if the ownership of a Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
+  - `java.lang.IllegalStateException` — if the ownership of a Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
-- **See also:** #beginTransaction(javax.sql.DataSource, IsolationLevel), #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean), SqlTransaction#commit(), SqlTransaction#rollback(), SqlTransaction#rollbackIfNotCommitted()
-- **Signature:** `public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException`
+- **See also:** SqlTransaction, #beginTransaction(javax.sql.DataSource, IsolationLevel), SqlTransaction#commit(), SqlTransaction#rollback(), SqlTransaction#rollbackIfNotCommitted()
+- **Signature:** `@SuppressWarnings("deprecation") public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException`
 - **Summary:** Begins a new transaction with the specified isolation level for the given DataSource.
 - **Contract:**
   - The transaction must be explicitly committed or rolled back.
-  - <p> If a transaction for {@code ds} is already active on the current thread, this call joins it as a nested scope and returns that same {@code SqlTransaction} ; a non- {@link IsolationLevel#DEFAULT} level is applied to the shared connection until the nested scope exits, when the enclosing scope's level is restored.
+  - <p> If a transaction for {@code ds} is already active on the current thread, this call joins it as a nested scope and returns a new {@code SqlTransaction} handle for it; a non- {@link IsolationLevel#DEFAULT} level is applied to the shared connection until the nested scope exits, when the enclosing scope's level is restored.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} for which to begin the transaction.
   - `isolationLevel` (`IsolationLevel`) — The isolation level for the transaction.
-- **Returns:** A {@link SqlTransaction} object representing the new transaction.
+- **Returns:** The {@link SqlTransaction} handle of the scope this call opened.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code isolationLevel} is {@code null} , or if {@code isolationLevel} is {@link IsolationLevel#NONE} , which is not a usable transaction isolation level.
-  - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, if the ownership of a Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
+  - `java.lang.IllegalStateException` — if the ownership of a Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
-- **See also:** #beginTransaction(javax.sql.DataSource, IsolationLevel, boolean)
-- **Signature:** `@SuppressWarnings("deprecation") public static SqlTransaction beginTransaction(final javax.sql.DataSource ds, final IsolationLevel isolationLevel, final boolean isForUpdateOnly) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException`
-- **Summary:** Starts a thread-bound transaction scope shared by database queries with the same DataSource in the same thread.
-- **Parameters:**
-  - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} for which to begin the transaction.
-  - `isolationLevel` (`IsolationLevel`) — The isolation level for the transaction.
-  - `isForUpdateOnly` (`boolean`) — Whether this transaction is only for update operations. While this scope is the innermost one, {@code SELECT} statements prepared from {@code ds} on this thread do not join the transaction and run on a separate connection (unless the {@code SELECT} embeds a data-modifying {@code INSERT} / {@code UPDATE} / {@code DELETE} / {@code MERGE} section, e.g. a PostgreSQL data-modifying CTE, has an {@code INTO} clause, or is a locking read: {@code FOR UPDATE} , {@code FOR NO KEY UPDATE} , {@code FOR SHARE} , {@code FOR KEY SHARE} , {@code LOCK IN SHARE MODE} , or a SQL Server table hint such as {@code WITH (UPDLOCK)} , whose locks would otherwise be released as soon as it completes); other statements still use the transaction's connection, and so does SQL with several statements separated by {@code ';'} unless every one of them is a {@code SELECT} that would not join on its own.
-- **Returns:** A {@link SqlTransaction} object representing the transaction.
-- **Throws:**
-  - `java.lang.IllegalArgumentException` — if {@code ds} or {@code isolationLevel} is {@code null} , or if {@code isolationLevel} is {@link IsolationLevel#NONE} , which is not a usable transaction isolation level.
-  - `java.lang.IllegalStateException` — if an existing transaction on this thread is no longer active and cannot accept another scope, if the ownership of a Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
-- **See also:** JdbcUtil#getConnection(javax.sql.DataSource), JdbcUtil#releaseConnection(Connection, javax.sql.DataSource)
+- **See also:** SqlTransaction
 ##### callInTransaction(...) -> R
 - **Signature:** `@Beta public static <R, E extends Throwable> R callInTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E`
 - **Summary:** Executes the given callable within a transaction and returns its result.
 - **Contract:**
   - The transaction is committed if the callable completes normally; it is rolled back if the callable throws any exception.
-  - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread when this method is invoked, the callable participates in that existing transaction (the reference count is incremented).
-  - If {@code cmd} fails in a nested call, the shared transaction is marked rollback-only, so the outermost scope rolls back even if it later calls {@code commit()} (which then returns normally).
+  - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread when this method is invoked, the callable participates in that existing transaction (as a nested scope).
+  - If {@code cmd} fails in a nested call, the shared transaction is marked rollback-only, so the outermost scope rolls back even if it later calls {@code commit()} , which then throws {@link RollbackOnlyException} .
   - </p> <p> <b> Spring integration: </b> Inside a Spring-managed transaction that owns the connection bound to {@code ds} , this method participates in it (see {@link #beginTransaction(javax.sql.DataSource)} ): {@code cmd} 's work is committed by Spring when its transaction completes, not by this method, and if {@code cmd} fails the Spring transaction is marked rollback-only, so Spring rolls it back.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} for the transaction, must not be {@code null} .
@@ -11271,17 +11269,17 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** The result returned by {@code cmd} .
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null} .
-  - `java.lang.IllegalStateException` — if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+  - `java.lang.IllegalStateException` — if {@code cmd} completes or invalidates the shared transaction before this method commits it (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the transaction has been rolled back.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if beginning, committing, or rolling back the transaction fails. A rollback failure is suppressed when {@code cmd} has already failed.
   - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-- **See also:** #runInTransaction(javax.sql.DataSource, Throwables.Runnable), #beginTransaction(javax.sql.DataSource)
+- **See also:** SqlTransaction, #runInTransaction(javax.sql.DataSource, Throwables.Runnable), #beginTransaction(javax.sql.DataSource)
 - **Signature:** `@Beta public static <T, E extends Throwable> T callInTransaction(final javax.sql.DataSource ds, final Throwables.Function<Connection, T, E> cmd) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E`
 - **Summary:** Executes the given function within a transaction, passing the transaction's {@link Connection} as an argument, and returns its result.
 - **Contract:**
   - The transaction is committed if the function completes normally; it is rolled back if the function throws any exception.
   - <p> Use this overload when the callable logic needs direct access to the {@link Connection} (e.g., to create {@link java.sql.PreparedStatement} s manually or call APIs that require a {@link Connection} parameter).
   - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the function participates in that existing transaction.
-  - If {@code cmd} fails in a nested call, the shared transaction is marked rollback-only, so the outermost scope rolls back even if it later calls {@code commit()} .
+  - If {@code cmd} fails in a nested call, the shared transaction is marked rollback-only, so the outermost scope rolls back even if it later calls {@code commit()} , which then throws {@link RollbackOnlyException} .
   - </p> <p> <b> Spring integration: </b> Inside a Spring-managed transaction that owns the connection bound to {@code ds} , this method participates in it (see {@link #beginTransaction(javax.sql.DataSource)} ): {@code cmd} 's work is committed by Spring when its transaction completes, not by this method, and if {@code cmd} fails the Spring transaction is marked rollback-only, so Spring rolls it back.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} for the transaction, must not be {@code null} .
@@ -11289,44 +11287,44 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Returns:** The result returned by {@code cmd} .
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null} .
-  - `java.lang.IllegalStateException` — if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+  - `java.lang.IllegalStateException` — if {@code cmd} completes or invalidates the shared transaction before this method commits it (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the transaction has been rolled back.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if beginning, committing, or rolling back the transaction fails. A rollback failure is suppressed when {@code cmd} has already failed.
   - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-- **See also:** #runInTransaction(javax.sql.DataSource, Throwables.Consumer), #callInTransaction(javax.sql.DataSource, Throwables.Callable)
+- **See also:** SqlTransaction, #runInTransaction(javax.sql.DataSource, Throwables.Consumer), #callInTransaction(javax.sql.DataSource, Throwables.Callable)
 ##### runInTransaction(...) -> void
 - **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E`
 - **Summary:** Executes the given runnable within a transaction.
 - **Contract:**
   - The transaction is committed if the runnable completes normally; it is rolled back if the runnable throws any exception.
-  - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the runnable participates in that existing transaction (the reference count is incremented).
-  - If {@code cmd} fails in a nested call, the shared transaction is marked rollback-only, so the outermost scope rolls back even if it later calls {@code commit()} (which then returns normally).
+  - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the runnable participates in that existing transaction (as a nested scope).
+  - If {@code cmd} fails in a nested call, the shared transaction is marked rollback-only, so the outermost scope rolls back even if it later calls {@code commit()} , which then throws {@link RollbackOnlyException} .
   - </p> <p> <b> Spring integration: </b> Inside a Spring-managed transaction that owns the connection bound to {@code ds} , this method participates in it (see {@link #beginTransaction(javax.sql.DataSource)} ): {@code cmd} 's work is committed by Spring when its transaction completes, not by this method, and if {@code cmd} fails the Spring transaction is marked rollback-only, so Spring rolls it back.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} for the transaction, must not be {@code null} .
   - `cmd` (`Throwables.Runnable<E>`) — The runnable to execute within the transaction, must not be {@code null} .
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null} .
-  - `java.lang.IllegalStateException` — if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+  - `java.lang.IllegalStateException` — if {@code cmd} completes or invalidates the shared transaction before this method commits it (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the transaction has been rolled back.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if beginning, committing, or rolling back the transaction fails. A rollback failure is suppressed when {@code cmd} has already failed.
   - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-- **See also:** #callInTransaction(javax.sql.DataSource, Throwables.Callable), #beginTransaction(javax.sql.DataSource)
+- **See also:** SqlTransaction, #callInTransaction(javax.sql.DataSource, Throwables.Callable), #beginTransaction(javax.sql.DataSource)
 - **Signature:** `@Beta public static <E extends Throwable> void runInTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<Connection, E> cmd) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, E`
 - **Summary:** Executes the given consumer within a transaction, passing the transaction's {@link Connection} as an argument.
 - **Contract:**
   - The transaction is committed if the consumer completes normally; it is rolled back if the consumer throws any exception.
   - <p> Use this overload when the transactional logic needs direct access to the {@link Connection} (e.g., to call APIs that require a {@link Connection} parameter).
   - </p> <p> <b> Nested calls: </b> If a transaction for {@code ds} is already active on the current thread, the consumer participates in that existing transaction.
-  - If {@code cmd} fails in a nested call, the shared transaction is marked rollback-only, so the outermost scope rolls back even if it later calls {@code commit()} .
+  - If {@code cmd} fails in a nested call, the shared transaction is marked rollback-only, so the outermost scope rolls back even if it later calls {@code commit()} , which then throws {@link RollbackOnlyException} .
   - </p> <p> <b> Spring integration: </b> Inside a Spring-managed transaction that owns the connection bound to {@code ds} , this method participates in it (see {@link #beginTransaction(javax.sql.DataSource)} ): {@code cmd} 's work is committed by Spring when its transaction completes, not by this method, and if {@code cmd} fails the Spring transaction is marked rollback-only, so Spring rolls it back.
 - **Parameters:**
   - `ds` (`javax.sql.DataSource`) — The {@link javax.sql.DataSource} for the transaction, must not be {@code null} .
   - `cmd` (`Throwables.Consumer<Connection, E>`) — The consumer to execute with the transaction's {@link Connection} , must not be {@code null} ; the connection must not be closed by the caller.
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null} .
-  - `java.lang.IllegalStateException` — if an existing transaction cannot accept another scope, or {@code cmd} completes or invalidates the shared transaction before this method commits it.
+  - `java.lang.IllegalStateException` — if {@code cmd} completes or invalidates the shared transaction before this method commits it (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the transaction has been rolled back.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if beginning, committing, or rolling back the transaction fails. A rollback failure is suppressed when {@code cmd} has already failed.
   - `E` — if {@code cmd} throws an exception (the transaction is rolled back before propagating).
-- **See also:** #callInTransaction(javax.sql.DataSource, Throwables.Function), #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
+- **See also:** SqlTransaction, #callInTransaction(javax.sql.DataSource, Throwables.Function), #runInTransaction(javax.sql.DataSource, Throwables.Runnable)
 ##### callOutsideTransaction(...) -> R
 - **Signature:** `@Beta public static <R, E extends Throwable> R callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Callable<? extends R, E> cmd) throws IllegalArgumentException, E, IllegalStateException`
 - **Summary:** Executes the given callable outside any active transaction bound to {@code ds} on the current thread, and returns its result.
@@ -11334,7 +11332,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - When {@code cmd} finishes (normally or exceptionally) the original transaction is restored.
   - If another transaction is opened and not closed inside {@code cmd} , an {@link IllegalStateException} is thrown.
   - </li> </ul> <p> This is useful for operations that must be committed immediately and independently of any surrounding transaction \\u2014 for example, writing an audit log entry or updating a status flag that should survive even if the outer transaction is later rolled back.
-  - </p> <p> <b> Spring integration: </b> When running inside a Spring-managed transaction context, Spring's transaction participation is also temporarily disabled for the duration of {@code cmd} , so the callable does not join any Spring {@code @Transactional} transaction through this library's connection-acquisition helpers.
+  - </p> <p> <b> Spring integration: </b> When running inside a Spring-managed transaction context, this library's participation in Spring transactions is also suspended for {@code ds} for the duration of {@code cmd} , so the callable does not join a Spring {@code @Transactional} transaction on {@code ds} through this library's connection-acquisition helpers, while work on other data sources still joins theirs.
   - The callback must obtain its connections through the appropriate helpers.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code // Persist an audit record that must not be rolled back with the main transaction SqlTransaction tran = JdbcUtil.beginTransaction(dataSource); try { orderDao.save(order); // part of tran String auditId = JdbcUtil.callOutsideTransaction(dataSource, () -> { // Runs on a separate connection; committed independently of 'tran' return auditDao.insertAndReturnId("ORDER_CREATED", order.getId()); }); tran.commit(); } finally { tran.rollbackIfNotCommitted(); } // No active transaction: the callback acquires connections as needed String token = JdbcUtil.callOutsideTransaction(dataSource, () -> tokenStore.generateAndPersist(userId)); } </pre>
 - **Parameters:**
@@ -11345,7 +11343,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null} .
   - `E` — if {@code cmd} throws an exception.
   - `java.lang.IllegalStateException` — if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to its exception as a suppressed exception instead.
-- **See also:** #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable), SqlTransaction#callOutsideTransaction(Throwables.Callable)
+- **See also:** SqlTransaction, #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable), SqlTransaction#callOutsideTransaction(Throwables.Callable)
 - **Signature:** `@Beta public static <T, E extends Throwable> T callOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Function<javax.sql.DataSource, T, E> cmd) throws IllegalArgumentException, E, IllegalStateException`
 - **Summary:** Executes the given function outside any active transaction bound to {@code ds} on the current thread, passing {@code ds} as an argument, and returns its result.
 - **Contract:**
@@ -11359,7 +11357,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null} .
   - `E` — if {@code cmd} throws an exception.
   - `java.lang.IllegalStateException` — if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to its exception as a suppressed exception instead.
-- **See also:** #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable), #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)
+- **See also:** SqlTransaction, #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable), #runOutsideTransaction(javax.sql.DataSource, Throwables.Consumer)
 ##### runOutsideTransaction(...) -> void
 - **Signature:** `@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Runnable<E> cmd) throws IllegalArgumentException, E, IllegalStateException`
 - **Summary:** Executes the given runnable outside any active transaction bound to {@code ds} on the current thread.
@@ -11374,7 +11372,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null} .
   - `E` — if {@code cmd} throws an exception.
   - `java.lang.IllegalStateException` — if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to its exception as a suppressed exception instead.
-- **See also:** #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable), SqlTransaction#runOutsideTransaction(Throwables.Runnable)
+- **See also:** SqlTransaction, #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable), SqlTransaction#runOutsideTransaction(Throwables.Runnable)
 - **Signature:** `@Beta public static <E extends Throwable> void runOutsideTransaction(final javax.sql.DataSource ds, final Throwables.Consumer<javax.sql.DataSource, E> cmd) throws IllegalArgumentException, E, IllegalStateException`
 - **Summary:** Executes the given consumer outside any active transaction bound to {@code ds} on the current thread, passing {@code ds} as an argument.
 - **Contract:**
@@ -11386,7 +11384,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
   - `java.lang.IllegalArgumentException` — if {@code ds} or {@code cmd} is {@code null} .
   - `E` — if {@code cmd} throws an exception.
   - `java.lang.IllegalStateException` — if a transaction for {@code ds} was active and, after {@code cmd} completes normally, another transaction for {@code ds} opened inside {@code cmd} is still open; if {@code cmd} throws, that condition is attached to its exception as a suppressed exception instead.
-- **See also:** #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable), #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)
+- **See also:** SqlTransaction, #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable), #callOutsideTransaction(javax.sql.DataSource, Throwables.Function)
 ##### runIgnoringSpringTransaction(...) -> void
 - **Signature:** `public static <E extends Exception> void runIgnoringSpringTransaction(final Throwables.Runnable<E> sqlAction) throws IllegalArgumentException, E`
 - **Summary:** Executes the given runnable with this library's Spring transaction participation temporarily disabled for the current thread.
@@ -11399,7 +11397,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
   - `E` — if {@code sqlAction} throws an exception.
-- **See also:** #callIgnoringSpringTransaction(Throwables.Callable), #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
+- **See also:** SqlTransaction, #callIgnoringSpringTransaction(Throwables.Callable), #runOutsideTransaction(javax.sql.DataSource, Throwables.Runnable)
 ##### callIgnoringSpringTransaction(...) -> R
 - **Signature:** `public static <R, E extends Exception> R callIgnoringSpringTransaction(final Throwables.Callable<? extends R, E> sqlAction) throws IllegalArgumentException, E`
 - **Summary:** Executes the given callable with this library's Spring transaction participation temporarily disabled for the current thread, and returns its result.
@@ -11409,7 +11407,7 @@ Utility class providing high-level JDBC operations with automatic resource manag
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code sqlAction} is {@code null} .
   - `E` — if {@code sqlAction} throws an exception.
-- **See also:** #runIgnoringSpringTransaction(Throwables.Runnable), #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
+- **See also:** SqlTransaction, #runIgnoringSpringTransaction(Throwables.Runnable), #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)
 ##### setIdExtractorForDao(...) -> void
 - **Signature:** `public static synchronized <T, ID, TD extends CrudDao<T, ID, TD>> void setIdExtractorForDao(final Class<? extends CrudDao<T, ID, TD>> daoInterface, final RowMapper<? extends ID> idExtractor) throws IllegalArgumentException`
 - **Summary:** Registers a custom ID extractor for the specified {@link CrudDao} interface.
@@ -12772,6 +12770,21 @@ Execution modes selected through the {@code op} element of {@link com.landawn.ab
 #### Public Instance Methods
 - (none)
 
+### Class RollbackOnlyException (com.landawn.abacus.jdbc.RollbackOnlyException)
+Thrown by the outermost {@link SqlTransaction#commit()} of a transaction that a nested scope marked rollback-only ( {@link Transaction.Status#MARKED_ROLLBACK} ), after the transaction has been rolled back: none of its work was committed.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- `public RollbackOnlyException(final String message)` — Constructs a {@code RollbackOnlyException} with the specified detail message.
+
+#### Public Static Methods
+- (none)
+
+#### Public Instance Methods
+- (none)
+
 ### Class SpringApplicationContext (com.landawn.abacus.jdbc.SpringApplicationContext)
 A bridge class that provides access to Spring's ApplicationContext for bean retrieval within the JDBC framework.
 
@@ -12863,147 +12876,131 @@ Default {@link Transaction} implementation backed by a JDBC {@link Connection} .
 #### Public Instance Methods
 ##### id(...) -> String
 - **Signature:** `@Override public String id()`
-- **Summary:** Returns the unique identifier of this transaction.
+- **Summary:** Returns the unique identifier of the transaction this scope belongs to.
 - **Parameters:**
   - (none)
 - **Returns:** the unique transaction identifier, never {@code null}
 ##### connection(...) -> Connection
 - **Signature:** `public Connection connection() throws IllegalStateException`
-- **Summary:** Returns the JDBC connection associated with this transaction.
+- **Summary:** Returns the JDBC connection of the transaction.
 - **Contract:**
-  - This connection should not be closed manually as it will be managed by the transaction.
+  - It is shared by all scopes of the transaction and must not be closed manually: the outermost scope releases it when the transaction completes.
 - **Parameters:**
   - (none)
-- **Returns:** the JDBC connection used by this transaction
+- **Returns:** the JDBC connection used by the transaction
 - **Throws:**
   - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread
 ##### isolationLevel(...) -> IsolationLevel
 - **Signature:** `@Override public IsolationLevel isolationLevel()`
-- **Summary:** Returns the isolation level of this transaction.
+- **Summary:** Returns the isolation level of this scope: the level requested when it was begun or, for a nested scope that requested {@link IsolationLevel#DEFAULT} , the level of the scope it is nested in.
 - **Contract:**
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE)) { IsolationLevel level = tran.isolationLevel(); if (level == IsolationLevel.SERIALIZABLE) { // Handle high isolation scenario } } } </pre>
+  - Returns the isolation level of this scope: the level requested when it was begun or, for a nested scope that requested {@link IsolationLevel#DEFAULT} , the level of the scope it is nested in.
 - **Parameters:**
   - (none)
-- **Returns:** the transaction isolation level, never {@code null}
+- **Returns:** the isolation level of this scope, never {@code null}
 - **See also:** IsolationLevel
 ##### status(...) -> Transaction.Status
 - **Signature:** `@Override public Transaction.Status status()`
-- **Summary:** Returns the current status of this transaction.
+- **Summary:** Returns the current status of the transaction this scope belongs to: {@link Status#ACTIVE} until the transaction is marked rollback-only ( {@link Status#MARKED_ROLLBACK} ) or the outermost scope completes.
 - **Contract:**
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) { Transaction.Status status = tran.status(); if (status == Transaction.Status.ACTIVE) { // Transaction is still active and can be committed or rolled back } } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) { if (tran.status() == Transaction.Status.ACTIVE) { // The transaction can still be committed } } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** the current transaction status, never {@code null}
 - **See also:** Transaction.Status
 ##### isActive(...) -> boolean
 - **Signature:** `@Override public boolean isActive()`
-- **Summary:** Checks if this transaction is currently active.
+- **Summary:** Checks whether the transaction this scope belongs to is active, i.e.
 - **Contract:**
-  - Checks if this transaction is currently active.
-  - A transaction is active only when its status is {@link Status#ACTIVE} (i.e.
-  - <p> This is a convenience method equivalent to checking if the status equals {@link Status#ACTIVE} .
-  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) { if (tran.isActive()) { // Safe to perform operations within this transaction performDatabaseOperations(); } } } </pre>
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) { if (tran.isActive()) { performDatabaseOperations(); } } } </pre>
 - **Parameters:**
   - (none)
 - **Returns:** {@code true} if the transaction is active, {@code false} otherwise
 ##### commit(...) -> void
 - **Signature:** `@Override public void commit() throws IllegalStateException, UncheckedSQLException`
-- **Summary:** Commits this transaction scope.
+- **Summary:** Commits this scope.
 - **Contract:**
-  - The actual JDBC {@code COMMIT} is issued only when the outermost scope commits (reference count reaches zero).
-  - </p> <p> If the transaction has been marked for rollback only (status {@link Status#MARKED_ROLLBACK} because an inner scope rolled back), the outermost commit is converted into a rollback rather than a commit; this method returns normally in that case (or throws {@link UncheckedSQLException} if that rollback itself fails).
-  - </p> <p> When the outermost scope actually commits, the status transitions to {@link Status#COMMITTED} on success.
-  - On failure the status first becomes {@link Status#FAILED_COMMIT} and an automatic rollback is attempted, leaving the status {@link Status#ROLLED_BACK} (or {@link Status#FAILED_ROLLBACK} if that rollback also fails).
-  - After the commit attempt (success or failure) the connection's original auto-commit and isolation level are restored, and the connection is released back to its data source if this transaction was created with connection ownership.
-  - </p> <p> For a transaction participating in a Spring-managed transaction (see the class documentation), the outermost commit issues no database {@code COMMIT} : it completes the scope (status {@link Status#COMMITTED} ) and releases the connection to Spring, which commits the work when its transaction completes.
-  - A participating transaction marked rollback-only marks the Spring transaction rollback-only instead (if that mark throws, see {@link #rollbackIfNotCommitted()} ).
+  - <p> A nested scope's commit only completes the scope: the database {@code COMMIT} is issued when the outermost scope commits.
+  - If the transaction has been marked rollback-only (a nested scope rolled back, typically because its failure was caught and the work went on), the outermost commit rolls back instead and throws {@link RollbackOnlyException} : none of the transaction's work was committed.
+  - If the rollback fails, its failure is thrown instead (such as the {@link UncheckedSQLException} of the rollback), as is an unchecked failure of the connection cleanup after the rollback; the reason the commit failed is attached to it as a suppressed exception (a {@code RollbackOnlyException} once the transaction has been rolled back, an {@code IllegalStateException} otherwise).
+  - </p> <p> Scopes opened inside this one that are still open when it commits were never completed (for example, a nested scope whose code threw before its {@code commit()} and has no {@code finally} block): they are exited, the transaction is marked rollback-only, and this method throws: an outermost scope rolls the transaction back and throws {@link RollbackOnlyException} (or the failure of the rollback, as above), a nested scope throws {@link IllegalStateException} .
+  - If restoring an isolation level while exiting such a scope fails with an unchecked exception, that exception is thrown instead (by an outermost scope, after the same rollback).
+  - </p> <p> If the driver fails to restore the enclosing scope's isolation level when this nested scope exits, the failure propagates (an SQL error as an {@link UncheckedSQLException} , a runtime exception or an error as it is) and this scope stays open, so its {@link #rollbackIfNotCommitted()} can complete it.
+  - </p> <p> When the outermost scope actually commits, the status becomes {@link Status#COMMITTED} on success.
+  - On failure the transaction is rolled back automatically, leaving the status {@link Status#ROLLED_BACK} (or {@link Status#FAILED_ROLLBACK} if that rollback also fails).
+  - For a transaction participating in a Spring-managed transaction, the outermost commit issues no database {@code COMMIT} : it completes the transaction and releases the connection to Spring, which commits the work when its transaction completes; a rollback-only one marks the Spring transaction rollback-only and throws {@link RollbackOnlyException} , or the failure of the mark (the status is then {@link Status#FAILED_ROLLBACK} ; see {@link #rollbackIfNotCommitted()} ).
+  - If the Spring transaction has completed already (the scope was left open past it), or runs its {@code afterCommit} or {@code afterCompletion} callbacks (the scope was left open into them), the commit throws {@link IllegalStateException} and the status becomes {@link Status#FAILED_COMMIT} : Spring decided the outcome of the work without it (see row 27 of the completion scenarios for what is detected).
 - **Parameters:**
   - (none)
 - **Throws:**
-  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, or if the outermost commit is attempted while the transaction is not in {@link Status#ACTIVE} or {@link Status#MARKED_ROLLBACK} . If the whole transaction has already completed (reference count already zero or below), the call is logged and ignored rather than throwing. A repeated call from a nested scope that has already completed is not detected: it exits the enclosing scope instead.
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs while restoring a nested scope's isolation level, committing, or rolling back a rollback-only transaction. A failed database commit triggers an automatic rollback; any rollback failure is suppressed on the commit exception.
+  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, if a scope opened inside this one was never completed, if this scope has already completed (committed, rolled back, its commit failed, or an enclosing scope completed and exited it while it was still open), if the outermost commit of a participating transaction marked rollback-only cannot mark the Spring transaction rollback-only (see {@link #rollbackIfNotCommitted()} ), or if the Spring-managed transaction a participating transaction participates in has completed, or begun to complete, before its outermost commit
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs while restoring the enclosing scope's isolation level (the scope then stays open, so its {@link #rollbackIfNotCommitted()} can complete it), committing, or rolling back a rollback-only transaction. A failed database commit triggers an automatic rollback; any rollback failure is suppressed on the commit exception.
+  - `com.landawn.abacus.jdbc.RollbackOnlyException` — if this is the outermost scope and the transaction was marked rollback-only, or a scope opened inside this one was never completed: the transaction has been rolled back (a participating transaction: the Spring-managed transaction has been marked rollback-only, so Spring rolls back the work)
 ##### rollback(...) -> void
 - **Signature:** `@Deprecated @Override public void rollback() throws IllegalStateException, UncheckedSQLException`
-- **Summary:** Rolls back this transaction scope.
+- **Summary:** Rolls back this scope.
 - **Contract:**
-  - </p> <p> After a successful rollback the status transitions to {@link Status#ROLLED_BACK} , the connection's original auto-commit and isolation level are restored, and the connection is released back to its data source if this transaction was created with connection ownership.
-  - If the underlying {@code Connection.rollback()} fails, the status becomes {@link Status#FAILED_ROLLBACK} and an {@link UncheckedSQLException} is thrown.
+  - <p> A nested scope's rollback marks the transaction rollback-only ( {@link Status#MARKED_ROLLBACK} ); the database {@code ROLLBACK} is issued when the outermost scope completes, whether it commits or rolls back.
+  - The outermost rollback sets the status to {@link Status#ROLLED_BACK} (or {@link Status#FAILED_ROLLBACK} if the rollback fails), restores the connection's original state and releases it (after a failed rollback, aborts and releases it without restoring its state).
+  - The scope is always exited, as by {@link #rollbackIfNotCommitted()} : if the enclosing scope's isolation level cannot be restored, the transaction stays marked rollback-only; an {@link SQLException} from the connection is logged, while a {@link RuntimeException} or an {@link Error} is thrown after the scope has been exited (it used to leave a nested scope open, and the transaction {@link Status#ACTIVE} , after an explicit rollback).
 - **Parameters:**
   - (none)
 - **Throws:**
-  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, or if the outermost rollback is attempted while the transaction status is not {@link Status#ACTIVE} , {@link Status#MARKED_ROLLBACK} , or {@link Status#FAILED_COMMIT} . If the whole transaction has already completed (reference count already zero or below), the call is logged and ignored rather than throwing. A repeated call from a nested scope that has already completed is not detected: it exits the enclosing scope instead.
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs during rollback or while restoring a nested scope's isolation level
-  - `java.lang.RuntimeException` — if the outermost rollback of a transaction participating in a Spring-managed transaction cannot mark that transaction rollback-only (an {@link Error} from the mark propagates as well); the status is then {@link Status#FAILED_ROLLBACK} , see {@link #rollbackIfNotCommitted()}
+  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, if this scope has already completed, or if the outermost rollback of a participating transaction cannot mark the Spring transaction rollback-only (see {@link #rollbackIfNotCommitted()} ; the status is then {@link Status#FAILED_ROLLBACK} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs during the outermost rollback
+  - `java.lang.RuntimeException` — if marking the Spring transaction rollback-only fails with another exception (an {@link Error} from the mark propagates as well); the status is then {@link Status#FAILED_ROLLBACK}
 ##### rollbackIfNotCommitted(...) -> void
 - **Signature:** `@Override public void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException`
-- **Summary:** Rolls back the transaction if it has not been committed successfully.
+- **Summary:** Ends this scope, rolling it back unless it has completed: a no-op after {@link #commit()} or {@link #rollback()} of this scope, and on any further call.
 - **Contract:**
-  - Rolls back the transaction if it has not been committed successfully.
-  - It rolls back when the transaction is still active, marked for rollback, or in a failed-commit state.
-  - It will do nothing if the transaction has already been committed or rolled back.
-  - It always exits the nested scope: if the enclosing scope's isolation level cannot be restored on the connection, the transaction stays marked rollback-only, so that the outermost scope can still complete and release the connection; an {@link SQLException} from the connection is logged, while a {@link RuntimeException} or an {@link Error} is propagated after the scope has been exited and the transaction's rollback actions have run.
-  - If the Spring transaction cannot be marked (the mark throws), that failure propagates, the status becomes {@link Status#FAILED_ROLLBACK} (not {@link Status#ROLLED_BACK} : Spring may still commit the work), the scope is still completed and the connection released to Spring, and the in-memory changes tied to the work (such as generated IDs written back to entities) are not undone but left to the Spring transaction's outcome.
+  - <p> A nested scope that is ended this way marks the transaction {@link Status#MARKED_ROLLBACK} ; the database {@code ROLLBACK} is issued when the outermost scope completes.
+  - The scope is always exited: if the enclosing scope's isolation level cannot be restored on the connection, the transaction stays marked rollback-only; an {@link SQLException} from the connection is logged, while a {@link RuntimeException} or an {@link Error} is propagated after the scope has been exited.
+  - If the Spring transaction cannot be marked (no connection holder is bound to the data source any more, a JPA transaction that owns the connection refuses the mark or can no longer be identified, the completion of the Spring transaction has started so that the mark can't change its outcome any more, see {@link #commit()} , or the mark throws), the rollback fails with an {@link IllegalStateException} (or the mark's own failure), the status becomes {@link Status#FAILED_ROLLBACK} (Spring may still commit the work), and the in-memory changes tied to the work (such as generated IDs written back to entities) are not undone but left to the Spring transaction's outcome.
 - **Parameters:**
   - (none)
 - **Throws:**
-  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, or if the outermost scope reaches the rollback while the status is none of {@link Status#ACTIVE} , {@link Status#MARKED_ROLLBACK} , or {@link Status#FAILED_COMMIT} . A {@link Status#COMMITTED} , {@link Status#ROLLED_BACK} , or {@link Status#FAILED_ROLLBACK} transaction returns without throwing, so that second condition is a defensive guard.
+  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, or if the outermost rollback of a participating transaction cannot mark the Spring transaction rollback-only (see above); the status is then {@link Status#FAILED_ROLLBACK}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs during the outermost rollback
-  - `java.lang.RuntimeException` — if the outermost rollback of a transaction participating in a Spring-managed transaction cannot mark that transaction rollback-only (an {@link Error} from the mark propagates as well); the status is then {@link Status#FAILED_ROLLBACK}
+  - `java.lang.RuntimeException` — if marking the Spring transaction rollback-only fails with another exception (an {@link Error} from the mark propagates as well); the status is then {@link Status#FAILED_ROLLBACK}
 ##### runOutsideTransaction(...) -> void
 - **Signature:** `public <E extends Throwable> void runOutsideTransaction(final Throwables.Runnable<E> cmd) throws IllegalStateException, IllegalArgumentException, E`
-- **Summary:** Executes the specified {@code Runnable} outside of this transaction context.
+- **Summary:** Executes {@code cmd} outside of this transaction: the transaction is unregistered from the current thread while {@code cmd} runs, so operations on the data source inside it acquire their own connections and commit independently, and it is registered again afterwards (if it is still active or marked rollback-only).
 - **Contract:**
-  - This method temporarily removes the transaction from the current thread, executes the runnable, and then restores the transaction (only if it was registered on this thread and is still active or marked rollback-only when {@code cmd} completes).
-  - <p> This is useful when you need to perform operations that should not be part of the current transaction, such as logging or audit operations that should not be rolled back with the main transaction.
+  - Executes {@code cmd} outside of this transaction: the transaction is unregistered from the current thread while {@code cmd} runs, so operations on the data source inside it acquire their own connections and commit independently, and it is registered again afterwards (if it is still active or marked rollback-only).
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) { dao.update(entity); tran.runOutsideTransaction(() -> auditDao.insert(auditRecord)); // committed even if tran rolls back tran.commit(); } } </pre>
 - **Parameters:**
   - `cmd` (`Throwables.Runnable<E>`) — the {@code Runnable} to be executed outside of this transaction, must not be {@code null}
 - **Throws:**
-  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, or if, after {@code cmd} completes normally, another transaction has been opened on this thread for the same data source and creator and was not closed. If {@code cmd} itself throws, the latter condition is instead attached to that exception as a suppressed exception.
+  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, or if, after {@code cmd} completes normally, another transaction has been opened on this thread for the same data source and was not closed: it is rolled back, as by {@link #rollbackIfNotCommitted()} of its outermost scope, and this transaction registered again (if {@code cmd} throws, that condition is attached to its exception as a suppressed exception)
   - `java.lang.IllegalArgumentException` — if {@code cmd} is {@code null}
   - `E` — if the {@code Runnable} throws an exception
 ##### callOutsideTransaction(...) -> R
 - **Signature:** `public <R, E extends Throwable> R callOutsideTransaction(final Throwables.Callable<? extends R, E> cmd) throws IllegalStateException, IllegalArgumentException, E`
-- **Summary:** Executes the specified {@code Callable} outside of this transaction context.
-- **Contract:**
-  - This method temporarily removes the transaction from the current thread, executes the callable, and then restores the transaction (only if it was registered on this thread and is still active or marked rollback-only when {@code cmd} completes).
-  - <p> This is useful when you need to perform operations that should not be part of the current transaction and return a result, such as querying data that should not be affected by uncommitted changes.
+- **Summary:** Executes {@code cmd} outside of this transaction and returns its result; see {@link #runOutsideTransaction(Throwables.Runnable)} .
 - **Parameters:**
   - `cmd` (`Throwables.Callable<? extends R, E>`) — the {@code Callable} to be executed outside of this transaction, must not be {@code null}
 - **Returns:** the result returned by the {@code Callable}
 - **Throws:**
-  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, or if, after {@code cmd} completes normally, another transaction has been opened on this thread for the same data source and creator and was not closed. If {@code cmd} itself throws, the latter condition is instead attached to that exception as a suppressed exception.
+  - `java.lang.IllegalStateException` — see {@link #runOutsideTransaction(Throwables.Runnable)}
   - `java.lang.IllegalArgumentException` — if {@code cmd} is {@code null}
   - `E` — if the {@code Callable} throws an exception
 ##### close(...) -> void
 - **Signature:** `@Override public void close() throws IllegalStateException, UncheckedSQLException`
-- **Summary:** Closes this transaction by calling {@link #rollbackIfNotCommitted()} .
+- **Summary:** Ends this scope by calling {@link #rollbackIfNotCommitted()} , so the scope can be used in a try-with-resources block: a no-op after {@link #commit()} , and on any further call.
+- **Contract:**
+  - <p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) { dao.save(entity); tran.commit(); } // close() rolls back if commit() was not reached } </pre>
 - **Parameters:**
   - (none)
 - **Throws:**
-  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, or if the outermost scope reaches the rollback while the status is none of {@link Status#ACTIVE} , {@link Status#MARKED_ROLLBACK} , or {@link Status#FAILED_COMMIT} . An already completed transaction, and the scope that has just committed or rolled back explicitly, return without throwing.
+  - `java.lang.IllegalStateException` — if called from a thread other than the transaction's owner thread, or if the outermost rollback of a participating transaction cannot mark the Spring transaction rollback-only (see {@link #rollbackIfNotCommitted()} )
   - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs during the outermost rollback
 - **See also:** #rollbackIfNotCommitted()
-##### hashCode(...) -> int
-- **Signature:** `@Override public int hashCode()`
-- **Summary:** Returns the hash code value for this transaction.
-- **Parameters:**
-  - (none)
-- **Returns:** the hash code value for this transaction
-##### equals(...) -> boolean
-- **Signature:** `@Override public boolean equals(final Object obj)`
-- **Summary:** Indicates whether some other object is "equal to" this transaction.
-- **Contract:**
-  - Two transactions are considered equal if they have the same timed ID.
-  - <p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran1 = JdbcUtil.beginTransaction(dataSource)) { SqlTransaction tran2 = tran1; if (tran1.equals(tran2)) { // Same transaction instance } } } </pre>
-- **Parameters:**
-  - `obj` (`Object`) — the reference object with which to compare
-- **Returns:** {@code true} if this transaction is equal to the obj argument; {@code false} otherwise
 ##### toString(...) -> String
 - **Signature:** `@Override public String toString()`
-- **Summary:** Returns a string representation of this transaction.
+- **Summary:** Returns a string representation of this scope, including the transaction's identifier.
 - **Parameters:**
   - (none)
-- **Returns:** a string representation of this transaction
+- **Returns:** a string representation of this scope
 
 ### Interface Transaction (com.landawn.abacus.jdbc.Transaction)
 Minimal contract for a JDBC transaction managed by this library.
@@ -13058,12 +13055,13 @@ Minimal contract for a JDBC transaction managed by this library.
 - **Signature:** `void commit() throws IllegalStateException, UncheckedSQLException`
 - **Summary:** Commits the current transaction, making all changes permanent.
 - **Contract:**
-  - <p> If the commit fails, the transaction transitions to {@link Status#FAILED_COMMIT} and an exception is thrown.
+  - <p> If the commit fails, the transaction passes through {@link Status#FAILED_COMMIT} and an exception is thrown.
+  - </p> <p> A {@link SqlTransaction} that participates in a Spring-managed transaction issues no database commit: the commit completes its scope, and Spring commits the work when its own transaction completes.
   - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code try { updateRecords(); transaction.commit(); } finally { // Also rolls back when the work, rather than commit itself, fails.
 - **Parameters:**
   - (none)
 - **Throws:**
-  - `java.lang.IllegalStateException` — if called from a thread other than the transaction owner, or if the transaction is not in a valid state for committing. Note: {@link SqlTransaction} (the built-in implementation) does not throw for a transaction that has already completed \\u2014 the call is logged and ignored.
+  - `java.lang.IllegalStateException` — if called from a thread other than the transaction owner, or if the transaction is not in a valid state for committing. Note: {@link SqlTransaction} (the built-in implementation) throws for a scope that has completed: commit() may be called only once per scope, also after a successful one, and a scope that ended without a commit (rolled back, its commit failed, or exited by an enclosing scope) can't commit its work; it throws {@link RollbackOnlyException} (an {@code IllegalStateException} ) when the outermost scope finds the transaction marked rollback-only and rolls it back.
   - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs during commit, rollback of a rollback-only transaction, or restoration of a nested scope's isolation level
 ##### rollback(...) -> void
 - **Signature:** `void rollback() throws IllegalStateException, UncheckedSQLException`
@@ -13071,11 +13069,14 @@ Minimal contract for a JDBC transaction managed by this library.
 - **Contract:**
   - For nested scopes in {@link SqlTransaction} , an inner rollback instead marks the shared transaction rollback-only; the database rollback occurs when the outermost scope completes.
   - <p> If the rollback fails, the transaction status will be set to {@link Status#FAILED_ROLLBACK} and an exception will be thrown.
+  - </p> <p> A {@link SqlTransaction} that participates in a Spring-managed transaction issues no database rollback: it marks the Spring transaction rollback-only, so Spring rolls the work back when its transaction completes.
+  - </p> <p> <b> Usage Examples: </b> </p> <pre> {@code try { performRiskyOperation(); if (!isStillWanted()) { transaction.rollback(); // only on a scope that has not completed return; } transaction.commit(); } finally { // Rolls back if the work or the commit failed; a no-op after the rollback() or commit() above.
+  - transaction.rollbackIfNotCommitted(); } } </pre> <p> Don't call it after a failed {@code commit()} : the commit completes the scope also when it fails, so {@link SqlTransaction} throws {@link IllegalStateException} there, and a {@code rollback()} in a {@code catch} block hid the commit's own failure.
 - **Parameters:**
   - (none)
 - **Throws:**
-  - `java.lang.IllegalStateException` — if called from a thread other than the transaction owner, or if the transaction is not in a valid state for rollback. Note: {@link SqlTransaction} (the built-in implementation) does not throw for a transaction that has already completed \\u2014 the call is logged and ignored.
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs during rollback or restoration of a nested scope's isolation level
+  - `java.lang.IllegalStateException` — if called from a thread other than the transaction owner, or if the transaction is not in a valid state for rollback. Note: {@link SqlTransaction} (the built-in implementation) throws it for a scope that has already completed, as Spring does (it used to log and ignore the call); its {@code rollbackIfNotCommitted()} and {@code close()} stay no-ops on a completed scope.
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs during the rollback (an implementation may also report a failure to restore a nested scope's isolation level; {@link SqlTransaction} logs it, and exits the scope all the same)
 ##### rollbackIfNotCommitted(...) -> void
 - **Signature:** `void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException`
 - **Summary:** Rolls back the transaction if it has not been committed successfully.
@@ -13084,8 +13085,8 @@ Minimal contract for a JDBC transaction managed by this library.
 - **Parameters:**
   - (none)
 - **Throws:**
-  - `java.lang.IllegalStateException` — if called from a thread other than the transaction owner, or if the transaction is in an unexpected status (other than {@link Status#ACTIVE} , {@link Status#MARKED_ROLLBACK} , or {@link Status#FAILED_COMMIT} ) when the rollback is actually performed
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs during rollback or restoration of a nested scope's isolation level
+  - `java.lang.IllegalStateException` — if called from a thread other than the transaction owner, or if the transaction is in an unexpected status (other than {@link Status#ACTIVE} , {@link Status#MARKED_ROLLBACK} , or {@link Status#FAILED_COMMIT} ) when the rollback is actually performed ( {@link SqlTransaction} : if the rollback of a transaction participating in a Spring-managed one can't mark it rollback-only)
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if an SQL error occurs during the rollback (an implementation may also report a failure to restore a nested scope's isolation level; {@link SqlTransaction} logs it, and exits the scope all the same)
 
 ### Enum Status (com.landawn.abacus.jdbc.Transaction.Status)
 Enumeration representing the various states a transaction can be in during its lifecycle.
@@ -14050,7 +14051,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
 
 #### Public Instance Methods
 ##### upsert(...) -> T
-- **Signature:** `default T upsert(final T entity) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
+- **Signature:** `default T upsert(final T entity) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Performs an upsert operation, matching existing records by the entity's ID property(ies): inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record with the values from {@code entity} .
 - **Contract:**
   - Performs an upsert operation, matching existing records by the entity's ID property(ies): inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record with the values from {@code entity} .
@@ -14060,11 +14061,12 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} is {@code null} , or an existing row is updated and {@code entity} has a property the loaded entity does not
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
+  - `java.lang.IllegalStateException` — if the call runs inside a Spring-managed transaction it cannot participate in (see {@link #upsert(Object, Condition)} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails, or starting or completing the transaction scope (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the entity's ID property(ies)
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-- **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
+- **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Performs an upsert operation: inserts {@code entity} if no record matches the specified condition; otherwise copies the non- {@code null} non-id properties from {@code entity} into the existing record (loaded via {@link #findOnlyOne(Condition)} ) and updates it.
 - **Contract:**
   - Performs an upsert operation: inserts {@code entity} if no record matches the specified condition; otherwise copies the non- {@code null} non-id properties from {@code entity} into the existing record (loaded via {@link #findOnlyOne(Condition)} ) and updates it.
@@ -14074,7 +14076,8 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
 - **Returns:** the saved entity: the inserted {@code entity} when no existing record was found, or the loaded database entity (with non- {@code null} non-id properties copied from {@code entity} ) when an existing record was updated
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} or {@code cond} is {@code null} , or an existing row is updated and {@code entity} has a property the loaded entity does not
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
+  - `java.lang.IllegalStateException` — if the call runs inside a Spring-managed transaction it cannot participate in (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails, or starting or completing the transaction scope (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified condition
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
@@ -14091,7 +14094,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.lang.IllegalArgumentException` — if {@code entities} contains a {@code null} element, or an existing row is updated and an entity has a property the loaded entity does not
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails, or starting or completing an internally required transaction fails
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
-  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
 - **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert of multiple entities with a specified batch size, matching existing records by ID fields.
@@ -14103,7 +14106,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.lang.IllegalArgumentException` — if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive, or an existing row is updated and an entity has a property the loaded entity does not
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails, or starting or completing an internally required transaction fails
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
-  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
 - **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert based on the specified unique properties for matching.
@@ -14115,12 +14118,12 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.lang.IllegalArgumentException` — if {@code entities} contains a {@code null} element, if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class, or an existing row is updated and an entity has a property the loaded entity does not
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails, or starting or completing an internally required transaction fails
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
-  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
 - **Signature:** `default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, SQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert based on the specified unique properties with a custom batch size.
 - **Contract:**
-  - When both inserts and updates are needed (or either set is large), the operation is wrapped in a transaction (each of {@code batchInsert} and {@code batchUpdate} also runs in one for more than one entity).
+  - The lookups and the writes run in one transaction scope inside a transaction, as for {@link #upsert(Object, Condition)} , and, outside one, for more than one entity, as other DAO batch operations do (they used to run apart: the lookups before it, each on a connection of its own, and the writes in a transaction only when both inserts and updates were needed or either set was large); a single entity outside a transaction is upserted as by {@code upsert} .
   - If that transaction, or a transaction enclosing this call, rolls back, the IDs that {@code batchInsert} wrote onto the new entities are put back to their previous values.
   - Inside an active Spring-managed transaction that owns the data source's connection, the transaction participates in it (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} ): Spring commits the work, a failure marks the Spring transaction rollback-only, and the IDs are put back if Spring rolls it back (this needs Spring's transaction synchronization, which is enabled by default, and follows the innermost Spring-managed transaction on the thread, as for {@code insert} ).
   - a component of the primary key, when matching by id) matches no row and is inserted.
@@ -14133,7 +14136,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations for entity
   - `java.lang.IllegalArgumentException` — if {@code entities} contains a {@code null} element, if {@code matchPropNames} is {@code null} /empty, if {@code batchSize} is not positive, or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class, or an existing row is updated and an entity has a property the loaded entity does not
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails, or starting or completing an internally required transaction fails
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
-  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
 
 ### Interface CrudJoinEntityHelper (com.landawn.abacus.jdbc.dao.CrudJoinEntityHelper)
@@ -14313,7 +14316,7 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
   - `java.sql.SQLException` — if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
 ##### upsert(...) -> T
-- **Signature:** `default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
+- **Signature:** `default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
 - **Contract:**
   - Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
@@ -14324,12 +14327,13 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty, or if any name in {@code matchPropNames} is not a readable property of the entity class, or an existing row is updated and {@code entity} has a property the loaded entity does not
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
+  - `java.lang.IllegalStateException` — if the call runs inside a Spring-managed transaction it cannot participate in (see {@link #upsert(Object, Condition)} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails, or starting or completing the transaction scope (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified {@code matchPropNames}
   - `java.lang.UnsupportedOperationException` — if an existing row is updated and the loaded class is an immutable bean
 - **See also:** #upsert(Object, Condition)
-- **Signature:** `default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
+- **Signature:** `default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, SQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the condition, otherwise updates the existing record.
 - **Contract:**
   - Executes an upsert operation: inserts the entity if no record matches the condition, otherwise updates the existing record.
@@ -14340,7 +14344,8 @@ The {@code Dao} interface provides a comprehensive data access abstraction layer
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} or {@code cond} is {@code null} , or an existing row is updated and {@code entity} has a property the loaded entity does not
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails
+  - `java.lang.IllegalStateException` — if the call runs inside a Spring-managed transaction it cannot participate in (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a required database connection fails, or starting or completing the transaction scope (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails
   - `java.sql.SQLException` — if looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified condition
   - `java.lang.UnsupportedOperationException` — if an existing row is updated and the loaded class is an immutable bean
@@ -14361,6 +14366,9 @@ Infrastructure root of the DAO capability hierarchy: the shared accessors ( {@co
 ##### dataSource(...) -> javax.sql.DataSource
 - **Signature:** `@NonDBOperation javax.sql.DataSource dataSource()`
 - **Summary:** Retrieves the underlying data source used by this DAO for database connections.
+- **Contract:**
+  - <p> A DAO interface may override this method with a {@code default} method, for example to route its statements to another data source: the DAO's statements then run on the data source it returns, and so do its transaction checks (the result caches kept out of transactions, the generated IDs put back when a transaction rolls back).
+  - It must return a data source of the same database as the one the DAO was created with (the same product and version, and the same schema): the DAO's SQL, its dialect handling, its type mappings and the metadata of its join properties are built from that one, once, when the DAO is created.
 - **Parameters:**
   - (none)
 - **Returns:** the data source configured for this DAO
@@ -14839,7 +14847,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
 
 #### Public Instance Methods
 ##### upsert(...) -> T
-- **Signature:** `@Override default T upsert(final T entity) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
+- **Signature:** `@Override default T upsert(final T entity) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Performs an upsert operation, matching existing records by the entity's ID property(ies): inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record with the values from {@code entity} .
 - **Contract:**
   - Performs an upsert operation, matching existing records by the entity's ID property(ies): inserts {@code entity} if no record with the same ID exists; otherwise updates the existing record with the values from {@code entity} .
@@ -14848,10 +14856,11 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} is {@code null} , or an existing row is updated and {@code entity} has a property the loaded entity does not
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
+  - `java.lang.IllegalStateException` — if the call runs inside a Spring-managed transaction it cannot participate in (see {@link #upsert(Object, Condition)} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing the transaction scope (inside a transaction) fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the entity's ID property(ies)
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-- **Signature:** `@Override default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
+- **Signature:** `@Override default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Performs an upsert operation, matching existing records by the specified unique properties: inserts {@code entity} if no record with the same values exists; otherwise updates the existing record with the values from {@code entity} .
 - **Contract:**
   - Performs an upsert operation, matching existing records by the specified unique properties: inserts {@code entity} if no record with the same values exists; otherwise updates the existing record with the values from {@code entity} .
@@ -14861,10 +14870,11 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty, or if any name in {@code matchPropNames} is not a readable property of the entity class, or an existing row is updated and {@code entity} has a property the loaded entity does not
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
+  - `java.lang.IllegalStateException` — if the call runs inside a Spring-managed transaction it cannot participate in (see {@link #upsert(Object, Condition)} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing the transaction scope (inside a transaction) fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified {@code matchPropNames}
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
-- **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
+- **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Performs an upsert operation: inserts {@code entity} if no record matches the specified condition; otherwise copies the non- {@code null} non-id properties from {@code entity} into the existing record (loaded via {@link #findOnlyOne(Condition)} ) and updates it.
 - **Contract:**
   - Performs an upsert operation: inserts {@code entity} if no record matches the specified condition; otherwise copies the non- {@code null} non-id properties from {@code entity} into the existing record (loaded via {@link #findOnlyOne(Condition)} ) and updates it.
@@ -14874,7 +14884,8 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
 - **Returns:** the saved entity: the inserted {@code entity} when no existing record was found, or the loaded database entity (with non- {@code null} non-id properties copied from {@code entity} ) when an existing record was updated
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} or {@code cond} is {@code null} , or an existing row is updated and {@code entity} has a property the loaded entity does not
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
+  - `java.lang.IllegalStateException` — if the call runs inside a Spring-managed transaction it cannot participate in (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing the transaction scope (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified condition
   - `java.lang.UnsupportedOperationException` — if no existing row is found, {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, the entity's ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
 - **See also:** Filters
@@ -14889,7 +14900,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entities} contains a {@code null} element, or an existing row is updated and an entity has a property the loaded entity does not
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
 - **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert of multiple entities with a specified batch size, matching existing records by ID fields.
@@ -14900,7 +14911,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive, or an existing row is updated and an entity has a property the loaded entity does not
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
 - **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert based on the specified unique properties for matching.
@@ -14911,12 +14922,12 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entities} contains a {@code null} element, if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class, or an existing row is updated and an entity has a property the loaded entity does not
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
 - **Signature:** `@Override default List<T> batchUpsert(final Collection<? extends T> entities, final Collection<String> matchPropNames, final int batchSize) throws IllegalArgumentException, UncheckedSQLException, IllegalStateException, UnsupportedOperationException`
 - **Summary:** Performs batch upsert based on the specified unique properties with a custom batch size.
 - **Contract:**
-  - When both inserts and updates are needed (or either set is large), the operation is wrapped in a transaction (each of {@code batchInsert} and {@code batchUpdate} also runs in one for more than one entity).
+  - The lookups and the writes run in one transaction scope inside a transaction, as for {@link #upsert(Object, Condition)} , and, outside one, for more than one entity, as other DAO batch operations do (they used to run apart: the lookups before it, each on a connection of its own, and the writes in a transaction only when both inserts and updates were needed or either set was large); a single entity outside a transaction is upserted as by {@code upsert} .
   - If that transaction, or a transaction enclosing this call, rolls back, the IDs that {@code batchInsert} wrote onto the new entities are put back to their previous values.
   - Inside an active Spring-managed transaction that owns the data source's connection, the transaction participates in it (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} ): Spring commits the work, a failure marks the Spring transaction rollback-only, and the IDs are put back if Spring rolls it back (this needs Spring's transaction synchronization, which is enabled by default, and follows the innermost Spring-managed transaction on the thread, as for {@code insert} ).
   - a component of the primary key, when matching by id) matches no row and is inserted.
@@ -14928,7 +14939,7 @@ Provides comprehensive CRUD (Create, Read, Update, Delete) operations with unche
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entities} contains a {@code null} element, if {@code matchPropNames} is {@code null} /empty, if {@code batchSize} is not positive, or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class, or an existing row is updated and an entity has a property the loaded entity does not
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
-  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or an existing transaction on the current thread is no longer active and cannot accept the internally required transaction scope, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `java.lang.IllegalStateException` — if more than one existing record matches one entity's unique key, or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its own while no JPA transaction owning it can be identified (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
   - `java.lang.UnsupportedOperationException` — if an entity is inserted while {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled, its ID is not set and {@link #generateId()} has not been overridden; or if an existing row is updated and the loaded class is an immutable bean
 
 ### Interface UncheckedCrudJoinEntityHelper (com.landawn.abacus.jdbc.dao.UncheckedCrudJoinEntityHelper)
@@ -15096,7 +15107,7 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
   - `java.lang.IllegalArgumentException` — if {@code sql} is {@code null} or empty, or {@code stmtCreator} is {@code null}
   - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
 ##### upsert(...) -> T
-- **Signature:** `@Override default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
+- **Signature:** `@Override default T upsert(final T entity, final Collection<String> matchPropNames) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
 - **Contract:**
   - Executes an upsert operation: inserts the entity if no record matches the unique properties, otherwise updates the existing record.
@@ -15106,11 +15117,12 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty, or if any name in {@code matchPropNames} is not a readable property of the entity class, or an existing row is updated and {@code entity} has a property the loaded entity does not
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
+  - `java.lang.IllegalStateException` — if the call runs inside a Spring-managed transaction it cannot participate in (see {@link #upsert(Object, Condition)} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing the transaction scope (inside a transaction) fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified {@code matchPropNames}
   - `java.lang.UnsupportedOperationException` — if an existing row is updated and the loaded class is an immutable bean
 - **See also:** #upsert(Object, Condition)
-- **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
+- **Signature:** `@Override default T upsert(final T entity, final Condition cond) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException, DuplicateResultException, UnsupportedOperationException`
 - **Summary:** Executes an upsert operation: inserts the entity if no record matches the condition, otherwise updates the existing record.
 - **Contract:**
   - Executes an upsert operation: inserts the entity if no record matches the condition, otherwise updates the existing record.
@@ -15121,7 +15133,8 @@ Interface for an unchecked Data Access Object (DAO) that extends the base {@link
 - **Returns:** the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
 - **Throws:**
   - `java.lang.IllegalArgumentException` — if {@code entity} or {@code cond} is {@code null} , or an existing row is updated and {@code entity} has a property the loaded entity does not
-  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
+  - `java.lang.IllegalStateException` — if the call runs inside a Spring-managed transaction it cannot participate in (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)} )
+  - `com.landawn.abacus.exception.UncheckedSQLException` — if acquiring a connection fails, starting or completing the transaction scope (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
   - `com.landawn.abacus.exception.DuplicateResultException` — if more than one record matches the specified condition
   - `java.lang.UnsupportedOperationException` — if an existing row is updated and the loaded class is an immutable bean
 

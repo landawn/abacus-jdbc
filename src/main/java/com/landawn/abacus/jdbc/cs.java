@@ -556,14 +556,6 @@ public final class cs { // NOSONAR
      */
     public static final String dataset = "dataset";
     /**
-     * Parameter name for the action executed after a transaction is committed.
-     */
-    public static final String actionAfterCommit = "actionAfterCommit";
-    /**
-     * Parameter name for the action executed after a transaction is rolled back.
-     */
-    public static final String actionAfterRollback = "actionAfterRollback";
-    /**
      * Parameter name for the backing map of a map-based DAO cache.
      */
     public static final String cache = "cache";

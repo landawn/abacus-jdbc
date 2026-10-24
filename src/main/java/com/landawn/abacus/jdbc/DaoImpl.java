@@ -22,6 +22,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -43,10 +44,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicIntegerArray;
+import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
 
@@ -97,7 +103,6 @@ import com.landawn.abacus.parser.ParserFactory;
 import com.landawn.abacus.parser.ParserUtil;
 import com.landawn.abacus.parser.ParserUtil.BeanInfo;
 import com.landawn.abacus.parser.ParserUtil.PropInfo;
-import com.landawn.abacus.query.AbstractQueryBuilder;
 import com.landawn.abacus.query.AbstractQueryBuilder.SP;
 import com.landawn.abacus.query.Dsl;
 import com.landawn.abacus.query.Filters;
@@ -2847,6 +2852,508 @@ final class DaoImpl {
     }
 
     /**
+     * Returns whether {@code entity} already holds the single-property ID {@code id} returned for it: a driver that returns
+     * an explicit ID as the generated key (H2, PostgreSQL, Oracle) hands back the ID the entity was inserted with. Writing it
+     * back changed nothing, while inside a transaction the write first took a snapshot of the entity's ID, kept until the
+     * transaction ended (see {@link EnclosingIdSnapshot}). A composite ID may come back partial, and is always written.
+     *
+     * @param entity the inserted entity
+     * @param id the ID returned for it
+     * @param isOneId whether the entity has a single ID property
+     * @param idGetter reads the entity's ID
+     * @return {@code true} if writing {@code id} back would change nothing
+     */
+    private static boolean holdsReturnedId(final Object entity, final Object id, final boolean isOneId, final Function<Object, Object> idGetter) {
+        return isOneId && N.equals(idGetter.apply(entity), id);
+    }
+
+    /**
+     * Returns whether every entity already holds the ID returned for it, paired by position (see
+     * {@link #holdsReturnedId(Object, Object, boolean, Function)}). A batch of explicit IDs on such a driver took a snapshot
+     * of every entity's ID, kept until the transaction ended, to put back the values the entities held all along. Stops at
+     * the first entity that differs: one inserted without an ID, as usual, answers at once.
+     *
+     * @param entities the inserted entities
+     * @param ids the IDs returned for them, as many as there are entities
+     * @param isOneId whether the entities have a single ID property
+     * @param idGetter reads an entity's ID
+     * @return {@code true} if writing {@code ids} back would change nothing
+     */
+    private static boolean holdReturnedIds(final Collection<?> entities, final List<?> ids, final boolean isOneId, final Function<Object, Object> idGetter) {
+        if (!isOneId) {
+            return false;
+        }
+
+        int idx = 0;
+
+        for (final Object entity : entities) {
+            if (!holdsReturnedId(entity, ids.get(idx++), true, idGetter)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The rollback action that puts back the IDs an insert writes onto its entities if a transaction enclosing the insert rolls
+     * back later (see {@code JdbcUtil.registerEnclosingTransactionRollbackAction}). It is
+     * registered right before the insert first writes an ID, so that an insert that writes none (its entities carry their IDs,
+     * and the database returns no keys for them) takes no snapshot of its entities: one taken before every insert in a
+     * transaction cost a batch of a million entities a million weak references. The values written are recorded after each
+     * write, so that a rollback puts back only the IDs that still hold them: an ID the application has set since is kept.
+     */
+    private static final class EnclosingIdSnapshot {
+        private final javax.sql.DataSource dataSource;
+        private final Collection<?> entities;
+        private final List<String> idPropNameList;
+        private final BeanInfo entityInfo;
+        private RollbackActionLog.IdSnapshot snapshot;
+        private boolean registered;
+
+        EnclosingIdSnapshot(final javax.sql.DataSource dataSource, final Collection<?> entities, final List<String> idPropNameList, final BeanInfo entityInfo) {
+            this.dataSource = dataSource;
+            this.entities = entities;
+            this.idPropNameList = idPropNameList;
+            this.entityInfo = entityInfo;
+        }
+
+        /**
+         * Registers the snapshot with the enclosing transaction, if there is one, capturing the IDs before the first write;
+         * later calls do nothing.
+         */
+        void beforeWrite() {
+            if (!registered) {
+                registered = true;
+                snapshot = JdbcUtil.registerEnclosingTransactionRollbackAction(dataSource,
+                        () -> RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo));
+            }
+        }
+
+        /**
+         * Records the ID values just written.
+         */
+        void afterWrite() {
+            if (snapshot != null) {
+                snapshot.recordWrittenValues();
+            }
+        }
+
+        /**
+         * Records the ID values a failed write has left as the values written (those it has just put back, after a failed ID
+         * generation, or those a failed database-key setter left), so that a rollback of the enclosing transaction leaves an ID
+         * the application sets afterwards alone. WHY: with no write recorded (the ID generation or the ID setter failed before
+         * any was), such a rollback put back every captured ID, overwriting one the application had set since, e.g. to retry
+         * the insert. A failure to read the values is attached to {@code failure}.
+         *
+         * @param failure the failure of the write, being propagated
+         */
+        void afterFailedWrite(final Throwable failure) {
+            try {
+                afterWrite();
+            } catch (final RuntimeException | Error e) {
+                if (e != failure) {
+                    failure.addSuppressed(e);
+                }
+            }
+        }
+
+        /**
+         * Writes the keys the database generated onto the entities (see {@link #beforeWrite()} and {@link #afterWrite()}),
+         * recording the values a failing setter left as written too (see {@link #afterFailedWrite(Throwable)}). WHY: a key
+         * setter that failed after assigning (a custom setter, or the setter of a later entity of a batch, after those of the
+         * earlier ones) recorded no write, so a rollback put back every captured ID, also one the application had set since.
+         *
+         * @param writes the setter calls
+         */
+        void write(final Runnable writes) {
+            beforeWrite();
+
+            try {
+                writes.run();
+            } catch (final RuntimeException | Error e) {
+                afterFailedWrite(e);
+                throw e;
+            }
+
+            afterWrite();
+        }
+
+        /**
+         * As {@link #write(Runnable)}, for an insert that may have no snapshot.
+         *
+         * @param enclosingIds the snapshot, or {@code null} to only run {@code writes}
+         * @param writes the setter calls
+         */
+        static void write(final EnclosingIdSnapshot enclosingIds, final Runnable writes) {
+            if (enclosingIds == null) {
+                writes.run();
+            } else {
+                enclosingIds.write(writes);
+            }
+        }
+    }
+
+    /**
+     * Updates {@code cache} for a write through {@code proxy} once the transaction the write runs in has committed (see
+     * {@code JdbcUtil.runAfterCommit}): a write that joins a {@code JdbcUtil} transaction of its own updates it only then,
+     * another one right away too (see {@code invalidatesNow} in the cache wrapper). A built-in cache invalidates by table only: it is updated once per transaction and
+     * table, without the write's arguments and result. Each write used to register an update of its own, holding its
+     * arguments (a batch's entities) until the commit: a chunked import in one transaction kept every chunk in memory, and
+     * the commit scanned the cache once per chunk. Another cache is updated for each write, with its arguments and result.
+     *
+     * @param dataSource the DAO's data source
+     * @param proxy the DAO the write ran through
+     * @param cache the cache to update
+     * @param tableName the DAO's table
+     * @param cacheKey the write's cache key
+     * @param result the write's result
+     * @param args the write's arguments
+     * @param methodSignature the write's method signature
+     */
+    private static void runCacheUpdateAfterCommit(final javax.sql.DataSource dataSource, @SuppressWarnings("rawtypes") final DaoBase proxy,
+            final Jdbc.DaoCache cache, final String tableName, final String cacheKey, final Object result, final Object[] args,
+            final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+        if (cache instanceof Jdbc.DefaultDaoCache || cache instanceof Jdbc.DaoCacheByMap) {
+            // The key that names the table only, as for a write whose arguments can't be serialized. No result: the update
+            // stands for every write of the transaction on the table, so it invalidates the table whatever a single write changed
+            // (with a result of zero rows, a built-in cache skips the update of a built-in write).
+            final String tableKey = Strings.concat(JdbcUtil.CACHE_KEY_SEPARATOR, tableName, JdbcUtil.CACHE_KEY_SEPARATOR);
+
+            JdbcUtil.runAfterCommit(dataSource, new CacheUpdateKey(cache, tableName), () -> {
+                CacheGenerations.invalidating(tableName);
+                cache.update(tableKey, null, proxy, null, methodSignature);
+            });
+        } else {
+            JdbcUtil.runAfterCommit(dataSource, null, () -> {
+                CacheGenerations.invalidating(tableName);
+                cache.update(cacheKey, result, proxy, args, methodSignature);
+            });
+        }
+    }
+
+    /**
+     * Removes a result just stored in {@code cache} for {@code cacheKey} because an invalidation of its table ran while it
+     * was read (see {@link CacheGenerations}). A {@code DaoCache} removes no single entry: a built-in cache invalidates the
+     * table, another cache is updated as for a write with the read's key, which names the table.
+     */
+    private static void invalidateStoredResult(final Jdbc.DaoCache cache, final String tableName, final String cacheKey,
+            @SuppressWarnings("rawtypes") final DaoBase proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+        if (cache instanceof Jdbc.DefaultDaoCache || cache instanceof Jdbc.DaoCacheByMap) {
+            cache.update(Strings.concat(JdbcUtil.CACHE_KEY_SEPARATOR, tableName, JdbcUtil.CACHE_KEY_SEPARATOR), null, proxy, null, methodSignature);
+        } else {
+            cache.update(cacheKey, null, proxy, args, methodSignature);
+        }
+    }
+
+    /**
+     * The connection holders of the Spring-managed transactions that wrote a table and have not completed yet, by invalidation
+     * generation (see {@link CacheGenerations}, which shares one between the table names that hash to it): while one of them
+     * runs, the shared caches (a DAO's and an {@code openDaoCacheScope}'s) neither serve nor store results of the table read
+     * outside it. WHY: a write in a Spring-managed transaction invalidated the caches right away and again once the transaction
+     * had committed, as Spring's transaction synchronization reported it, which is that of the innermost transaction on the
+     * thread. A read outside the transaction in between stored the rows as they were before it, which the cache kept for good
+     * (with a cache by map) once the second invalidation was lost or ran too early: the write joined an enclosing transaction
+     * from inside another transaction manager's transaction, which then rolled back (or committed before the enclosing one), or
+     * the synchronization was disabled. The holder of a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}
+     * transaction tells when the transaction has completed, whatever synchronizations Spring runs (see
+     * {@code JdbcUtil.springResourceRecordingCompletion}): read on use, from any thread; a holder is forgotten once its
+     * transaction has completed, or once it has been garbage collected. A JPA transaction's holder tells nothing: the writes in
+     * one rely on the synchronization alone.
+     */
+    private static final class PendingCommits {
+        /** The index of the holders of the writes of every table (a DAO with an empty table name). */
+        private static final int ALL_TABLES = CacheGenerations.SLOTS;
+        /** The number of holders by index, a hint: a holder garbage collected is only noticed when the index is checked. */
+        private static final AtomicIntegerArray counts = new AtomicIntegerArray(ALL_TABLES + 1);
+        /** The holders by index, weakly referenced, each map guarded by itself; {@code null} until the first. */
+        private static final AtomicReferenceArray<Map<Object, Boolean>> holders = new AtomicReferenceArray<>(ALL_TABLES + 1);
+
+        private PendingCommits() {
+            // utility class
+        }
+
+        /**
+         * Records that the transaction whose connection holder is {@code holder} wrote {@code tableName}.
+         *
+         * @param tableName the table, or an empty name for every table
+         * @param holder the connection holder, from {@code JdbcUtil.springResourceRecordingCompletion}
+         */
+        static void add(final String tableName, final Object holder) {
+            final int index = Strings.isEmpty(tableName) ? ALL_TABLES : CacheGenerations.slotOf(tableName);
+            Map<Object, Boolean> map = holders.get(index);
+
+            if (map == null) {
+                holders.compareAndSet(index, null, new WeakHashMap<>());
+                map = holders.get(index);
+            }
+
+            synchronized (map) {
+                map.put(holder, Boolean.TRUE);
+                // Set before the write's invalidation bumps the generation: see the read path of the cache wrapper.
+                counts.set(index, map.size());
+            }
+        }
+
+        /**
+         * Returns whether a transaction that wrote a table of generation {@code slot} (or every table) still runs, forgetting
+         * those that have completed.
+         *
+         * @param slot the table's generation (see {@link CacheGenerations#slotOf(String)})
+         * @return {@code true} if one does
+         */
+        static boolean isPending(final int slot) {
+            return isPendingAt(ALL_TABLES) || isPendingAt(slot);
+        }
+
+        private static boolean isPendingAt(final int index) {
+            if (counts.get(index) == 0) {
+                return false;
+            }
+
+            final Map<Object, Boolean> map = holders.get(index);
+
+            synchronized (map) {
+                map.keySet().removeIf(JdbcUtil::hasSpringTransactionCompleted);
+                counts.set(index, map.size());
+
+                return !map.isEmpty();
+            }
+        }
+    }
+
+    /**
+     * The invalidation generations of the cached tables: every invalidation of a table's cached results bumps its generation
+     * first, and a read stores its result only while the generation it saw before reading is current. A fixed number of
+     * generations, each shared by the table names that hash to it ignoring case, across caches and data sources: an
+     * invalidation of another table sharing the generation only skips a store. A table name that is empty (a built-in cache
+     * then clears all its entries) bumps the generation of every table.
+     *
+     * <p>WHY ignoring case: the built-in caches invalidate the entries of a table ignoring the case of its name (see
+     * {@code Jdbc.DaoCacheByMap}), while the generations were keyed by the exact name, so a write through a DAO declaring the
+     * table in another letter case left the generation of a read through the first DAO unchanged, and the read stored the rows
+     * it had fetched before the write. WHY a fixed number: one generation per table name, kept for the JVM's life, grew without
+     * limit for DAOs created per table name (a table per tenant or per day).</p>
+     */
+    private static final class CacheGenerations {
+        private static final int SLOTS = 1024; // a power of two
+        private static final AtomicLongArray byTable = new AtomicLongArray(SLOTS);
+        private static final AtomicLong allTables = new AtomicLong();
+
+        private CacheGenerations() {
+            // utility class
+        }
+
+        /**
+         * Returns the generation of {@code tableName}: names that {@link String#equalsIgnoreCase(String)} takes for equal
+         * share one.
+         *
+         * @param tableName the table name, or {@code null}
+         * @return the index of its generation
+         */
+        static int slotOf(final String tableName) {
+            int h = 0;
+
+            if (tableName != null) {
+                for (int i = 0, len = tableName.length(); i < len;) {
+                    // The character equalsIgnoreCase compares: the lower case of its upper case. By code point, as it compares a
+                    // supplementary character (a surrogate pair): hashed by char, two such names it takes for equal (Deseret
+                    // capital and small letters) had different generations.
+                    final int codePoint = tableName.codePointAt(i);
+                    h = 31 * h + Character.toLowerCase(Character.toUpperCase(codePoint));
+                    i += Character.charCount(codePoint);
+                }
+            }
+
+            return (h ^ (h >>> 16)) & (SLOTS - 1);
+        }
+
+        static long current(final int slot) {
+            // Both only grow, so the sum changes whenever either does.
+            return byTable.get(slot) + allTables.get();
+        }
+
+        static void invalidating(final String tableName) {
+            if (Strings.isEmpty(tableName)) {
+                allTables.incrementAndGet();
+            } else {
+                byTable.incrementAndGet(slotOf(tableName));
+            }
+        }
+    }
+
+    /**
+     * Identifies the update of a built-in DAO cache for a table after a commit (see
+     * {@link #runCacheUpdateAfterCommit}): equal for the same cache instance and table.
+     */
+    private record CacheUpdateKey(Jdbc.DaoCache cache, String tableName) {
+        @Override
+        public boolean equals(final Object obj) {
+            // The cache's identity: two DaoCacheByMap records over equal maps are equal, yet distinct caches.
+            return obj instanceof final CacheUpdateKey other && other.cache == cache && Objects.equals(other.tableName, tableName);
+        }
+
+        @Override
+        public int hashCode() {
+            return System.identityHashCode(cache) * 31 + Objects.hashCode(tableName);
+        }
+    }
+
+    /**
+     * Returns whether {@code daoInterface} overrides {@code dataSource()} with a default method, whose data source its
+     * statements then run on.
+     *
+     * @param daoInterface the DAO interface
+     * @return {@code true} if its {@code dataSource()} is not abstract
+     */
+    private static boolean isDataSourceOverridden(final Class<?> daoInterface) {
+        try {
+            return !Modifier.isAbstract(daoInterface.getMethod("dataSource").getModifiers());
+        } catch (final NoSuchMethodException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Returns the annotation of type {@code annotationType} of {@code method}, or else that of the nearest method it overrides
+     * in a super-interface of its declaring interface that declares one (an override in between that declares none does not
+     * stop the search), as Spring finds {@code @Transactional}. Java does not inherit method
+     * annotations, so a default method overriding a {@code @Transactional} one lost its transaction, and one overriding a
+     * {@code @NonDBOperation} one (such as {@code dataSource()}) was processed as a database operation. A method of a generic
+     * super-interface is overridden when its parameter types, with the type arguments given along the way, erase to those of
+     * {@code method} (as {@code save(String)} overrides {@code save(T)} of {@code Base<T>} for {@code Base<String>}).
+     *
+     * @param <A> the annotation type
+     * @param method a method of the DAO interface
+     * @param annotationType {@code Transactional} or {@code NonDBOperation}
+     * @return the annotation, or {@code null} if neither declares one
+     */
+    private static <A extends Annotation> A findInheritedAnnotation(final Method method, final Class<A> annotationType) {
+        final A declared = Stream.of(method.getAnnotations()).select(annotationType).last().orElseNull();
+
+        if (declared != null || Modifier.isStatic(method.getModifiers())) {
+            return declared;
+        }
+
+        final Class<?>[] parameterTypes = method.getParameterTypes();
+        // Each super-interface with the type arguments of its type variables, nearest first.
+        final ArrayDeque<Tuple2<Class<?>, Map<TypeVariable<?>, Class<?>>>> types = new ArrayDeque<>();
+        final Set<Class<?>> visited = new HashSet<>();
+
+        addSuperInterfaces(method.getDeclaringClass(), Map.of(), types);
+
+        while (!types.isEmpty()) {
+            final Tuple2<Class<?>, Map<TypeVariable<?>, Class<?>>> next = types.poll();
+            final Class<?> type = next._1;
+
+            if (!visited.add(type)) {
+                continue;
+            }
+
+            for (final Method candidate : overridableMethodsByName.get(type).getOrDefault(method.getName(), List.of())) {
+                // WHY the type arguments: looked up by its erased parameter types, save(String) did not find the save(T) it
+                // overrides, whose erasure is save(Object); only the bridge method javac adds inherited the annotation.
+                if (overridesParameters(candidate, next._2, parameterTypes)) {
+                    final A inherited = Stream.of(candidate.getAnnotations()).select(annotationType).last().orElseNull();
+
+                    if (inherited != null) {
+                        return inherited;
+                    }
+                }
+            }
+
+            addSuperInterfaces(type, next._2, types);
+        }
+
+        return null;
+    }
+
+    /**
+     * The methods an interface declares that another one can override (neither private, static, bridge nor synthetic), by
+     * name, for {@link #findInheritedAnnotation(Method, Class)}: {@code getDeclaredMethods()} copies every method on each call, and is
+     * needed for each method of a DAO and each of its super-interfaces. A {@link ClassValue}: released with the interface.
+     */
+    private static final ClassValue<Map<String, List<Method>>> overridableMethodsByName = new ClassValue<>() {
+        @Override
+        protected Map<String, List<Method>> computeValue(final Class<?> type) {
+            final Map<String, List<Method>> methods = new HashMap<>();
+
+            for (final Method declared : type.getDeclaredMethods()) {
+                if (!declared.isBridge() && !declared.isSynthetic() && !Modifier.isPrivate(declared.getModifiers())
+                        && !Modifier.isStatic(declared.getModifiers())) {
+                    methods.computeIfAbsent(declared.getName(), k -> new ArrayList<>(1)).add(declared);
+                }
+            }
+
+            return methods;
+        }
+    };
+
+    /**
+     * Adds the super-interfaces of {@code type} to {@code types}, each with the erasures of the type arguments {@code type}
+     * gives its type variables, a type variable of {@code type} erased to its binding in {@code bindings}.
+     */
+    private static void addSuperInterfaces(final Class<?> type, final Map<TypeVariable<?>, Class<?>> bindings,
+            final ArrayDeque<Tuple2<Class<?>, Map<TypeVariable<?>, Class<?>>>> types) {
+        for (final Type superInterface : type.getGenericInterfaces()) {
+            if (superInterface instanceof final ParameterizedType parameterized && parameterized.getRawType() instanceof final Class<?> raw) {
+                final TypeVariable<?>[] variables = raw.getTypeParameters();
+                final Type[] arguments = parameterized.getActualTypeArguments();
+                final Map<TypeVariable<?>, Class<?>> superBindings = new HashMap<>();
+
+                for (int i = 0; i < variables.length && i < arguments.length; i++) {
+                    superBindings.put(variables[i], erasure(arguments[i], bindings));
+                }
+
+                types.add(Tuple.of(raw, superBindings));
+            } else if (superInterface instanceof final Class<?> raw) {
+                types.add(Tuple.of(raw, Map.of()));
+            }
+        }
+    }
+
+    /**
+     * Returns whether the parameter types of {@code candidate}, with {@code bindings} applied to the type variables of its
+     * declaring interface, erase to {@code parameterTypes}.
+     */
+    private static boolean overridesParameters(final Method candidate, final Map<TypeVariable<?>, Class<?>> bindings, final Class<?>[] parameterTypes) {
+        final Type[] candidateTypes = candidate.getGenericParameterTypes();
+
+        if (candidateTypes.length != parameterTypes.length) {
+            return false;
+        }
+
+        for (int i = 0; i < candidateTypes.length; i++) {
+            if (erasure(candidateTypes[i], bindings) != parameterTypes[i]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns the erasure of {@code type}, a type variable bound in {@code bindings} erased to its binding there, and another
+     * one to its first bound.
+     */
+    private static Class<?> erasure(final Type type, final Map<TypeVariable<?>, Class<?>> bindings) {
+        if (type instanceof final Class<?> cls) {
+            return cls;
+        } else if (type instanceof final ParameterizedType parameterized) {
+            return erasure(parameterized.getRawType(), bindings);
+        } else if (type instanceof final GenericArrayType array) {
+            return java.lang.reflect.Array.newInstance(erasure(array.getGenericComponentType(), bindings), 0).getClass();
+        } else if (type instanceof final TypeVariable<?> variable) {
+            final Class<?> bound = bindings.get(variable);
+            return bound != null ? bound : erasure(variable.getBounds()[0], bindings);
+        } else if (type instanceof final WildcardType wildcard) {
+            return erasure(wildcard.getUpperBounds()[0], bindings);
+        }
+
+        return Object.class;
+    }
+
+    /**
      * Returns the id extractor for the given DAO: the extractor declared on the DAO interface if present, otherwise
      * {@code defaultIdExtractor}. The resolved extractor is stored in {@code idExtractorHolder} so subsequent calls
      * reuse it.
@@ -3236,13 +3743,6 @@ final class DaoImpl {
     }
 
     /**
-     * Returns the first non-null element of a custom batch INSERT's rows, which decides whether the batch holds DAO entities
-     * when the declared element type does not (a wildcard, a type variable or a raw collection).
-     *
-     * @param batchParameters the rows; may be empty
-     * @return the first non-null row; {@code null} if there is none
-     */
-    /**
      * Returns the class a declared type stands for: the class itself, the raw class of a parameterized type, or the (single)
      * upper bound of a wildcard or type variable, resolved recursively; {@code null} if it has none (an unbounded or
      * multiply-bounded wildcard/type variable resolves to {@code Object} or {@code null}).
@@ -3268,6 +3768,13 @@ final class DaoImpl {
         return null;
     }
 
+    /**
+     * Returns the first non-null element of a custom batch INSERT's rows, which decides whether the batch holds DAO entities
+     * when the declared element type does not (a wildcard, a type variable or a raw collection).
+     *
+     * @param batchParameters the rows; may be empty
+     * @return the first non-null row; {@code null} if there is none
+     */
     private static Object firstNonNullElement(final Collection<?> batchParameters) {
         for (final Object element : batchParameters) {
             if (element != null) {
@@ -3646,6 +4153,12 @@ final class DaoImpl {
 
         @SuppressWarnings("UnnecessaryLocalVariable")
         final javax.sql.DataSource primaryDataSource = ds;
+        // The data source the DAO's statements run on, for the checks of the transaction they run in (the result caches kept
+        // out of it, the generated IDs it puts back): a DAO interface may override dataSource() with a default method, which
+        // the statements honour (they run on proxy.dataSource()); otherwise the DAO's own, without a call through the proxy.
+        // WHY: those checks used the DAO's own data source while the statements ran on the overriding one.
+        final Function<DaoBase, javax.sql.DataSource> workDataSourceOf = isDataSourceOverridden(daoInterface) ? DaoBase::dataSource
+                : proxy -> primaryDataSource;
         final SqlDialect.ProductInfo dbProductInfo = JdbcUtil.getDBProductInfo(ds);
 
         if (daoLogger.isDebugEnabled()) {
@@ -4191,7 +4704,9 @@ final class DaoImpl {
         };
 
         Stream.of(sqlMethods).parallel().filter(method -> Modifier.isPublic(method.getModifiers())).forEach(method -> {
-            final boolean isNonDBOperation = Stream.of(method.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(NonDBOperation.class));
+            // WHY inherited: a default override of dataSource() was processed as a database operation, so its type-level handlers
+            // ran for it, and a cache wrapper matching it recursed (its transaction checks call proxy.dataSource()).
+            final boolean isNonDBOperation = findInheritedAnnotation(method, NonDBOperation.class) != null;
 
             // Single, unified method-name filter rule shared by every type-level filter() element
             // (@Handler, @PerfLog, @SqlLogEnabled, @CacheResult, @RefreshCache): an entry matches when the
@@ -5951,8 +6466,8 @@ final class DaoImpl {
 
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             // Puts back the ID this call writes onto the entity if a transaction it runs in is rolled back later.
-                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
-                                    () -> RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo));
+                            final EnclosingIdSnapshot enclosingIds = new EnclosingIdSnapshot(workDataSourceOf.apply(proxy), List.of(entity), idPropNameList,
+                                    entityInfo);
 
                             ParsedSql namedInsertSql = null;
                             Runnable generatedIdRestorer = null;
@@ -5963,12 +6478,17 @@ final class DaoImpl {
 
                                     // An ID setter can fail after writing part of the ID (e.g. one property of a composite ID): no row was
                                     // inserted, so the ID values are put back (see restoreGeneratedIds), as the batch paths do.
+                                    enclosingIds.beforeWrite();
+
                                     try {
                                         idSetter.accept(DaoUtil.generateId(proxy), entity);
                                     } catch (final Throwable e) { //NOSONAR
                                         restoreGeneratedIds(generatedIdRestorer, e);
+                                        enclosingIds.afterFailedWrite(e);
                                         throw e;
                                     }
+
+                                    enclosingIds.afterWrite();
 
                                     namedInsertSql = namedInsertWithIdSQL;
                                 } else {
@@ -5991,7 +6511,9 @@ final class DaoImpl {
                             }
 
                             return generatedKey.map(ret -> {
-                                idSetter.accept(ret, entity);
+                                if (!holdsReturnedId(entity, ret, isOneId, idGetter)) {
+                                    enclosingIds.write(() -> idSetter.accept(ret, entity));
+                                }
 
                                 // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
                                 // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
@@ -6007,8 +6529,8 @@ final class DaoImpl {
 
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             // Puts back the ID this call writes onto the entity if a transaction it runs in is rolled back later.
-                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
-                                    () -> RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo));
+                            final EnclosingIdSnapshot enclosingIds = new EnclosingIdSnapshot(workDataSourceOf.apply(proxy), List.of(entity), idPropNameList,
+                                    entityInfo);
 
                             final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToInsert).build().query();
                             Runnable generatedIdRestorer = null;
@@ -6018,12 +6540,17 @@ final class DaoImpl {
 
                                 // An ID setter can fail after writing part of the ID (e.g. one property of a composite ID): no row was
                                 // inserted, so the ID values are put back (see restoreGeneratedIds), as the batch paths do.
+                                enclosingIds.beforeWrite();
+
                                 try {
                                     idSetter.accept(DaoUtil.generateId(proxy), entity);
                                 } catch (final Throwable e) { //NOSONAR
                                     restoreGeneratedIds(generatedIdRestorer, e);
+                                    enclosingIds.afterFailedWrite(e);
                                     throw e;
                                 }
+
+                                enclosingIds.afterWrite();
                             }
 
                             final Optional<Object> generatedKey;
@@ -6039,7 +6566,9 @@ final class DaoImpl {
                             }
 
                             return generatedKey.map(ret -> {
-                                idSetter.accept(ret, entity);
+                                if (!holdsReturnedId(entity, ret, isOneId, idGetter)) {
+                                    enclosingIds.write(() -> idSetter.accept(ret, entity));
+                                }
 
                                 // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
                                 // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
@@ -6055,8 +6584,8 @@ final class DaoImpl {
 
                             final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
                             // Puts back the ID this call writes onto the entity if a transaction it runs in is rolled back later.
-                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
-                                    () -> RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo));
+                            final EnclosingIdSnapshot enclosingIds = new EnclosingIdSnapshot(workDataSourceOf.apply(proxy), List.of(entity), idPropNameList,
+                                    entityInfo);
 
                             Runnable generatedIdRestorer = null;
 
@@ -6065,12 +6594,17 @@ final class DaoImpl {
 
                                 // An ID setter can fail after writing part of the ID (e.g. one property of a composite ID): no row was
                                 // inserted, so the ID values are put back (see restoreGeneratedIds), as the batch paths do.
+                                enclosingIds.beforeWrite();
+
                                 try {
                                     idSetter.accept(DaoUtil.generateId(proxy), entity);
                                 } catch (final Throwable e) { //NOSONAR
                                     restoreGeneratedIds(generatedIdRestorer, e);
+                                    enclosingIds.afterFailedWrite(e);
                                     throw e;
                                 }
+
+                                enclosingIds.afterWrite();
                             }
 
                             final Optional<Object> generatedKey;
@@ -6086,7 +6620,9 @@ final class DaoImpl {
                             }
 
                             return generatedKey.map(ret -> {
-                                idSetter.accept(ret, entity);
+                                if (!holdsReturnedId(entity, ret, isOneId, idGetter)) {
+                                    enclosingIds.write(() -> idSetter.accept(ret, entity));
+                                }
 
                                 // A composite id may come back partial (e.g. only the auto-increment column, possibly under a
                                 // driver label such as GENERATED_KEY); the setter merged it into the entity, so return the full id.
@@ -6106,10 +6642,10 @@ final class DaoImpl {
                                 return new ArrayList<>();
                             }
 
-                            // The elements are validated before the rollback action is registered: inside a transaction the registration
-                            // takes the ID snapshot at once, which failed with a NullPointerException on a null element that the ID getter
-                            // rejects with an IllegalArgumentException outside a transaction. The same pass finds whether every, and
-                            // whether any, entity has a default ID.
+                            // The elements are validated before any ID is written: inside a transaction the rollback action registered
+                            // right before the first write takes the ID snapshot of every entity, which failed with a NullPointerException
+                            // on a null element that the ID getter rejects with an IllegalArgumentException outside a transaction. The
+                            // same pass finds whether every, and whether any, entity has a default ID.
                             boolean allDefaultIdValue = true;
                             boolean anyDefaultIdValue = false;
 
@@ -6124,8 +6660,8 @@ final class DaoImpl {
                             }
 
                             // Puts back the IDs this call writes onto the entities if a transaction it runs in is rolled back later.
-                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
-                                    () -> RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo));
+                            final EnclosingIdSnapshot enclosingIds = new EnclosingIdSnapshot(workDataSourceOf.apply(proxy), entities, idPropNameList,
+                                    entityInfo);
 
                             // Puts back the IDs generated below if this call fails (see restoreGeneratedIds). The snapshot of every entity's
                             // ID is only taken when an ID will be generated: it was wasted on a batch whose entities all carry explicit IDs.
@@ -6134,6 +6670,10 @@ final class DaoImpl {
                                     : null;
 
                             if (callGenerateIdForInsert) {
+                                if (generatedIdRestorer != null) { // an entity has a default ID: one is written
+                                    enclosingIds.beforeWrite();
+                                }
+
                                 try {
                                     for (final Object entity : entities) {
                                         if (isDefaultIdTester.test(idGetter.apply(entity))) {
@@ -6142,8 +6682,11 @@ final class DaoImpl {
                                     }
                                 } catch (final Throwable e) { //NOSONAR
                                     restoreGeneratedIds(generatedIdRestorer, e);
+                                    enclosingIds.afterFailedWrite(e);
                                     throw e;
                                 }
+
+                                enclosingIds.afterWrite();
 
                                 allDefaultIdValue = false;
                             }
@@ -6217,8 +6760,12 @@ final class DaoImpl {
                                         JdbcUtil.rollbackAfterTransactionCommand(tran, failure);
                                     }
 
-                                    for (final Pair<Object, Object> idEntityPair : returnedIdEntityPairs) {
-                                        idSetter.accept(idEntityPair.left(), idEntityPair.right());
+                                    if (!returnedIdEntityPairs.isEmpty()) {
+                                        enclosingIds.write(() -> {
+                                            for (final Pair<Object, Object> idEntityPair : returnedIdEntityPairs) {
+                                                idSetter.accept(idEntityPair.left(), idEntityPair.right());
+                                            }
+                                        });
                                     }
 
                                     if (failureAfterCommit != null) {
@@ -6278,12 +6825,17 @@ final class DaoImpl {
                                 ids = new ArrayList<>();
                             }
 
-                            if (N.notEmpty(ids) && N.notEmpty(entities) && ids.size() == N.size(entities)) {
-                                int idx = 0;
+                            if (N.notEmpty(ids) && N.notEmpty(entities) && ids.size() == N.size(entities)
+                                    && !holdReturnedIds(entities, ids, isOneId, idGetter)) {
+                                final List<?> returnedIds = ids;
 
-                                for (final Object e : entities) {
-                                    idSetter.accept(ids.get(idx++), e);
-                                }
+                                enclosingIds.write(() -> {
+                                    int idx = 0;
+
+                                    for (final Object e : entities) {
+                                        idSetter.accept(returnedIds.get(idx++), e);
+                                    }
+                                });
                             }
 
                             if ((N.notEmpty(ids) && N.size(ids) != N.size(entities)) && daoLogger.isWarnEnabled()) {
@@ -6329,8 +6881,8 @@ final class DaoImpl {
                             }
 
                             // Puts back the IDs this call writes onto the entities if a transaction it runs in is rolled back later.
-                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
-                                    () -> RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo));
+                            final EnclosingIdSnapshot enclosingIds = new EnclosingIdSnapshot(workDataSourceOf.apply(proxy), entities, idPropNameList,
+                                    entityInfo);
 
                             final String namedInsertSql = namedInsertSqlBuilderFunc.apply(propNamesToInsert).build().query();
                             // Puts back the IDs generated below if this call fails (see restoreGeneratedIds); only taken when an ID will be generated.
@@ -6338,6 +6890,10 @@ final class DaoImpl {
                                     : null;
 
                             if (generatesIds) {
+                                if (generatedIdRestorer != null) { // an entity has a default ID: one is written
+                                    enclosingIds.beforeWrite();
+                                }
+
                                 try {
                                     for (final Object entity : entities) {
                                         if (isDefaultIdTester.test(idGetter.apply(entity))) {
@@ -6346,8 +6902,11 @@ final class DaoImpl {
                                     }
                                 } catch (final Throwable e) { //NOSONAR
                                     restoreGeneratedIds(generatedIdRestorer, e);
+                                    enclosingIds.afterFailedWrite(e);
                                     throw e;
                                 }
+
+                                enclosingIds.afterWrite();
                             }
                             List<Object> ids = null;
                             Throwable failureAfterCommit = null;
@@ -6397,12 +6956,17 @@ final class DaoImpl {
                                 ids = new ArrayList<>();
                             }
 
-                            if (N.notEmpty(ids) && N.notEmpty(entities) && ids.size() == N.size(entities)) {
-                                int idx = 0;
+                            if (N.notEmpty(ids) && N.notEmpty(entities) && ids.size() == N.size(entities)
+                                    && !holdReturnedIds(entities, ids, isOneId, idGetter)) {
+                                final List<?> returnedIds = ids;
 
-                                for (final Object e : entities) {
-                                    idSetter.accept(ids.get(idx++), e);
-                                }
+                                enclosingIds.write(() -> {
+                                    int idx = 0;
+
+                                    for (final Object e : entities) {
+                                        idSetter.accept(returnedIds.get(idx++), e);
+                                    }
+                                });
                             }
 
                             if ((N.notEmpty(ids) && N.size(ids) != N.size(entities)) && daoLogger.isWarnEnabled()) {
@@ -6447,14 +7011,18 @@ final class DaoImpl {
                             }
 
                             // Puts back the IDs this call writes onto the entities if a transaction it runs in is rolled back later.
-                            JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
-                                    () -> RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo));
+                            final EnclosingIdSnapshot enclosingIds = new EnclosingIdSnapshot(workDataSourceOf.apply(proxy), entities, idPropNameList,
+                                    entityInfo);
 
                             // Puts back the IDs generated below if this call fails (see restoreGeneratedIds); only taken when an ID will be generated.
                             final Runnable generatedIdRestorer = anyDefaultIdValue ? RollbackActionLog.captureIdValues(entities, idPropNameList, entityInfo)
                                     : null;
 
                             if (callGenerateIdForInsertWithSql) {
+                                if (generatedIdRestorer != null) { // an entity has a default ID: one is written
+                                    enclosingIds.beforeWrite();
+                                }
+
                                 try {
                                     for (final Object entity : entities) {
                                         if (isDefaultIdTester.test(idGetter.apply(entity))) {
@@ -6463,8 +7031,11 @@ final class DaoImpl {
                                     }
                                 } catch (final Throwable e) { //NOSONAR
                                     restoreGeneratedIds(generatedIdRestorer, e);
+                                    enclosingIds.afterFailedWrite(e);
                                     throw e;
                                 }
+
+                                enclosingIds.afterWrite();
                             }
 
                             List<Object> ids = null;
@@ -6520,12 +7091,17 @@ final class DaoImpl {
                                         entities.size());
                             }
 
-                            if (N.notEmpty(ids) && N.notEmpty(entities) && ids.size() == N.size(entities)) {
-                                int idx = 0;
+                            if (N.notEmpty(ids) && N.notEmpty(entities) && ids.size() == N.size(entities)
+                                    && !holdReturnedIds(entities, ids, isOneId, idGetter)) {
+                                final List<?> returnedIds = ids;
 
-                                for (final Object e : entities) {
-                                    idSetter.accept(ids.get(idx++), e);
-                                }
+                                enclosingIds.write(() -> {
+                                    int idx = 0;
+
+                                    for (final Object e : entities) {
+                                        idSetter.accept(returnedIds.get(idx++), e);
+                                    }
+                                });
                             }
 
                             // Return the entities' ids unless the keys are exactly the single-property ids just assigned: a composite
@@ -7364,11 +7940,12 @@ final class DaoImpl {
                     // op = update/largeUpdate is only honored for a statement that is not a SELECT. On a plain SELECT it was
                     // silently ignored and the method ran as a query, so an int return got the first column of the first row
                     // instead of an update count. Reject it like the other operation/return-type mismatches, but only for a
-                    // SELECT that is a plain read under every lexical reading: one that may write (a data-modifying CTE, a
-                    // data-change delta table, SELECT ... INTO) keeps running as before. SqlParser does not recognize a delta
-                    // table, so JdbcUtil's write scan is checked as well.
+                    // SELECT that is a plain read: one that may write (a data-modifying CTE, a data-change delta table, which
+                    // SqlParser does not accept as a read, or SELECT ... INTO) keeps running as before. WHY the INTO token:
+                    // SqlParser accepts MySQL's trailing form (SELECT a FROM t WHERE ... INTO @v) as a read, so such a method,
+                    // accepted before the removed SQL scanner, failed DAO creation (a leading SELECT ... INTO is not a read).
                     if (queryInfo.isSelect && (queryOperation == QueryOperation.update || queryOperation == QueryOperation.largeUpdate)
-                            && SqlParser.isSyntacticallyReadQuery(query) && !JdbcUtil.mayWriteUnderAnyDialect(query)) {
+                            && SqlParser.isSyntacticallyReadQuery(query) && SqlParser.indexOfToken(query, "INTO") < 0) {
                         throw new UnsupportedOperationException(
                                 "The SELECT statement of method: " + fullClassMethodName + " is not supported by the specified queryOperation: "
                                         + queryOperation + ". Remove 'op' or declare a query operation, e.g. QueryOperation.queryForSingle");
@@ -7972,18 +8549,17 @@ final class DaoImpl {
 
                                 final Jdbc.BiRowMapper<Object> keyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
 
-                                if (isEntity && !isNoId) {
-                                    // Puts back the ID written onto the entity below if a transaction this insert runs in is rolled back later.
-                                    JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
-                                            () -> RollbackActionLog.captureIdValues(List.of(entity), idPropNameList, entityInfo));
-                                }
+                                // Puts back the ID written onto the entity below if a transaction this insert runs in is rolled back later.
+                                final EnclosingIdSnapshot enclosingIds = isEntity && !isNoId
+                                        ? new EnclosingIdSnapshot(workDataSourceOf.apply(proxy), List.of(entity), idPropNameList, entityInfo)
+                                        : null;
 
                                 final Optional<Object> id = prepareQuery(proxy, queryInfo, mergedByIdAnno, returnType, args, fragmentParamIndexes,
                                         fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames, outParameterList, parametersSetter,
                                         isExistsQueryMethod, isSingleReturnTypeMethod, isListQueryMethod).insert(keyExtractor, isDefaultIdTester);
 
-                                if (isEntity && id.isPresent()) {
-                                    idSetter.accept(id.get(), entity);
+                                if (isEntity && id.isPresent() && !holdsReturnedId(entity, id.get(), isOneId, idGetter)) {
+                                    EnclosingIdSnapshot.write(enclosingIds, () -> idSetter.accept(id.get(), entity));
 
                                     if (!isOneId) {
                                         // A composite id may come back partial (see the built-in insert); return the entity's full id.
@@ -8042,11 +8618,12 @@ final class DaoImpl {
                                     for (final Object entity : batchParameters) {
                                         N.checkArgNotNull(entity, cs.entity);
                                     }
-
-                                    // Puts back the IDs written onto the entities below if a transaction this call runs in is rolled back later.
-                                    JdbcUtil.registerEnclosingTransactionRollbackAction(proxy.dataSource(),
-                                            () -> RollbackActionLog.captureIdValues(batchParameters, idPropNameList, entityInfo));
                                 }
+
+                                // Puts back the IDs written onto the entities below if a transaction this call runs in is rolled back later.
+                                final EnclosingIdSnapshot enclosingIds = writesIdsBack
+                                        ? new EnclosingIdSnapshot(workDataSourceOf.apply(proxy), batchParameters, idPropNameList, entityInfo)
+                                        : null;
 
                                 List<Object> ids = null;
                                 Throwable failureAfterCommit = null;
@@ -8129,12 +8706,17 @@ final class DaoImpl {
                                     @SuppressWarnings("UnnecessaryLocalVariable")
                                     final Collection<Object> entities = batchParameters;
 
-                                    if (N.notEmpty(ids) && N.notEmpty(entities) && ids.size() == N.size(entities)) {
-                                        int idx = 0;
+                                    if (N.notEmpty(ids) && N.notEmpty(entities) && ids.size() == N.size(entities)
+                                            && !holdReturnedIds(entities, ids, isOneId, idGetter)) {
+                                        final List<?> returnedIds = ids;
 
-                                        for (final Object e : entities) {
-                                            idSetter.accept(ids.get(idx++), e);
-                                        }
+                                        EnclosingIdSnapshot.write(enclosingIds, () -> {
+                                            int idx = 0;
+
+                                            for (final Object e : entities) {
+                                                idSetter.accept(returnedIds.get(idx++), e);
+                                            }
+                                        });
                                     }
 
                                     // Return the entities' ids unless the keys are exactly the single-property ids just assigned: a composite
@@ -8282,6 +8864,12 @@ final class DaoImpl {
             }
 
             if (isNonDBOperation) {
+                // Not executed as a DB operation, so a @Transactional on it had no effect: rejected instead of ignored. Only one it
+                // declares: one it would inherit from the method it overrides is ignored, as the override is not a DB operation.
+                if (Stream.of(method.getAnnotations()).anyMatch(anno -> anno.annotationType().equals(Transactional.class))) {
+                    throw new UnsupportedOperationException("@Transactional is not supported on a @NonDBOperation method: " + fullClassMethodName);
+                }
+
                 nonDBOperationSet.add(method);
 
                 if (daoLogger.isDebugEnabled()) {
@@ -8290,7 +8878,7 @@ final class DaoImpl {
 
                 // ignore
             } else {
-                final Transactional transactionalAnno = Stream.of(method.getAnnotations()).select(Transactional.class).last().orElseNull();
+                final Transactional transactionalAnno = findInheritedAnnotation(method, Transactional.class);
 
                 if (transactionalAnno != null && transactionalAnno.propagation() != Propagation.SUPPORTS
                         && transactionalAnno.propagation() != Propagation.MANDATORY
@@ -8807,13 +9395,50 @@ final class DaoImpl {
                             }
                             : uncachedCall;
 
+                    // Bumped by every invalidation of the table (see CacheGenerations): a read stores its result only if none ran meanwhile.
+                    final int tableGeneration = CacheGenerations.slotOf(tableName);
+
+                    // Whether a write in a transaction on the DAO's data source joins it: an abstract method (a built-in one or a
+                    // @Query) or a default method of this library's DAO interfaces (built-in overloads such as batchInsert(Collection),
+                    // which delegate to abstract ones), whose own propagation keeps it in the transaction. In a JdbcUtil transaction of
+                    // its own, its caches are then invalidated once the transaction has committed only (see invalidatesNow). WHY: until
+                    // the commit, such a write changes nothing other threads can read, and reads in the transaction bypass the caches,
+                    // so invalidating before the commit only scanned the cache once per write (a chunked import in one transaction:
+                    // once per chunk) and kept concurrent reads of committed rows from storing them. A default method of the
+                    // application's (which may commit on its own) and a write whose propagation leaves the transaction (REQUIRES_NEW,
+                    // NOT_SUPPORTED, NEVER) invalidate right away as well.
+                    final boolean writeJoinsTransaction = (Modifier.isAbstract(method.getModifiers())
+                            || Dao.class.getPackageName().equals(method.getDeclaringClass().getPackageName()))
+                            && (transactionalAnno == null || transactionalAnno.propagation() == Propagation.REQUIRED
+                                    || transactionalAnno.propagation() == Propagation.SUPPORTS || transactionalAnno.propagation() == Propagation.MANDATORY);
+
                     call = (proxy, args) -> {
-                        final boolean cacheResultEnabled = isAnnotatedCacheResult
+                        // The shared result cache is kept out of transactions on the DAO's data source: a result read in one can hold
+                        // uncommitted work, which other threads then read from the cache (also after a rollback discarded it), and a
+                        // cached result misses the transaction's own writes. Results used to be stored and served there too, and a
+                        // write in a transaction invalidated the cache only before the commit, so another thread could cache the old
+                        // rows again, which then outlived the commit.
+                        // So is the cache of an openDaoCacheScope: a result read in a transaction was served there after a rollback.
+                        final Jdbc.DaoCache localThreadCache = JdbcUtil.localThreadCache_TL.get();
+                        // Once per call: an overriding dataSource() is application code (see workDataSourceOf).
+                        final javax.sql.DataSource workDataSource = isAnnotatedCacheResult || isAnnotatedRefreshResult || localThreadCache != null
+                                ? workDataSourceOf.apply(proxy)
+                                : null;
+                        final boolean inTransaction = workDataSource != null && JdbcUtil.mayRunInTransaction(workDataSource);
+                        // Taken before the read, so that a result it fetched before an invalidation of the table is not stored after it;
+                        // and before the check of the pending commits below, so that one registered after that check is seen (a write
+                        // registers it before it invalidates).
+                        final long generationBeforeRead = CacheGenerations.current(tableGeneration);
+                        // Neither served nor stored while a Spring-managed transaction that wrote the table runs (see PendingCommits).
+                        final boolean commitPending = !inTransaction
+                                && (isAnnotatedCacheResult || isLocalThreadCacheableQueryMethod && localThreadCache != null)
+                                && PendingCommits.isPending(tableGeneration);
+                        final boolean cacheResultEnabled = isAnnotatedCacheResult && !inTransaction && !commitPending
                                 && (methodCacheResultAnno != null || !Boolean.TRUE.equals(suppressInheritedResultCaching_TL.get()));
                         // Read on use: a cache created by createDao is only set once the DAO has passed every validation.
                         final Jdbc.DaoCache daoCacheToUseInMethod = cacheResultEnabled || isAnnotatedRefreshResult ? daoCacheRef.get() : null;
-                        final Jdbc.DaoCache localThreadCache = JdbcUtil.localThreadCache_TL.get();
-                        final boolean isLocalThreadCacheEnabled = isLocalThreadCacheableQueryMethod && localThreadCache != null;
+                        final boolean isLocalThreadCacheEnabled = isLocalThreadCacheableQueryMethod && localThreadCache != null && !inTransaction
+                                && !commitPending;
                         final boolean isRefreshLocalThreadCacheRequired = isUpdateMethod && localThreadCache != null;
 
                         final String cacheKey = cacheResultEnabled || isAnnotatedRefreshResult || isLocalThreadCacheEnabled || isRefreshLocalThreadCacheRequired
@@ -8852,10 +9477,45 @@ final class DaoImpl {
                                                 JdbcUtil.CACHE_KEY_SEPARATOR);
 
                                 Throwable refreshFailure = null;
+                                // Only once the transaction has committed, for a write that joins it (see writeJoinsTransaction) in a
+                                // JdbcUtil transaction of its own, whose commit is observed exactly. WHY not in a Spring transaction:
+                                // Spring reports the completion of the innermost transaction on the thread only, so a write joining an
+                                // enclosing transaction from inside another transaction manager's transaction lost its invalidation
+                                // when that inner one rolled back, while the enclosing one committed the write (a cache by map then
+                                // served the old rows for good).
+                                final boolean joinsTransactionOfItsOwn = inTransaction && writeJoinsTransaction
+                                        && JdbcUtil.isInTransactionOfItsOwn(workDataSource);
+                                final boolean invalidatesNow = !joinsTransactionOfItsOwn;
+                                // A write joining a Spring-managed transaction whose connection holder records its completion keeps the
+                                // results of the table out of the caches until it has completed (see PendingCommits). Registered before
+                                // the invalidations below, so that a read the check of which overlooked it began before them.
+                                final Object pendingCommit = inTransaction && writeJoinsTransaction && !joinsTransactionOfItsOwn
+                                        ? JdbcUtil.springResourceRecordingCompletion(workDataSource)
+                                        : null;
+
+                                if (pendingCommit != null) {
+                                    PendingCommits.add(tableName, pendingCommit);
+                                }
+
+                                if (invalidatesNow) {
+                                    // Before the invalidations below, so that a read storing its result after them sees it (see CacheGenerations).
+                                    CacheGenerations.invalidating(tableName);
+                                }
 
                                 if (isRefreshLocalThreadCacheRequired) {
+                                    final Object invocationResult = result;
+
                                     try {
-                                        localThreadCache.update(refreshCacheKey, result, proxy, args, methodSignature);
+                                        if (invalidatesNow) {
+                                            localThreadCache.update(refreshCacheKey, invocationResult, proxy, args, methodSignature);
+                                        }
+
+                                        if (inTransaction) {
+                                            // Again once the transaction has committed, as for the DAO's cache below: a scope cache may be
+                                            // shared by several threads (openDaoCacheScope(cache)).
+                                            runCacheUpdateAfterCommit(workDataSource, proxy, localThreadCache, tableName, refreshCacheKey, invocationResult,
+                                                    args, methodSignature);
+                                        }
                                     } catch (final Throwable t) {
                                         if (t != invocationFailure) {
                                             refreshFailure = t;
@@ -8864,8 +9524,19 @@ final class DaoImpl {
                                 }
 
                                 if (isAnnotatedRefreshResult) {
+                                    final Object invocationResult = result;
+
                                     try {
-                                        daoCacheToUseInMethod.update(refreshCacheKey, result, proxy, args, methodSignature);
+                                        if (invalidatesNow) {
+                                            daoCacheToUseInMethod.update(refreshCacheKey, invocationResult, proxy, args, methodSignature);
+                                        }
+
+                                        if (inTransaction) {
+                                            // Again once the transaction has committed: another thread may have cached the rows as
+                                            // they were before it meanwhile.
+                                            runCacheUpdateAfterCommit(workDataSource, proxy, daoCacheToUseInMethod, tableName, refreshCacheKey,
+                                                    invocationResult, args, methodSignature);
+                                        }
                                     } catch (final Throwable t) {
                                         if (t == invocationFailure) {
                                             // The invocation failure is already being propagated. Do not attach it
@@ -8890,9 +9561,16 @@ final class DaoImpl {
                             result = temp.apply(proxy, args);
                         }
 
-                        if (Strings.isNotEmpty(cacheKey) && result != null) {
+                        // WHY the generation: a read that fetched its rows before a write committed, and stored them after the write's
+                        // invalidation, kept the old rows cached until they expired (as a write invalidating once after its commit
+                        // left them, too). Stored only if no invalidation of the table ran since the read began; and undone if one
+                        // ran between that check and the store (the invalidation bumps the generation before it removes entries).
+                        if (Strings.isNotEmpty(cacheKey) && result != null && CacheGenerations.current(tableGeneration) == generationBeforeRead) {
+                            Jdbc.DaoCache storedIn = null;
+
                             if (isLocalThreadCacheEnabled) {
                                 localThreadCache.put(cacheKey, cloneFunc.apply(result), proxy, args, methodSignature);
+                                storedIn = localThreadCache;
                             } else if (cacheResultEnabled) {
                                 // Map and object-array results are bounded too: they skipped minSize/maxSize, so maxSize did not
                                 // guard the memory of a large @MappedByKey map.
@@ -8900,7 +9578,12 @@ final class DaoImpl {
 
                                 if (resultSize < 0 || (resultSize >= cacheResultAnno.minSize() && resultSize <= cacheResultAnno.maxSize())) {
                                     daoCacheToUseInMethod.put(cacheKey, cloneFunc.apply(result), cacheLiveTime, cacheMaxIdleTime, proxy, args, methodSignature);
+                                    storedIn = daoCacheToUseInMethod;
                                 }
+                            }
+
+                            if (storedIn != null && CacheGenerations.current(tableGeneration) != generationBeforeRead) {
+                                invalidateStoredResult(storedIn, tableName, cacheKey, proxy, args, methodSignature);
                             }
                         }
 

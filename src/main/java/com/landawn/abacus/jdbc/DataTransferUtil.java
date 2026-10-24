@@ -55,7 +55,6 @@ import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.query.SqlDialect.ProductInfo;
 import com.landawn.abacus.type.Type;
 import com.landawn.abacus.util.BufferedCsvWriter;
-import com.landawn.abacus.util.ClassUtil;
 import com.landawn.abacus.util.CsvUtil;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.IOUtil;
@@ -271,17 +270,23 @@ public final class DataTransferUtil {
 
     /**
      * Whether Spring JDBC ({@code org.springframework.jdbc}) is present on the classpath, so that a connection may be a Spring
-     * {@code ConnectionProxy}; detected once during class initialization and cleared if a Spring type fails to link. Kept
-     * separate from {@code JdbcUtil}'s flag so that this class stays loadable without Spring on its own.
+     * {@code ConnectionProxy}: decided once, during class initialization, by loading that interface through this class's class
+     * loader (which resolves this class's references to it), and never changed afterwards. Kept separate from
+     * {@code JdbcUtil}'s flag so that this class stays loadable without Spring on its own.
      */
-    private static volatile boolean isInSpring = true;
+    private static final boolean isInSpring;
 
     static {
+        boolean springJdbcLoadable;
+
         try {
-            isInSpring = ClassUtil.forName("org.springframework.jdbc.datasource.ConnectionProxy") != null;
+            Class.forName("org.springframework.jdbc.datasource.ConnectionProxy", true, DataTransferUtil.class.getClassLoader());
+            springJdbcLoadable = true;
         } catch (final Exception | LinkageError e) {
-            isInSpring = false;
+            springJdbcLoadable = false;
         }
+
+        isInSpring = springJdbcLoadable;
     }
 
     /**
@@ -300,6 +305,7 @@ public final class DataTransferUtil {
      * @param sourceConn the connection the source statement is prepared on
      * @param targetConn the connection the target statement is prepared on
      * @return {@code true} if both statements run on one underlying connection
+     * @throws LinkageError if a Spring proxy fails with one to obtain its target connection (from its data source's driver)
      */
     static boolean isSameConnection(final Connection sourceConn, final Connection targetConn) {
         if (sourceConn == targetConn) {
@@ -310,13 +316,11 @@ public final class DataTransferUtil {
             return false;
         }
 
-        try {
-            return unwrapSpringConnectionProxy(sourceConn) == unwrapSpringConnectionProxy(targetConn);
-        } catch (final LinkageError e) {
-            isInSpring = false;
-
-            return false;
-        }
+        // A LinkageError propagates: ConnectionProxy has been loaded (isInSpring), so it comes from a proxy obtaining its target
+        // connection through its data source's driver. Caught, it turned the unwrapping off for the rest of the JVM's life and
+        // answered "different connections", which could let MySQL/MariaDB stream the source rows on the connection the inserts
+        // then use.
+        return unwrapSpringConnectionProxy(sourceConn) == unwrapSpringConnectionProxy(targetConn);
     }
 
     /**
@@ -331,8 +335,8 @@ public final class DataTransferUtil {
 
         // Binding the Spring interface here and calling it is verifier-safe: assignability to the same named type loads nothing,
         // so this class links without Spring. Only a member signature (field, parameter, return or throws type) may not name a
-        // Spring type - the constraint SpringAbsentRuntimeCompatibilityTest checks. The caller guards this with isInSpring and
-        // catches LinkageError for a type that cannot be resolved at run time.
+        // Spring type - the constraint SpringAbsentRuntimeCompatibilityTest checks. The caller guards this with isInSpring, set
+        // only once ConnectionProxy has been loaded.
         while (result instanceof final org.springframework.jdbc.datasource.ConnectionProxy proxy) {
             final Connection target;
 

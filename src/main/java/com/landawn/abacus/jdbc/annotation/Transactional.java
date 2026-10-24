@@ -42,7 +42,8 @@ import com.landawn.abacus.jdbc.Propagation;
  *       or error escapes. A transaction joined through {@code REQUIRED}, {@code SUPPORTS}, or
  *       {@code MANDATORY} remains governed by its outer owner; an exception or error escaping a
  *       {@code REQUIRED}/{@code MANDATORY} invocation that joined a {@code JdbcUtil} transaction
- *       marks that transaction rollback-only, so its outermost commit rolls it back, and one escaping
+ *       marks that transaction rollback-only, so its outermost commit rolls it back and throws
+ *       {@link com.landawn.abacus.jdbc.RollbackOnlyException}, and one escaping
  *       an invocation that joined a Spring-managed transaction marks the Spring transaction
  *       rollback-only, so Spring rolls it back (a commit attempt then fails with
  *       {@code UnexpectedRollbackException}).</li>
@@ -69,12 +70,19 @@ import com.landawn.abacus.jdbc.Propagation;
  * transactions.</p>
  * <p>Transaction handling surrounds method execution inside the cache interceptor. A result served
  * from a DAO or thread-local cache bypasses execution and therefore does not start, suspend, or
- * validate a transaction context. In particular, {@code MANDATORY}/{@code NEVER} checks do not run
+ * validate a transaction context (the caches are not read inside a transaction on the DAO's data source, so this
+ * concerns calls outside one). In particular, {@code MANDATORY}/{@code NEVER} checks do not run
  * on cache hits; avoid result caching when those checks must apply to every call.</p>
  *
  * <p>This annotation may only be placed on methods (not on the DAO type). To make every method
  * transactional, mix in a base interface or apply {@code @Transactional} to each method
- * explicitly.</p>
+ * explicitly. A method without the annotation (a {@code default} method, or an abstract re-declaration) that overrides an
+ * annotated method of a super-interface (also a generic one, such as {@code save(T)} of {@code Base<T>}) inherits the
+ * annotation of the nearest overridden method that declares one, as in Spring: an override in between that declares none
+ * does not stop the search. To run an override without the inherited transaction, declare
+ * {@code @Transactional(propagation = Propagation.SUPPORTS)} on it. DAO creation rejects the annotation declared on a {@code @NonDBOperation}
+ * method, where it would have no effect; one such a method would inherit is ignored, as it is not run as a DB
+ * operation.</p>
  *
  * <p><b>Lazy stream limitation:</b> {@link Propagation#REQUIRED},
  * {@link Propagation#REQUIRES_NEW}, {@link Propagation#NOT_SUPPORTED}, and
