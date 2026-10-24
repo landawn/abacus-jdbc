@@ -253,7 +253,8 @@ class SpringAbsentRuntimeCompatibilityTest {
          * a class literal would load the class.
          */
         private static final List<String> SPRING_ADAPTER_CLASSES = List.of("com.landawn.abacus.jdbc.SpringApplicationContext",
-                "com.landawn.abacus.jdbc.JdbcUtil$SpringRollbackActions", "com.landawn.abacus.jdbc.JdbcUtil$SpringConnectionHolderAccess");
+                "com.landawn.abacus.jdbc.SpringTransactionTracker", "com.landawn.abacus.jdbc.JdbcUtil$SpringRollbackActions",
+                "com.landawn.abacus.jdbc.JdbcUtil$SpringConnectionHolderAccess");
 
         public static void main(final String[] args) throws Exception {
             assertThrows(ClassNotFoundException.class, () -> Class.forName("org.springframework.jdbc.CannotGetJdbcConnectionException"));

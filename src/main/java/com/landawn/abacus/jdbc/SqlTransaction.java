@@ -278,6 +278,12 @@ import com.landawn.abacus.util.Throwables;
  * transaction manager's transaction begun in it) is not participated in: a transaction begun there is one of its own, on a
  * connection of its own (see {@link JdbcUtil#beginTransaction(javax.sql.DataSource)}). A participating scope left open into
  * those callbacks can neither commit nor roll back there (see {@link #commit()}), nor can a query prepared in it run.
+ * Register a {@link SpringTransactionTracker} with the transaction managers (first, before their other execution listeners,
+ * as {@code SpringTransactionTracker.register} does, and with every one on the data source, as its {@code Registrar}
+ * does) to have the transaction manager that owns the connection report when its transaction commits or rolls back: the
+ * completion of the transaction participated in is then recognized whatever synchronizations Spring runs meanwhile (in
+ * another transaction manager's transaction begun in it, or in a synchronization registered late in its completion
+ * callbacks), and also after the callbacks of a JPA transaction.
  * A connection Spring bound only for synchronization (a non-transactional scope such as {@code SUPPORTS}) is not a
  * Spring-managed transaction, and JTA transactions are not detected: the returned transaction then completes the connection
  * itself. So does a transaction that an operation begins of its own (a DAO batch operation of more than one element, or a
@@ -670,9 +676,13 @@ import com.landawn.abacus.util.Throwables;
  *         callbacks, where Spring still binds its connection: detected there through the synchronization this library
  *         registers with the synchronizations Spring runs when the scope begins (for a scope begun inside another
  *         transaction manager's transaction, begun in the one it participates in, while that inner transaction's callbacks
- *         run as well). Once the callbacks have run, detected for a {@code DataSourceTransactionManager} or
- *         {@code JdbcTransactionManager} transaction, whose connection holder records its completion: a completed JPA
- *         transaction can't be told from a suspended one, so such a commit returns normally.</td>
+ *         run as well; not in a synchronization registered after this library's end-of-completion marker, such as one
+ *         another synchronization registers in its {@code afterCommit} callback with the lowest precedence). Once the
+ *         callbacks have run, detected for a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}
+ *         transaction, whose connection holder records its completion: a completed JPA transaction can't be told from a
+ *         suspended one, so such a commit returns normally. With a {@link SpringTransactionTracker} registered with the
+ *         transaction manager, all of these are detected as the transaction manager reports them: from its
+ *         {@code beforeCommit}/{@code beforeRollback} on.</td>
  *   </tr>
  *   <tr>
  *     <td><b>28. Participating: complete the scope while Spring runs another transaction on the data source.</b>

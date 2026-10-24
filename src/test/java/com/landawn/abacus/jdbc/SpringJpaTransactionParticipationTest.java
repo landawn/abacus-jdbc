@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -432,6 +433,378 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         assertNotNull(item.getId());
     }
 
+    // External review (owner tracking): a JPA transaction's connection holder records nothing of its completion, so the commit
+    // of a participating scope left open past it returned normally, with COMMITTED, although JPA had decided the outcome of
+    // its work without it (a documented limit). With a SpringTransactionTracker registered with the JpaTransactionManager, the
+    // transaction manager reports the completion: the commit fails, FAILED_COMMIT.
+    @ParameterizedTest(name = "tracked={0}")
+    @ValueSource(booleans = { false, true })
+    void theCommitOfAScopeLeftOpenPastAJpaTransaction_failsWithATracker(final boolean tracked) throws SQLException {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+
+        if (tracked) {
+            jpa.transactionManager.addListener(new SpringTransactionTracker());
+        }
+
+        final SqlTransaction[] leftOpen = new SqlTransaction[1];
+
+        new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+            leftOpen[0] = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                JdbcUtil.executeUpdate(dataSource, "INSERT INTO jpa_item (name) VALUES ('a')");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+        });
+
+        assertTrue(jpa.entityTransaction.committed);
+        assertEquals(1, count());
+
+        if (tracked) {
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class, leftOpen[0]::commit);
+            assertTrue(thrown.getMessage().contains("has completed"), thrown.getMessage());
+            assertEquals(Transaction.Status.FAILED_COMMIT, leftOpen[0].status());
+        } else {
+            leftOpen[0].commit(); // the documented limit without a tracker
+            assertEquals(Transaction.Status.COMMITTED, leftOpen[0].status());
+        }
+    }
+
+    // External review (owner tracking): a write in a JPA transaction kept the DAO result caches out of its table only until
+    // Spring's synchronization reported the innermost transaction's commit, as the JPA transaction's connection holder records
+    // nothing: a read outside the transaction between the write and the commit stored its result (removed again here by the
+    // invalidation after the commit, but kept for good where that invalidation is lost). With a SpringTransactionTracker, the
+    // transaction manager tells when the transaction has completed: such a read stores nothing.
+    @ParameterizedTest(name = "tracked={0}")
+    @ValueSource(booleans = { false, true })
+    void aReadOutsideAJpaTransactionThatWroteTheTable_storesNothingWithATracker(final boolean tracked) throws SQLException {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+
+        if (tracked) {
+            jpa.transactionManager.addListener(new SpringTransactionTracker());
+        }
+
+        final AtomicInteger stores = new AtomicInteger();
+        final CachedItemDao dao = JdbcUtil.createDao(CachedItemDao.class, dataSource,
+                JdbcUtil.DaoCreationOptions.builder().cache(countingCache(stores)).build());
+
+        new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+            try {
+                dao.addItem("a");
+                assertEquals(0, (int) JdbcUtil.callOutsideTransaction(dataSource, () -> dao.cachedCount()), "the rows committed before");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+        });
+
+        assertEquals(tracked ? 0 : 1, stores.get(), "the read in between stored its result only without a tracker");
+        assertEquals(1, dao.cachedCount());
+    }
+
+    // External review: an execution listener registered before the tracker that throws from afterCommit keeps Spring from
+    // calling the tracker's, and a JPA transaction's connection holder can't tell the completion either: the transaction stayed
+    // pending, and the caches kept out of its table, for good. The synchronization the tracker registers when the transaction
+    // begins reports the completion, as Spring calls every synchronization's afterCompletion.
+    //
+    // External review: without synchronization, nothing else reports the completion of a JPA transaction (its holder tells
+    // nothing), so the tracker has to run before the failing listener: SpringTransactionTracker.register puts it first.
+    // Registered after it, the caches stayed out of the table until the holder had been garbage collected; the close of the
+    // entity manager tells the end of Spring's cleanup now, after which they serve and store its rows again.
+    @ParameterizedTest(name = "synchronization={0}, registeredFirst={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "true, false", "false, true", "false, false" })
+    void aListenerFailingBeforeTheTrackerOfAJpaTransaction_stillReleasesTheCaches(final boolean synchronization, final boolean registeredFirst)
+            throws SQLException {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+
+        if (!synchronization) {
+            jpa.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        jpa.transactionManager.addListener(new org.springframework.transaction.TransactionExecutionListener() {
+            @Override
+            public void afterCommit(final org.springframework.transaction.TransactionExecution transaction, final Throwable commitFailure) {
+                throw new IllegalStateException("listener failed");
+            }
+        });
+
+        if (registeredFirst) {
+            SpringTransactionTracker.register(jpa.transactionManager);
+        } else {
+            jpa.transactionManager.addListener(new SpringTransactionTracker());
+        }
+
+        // Kept reachable to the end: an owner whose holder has been garbage collected counts as completed.
+        final Object[] holder = new Object[1];
+
+        final AtomicInteger stores = new AtomicInteger();
+        final CachedItemDao dao = JdbcUtil.createDao(CachedItemDao.class, dataSource,
+                JdbcUtil.DaoCreationOptions.builder().cache(countingCache(stores)).build());
+
+        final IllegalStateException failure = assertThrows(IllegalStateException.class,
+                () -> new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+                    holder[0] = org.springframework.transaction.support.TransactionSynchronizationManager.getResource(dataSource);
+
+                    try {
+                        dao.addItem("a");
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                }));
+
+        assertEquals("listener failed", failure.getMessage());
+        assertTrue(jpa.entityTransaction.committed);
+        assertEquals(1, dao.cachedCount());
+        assertEquals(1, dao.cachedCount());
+
+        assertEquals(1, stores.get(), "cached again once the JPA transaction had committed, the holder still reachable");
+
+        assertNotNull(holder[0]);
+        java.lang.ref.Reference.reachabilityFence(holder);
+    }
+
+    // External review (tests): a tracked JPA transaction whose commit or rollback fails has an uncertain outcome (the
+    // transaction manager reports the failure, with STATUS_UNKNOWN to the synchronizations): the caches store nothing until
+    // Spring's cleanup. External review: its connection holder can't tell when the cleanup is done, so the caches stayed out of
+    // its table until the holder had been garbage collected, which a SqlTransaction of the transaction that the application
+    // keeps put off for good. The close of its entity manager, the last step of the cleanup, tells its end: the caches serve and
+    // store its rows again once it is done, with the holder and a completed scope of the transaction still reachable.
+    @ParameterizedTest(name = "rollback={0}, synchronization={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "false, false", "false, true", "true, false", "true, true" })
+    void aFailedCommitOrRollbackOfATrackedJpaTransaction_keepsTheCachesOutUntilSpringsCleanup(final boolean rollback, final boolean synchronization)
+            throws Exception {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+
+        if (!synchronization) {
+            jpa.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        final AtomicInteger stores = new AtomicInteger();
+        final CachedItemDao dao = JdbcUtil.createDao(CachedItemDao.class, dataSource,
+                JdbcUtil.DaoCreationOptions.builder().cache(countingCache(stores)).build());
+        final java.util.List<Throwable> reportedFailures = new java.util.ArrayList<>();
+        // After the tracker (registered first below): reads once the tracker has heard of the failure, before the cleanup.
+        jpa.transactionManager.addListener(new org.springframework.transaction.TransactionExecutionListener() {
+            @Override
+            public void afterCommit(final org.springframework.transaction.TransactionExecution transaction, final Throwable commitFailure) {
+                reportedFailures.add(commitFailure);
+                assertEquals(0, readOutside(dao));
+            }
+
+            @Override
+            public void afterRollback(final org.springframework.transaction.TransactionExecution transaction, final Throwable rollbackFailure) {
+                reportedFailures.add(rollbackFailure);
+                assertEquals(0, readOutside(dao));
+            }
+        });
+        SpringTransactionTracker.register(jpa.transactionManager);
+
+        final Object[] holder = new Object[1];
+        final SqlTransaction[] scope = new SqlTransaction[1];
+
+        if (rollback) {
+            jpa.entityTransaction.failsRollback = true;
+        } else {
+            jpa.entityTransaction.failsCommit = true;
+        }
+
+        try {
+            assertThrows(RuntimeException.class, () -> new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+                holder[0] = org.springframework.transaction.support.TransactionSynchronizationManager.getResource(dataSource);
+                scope[0] = JdbcUtil.beginTransaction(dataSource);
+
+                try {
+                    dao.addItem("a");
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                }
+
+                scope[0].commit(); // participating: leaves the commit to Spring
+
+                if (rollback) {
+                    status.setRollbackOnly();
+                }
+            }));
+
+            assertEquals(1, reportedFailures.size());
+            assertNotNull(reportedFailures.get(0), "the transaction manager reported a failure");
+            assertEquals(0, stores.get(), "the read during the completion stored nothing: the outcome is unknown");
+            assertTrue(!jpa.entityTransaction.committed && !jpa.entityTransaction.rolledBack, "the work was left pending");
+        } finally {
+            jpa.entityTransaction.failsCommit = false;
+            jpa.entityTransaction.failsRollback = false;
+
+            if (jpa.entityTransaction.isActive()) {
+                jpa.entityTransaction.rollback(); // a pending insert would keep its row locked
+            }
+        }
+
+        assertNotNull(holder[0]);
+        assertNotNull(scope[0]);
+        assertEquals(0, dao.cachedCount());
+        assertEquals(0, dao.cachedCount());
+        assertEquals(1, stores.get(), "cached again after Spring's cleanup, the holder and the scope still reachable");
+        java.lang.ref.Reference.reachabilityFence(holder);
+        java.lang.ref.Reference.reachabilityFence(scope);
+    }
+
+    // External review: a JPA dialect's connection release in Spring's cleanup may settle the connection, committing the work a
+    // failed commit or rollback left pending on it (this one restores auto-commit). The caches took the start of the cleanup
+    // (the transaction status's completion) for its end: a read on another thread during the release stored the rows as they
+    // were before the work, which the release then committed, and the cache kept serving them. The close of the entity
+    // manager, the cleanup's last step, tells the end: the read during the release stores nothing, and the committed rows are
+    // read afterwards.
+    @ParameterizedTest(name = "rollback={0}, synchronization={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "false, false", "false, true", "true, false", "true, true" })
+    void aReadDuringTheConnectionReleaseOfAFailedJpaTransaction_storesNothing(final boolean rollback, final boolean synchronization) throws Exception {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+
+        if (!synchronization) {
+            jpa.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        SpringTransactionTracker.register(jpa.transactionManager);
+
+        final AtomicInteger stores = new AtomicInteger();
+        final CachedItemDao dao = JdbcUtil.createDao(CachedItemDao.class, dataSource,
+                JdbcUtil.DaoCreationOptions.builder().cache(countingCache(stores)).build());
+        final java.util.List<Integer> readsDuringRelease = new java.util.ArrayList<>();
+        jpa.onRelease = () -> {
+            readsDuringRelease.add(onAnotherThread(dao::cachedCount));
+
+            try {
+                jpa.connection.setAutoCommit(true); // settles the connection: commits the pending work
+            } catch (final SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        };
+
+        if (rollback) {
+            jpa.entityTransaction.failsRollback = true;
+        } else {
+            jpa.entityTransaction.failsCommit = true;
+        }
+
+        try {
+            assertThrows(RuntimeException.class, () -> new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+                try {
+                    dao.addItem("a");
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                }
+
+                if (rollback) {
+                    status.setRollbackOnly();
+                }
+            }));
+        } finally {
+            jpa.entityTransaction.failsCommit = false;
+            jpa.entityTransaction.failsRollback = false;
+        }
+
+        assertEquals(java.util.List.of(0), readsDuringRelease, "the read during the release saw the rows committed before");
+        assertEquals(0, stores.get(), "and stored nothing: the cleanup had begun, not finished");
+        assertEquals(1, dao.cachedCount(), "the release committed the work: the committed rows are read");
+        assertEquals(1, dao.cachedCount());
+        assertEquals(1, stores.get());
+    }
+
+    // External review (tests): a JpaTransactionManager transaction gets the entity manager's cleanup check: the tracker
+    // reaches the entity manager through the transaction manager's private transaction object, and the cleanup's close of it
+    // tells the end.
+    @Test
+    void aJpaTransactionManagerTransaction_getsTheEntityManagerCleanup() throws SQLException {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+        final java.util.List<SpringTransactionOwners.Cleanup> cleanups = new java.util.ArrayList<>();
+        jpa.transactionManager.addListener(new org.springframework.transaction.TransactionExecutionListener() {
+            @Override
+            public void afterBegin(final org.springframework.transaction.TransactionExecution transaction, final Throwable beginFailure) {
+                cleanups.add(SpringTransactionTracker.cleanupOf(transaction, TransactionSynchronizationManager.getResource(dataSource)));
+            }
+        });
+
+        new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> assertFalse(cleanups.get(0).isFinished()));
+
+        assertEquals(1, cleanups.size());
+        assertTrue(cleanups.get(0) instanceof SpringTransactionTracker.EntityManagerCleanup, String.valueOf(cleanups.get(0)));
+        assertTrue(cleanups.get(0).isFinished(), "its entity manager was closed by the cleanup");
+    }
+
+    // External review (tests): an entity manager bound before the transaction (as OpenEntityManagerInViewFilter and
+    // OpenEntityManagerInViewInterceptor bind one for a request) is not closed by Spring's cleanup. After a failed commit, the
+    // caches stay out of the transaction's table until it is closed, at the end of the request.
+    @ParameterizedTest(name = "synchronization={0}")
+    @ValueSource(booleans = { false, true })
+    void aFailedCommitOnAnEntityManagerBoundBeforeTheTransaction_keepsTheCachesOutUntilItIsClosed(final boolean synchronization) throws Exception {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+
+        if (!synchronization) {
+            jpa.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        SpringTransactionTracker.register(jpa.transactionManager);
+
+        final AtomicInteger stores = new AtomicInteger();
+        final CachedItemDao dao = JdbcUtil.createDao(CachedItemDao.class, dataSource,
+                JdbcUtil.DaoCreationOptions.builder().cache(countingCache(stores)).build());
+        final EntityManagerFactory entityManagerFactory = jpa.transactionManager.getEntityManagerFactory();
+        final EntityManager entityManager = entityManagerFactory.createEntityManager();
+        TransactionSynchronizationManager.bindResource(entityManagerFactory, new EntityManagerHolder(entityManager));
+
+        try {
+            jpa.entityTransaction.failsCommit = true;
+
+            try {
+                assertThrows(org.springframework.transaction.TransactionSystemException.class,
+                        () -> new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+                            try {
+                                dao.addItem("a");
+                            } catch (final SQLException e) {
+                                throw new IllegalArgumentException(e);
+                            }
+                        }));
+            } finally {
+                jpa.entityTransaction.failsCommit = false;
+
+                if (jpa.entityTransaction.isActive()) {
+                    jpa.entityTransaction.rollback(); // a pending insert would keep its row locked
+                }
+            }
+
+            assertTrue(entityManager.isOpen(), "not closed by Spring's cleanup");
+            assertEquals(0, dao.cachedCount());
+            assertEquals(0, dao.cachedCount());
+            assertEquals(0, stores.get(), "kept out while the entity manager is open");
+        } finally {
+            TransactionSynchronizationManager.unbindResource(entityManagerFactory);
+        }
+
+        entityManager.close(); // the end of the request
+        assertEquals(0, dao.cachedCount());
+        assertEquals(0, dao.cachedCount());
+        assertEquals(1, stores.get(), "cached again once the entity manager had been closed");
+    }
+
+    private static int onAnotherThread(final java.util.concurrent.Callable<Integer> read) {
+        final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+
+        try {
+            return executor.submit(read).get(10, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (final Exception e) {
+            throw new IllegalStateException(e);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    private int readOutside(final CachedItemDao dao) {
+        try {
+            return JdbcUtil.callOutsideTransaction(dataSource, () -> dao.cachedCount());
+        } catch (final SQLException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     @Test
     void commitInProgrammaticJpaTransaction_isCommittedByJpa() throws SQLException {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
@@ -605,9 +978,45 @@ class SpringJpaTransactionParticipationTest extends TestBase {
      * A JpaTransactionManager over a mocked entity manager whose resource-local transaction runs on one H2 connection, which
      * a JPA dialect exposes as the transaction's JDBC connection, as HibernateJpaDialect does.
      */
+    /** A cache by map that counts the results stored in it. */
+    private static Jdbc.DaoCache countingCache(final AtomicInteger stores) {
+        final Jdbc.DaoCache map = Jdbc.DaoCache.createByMap();
+
+        return new Jdbc.DaoCache() {
+            @Override
+            public Object get(final String key, final Object daoProxy, final Object[] args,
+                    final com.landawn.abacus.util.Tuple.Tuple3<java.lang.reflect.Method, com.landawn.abacus.util.ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                return map.get(key, daoProxy, args, methodSignature);
+            }
+
+            @Override
+            public boolean put(final String key, final Object result, final Object daoProxy, final Object[] args,
+                    final com.landawn.abacus.util.Tuple.Tuple3<java.lang.reflect.Method, com.landawn.abacus.util.ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                stores.incrementAndGet();
+                return map.put(key, result, daoProxy, args, methodSignature);
+            }
+
+            @Override
+            public boolean put(final String key, final Object result, final long liveTime, final long maxIdleTime, final Object daoProxy, final Object[] args,
+                    final com.landawn.abacus.util.Tuple.Tuple3<java.lang.reflect.Method, com.landawn.abacus.util.ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                stores.incrementAndGet();
+                return map.put(key, result, liveTime, maxIdleTime, daoProxy, args, methodSignature);
+            }
+
+            @Override
+            public void update(final String key, final Object result, final Object daoProxy, final Object[] args,
+                    final com.landawn.abacus.util.Tuple.Tuple3<java.lang.reflect.Method, com.landawn.abacus.util.ImmutableList<Class<?>>, Class<?>> methodSignature) {
+                map.update(key, result, daoProxy, args, methodSignature);
+            }
+        };
+    }
+
     private static final class JpaTransaction {
+        final Connection connection;
         final H2EntityTransaction entityTransaction;
         final JpaTransactionManager transactionManager;
+        /** Runs when the JPA dialect releases the JDBC connection in Spring's cleanup. */
+        volatile Runnable onRelease;
 
         /**
          * @param factoryReportsDataSource whether the entity manager factory reports its data source, as the factories built by
@@ -616,20 +1025,33 @@ class SpringJpaTransactionParticipationTest extends TestBase {
          *        Spring's Hibernate and EclipseLink dialects do
          */
         JpaTransaction(final DataSource dataSource, final boolean factoryReportsDataSource, final boolean handleKeepsEntityManager) throws SQLException {
-            final Connection connection = dataSource.getConnection();
+            connection = dataSource.getConnection();
             entityTransaction = new H2EntityTransaction(connection);
 
             final EntityManager entityManager = mock(EntityManager.class);
             when(entityManager.getTransaction()).thenReturn(entityTransaction);
+            // Open from its creation until it is closed, as JpaTransactionManager does at the end of its cleanup.
+            final java.util.concurrent.atomic.AtomicBoolean open = new java.util.concurrent.atomic.AtomicBoolean();
+            when(entityManager.isOpen()).thenAnswer(invocation -> open.get());
+            org.mockito.Mockito.doAnswer(invocation -> {
+                open.set(false);
+                return null;
+            }).when(entityManager).close();
             final EntityManagerFactory nativeEntityManagerFactory = mock(EntityManagerFactory.class);
-            when(nativeEntityManagerFactory.createEntityManager()).thenReturn(entityManager);
+            when(nativeEntityManagerFactory.createEntityManager()).thenAnswer(invocation -> {
+                open.set(true);
+                return entityManager;
+            });
             final EntityManagerFactory entityManagerFactory;
 
             if (factoryReportsDataSource) {
                 entityManagerFactory = mock(EntityManagerFactory.class, org.mockito.Mockito.withSettings().extraInterfaces(EntityManagerFactoryInfo.class));
                 when(((EntityManagerFactoryInfo) entityManagerFactory).getDataSource()).thenReturn(dataSource);
                 when(((EntityManagerFactoryInfo) entityManagerFactory).getNativeEntityManagerFactory()).thenReturn(nativeEntityManagerFactory);
-                when(((EntityManagerFactoryInfo) entityManagerFactory).createNativeEntityManager(org.mockito.ArgumentMatchers.any())).thenReturn(entityManager);
+                when(((EntityManagerFactoryInfo) entityManagerFactory).createNativeEntityManager(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> {
+                    open.set(true);
+                    return entityManager;
+                });
             } else {
                 entityManagerFactory = nativeEntityManagerFactory;
             }
@@ -640,6 +1062,15 @@ class SpringJpaTransactionParticipationTest extends TestBase {
                 @Override
                 public ConnectionHandle getJdbcConnection(final EntityManager em, final boolean readOnly) {
                     return handleKeepsEntityManager ? new EntityManagerConnectionHandle(em, connection) : () -> connection;
+                }
+
+                @Override
+                public void releaseJdbcConnection(final ConnectionHandle conHandle, final EntityManager em) {
+                    final Runnable hook = onRelease;
+
+                    if (hook != null) {
+                        hook.run();
+                    }
                 }
             });
         }
@@ -671,6 +1102,10 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         boolean rolledBack;
         /** Whether {@link #setRollbackOnly()} fails, as a provider may. */
         boolean refusesRollbackOnly;
+        /** Whether {@link #commit()} fails without committing, leaving the work pending on the connection. */
+        boolean failsCommit;
+        /** Whether {@link #rollback()} fails without rolling back, leaving the work pending on the connection. */
+        boolean failsRollback;
 
         H2EntityTransaction(final Connection connection) {
             this.connection = connection;
@@ -690,6 +1125,10 @@ class SpringJpaTransactionParticipationTest extends TestBase {
                 throw new jakarta.persistence.RollbackException("Transaction marked rollback-only");
             }
 
+            if (failsCommit) {
+                throw new jakarta.persistence.RollbackException("Simulated commit failure");
+            }
+
             run(connection::commit);
             committed = true;
             end();
@@ -697,6 +1136,10 @@ class SpringJpaTransactionParticipationTest extends TestBase {
 
         @Override
         public void rollback() {
+            if (failsRollback) {
+                throw new jakarta.persistence.PersistenceException("Simulated rollback failure");
+            }
+
             run(connection::rollback);
             rolledBack = true;
             end();
@@ -834,6 +1277,16 @@ class SpringJpaTransactionParticipationTest extends TestBase {
     }
 
     public interface ItemDao extends CrudDao<Item, Long, ItemDao> {
+    }
+
+    public interface CachedItemDao extends com.landawn.abacus.jdbc.dao.NonUpdateCrudDao<Item, Long, CachedItemDao> {
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true)
+        @com.landawn.abacus.jdbc.annotation.Query("SELECT COUNT(*) FROM jpa_item")
+        int cachedCount() throws SQLException;
+
+        @com.landawn.abacus.jdbc.annotation.RefreshCache
+        @com.landawn.abacus.jdbc.annotation.Query("INSERT INTO jpa_item (name) VALUES (:name)")
+        void addItem(@com.landawn.abacus.jdbc.annotation.Bind("name") String name) throws SQLException;
     }
 
     @Table("jpa_item")

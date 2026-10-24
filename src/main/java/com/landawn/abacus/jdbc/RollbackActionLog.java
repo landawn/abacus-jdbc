@@ -351,6 +351,12 @@ final class RollbackActionLog {
          */
         private Object[][] writtenValues;
 
+        /**
+         * Marks, in {@link #writtenValues}, an entity whose ID values could not be read when they were recorded: {@link #run()}
+         * leaves it alone, as it can't tell whether the application has set another ID since.
+         */
+        private static final Object[] UNKNOWN = {};
+
         IdSnapshot(final Collection<?> entities, final List<String> idPropNameList, final BeanInfo entityInfo) {
             idPropInfos = new PropInfo[idPropNameList.size()];
 
@@ -395,10 +401,18 @@ final class RollbackActionLog {
 
         /**
          * Records the current ID values of the entities as those the insert wrote: {@link #run()} then leaves an entity alone
-         * whose ID values have changed since (the application set another ID after the insert).
+         * whose ID values have changed since (the application set another ID after the insert). Each entity is recorded on its
+         * own: one whose ID values can't be read is recorded as unknown, and left alone by {@link #run()} as well. WHY: the
+         * first getter that failed left nothing recorded, so a rollback put back the captured IDs of every entity, overwriting
+         * those the application had set since.
+         *
+         * @throws RuntimeException the first failure to read an entity's ID values (later ones attached to it), once every
+         *         entity has been recorded
+         * @throws Error the first such {@code Error}, likewise
          */
         void recordWrittenValues() {
             final Object[][] written = new Object[entityRefs.length][];
+            Throwable firstFailure = null;
 
             for (int i = 0; i < entityRefs.length; i++) {
                 final Object entity = entityRefs[i].get();
@@ -406,29 +420,46 @@ final class RollbackActionLog {
                 if (entity != null) {
                     final Object[] values = new Object[idPropInfos.length];
 
-                    for (int j = 0; j < values.length; j++) {
-                        values[j] = idPropInfos[j].getPropValue(entity);
-                    }
+                    try {
+                        for (int j = 0; j < values.length; j++) {
+                            values[j] = idPropInfos[j].getPropValue(entity);
+                        }
 
-                    written[i] = values;
+                        written[i] = values;
+                    } catch (final RuntimeException | Error e) {
+                        written[i] = UNKNOWN;
+
+                        if (firstFailure == null) {
+                            firstFailure = e;
+                        } else if (firstFailure != e) {
+                            firstFailure.addSuppressed(e);
+                        }
+                    }
                 }
             }
 
             writtenValues = written;
+
+            if (firstFailure instanceof final Error error) {
+                throw error;
+            } else if (firstFailure != null) {
+                throw (RuntimeException) firstFailure;
+            }
         }
 
         /**
          * Puts back every captured ID value that has changed since the capture. An unchanged value is not written, so an
          * immutable entity whose ID was not changed does not fail. Once the written values are recorded, an entity whose ID
          * values no longer equal them is left alone: the application has set another ID since, which putting back the captured
-         * one overwrote.
+         * one overwrote; so is one whose written values could not be read (see {@link #recordWrittenValues()}).
          */
         @Override
         public void run() {
             for (int i = 0; i < entityRefs.length; i++) {
                 final Object entity = entityRefs[i].get();
 
-                if (entity == null || (writtenValues != null && writtenValues[i] != null && !holdsValues(entity, writtenValues[i]))) {
+                if (entity == null
+                        || (writtenValues != null && writtenValues[i] != null && (writtenValues[i] == UNKNOWN || !holdsValues(entity, writtenValues[i])))) {
                     continue;
                 }
 

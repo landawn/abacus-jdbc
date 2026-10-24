@@ -51,7 +51,17 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * table runs, results of that table read outside it are neither served from these caches nor stored in them, as long as the
  * transaction's connection holder records its completion ({@code DataSourceTransactionManager},
  * {@code JdbcTransactionManager}), whatever transaction's synchronizations Spring runs meanwhile: the rows a read between
- * the write and the commit fetched are as they were before the write. For a JPA transaction, whose holder records nothing,
+ * the write and the commit fetched are as they were before the write. Register a
+ * {@link com.landawn.abacus.jdbc.SpringTransactionTracker} with the transaction managers (first, and with every one on the
+ * data source: see its registration requirements) to have the transaction manager report the completion instead, for any
+ * transaction manager whose transaction exposes its JDBC connection holder (JPA ones included), published so that every
+ * thread sees it. A transaction whose commit or rollback failed keeps them out until Spring's cleanup after it has
+ * finished, as the cleanup may still commit the work the failure left pending on the connection: a
+ * {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction until its connection holder is
+ * cleared (the cleanup's last step, after restoring auto-commit), a JPA transaction until its entity manager is closed (the
+ * cleanup's last step, after the dialect's connection release; an entity manager bound before the transaction, as for
+ * open-in-view, until it is closed), and another kind of transaction, whose end can't be told, until its connection
+ * holder has been garbage collected. For a JPA transaction without one, whose holder records nothing,
  * the commit is observed through Spring's transaction synchronization of the innermost Spring transaction on the thread
  * only: with synchronization disabled, the second invalidation runs right away too, and for a write to the data source of
  * an enclosing transaction while another transaction manager's transaction runs inside it, at that inner transaction's

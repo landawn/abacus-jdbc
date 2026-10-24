@@ -12861,6 +12861,69 @@ A bridge class that provides access to Spring's ApplicationContext for bean retr
   - `org.springframework.beans.BeansException` — if the initialized context cannot create or retrieve the bean.
 - **See also:** ApplicationContext#getBean(String, Class)
 
+### Class SpringTransactionTracker (com.landawn.abacus.jdbc.SpringTransactionTracker)
+Tells this library, from a Spring transaction manager, when each transaction it runs is committed or rolled back, so that the library follows the transaction that actually owns a data source's connection.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- `public SpringTransactionTracker()` — Creates a tracker.
+
+#### Public Static Methods
+##### register(...) -> void
+- **Signature:** `public static void register(final ConfigurableTransactionManager... transactionManagers) throws IllegalArgumentException`
+- **Summary:** Registers a tracker with each of {@code transactionManagers} , before their other execution listeners (see the registration requirements above), replacing any tracker registered with them before.
+- **Parameters:**
+  - `transactionManagers` (`ConfigurableTransactionManager[]`) — the transaction managers, such as {@code DataSourceTransactionManager} , {@code JdbcTransactionManager} or {@code JpaTransactionManager}
+- **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code transactionManagers} or one of them is {@code null}
+
+#### Public Instance Methods
+##### afterBegin(...) -> void
+- **Signature:** `@Override public void afterBegin(final TransactionExecution transaction, final Throwable beginFailure)`
+- **Parameters:**
+  - `transaction` (`TransactionExecution`)
+  - `beginFailure` (`Throwable`)
+##### beforeCommit(...) -> void
+- **Signature:** `@Override public void beforeCommit(final TransactionExecution transaction)`
+- **Parameters:**
+  - `transaction` (`TransactionExecution`)
+##### afterCommit(...) -> void
+- **Signature:** `@Override public void afterCommit(final TransactionExecution transaction, final Throwable commitFailure)`
+- **Parameters:**
+  - `transaction` (`TransactionExecution`)
+  - `commitFailure` (`Throwable`)
+##### beforeRollback(...) -> void
+- **Signature:** `@Override public void beforeRollback(final TransactionExecution transaction)`
+- **Parameters:**
+  - `transaction` (`TransactionExecution`)
+##### afterRollback(...) -> void
+- **Signature:** `@Override public void afterRollback(final TransactionExecution transaction, final Throwable rollbackFailure)`
+- **Parameters:**
+  - `transaction` (`TransactionExecution`)
+  - `rollbackFailure` (`Throwable`)
+
+### Class Registrar (com.landawn.abacus.jdbc.SpringTransactionTracker.Registrar)
+Registers a tracker, first, with every transaction manager of the Spring application context it is a bean of (see {@link SpringTransactionTracker#register(ConfigurableTransactionManager...)} ): every bean that is a {@code ConfigurableTransactionManager} , once it is initialized.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- `public Registrar()` — Creates a registrar.
+
+#### Public Static Methods
+- (none)
+
+#### Public Instance Methods
+##### postProcessAfterInitialization(...) -> Object
+- **Signature:** `@Override public Object postProcessAfterInitialization(final Object bean, final String beanName)`
+- **Parameters:**
+  - `bean` (`Object`)
+  - `beanName` (`String`)
+- **Returns:** unspecified
+
 ### Class SqlTransaction (com.landawn.abacus.jdbc.SqlTransaction)
 Default {@link Transaction} implementation backed by a JDBC {@link Connection} .
 

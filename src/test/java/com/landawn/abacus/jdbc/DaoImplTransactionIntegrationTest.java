@@ -1090,6 +1090,103 @@ class DaoImplTransactionIntegrationTest extends TestBase {
         assertEquals(0, count(keeper, "SELECT COUNT(*) FROM generated_record"));
     }
 
+    // External review (tests): a composite key the database generated, written in part when a setter fails (the setter of the
+    // second part throws before assigning it): the part written counts as written, so a rollback puts the key back unless the
+    // application has set it since.
+    @Test
+    void aCompositeKeyWrittenInPartWhenItsSetterFails_isPutBackUnlessSetSince() throws SQLException {
+        try (Statement statement = keeper.createStatement()) {
+            statement.execute("CREATE TABLE IF NOT EXISTS partial_key_record (tenant_id BIGINT DEFAULT 7, row_id BIGINT AUTO_INCREMENT, name VARCHAR(10),"
+                    + " PRIMARY KEY (tenant_id, row_id))");
+            statement.executeUpdate("DELETE FROM partial_key_record");
+        }
+
+        final PartialKeyDao dao = JdbcUtil.createDao(PartialKeyDao.class, dataSource);
+
+        for (final boolean reassigned : new boolean[] { false, true }) {
+            final PartialKeyRecord record = new PartialKeyRecord();
+            record.setName("p");
+            final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+            try {
+                PartialKeyRecord.FAIL_ROW_ID.set(true);
+                assertThrows(IllegalStateException.class, () -> dao.insert(record));
+                assertEquals(7L, record.tenantId, "the first part was written");
+                assertNull(record.rowId, "the second was not");
+
+                if (reassigned) {
+                    record.tenantId = 1L;
+                    record.rowId = 2L;
+                }
+            } finally {
+                PartialKeyRecord.FAIL_ROW_ID.set(false);
+                tran.rollbackIfNotCommitted();
+            }
+
+            assertEquals(reassigned ? Long.valueOf(1L) : null, record.tenantId, "reassigned=" + reassigned);
+            assertEquals(reassigned ? Long.valueOf(2L) : null, record.rowId, "reassigned=" + reassigned);
+        }
+
+        assertEquals(0, count(keeper, "SELECT COUNT(*) FROM partial_key_record"));
+    }
+
+    // External review (tests): a failure to read the values a failed setter left (its getter throws) is attached to the setter's
+    // failure as suppressed, which propagates. External review: the first failure left no value recorded at all, so a rollback
+    // put back the captured IDs of every entity, also those the application had set since (90 -> null; [90, 91] ->
+    // [null, null]). Each entity is recorded on its own now: one whose ID can't be read is recorded as unknown and left alone
+    // (it keeps the ID the insert assigned, as the rollback can't tell whether the application has set another one since), the
+    // others as before. External review (tests): with several unreadable entities, the later failures are attached to the
+    // first one, as suppressed.
+    @ParameterizedTest(name = "entities={0}, unreadable={1}, reassigned={2}")
+    @org.junit.jupiter.params.provider.CsvSource({ "1, 1, false", "1, 1, true", "2, 1, false", "2, 1, true", "3, 2, false", "3, 2, true" })
+    void aFailureToRecordTheValuesAFailedSetterLeft_isSuppressedAndLeavesTheUnreadableEntitiesAlone(final int entities, final int unreadable,
+            final boolean reassigned) throws SQLException {
+        final FailingSetterDao dao = JdbcUtil.createDao(FailingSetterDao.class, dataSource);
+        final List<FailingSetterRecord> records = new java.util.ArrayList<>();
+
+        for (int i = 0; i < entities; i++) {
+            records.add(FailingSetterRecord.named("r" + i));
+        }
+
+        final Long[] keys = new Long[entities];
+        final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
+
+        try {
+            FailingSetterRecord.FAIL_AT.set(entities - 1); // the setter of the last entity fails, after assigning its key
+            // then the next ID reads fail: those of the first entities
+            FailingSetterRecord.GETTER_FAILURES_AFTER_SETTER.set(unreadable);
+
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                    () -> insertFailingSetterRecords(dao, entities == 1 ? "insert" : "batchInsert", records));
+            assertEquals("the ID setter failed after assigning the ID", thrown.getMessage(), "the setter's failure propagates");
+            assertEquals(1, thrown.getSuppressed().length);
+            final Throwable firstGetterFailure = thrown.getSuppressed()[0];
+            assertEquals("the ID getter failed", firstGetterFailure.getMessage());
+            assertEquals(unreadable - 1, firstGetterFailure.getSuppressed().length, "the later getter failures are attached to the first");
+
+            for (final Throwable later : firstGetterFailure.getSuppressed()) {
+                assertEquals("the ID getter failed", later.getMessage());
+            }
+
+            for (int i = 0; i < entities; i++) {
+                keys[i] = records.get(i).id;
+                assertNotNull(keys[i]);
+
+                if (reassigned) {
+                    records.get(i).id = 90L + i;
+                }
+            }
+        } finally {
+            FailingSetterRecord.resetFailures();
+            tran.rollbackIfNotCommitted();
+        }
+
+        for (int i = 0; i < entities; i++) {
+            final Long expected = reassigned ? Long.valueOf(90L + i) : i < unreadable ? keys[i] : null;
+            assertEquals(expected, records.get(i).id, "entity " + i + (i < unreadable ? " (unknown: left alone)" : " (recorded)"));
+        }
+    }
+
     private static Stream<Arguments> failingSetterInserts() {
         return Stream.of(Arguments.of("insert", 1), Arguments.of("batchInsert", 2), Arguments.of("@Query insert", 1), Arguments.of("@Query batch insert", 2));
     }
@@ -1577,6 +1674,9 @@ class DaoImplTransactionIntegrationTest extends TestBase {
     public static class FailingSetterRecord {
         /** The number of non-null IDs set before the setter fails; negative: it does not fail. */
         static final AtomicInteger FAIL_AT = new AtomicInteger(-1);
+        /** How many reads of the ID fail, one after the other, right after a failed setter. */
+        static final AtomicInteger GETTER_FAILURES_AFTER_SETTER = new AtomicInteger();
+        private static final AtomicInteger getterFailures = new AtomicInteger();
 
         @Id
         Long id;
@@ -1589,6 +1689,10 @@ class DaoImplTransactionIntegrationTest extends TestBase {
         }
 
         public Long getId() {
+            if (getterFailures.get() > 0 && getterFailures.getAndDecrement() > 0) {
+                throw new IllegalStateException("the ID getter failed");
+            }
+
             return id;
         }
 
@@ -1596,8 +1700,80 @@ class DaoImplTransactionIntegrationTest extends TestBase {
             this.id = id;
 
             if (id != null && FAIL_AT.get() >= 0 && FAIL_AT.getAndDecrement() == 0) {
+                getterFailures.set(GETTER_FAILURES_AFTER_SETTER.get());
                 throw new IllegalStateException("the ID setter failed after assigning the ID");
             }
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+
+        static void resetFailures() {
+            FAIL_AT.set(-1);
+            GETTER_FAILURES_AFTER_SETTER.set(0);
+            getterFailures.set(0);
+        }
+    }
+
+    interface PartialKeyDao extends CrudDao<PartialKeyRecord, PartialKeyId, PartialKeyDao> {
+    }
+
+    public static class PartialKeyId {
+        private Long tenantId;
+        private Long rowId;
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public Long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final Long rowId) {
+            this.rowId = rowId;
+        }
+    }
+
+    /** A composite key the database generates, read and written through methods: the setter of its second part fails once armed. */
+    @Table("partial_key_record")
+    @com.landawn.abacus.annotation.AccessFieldByMethod
+    public static class PartialKeyRecord {
+        static final AtomicBoolean FAIL_ROW_ID = new AtomicBoolean();
+
+        @Id
+        Long tenantId;
+        @Id
+        Long rowId;
+        private String name;
+
+        public Long getTenantId() {
+            return tenantId;
+        }
+
+        public void setTenantId(final Long tenantId) {
+            this.tenantId = tenantId;
+        }
+
+        public Long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final Long rowId) {
+            if (rowId != null && FAIL_ROW_ID.getAndSet(false)) {
+                throw new IllegalStateException("the setter of the second part failed");
+            }
+
+            this.rowId = rowId;
         }
 
         public String getName() {

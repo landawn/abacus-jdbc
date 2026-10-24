@@ -1347,11 +1347,14 @@ class SpringTransactionParticipationTest extends TestBase {
     // begun in it has none of this library's: its afterCommit callbacks are not recognized as its completion, a transaction
     // begun there joins it, and Spring's cleanup commits that work although it was rolled back. No Spring API reaches the
     // suspended synchronizations of the enclosing transaction. Pinned, so that a change is noticed (and the docs updated).
-    @Test
-    void aTransactionUsedOnlyInsideAnotherManagersTransaction_isNotRecognizedAsCompletingInItsAfterCommitCallbacks() {
+    // External review (owner tracking): with a SpringTransactionTracker registered with the transaction manager, the owner reports
+    // its completion itself, so a transaction begun there is one of its own, which rolls back.
+    @ParameterizedTest(name = "tracked={0}")
+    @ValueSource(booleans = { false, true })
+    void aTransactionUsedOnlyInsideAnotherManagersTransaction_isNotRecognizedAsCompletingInItsAfterCommitCallbacks(final boolean tracked) {
         final Boolean[] participated = new Boolean[1];
 
-        transactionTemplate().executeWithoutResult(outer -> {
+        template(tracked).executeWithoutResult(outer -> {
             new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
                 final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA); // participates in the outer transaction
 
@@ -1382,8 +1385,438 @@ class SpringTransactionParticipationTest extends TestBase {
             });
         });
 
-        assertEquals(Boolean.TRUE, participated[0], "the limit: it joined the committed transaction");
-        assertEquals(List.of("outer work", "callback"), itemNames(), "and Spring's cleanup committed the work it rolled back");
+        if (tracked) {
+            assertEquals(Boolean.FALSE, participated[0], "a transaction of its own");
+            assertEquals(List.of("outer work"), itemNames(), "which rolled back");
+        } else {
+            assertEquals(Boolean.TRUE, participated[0], "the limit: it joined the committed transaction");
+            assertEquals(List.of("outer work", "callback"), itemNames(), "and Spring's cleanup committed the work it rolled back");
+        }
+    }
+
+    // External review: this library's end-of-completion marker runs after the synchronizations registered before it, not after
+    // one that another synchronization registers in its afterCommit callback with the same (lowest) precedence: in such a late
+    // callback, a query prepared in a participating scope ran, on the connection of a transaction that had committed, and so
+    // would a commit of such a scope. With a SpringTransactionTracker, the transaction manager reports that its outcome is
+    // being decided, whatever callbacks run; without one, this remains a documented limit.
+    @ParameterizedTest(name = "tracked={0}")
+    @ValueSource(booleans = { false, true })
+    void aSynchronizationRegisteredLateInTheCompletionCallbacks_seesTheCompletionWithATracker(final boolean tracked) throws SQLException {
+        final PreparedQuery[] query = new PreparedQuery[1];
+        final SqlTransaction[] leftOpen = new SqlTransaction[1];
+        final RuntimeException[] failures = new RuntimeException[2];
+
+        template(tracked).executeWithoutResult(status -> {
+            final SqlTransaction committed = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                query[0] = JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").closeAfterExecution(false);
+                committed.commit();
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            } finally {
+                committed.rollbackIfNotCommitted();
+            }
+
+            leftOpen[0] = JdbcUtil.beginTransaction(dataSourceA);
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    // Registered now, with the lowest precedence, as this library's marker: it runs after the marker.
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCompletion(final int completionStatus) {
+                            failures[0] = thrownBy(() -> {
+                                try {
+                                    query[0].queryForInt();
+                                } catch (final SQLException e) {
+                                    throw new UncheckedSQLException(e);
+                                }
+                            });
+                            failures[1] = thrownBy(leftOpen[0]::commit);
+                        }
+                    });
+                }
+            });
+        });
+
+        try {
+            if (tracked) {
+                assertTrue(failures[0] instanceof IllegalStateException, String.valueOf(failures[0]));
+                assertTrue(failures[1] instanceof IllegalStateException, String.valueOf(failures[1]));
+                assertEquals(Transaction.Status.FAILED_COMMIT, leftOpen[0].status());
+            } else {
+                assertNull(failures[0], "the documented limit without a tracker: the query ran");
+                assertNull(failures[1], "and the scope committed");
+                assertEquals(Transaction.Status.COMMITTED, leftOpen[0].status());
+            }
+        } finally {
+            query[0].close();
+        }
+    }
+
+    // External review (tests): a synchronization whose afterCommit callback fails makes the commit throw, after the transaction
+    // committed: the transaction manager still reports the completion to the tracker, so a query prepared in the transaction
+    // is refused, and a scope left open past it can't commit.
+    @Test
+    void aFailingCompletionCallback_stillEndsATrackedTransaction() throws SQLException {
+        final PreparedQuery[] query = new PreparedQuery[1];
+        final SqlTransaction[] leftOpen = new SqlTransaction[1];
+
+        final IllegalStateException callbackFailure = assertThrows(IllegalStateException.class, () -> template(true).executeWithoutResult(status -> {
+            leftOpen[0] = JdbcUtil.beginTransaction(dataSourceA);
+
+            try {
+                insertItem(dataSourceA, "committed");
+                query[0] = JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").closeAfterExecution(false);
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    throw new IllegalStateException("afterCommit failed");
+                }
+            });
+        }));
+
+        try {
+            assertEquals("afterCommit failed", callbackFailure.getMessage());
+            assertEquals(List.of("committed"), itemNames());
+            assertThrows(IllegalStateException.class, () -> query[0].queryForInt());
+            assertThrows(IllegalStateException.class, leftOpen[0]::commit);
+            assertEquals(Transaction.Status.FAILED_COMMIT, leftOpen[0].status());
+        } finally {
+            query[0].close();
+        }
+    }
+
+    // External review: a connection holder bound to the data source before a transaction (as DataSourceUtils binds one for
+    // synchronization) is reused by each transaction on it. The owner a tracked transaction left on it, kept until the holder
+    // is collected, was taken for the owner of a later transaction of a transaction manager without a tracker on the same
+    // holder: that transaction was taken for completed, so a scope begun in it ran a transaction of its own, whose work
+    // survived the rollback. An owner whose transaction's cleanup has begun while its holder is transaction-active again, and a
+    // Spring transaction is active on the thread, belongs to an older transaction: it is forgotten. (A later tracked
+    // transaction replaces it.) A later transaction without synchronization sets no thread state, so it can't be told from
+    // the tracked transaction's cleanup: with a transaction manager without a tracker, the documented limit remains.
+    @ParameterizedTest(name = "laterTracked={0}, laterSynchronization={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "false, true", "true, true", "true, false", "false, false" })
+    void anOwnerLeftOnAReusedHolder_isIgnoredByALaterTransactionOnIt(final boolean laterTracked, final boolean laterSynchronization) throws SQLException {
+        final DataSourceTransactionManager first = new DataSourceTransactionManager(dataSourceA);
+        SpringTransactionTracker.register(first);
+        final DataSourceTransactionManager later = new DataSourceTransactionManager(dataSourceA);
+
+        if (laterTracked) {
+            SpringTransactionTracker.register(later);
+        }
+
+        if (!laterSynchronization) {
+            later.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        try (Connection connection = dataSourceA.getConnection()) {
+            TransactionSynchronizationManager.bindResource(dataSourceA, new ConnectionHolder(connection));
+
+            try {
+                new TransactionTemplate(first).executeWithoutResult(status -> insertInScope("first"));
+                new TransactionTemplate(later).executeWithoutResult(status -> {
+                    insertInScope("later");
+                    status.setRollbackOnly();
+                });
+            } finally {
+                TransactionSynchronizationManager.unbindResource(dataSourceA);
+            }
+        }
+
+        if (laterTracked || laterSynchronization) {
+            assertEquals(List.of("first"), itemNames(), "the later transaction's work rolled back with it");
+        } else {
+            assertEquals(List.of("first", "later"), itemNames(), "the documented limit: the later transaction was taken for completed");
+        }
+    }
+
+    // External review: Spring's cleanup runs application code while the transaction's status is completed and its holder is
+    // still transaction-active (DataSourceTransactionManager restores auto-commit and resets the connection, so the hooks of a
+    // connection wrapper or a pool run; it clears the holder as its last step). The reuse check took that for a newer
+    // transaction and forgot the owner: a scope begun from such a hook joined the connection, which the cleanup then committed,
+    // although the scope rolled back. The thread's transaction state, which Spring clears as the cleanup's first step, tells
+    // the cleanup apart: the scope runs a transaction of its own, as after the completion.
+    @Test
+    void aScopeBegunFromAConnectionHookInsideTheCleanup_doesNotJoinTheCompletedTransaction() throws SQLException {
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
+        SpringTransactionTracker.register(transactionManager);
+        final java.util.concurrent.atomic.AtomicBoolean armed = new java.util.concurrent.atomic.AtomicBoolean();
+        final RuntimeException[] hookFailure = new RuntimeException[1];
+
+        try (Connection target = dataSourceA.getConnection()) {
+            final Connection wrapper = (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(), new Class<?>[] { Connection.class },
+                    (proxy, method, args) -> {
+                        // The cleanup restoring auto-commit: a hook runs library code before the call goes through.
+                        if ("setAutoCommit".equals(method.getName()) && Boolean.TRUE.equals(args[0]) && armed.getAndSet(false)) {
+                            hookFailure[0] = thrownBy(() -> insertInScopeAndRollBack("hook"));
+                        }
+
+                        return invokeOn(target, method, args);
+                    });
+            TransactionSynchronizationManager.bindResource(dataSourceA, new ConnectionHolder(wrapper));
+
+            try {
+                new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                    insertInScope("first");
+                    armed.set(true);
+                });
+            } finally {
+                TransactionSynchronizationManager.unbindResource(dataSourceA);
+            }
+        }
+
+        assertNull(hookFailure[0]);
+        assertEquals(List.of("first"), itemNames(), "the hook's scope rolled its insert back");
+    }
+
+    /** Inserts an item in a scope of its own on {@code dataSourceA}, and rolls the scope back. */
+    private void insertInScopeAndRollBack(final String name) {
+        final SqlTransaction scope = JdbcUtil.beginTransaction(dataSourceA);
+
+        try {
+            insertItem(dataSourceA, name);
+        } catch (final SQLException e) {
+            throw new IllegalArgumentException(e);
+        } finally {
+            scope.rollbackIfNotCommitted();
+        }
+    }
+
+    /** Inserts an item in a scope of its own on {@code dataSourceA}, which participates in a Spring transaction it finds. */
+    private void insertInScope(final String name) {
+        final SqlTransaction scope = JdbcUtil.beginTransaction(dataSourceA);
+
+        try {
+            insertItem(dataSourceA, name);
+            scope.commit();
+        } catch (final SQLException e) {
+            throw new IllegalArgumentException(e);
+        } finally {
+            scope.rollbackIfNotCommitted();
+        }
+    }
+
+    // External review (tests): a scope left open in a tracked transaction whose commit fails can't commit: the transaction
+    // manager has decided (the outcome is unknown until Spring's cleanup, which, restoring auto-commit, commits what the failed
+    // commit left on the connection), so the scope's commit throws and ends FAILED_COMMIT, before the cleanup (from an
+    // execution listener after the tracker) as after it.
+    @ParameterizedTest(name = "synchronization={0}, beforeCleanup={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "false, false", "false, true", "true, false", "true, true" })
+    void aScopeLeftOpenInATrackedTransactionWhoseCommitFails_cannotCommit(final boolean synchronization, final boolean beforeCleanup) {
+        final java.util.concurrent.atomic.AtomicBoolean commitFails = new java.util.concurrent.atomic.AtomicBoolean();
+        final DataSource failing = new DelegatingDataSource(dataSourceA) {
+            @Override
+            public Connection getConnection() throws SQLException {
+                final Connection target = super.getConnection();
+
+                return (Connection) Proxy.newProxyInstance(Connection.class.getClassLoader(), new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+                    if ("commit".equals(method.getName()) && method.getParameterCount() == 0 && commitFails.getAndSet(false)) {
+                        throw new SQLException("commit failed");
+                    }
+
+                    return invokeOn(target, method, args);
+                });
+            }
+        };
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(failing);
+
+        if (!synchronization) {
+            transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        final SqlTransaction[] leftOpen = new SqlTransaction[1];
+        final RuntimeException[] failure = new RuntimeException[1];
+        transactionManager.addListener(new org.springframework.transaction.TransactionExecutionListener() {
+            @Override
+            public void afterCommit(final org.springframework.transaction.TransactionExecution transaction, final Throwable commitFailure) {
+                if (beforeCleanup) {
+                    failure[0] = thrownBy(leftOpen[0]::commit);
+                }
+            }
+        });
+        SpringTransactionTracker.register(transactionManager);
+
+        assertThrows(org.springframework.transaction.TransactionException.class,
+                () -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                    leftOpen[0] = JdbcUtil.beginTransaction(failing);
+
+                    try {
+                        insertItem(failing, "pending");
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+
+                    commitFails.set(true);
+                }));
+
+        if (!beforeCleanup) {
+            failure[0] = thrownBy(leftOpen[0]::commit);
+        }
+
+        assertTrue(failure[0] instanceof IllegalStateException, String.valueOf(failure[0]));
+        assertEquals(Transaction.Status.FAILED_COMMIT, leftOpen[0].status());
+        assertEquals(List.of("pending"), itemNames(), "Spring's cleanup committed what the failed commit left on the connection");
+    }
+
+    // External review (owner tracking): a scope begun inside another transaction manager's transaction, participating in the
+    // enclosing one, follows the enclosing one as its transaction manager reports it: usable after the inner one completes,
+    // refused once the enclosing one does.
+    @ParameterizedTest(name = "innerRollsBack={0}")
+    @ValueSource(booleans = { false, true })
+    void aTrackedScopeBegunInsideAnotherManagersTransaction_followsTheTransactionItParticipatesIn(final boolean innerRollsBack) throws SQLException {
+        final PreparedQuery[] query = new PreparedQuery[1];
+
+        template(true).executeWithoutResult(outer -> {
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
+                final SqlTransaction committed = JdbcUtil.beginTransaction(dataSourceA);
+
+                try {
+                    insertItem(dataSourceA, "committed");
+                    query[0] = JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").closeAfterExecution(false);
+                    committed.commit();
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                } finally {
+                    committed.rollbackIfNotCommitted();
+                }
+
+                if (innerRollsBack) {
+                    inner.setRollbackOnly();
+                }
+            });
+
+            try {
+                assertEquals(1, query[0].queryForInt().orElseThrow(), "the transaction it participates in still runs");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+        });
+
+        try {
+            assertThrows(IllegalStateException.class, () -> query[0].queryForInt());
+        } finally {
+            query[0].close();
+        }
+    }
+
+    // External review: the tracker forgot a transaction as soon as its afterCommit listener callback ran, while Spring still ran
+    // the execution listeners after it and its cleanup, with the connection holder bound and transaction-active. A
+    // beginTransaction in a later listener found no owner and, with synchronization disabled (nothing else told the
+    // completion), joined the committed connection: closed without a commit, it marked the transaction rollback-only, which
+    // changed nothing, and Spring's cleanup committed its row. The completed owner is kept now; a listener before the tracker
+    // already saw the transaction deciding.
+    @ParameterizedTest(name = "listenerAfterTracker={0}, synchronization={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "false, false", "true, false", "false, true", "true, true" })
+    void aTransactionBegunInAListenerAfterTheCommit_isOneOfItsOwnWhateverTheListenerOrder(final boolean listenerAfterTracker, final boolean synchronization) {
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
+
+        if (!synchronization) {
+            transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        final Boolean[] participated = new Boolean[1];
+        final org.springframework.transaction.TransactionExecutionListener begins = new org.springframework.transaction.TransactionExecutionListener() {
+            @Override
+            public void afterCommit(final org.springframework.transaction.TransactionExecution transaction, final Throwable commitFailure) {
+                final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
+
+                try {
+                    participated[0] = tran.context().isSpringParticipating();
+                    insertItem(dataSourceA, "listener");
+                } catch (final SQLException e) {
+                    throw new IllegalArgumentException(e);
+                } finally {
+                    tran.rollbackIfNotCommitted();
+                }
+            }
+        };
+
+        if (listenerAfterTracker) {
+            transactionManager.addListener(new SpringTransactionTracker());
+            transactionManager.addListener(begins);
+        } else {
+            transactionManager.addListener(begins);
+            transactionManager.addListener(new SpringTransactionTracker());
+        }
+
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            try {
+                insertItem(dataSourceA, "committed");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+        });
+
+        assertEquals(Boolean.FALSE, participated[0], "a transaction of its own");
+        assertEquals(List.of("committed"), itemNames(), "which rolled back");
+    }
+
+    // External review: the tracker must run before the other execution listeners (one that throws keeps Spring from calling
+    // those after it), and be registered with every transaction manager. register puts a single tracker first; the Registrar
+    // bean does it for every transaction manager of an application context.
+    @Test
+    void register_putsOneTrackerBeforeTheOtherListeners() {
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
+        final org.springframework.transaction.TransactionExecutionListener other = new org.springframework.transaction.TransactionExecutionListener() {
+        };
+        transactionManager.addListener(other);
+        transactionManager.addListener(new SpringTransactionTracker());
+
+        SpringTransactionTracker.register(transactionManager);
+        SpringTransactionTracker.register(transactionManager);
+
+        final List<org.springframework.transaction.TransactionExecutionListener> listeners = new ArrayList<>(
+                transactionManager.getTransactionExecutionListeners());
+        assertEquals(2, listeners.size());
+        assertTrue(listeners.get(0) instanceof SpringTransactionTracker);
+        assertSame(other, listeners.get(1));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> SpringTransactionTracker.register((org.springframework.transaction.ConfigurableTransactionManager[]) null));
+        assertThrows(IllegalArgumentException.class, () -> SpringTransactionTracker.register(new DataSourceTransactionManager(dataSourceB), null));
+    }
+
+    @Test
+    void registrar_registersATrackerFirstWithEveryTransactionManagerOfTheContext() {
+        final org.springframework.transaction.TransactionExecutionListener other = new org.springframework.transaction.TransactionExecutionListener() {
+        };
+
+        try (org.springframework.context.support.GenericApplicationContext context = new org.springframework.context.support.GenericApplicationContext()) {
+            context.registerBean(SpringTransactionTracker.Registrar.class);
+            context.registerBean("first", DataSourceTransactionManager.class, () -> {
+                final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
+                transactionManager.addListener(other);
+                return transactionManager;
+            });
+            context.registerBean("second", DataSourceTransactionManager.class, () -> new DataSourceTransactionManager(dataSourceB));
+            context.refresh();
+
+            for (final DataSourceTransactionManager transactionManager : context.getBeansOfType(DataSourceTransactionManager.class).values()) {
+                final List<org.springframework.transaction.TransactionExecutionListener> listeners = new ArrayList<>(
+                        transactionManager.getTransactionExecutionListeners());
+                assertTrue(listeners.get(0) instanceof SpringTransactionTracker, listeners.toString());
+                assertEquals(1, listeners.stream().filter(SpringTransactionTracker.class::isInstance).count());
+            }
+
+            assertSame(other, new ArrayList<>(context.getBean("first", DataSourceTransactionManager.class).getTransactionExecutionListeners()).get(1));
+        }
+    }
+
+    private TransactionTemplate template(final boolean tracked) {
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
+
+        if (tracked) {
+            transactionManager.addListener(new SpringTransactionTracker());
+        }
+
+        return new TransactionTemplate(transactionManager);
     }
 
     // Round 17 review: a nested runOutsideTransaction of a participating transaction (not the call that unregistered it)

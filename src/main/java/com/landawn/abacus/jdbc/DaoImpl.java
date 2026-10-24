@@ -3055,11 +3055,14 @@ final class DaoImpl {
      * thread. A read outside the transaction in between stored the rows as they were before it, which the cache kept for good
      * (with a cache by map) once the second invalidation was lost or ran too early: the write joined an enclosing transaction
      * from inside another transaction manager's transaction, which then rolled back (or committed before the enclosing one), or
-     * the synchronization was disabled. The holder of a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}
-     * transaction tells when the transaction has completed, whatever synchronizations Spring runs (see
-     * {@code JdbcUtil.springResourceRecordingCompletion}): read on use, from any thread; a holder is forgotten once its
-     * transaction has completed, or once it has been garbage collected. A JPA transaction's holder tells nothing: the writes in
-     * one rely on the synchronization alone.
+     * the synchronization was disabled. What tells when the transaction has completed, whatever synchronizations Spring runs:
+     * its {@code SpringTransactionOwners.Owner}, if a {@link SpringTransactionTracker} is registered with its transaction
+     * manager (published in a {@code volatile} field, so that every thread sees it; JPA transactions included), or else the
+     * holder of a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction (see
+     * {@code JdbcUtil.springResourceRecordingCompletion}), whose transaction-active flag another thread may see change late,
+     * which keeps the caches out longer, never shorter. Read on use; an entry is forgotten once its transaction has completed,
+     * or once it has been garbage collected. A JPA transaction's holder tells nothing: without a tracker, the writes in one
+     * rely on the synchronization alone.
      */
     private static final class PendingCommits {
         /** The index of the holders of the writes of every table (a DAO with an empty table name). */
@@ -3074,10 +3077,26 @@ final class DaoImpl {
         }
 
         /**
-         * Records that the transaction whose connection holder is {@code holder} wrote {@code tableName}.
+         * Returns what tells when the Spring-managed transaction that owns the connection of {@code dataSource} completes:
+         * its {@code SpringTransactionOwners.Owner}, if a {@link SpringTransactionTracker} is registered with its transaction
+         * manager (any transaction manager whose transaction object exposes its JDBC connection holder, JPA ones included),
+         * or else its connection holder, if it records the completion (see
+         * {@code JdbcUtil.springResourceRecordingCompletion}).
+         *
+         * @param dataSource the data source written
+         * @return the owner or the holder, or {@code null} if neither tells (a JPA transaction without a tracker)
+         */
+        static Object pendingCommitOf(final javax.sql.DataSource dataSource) {
+            final SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(JdbcUtil.boundSpringResource(dataSource));
+
+            return owner != null ? owner : JdbcUtil.springResourceRecordingCompletion(dataSource);
+        }
+
+        /**
+         * Records that the transaction told by {@code holder} wrote {@code tableName}.
          *
          * @param tableName the table, or an empty name for every table
-         * @param holder the connection holder, from {@code JdbcUtil.springResourceRecordingCompletion}
+         * @param holder the owner or the connection holder, from {@link #pendingCommitOf(javax.sql.DataSource)}
          */
         static void add(final String tableName, final Object holder) {
             final int index = Strings.isEmpty(tableName) ? ALL_TABLES : CacheGenerations.slotOf(tableName);
@@ -3114,7 +3133,10 @@ final class DaoImpl {
             final Map<Object, Boolean> map = holders.get(index);
 
             synchronized (map) {
-                map.keySet().removeIf(JdbcUtil::hasSpringTransactionCompleted);
+                // An owner, as its transaction manager reports it (published in a volatile field), or else a holder's flag.
+                map.keySet()
+                        .removeIf(pending -> pending instanceof final SpringTransactionOwners.Owner owner ? owner.isCompleted()
+                                : JdbcUtil.hasSpringTransactionCompleted(pending));
                 counts.set(index, map.size());
 
                 return !map.isEmpty();
@@ -9411,6 +9433,11 @@ final class DaoImpl {
                             || Dao.class.getPackageName().equals(method.getDeclaringClass().getPackageName()))
                             && (transactionalAnno == null || transactionalAnno.propagation() == Propagation.REQUIRED
                                     || transactionalAnno.propagation() == Propagation.SUPPORTS || transactionalAnno.propagation() == Propagation.MANDATORY);
+                    // Whether a write in a transaction certainly leaves it: its own propagation runs it in a transaction of its own,
+                    // or in none. Any other write may write through the transaction, a default method of the application's included
+                    // (e.g. through JdbcUtil.executeUpdate(dataSource(), ...)), so it keeps the caches out until it completes.
+                    final boolean writeLeavesTransaction = transactionalAnno != null && (transactionalAnno.propagation() == Propagation.REQUIRES_NEW
+                            || transactionalAnno.propagation() == Propagation.NOT_SUPPORTED || transactionalAnno.propagation() == Propagation.NEVER);
 
                     call = (proxy, args) -> {
                         // The shared result cache is kept out of transactions on the DAO's data source: a result read in one can hold
@@ -9483,14 +9510,15 @@ final class DaoImpl {
                                 // enclosing transaction from inside another transaction manager's transaction lost its invalidation
                                 // when that inner one rolled back, while the enclosing one committed the write (a cache by map then
                                 // served the old rows for good).
-                                final boolean joinsTransactionOfItsOwn = inTransaction && writeJoinsTransaction
-                                        && JdbcUtil.isInTransactionOfItsOwn(workDataSource);
-                                final boolean invalidatesNow = !joinsTransactionOfItsOwn;
-                                // A write joining a Spring-managed transaction whose connection holder records its completion keeps the
-                                // results of the table out of the caches until it has completed (see PendingCommits). Registered before
-                                // the invalidations below, so that a read the check of which overlooked it began before them.
-                                final Object pendingCommit = inTransaction && writeJoinsTransaction && !joinsTransactionOfItsOwn
-                                        ? JdbcUtil.springResourceRecordingCompletion(workDataSource)
+                                final boolean inTransactionOfItsOwn = inTransaction && JdbcUtil.isInTransactionOfItsOwn(workDataSource);
+                                final boolean invalidatesNow = !(inTransactionOfItsOwn && writeJoinsTransaction);
+                                // A write in a Spring-managed transaction, unless it certainly leaves it, keeps the results of the table
+                                // out of the caches until the transaction has completed (see PendingCommits). WHY not only a write that
+                                // joins it (see writeJoinsTransaction): a default method of the application's may write through it too,
+                                // and a read in between stored the old rows. Registered before the invalidations below, so that a read
+                                // the check of which overlooked it began before them.
+                                final Object pendingCommit = inTransaction && !inTransactionOfItsOwn && !writeLeavesTransaction
+                                        ? PendingCommits.pendingCommitOf(workDataSource)
                                         : null;
 
                                 if (pendingCommit != null) {

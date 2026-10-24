@@ -386,14 +386,15 @@ class DaoCacheTransactionTest extends TestBase {
     // transaction between the write and the enclosing commit stored the rows as they were before, which the cache by map kept
     // for good. While the transaction that wrote the table runs, its connection holder keeps the shared caches out of reads of
     // the table, whatever the synchronization.
-    @ParameterizedTest(name = "innerRollsBack={0}")
-    @ValueSource(booleans = { false, true })
-    void aReadBetweenAWriteFromAnotherManagersTransactionAndTheEnclosingCommit_storesNothing(final boolean innerRollsBack) throws SQLException {
+    @ParameterizedTest(name = "innerRollsBack={0}, tracked={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "false, false", "true, false", "false, true", "true, true" })
+    void aReadBetweenAWriteFromAnotherManagersTransactionAndTheEnclosingCommit_storesNothing(final boolean innerRollsBack, final boolean tracked)
+            throws SQLException {
         final JdbcDataSource other = new JdbcDataSource();
         other.setURL("jdbc:h2:mem:dao_cache_other_" + UUID.randomUUID());
         assertEquals(1, dao.cachedCount()); // cached
 
-        new TransactionTemplate(new DataSourceTransactionManager(dataSource)).executeWithoutResult(outer -> {
+        template(tracked).executeWithoutResult(outer -> {
             new TransactionTemplate(new DataSourceTransactionManager(other)).executeWithoutResult(inner -> {
                 try {
                     dao.addItem(2); // joins the enclosing transaction, which owns the connection of the DAO's data source
@@ -416,6 +417,313 @@ class DaoCacheTransactionTest extends TestBase {
 
         assertEquals(2, countRows(), "the enclosing transaction committed the row");
         assertEquals(2, dao.cachedCount(), "the read in between stored nothing");
+    }
+
+    // External review (tests): several transactions with writes of a table pending (an enclosing one, and a REQUIRES_NEW one
+    // inside it that commits first): the caches stay out of the table until the last of them has completed.
+    @ParameterizedTest(name = "tracked={0}")
+    @ValueSource(booleans = { false, true })
+    void severalPendingWriters_keepTheCachesOutUntilTheLastHasCompleted(final boolean tracked) throws SQLException {
+        assertEquals(1, dao.cachedCount()); // cached
+
+        final TransactionTemplate outer = template(tracked);
+        final TransactionTemplate requiresNew = template(tracked);
+        requiresNew.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+        outer.executeWithoutResult(outerStatus -> {
+            try {
+                dao.addItem(2);
+
+                requiresNew.executeWithoutResult(innerStatus -> {
+                    try {
+                        dao.addItem(3);
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                });
+
+                // The REQUIRES_NEW row is committed, the enclosing one is not: still kept out of the caches.
+                assertEquals(2, (int) JdbcUtil.callOutsideTransaction(dataSource, () -> dao.cachedCount()));
+                assertEquals(2, (int) JdbcUtil.callOutsideTransaction(dataSource, () -> dao.cachedCount()), "not stored meanwhile");
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+        });
+
+        assertEquals(3, dao.cachedCount(), "the last writer has committed");
+    }
+
+    // External review (tests): a read already in flight when a write in a Spring transaction registers its pending commit (it
+    // began before, and its check of the pending commits saw none) still doesn't store its rows: the write's invalidation
+    // changes the generation of the table the read took before it began.
+    @Test
+    void aReadInFlightWhenASpringTransactionWritesTheTable_storesNothing() throws Exception {
+        final Jdbc.DaoCache delegate = Jdbc.DaoCache.createByMap();
+        final java.util.concurrent.CountDownLatch storing = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.CountDownLatch written = new java.util.concurrent.CountDownLatch(1);
+        final CachedItemDao cachedDao = JdbcUtil.createDao(CachedItemDao.class, dataSource,
+                JdbcUtil.DaoCreationOptions.builder().cache(pausingCache(delegate, storing, written)).build());
+        final java.util.concurrent.CompletableFuture<Integer> reader = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            try {
+                return cachedDao.cachedCount();
+            } catch (final SQLException e) {
+                throw new IllegalStateException(e);
+            }
+        });
+
+        assertTrue(storing.await(10, java.util.concurrent.TimeUnit.SECONDS), "the read has fetched its rows");
+
+        template(false).executeWithoutResult(status -> {
+            try {
+                cachedDao.addItem(2);
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+
+            written.countDown();
+            assertEquals(1, reader.join(), "fetched before the write");
+        });
+
+        assertEquals(2, cachedDao.cachedCount(), "the read in flight stored nothing");
+    }
+
+    // External review (tests): a tracked Spring transaction whose afterCommit callback fails still reports its completion to the
+    // tracker, so the caches serve and store results of its table again once it has committed.
+    @Test
+    void aTrackedTransactionWithAFailingCompletionCallback_releasesTheCaches() throws Exception {
+        final Jdbc.DaoCache builtIn = Mockito.spy(Jdbc.DaoCache.createByMap());
+        final CachedItemDao cachedDao = JdbcUtil.createDao(CachedItemDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().cache(builtIn).build());
+
+        final IllegalStateException failure = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> template(true).executeWithoutResult(status -> {
+                    try {
+                        cachedDao.addItem(2);
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+
+                    org.springframework.transaction.support.TransactionSynchronizationManager
+                            .registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
+                                @Override
+                                public void afterCommit() {
+                                    throw new IllegalStateException("afterCommit failed");
+                                }
+                            });
+                }));
+
+        assertEquals("afterCommit failed", failure.getMessage());
+        assertEquals(2, countRows(), "committed");
+        assertEquals(2, cachedDao.cachedCount());
+        verify(builtIn, times(1)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(), any());
+        assertEquals(2, cachedDao.cachedCount(), "served from the cache");
+    }
+
+    // External review: the tracker took a failed commit (or rollback) for a completion, so the caches served and stored rows of
+    // the transaction's table again before Spring's cleanup, which, restoring auto-commit, then committed the work the failed
+    // commit had left pending on the connection: a read in between stored the old count for good. Such an outcome is uncertain
+    // until the cleanup is done, which the connection holder tells.
+    @ParameterizedTest(name = "rollback={0}, synchronization={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "false, false", "false, true", "true, false", "true, true" })
+    void aReadAfterAFailedCommitOrRollback_storesNothingBeforeTheCleanup(final boolean rollback, final boolean synchronization) throws Exception {
+        final java.util.concurrent.atomic.AtomicBoolean failNext = new java.util.concurrent.atomic.AtomicBoolean();
+        final javax.sql.DataSource failing = failingDataSource(rollback ? "rollback" : "commit", failNext);
+        final CachedItemDao cachedDao = JdbcUtil.createDao(CachedItemDao.class, failing,
+                JdbcUtil.DaoCreationOptions.builder().cache(Jdbc.DaoCache.createByMap()).build());
+        assertEquals(1, cachedDao.cachedCount()); // cached
+
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(failing);
+
+        if (!synchronization) {
+            transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        final List<Integer> readsInBetween = new java.util.ArrayList<>();
+        // After the tracker (registered first below): reads once the tracker has heard of the failure, before the cleanup.
+        transactionManager.addListener(new org.springframework.transaction.TransactionExecutionListener() {
+            @Override
+            public void afterCommit(final org.springframework.transaction.TransactionExecution transaction, final Throwable commitFailure) {
+                readsInBetween.add(readOutside(cachedDao, failing));
+            }
+
+            @Override
+            public void afterRollback(final org.springframework.transaction.TransactionExecution transaction, final Throwable rollbackFailure) {
+                readsInBetween.add(readOutside(cachedDao, failing));
+            }
+        });
+        SpringTransactionTracker.register(transactionManager);
+
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.transaction.TransactionException.class,
+                () -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                    try {
+                        cachedDao.addItem(2);
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+
+                    failNext.set(true);
+
+                    if (rollback) {
+                        status.setRollbackOnly();
+                    }
+                }));
+
+        assertEquals(List.of(1), readsInBetween, "the read in between saw the rows committed before");
+        assertEquals(2, countRows(), "Spring's cleanup committed the work the failed commit or rollback left pending");
+        assertEquals(2, cachedDao.cachedCount(), "the read in between stored nothing");
+    }
+
+    // External review (tests): a commit that fails and that the transaction manager then rolls back cleanly
+    // (rollbackOnCommitFailure) has completed: nothing is left pending on the connection, so the caches serve and store rows of
+    // its table again right away, before the cleanup. (A clean completion also wins over a failure reported for the same
+    // transaction: see SpringTransactionOwnersTest.)
+    @ParameterizedTest(name = "synchronization={0}")
+    @ValueSource(booleans = { false, true })
+    void aFailedCommitRolledBackCleanly_releasesTheCachesBeforeTheCleanup(final boolean synchronization) throws Exception {
+        final java.util.concurrent.atomic.AtomicBoolean failNext = new java.util.concurrent.atomic.AtomicBoolean();
+        final javax.sql.DataSource failing = failingDataSource("commit", failNext);
+        final CachedItemDao cachedDao = JdbcUtil.createDao(CachedItemDao.class, failing,
+                JdbcUtil.DaoCreationOptions.builder().cache(Jdbc.DaoCache.createByMap()).build());
+        assertEquals(1, cachedDao.cachedCount()); // cached
+
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(failing);
+        transactionManager.setRollbackOnCommitFailure(true);
+
+        if (!synchronization) {
+            transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        final List<Integer> readsInBetween = new java.util.ArrayList<>();
+        // After the tracker (registered first below): reads once the tracker has heard of the rollback, before the cleanup.
+        transactionManager.addListener(new org.springframework.transaction.TransactionExecutionListener() {
+            @Override
+            public void afterRollback(final org.springframework.transaction.TransactionExecution transaction, final Throwable rollbackFailure) {
+                readsInBetween.add(readOutside(cachedDao, failing));
+            }
+        });
+        SpringTransactionTracker.register(transactionManager);
+
+        org.junit.jupiter.api.Assertions.assertThrows(org.springframework.transaction.TransactionException.class,
+                () -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                    try {
+                        cachedDao.addItem(2);
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+
+                    failNext.set(true);
+                }));
+
+        assertEquals(List.of(1), readsInBetween, "the read in between saw the rows committed before");
+        assertEquals(1, countRows(), "the transaction manager rolled the work back");
+
+        // A row the caches don't hear of: a stored result keeps serving the count read in between.
+        try (Statement statement = keeper.createStatement()) {
+            statement.executeUpdate("INSERT INTO cache_tx_item (id, name) VALUES (3, 'c')");
+        }
+
+        assertEquals(1, cachedDao.cachedCount(), "the read in between was stored");
+    }
+
+    /**
+     * Wraps the test's data source: the next call of a connection's no-argument {@code failingMethod} ({@code commit} or
+     * {@code rollback}) after {@code failNext} is set fails, without reaching the database.
+     */
+    private javax.sql.DataSource failingDataSource(final String failingMethod, final java.util.concurrent.atomic.AtomicBoolean failNext) {
+        return new org.springframework.jdbc.datasource.DelegatingDataSource(dataSource) {
+            @Override
+            public Connection getConnection() throws SQLException {
+                final Connection target = super.getConnection();
+
+                return (Connection) java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(), new Class<?>[] { Connection.class },
+                        (proxy, method, args) -> {
+                            if (method.getName().equals(failingMethod) && (args == null || args.length == 0) && failNext.getAndSet(false)) {
+                                throw new SQLException("Simulated " + method.getName() + " failure");
+                            }
+
+                            try {
+                                return method.invoke(target, args);
+                            } catch (final java.lang.reflect.InvocationTargetException e) {
+                                throw e.getCause();
+                            }
+                        });
+            }
+        };
+    }
+
+    private static int readOutside(final CachedItemDao cachedDao, final javax.sql.DataSource dataSource) {
+        try {
+            return JdbcUtil.callOutsideTransaction(dataSource, () -> cachedDao.cachedCount());
+        } catch (final SQLException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    // External review: only a write joining the transaction (a built-in or @Query method) kept the caches out of its table while
+    // a Spring transaction ran, while a default method of the application's may write through the transaction as well (here
+    // through JdbcUtil.executeUpdate(dataSource(), ...)): a read outside the transaction before the commit stored the old
+    // rows for good. Every write in a Spring transaction does now, unless its propagation leaves the transaction.
+    @ParameterizedTest(name = "tracked={0}")
+    @ValueSource(booleans = { false, true })
+    void aDefaultMethodWritingThroughASpringTransaction_keepsTheCachesOutUntilItCompletes(final boolean tracked) throws SQLException {
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+        transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+
+        if (tracked) {
+            transactionManager.addListener(new SpringTransactionTracker());
+        }
+
+        assertEquals(1, dao.cachedCount()); // cached
+
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            try {
+                dao.addItemThroughJdbcUtil(2);
+                assertEquals(1, (int) JdbcUtil.callOutsideTransaction(dataSource, () -> dao.cachedCount()));
+            } catch (final SQLException e) {
+                throw new IllegalArgumentException(e);
+            }
+        });
+
+        assertEquals(2, countRows());
+        assertEquals(2, dao.cachedCount(), "the read in between stored nothing");
+    }
+
+    // External review: an execution listener registered before the tracker that threw from afterCommit kept Spring from
+    // calling the tracker's, so the transaction stayed pending, and the caches kept out of its table, for good. The tracker's
+    // synchronization reports the completion as well, and without synchronization, the connection holder does.
+    @ParameterizedTest(name = "synchronization={0}")
+    @ValueSource(booleans = { false, true })
+    void aListenerFailingBeforeTheTracker_stillReleasesTheCaches(final boolean synchronization) throws Exception {
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+
+        if (!synchronization) {
+            transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        transactionManager.addListener(new org.springframework.transaction.TransactionExecutionListener() {
+            @Override
+            public void afterCommit(final org.springframework.transaction.TransactionExecution transaction, final Throwable commitFailure) {
+                throw new IllegalStateException("listener failed");
+            }
+        });
+        transactionManager.addListener(new SpringTransactionTracker());
+
+        final Jdbc.DaoCache builtIn = Mockito.spy(Jdbc.DaoCache.createByMap());
+        final CachedItemDao cachedDao = JdbcUtil.createDao(CachedItemDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().cache(builtIn).build());
+
+        final IllegalStateException failure = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                    try {
+                        cachedDao.addItem(2);
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+                }));
+
+        assertEquals("listener failed", failure.getMessage());
+        assertEquals(2, countRows(), "committed");
+        assertEquals(2, cachedDao.cachedCount());
+        assertEquals(2, cachedDao.cachedCount());
+        verify(builtIn, times(1)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(), any());
     }
 
     // External review: with Spring's transaction synchronization disabled, a write in a Spring transaction ran both of its
@@ -575,6 +883,16 @@ class DaoCacheTransactionTest extends TestBase {
         verify(failing, Mockito.atLeastOnce()).update(anyString(), any(), any(), notNull(), any());
     }
 
+    private TransactionTemplate template(final boolean tracked) {
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+
+        if (tracked) {
+            transactionManager.addListener(new SpringTransactionTracker());
+        }
+
+        return new TransactionTemplate(transactionManager);
+    }
+
     private int countRows() throws SQLException {
         try (Statement statement = keeper.createStatement();
              java.sql.ResultSet resultSet = statement.executeQuery("SELECT COUNT(*) FROM cache_tx_item")) {
@@ -704,6 +1022,11 @@ class DaoCacheTransactionTest extends TestBase {
         @com.landawn.abacus.jdbc.annotation.Transactional(propagation = Propagation.NOT_SUPPORTED)
         @Query("INSERT INTO cache_tx_item (id, name) VALUES (:id, 'x')")
         void addItemOutsideTransaction(@Bind("id") long id) throws SQLException;
+
+        @RefreshCache
+        default void addItemThroughJdbcUtil(final long id) throws SQLException {
+            JdbcUtil.executeUpdate(dataSource(), "INSERT INTO cache_tx_item (id, name) VALUES (?, 'x')", id);
+        }
     }
 
     @RefreshCache(filter = "batchInsert")

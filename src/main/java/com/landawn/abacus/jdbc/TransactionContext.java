@@ -149,6 +149,13 @@ final class TransactionContext {
     private final Object _springSynchronization; //NOSONAR
 
     /**
+     * For a participating transaction, the Spring transaction it participates in as its transaction manager reports it to a
+     * {@link SpringTransactionTracker} (see {@link #hasParticipatedTransactionCompleted()}); {@code null} otherwise, or if no
+     * tracker is registered with that transaction manager.
+     */
+    private final SpringTransactionOwners.Owner _springOwner; //NOSONAR
+
+    /**
      * The participating transaction registered under the same key that this one hides (see {@link #putTransaction}), registered
      * again when this one's outermost scope exits; {@code null} if none.
      */
@@ -227,6 +234,7 @@ final class TransactionContext {
         // Registered now, so that it sees the Spring transaction's afterCommit callbacks (see JdbcUtil.isSpringTransactionCompleting)
         // and its completion (see hasParticipatedTransactionCompleted).
         _springSynchronization = springParticipating ? JdbcUtil.participationSynchronization() : null;
+        _springOwner = springParticipating ? SpringTransactionOwners.of(_springResource) : null;
 
         if (springParticipating) {
             // Spring owns the connection's state: it set auto-commit and isolation for its transaction and restores them when
@@ -1022,7 +1030,7 @@ final class TransactionContext {
             Error actionError = null;
 
             try {
-                if (JdbcUtil.isSpringCompletionInProgress(_springSynchronization)) {
+                if (_springOwner != null ? _springOwner.isDeciding() : JdbcUtil.isSpringCompletionInProgress(_springSynchronization)) {
                     // WHY: the rollback of a scope left open into the completion callbacks of the Spring transaction (where Spring
                     // still binds its connection) marked it, which had no effect any more, and reported ROLLED_BACK, also after
                     // Spring had committed the work. Once the callbacks have run, a completed transaction's holder is no longer
@@ -1400,14 +1408,21 @@ final class TransactionContext {
 
     /**
      * Returns whether the Spring-managed transaction this one participates in is known to have decided the outcome of its
-     * work: it runs its completion callbacks, as recorded by the synchronization registered when this transaction began (see
-     * {@link JdbcUtil#isSpringCompletionInProgress(Object)}), or it has completed, as recorded by its connection holder (see
-     * {@link JdbcUtil#hasSpringTransactionCompleted(Object)}: a {@code DataSourceTransactionManager} or
+     * work. As its transaction manager reports it to a {@link SpringTransactionTracker}, if one is registered with it: the
+     * manager is committing or rolling it back, runs its completion callbacks, or has completed it. Otherwise: it runs its
+     * completion callbacks, as recorded by the synchronization registered when this transaction began (see
+     * {@link JdbcUtil#isSpringCompletionInProgress(Object)}, the innermost transaction on the thread then, until a
+     * synchronization registered after this library's has run), or it has completed, as recorded by its connection holder
+     * (see {@link JdbcUtil#hasSpringTransactionCompleted(Object)}: a {@code DataSourceTransactionManager} or
      * {@code JdbcTransactionManager} transaction only). Readable on any thread.
      *
      * @return {@code true} if so
      */
     private boolean hasParticipatedTransactionCompleted() {
+        if (_springOwner != null) {
+            return _springOwner.isDeciding();
+        }
+
         return JdbcUtil.isSpringCompletionInProgress(_springSynchronization) || JdbcUtil.hasSpringTransactionCompleted(_springResource);
     }
 

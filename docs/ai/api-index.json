@@ -50323,6 +50323,230 @@
           "fields": []
         },
         {
+          "fqn": "com.landawn.abacus.jdbc.SpringTransactionTracker",
+          "name": "SpringTransactionTracker",
+          "kind": "class",
+          "modifiers": [
+            "public",
+            "final"
+          ],
+          "javadoc_summary": "Tells this library, from a Spring transaction manager, when each transaction it runs is committed or rolled back, so that the library follows the transaction that actually owns a data source's connection.",
+          "thread_safety": "unspecified",
+          "nullability": "unspecified",
+          "type_params": [],
+          "constructors": [
+            {
+              "signature": "public SpringTransactionTracker()",
+              "javadoc_summary": "Creates a tracker.",
+              "params": [],
+              "throws": []
+            }
+          ],
+          "methods": [
+            {
+              "name": "register",
+              "kind": "static",
+              "modifiers": [
+                "public",
+                "static"
+              ],
+              "signature": "public static void register(final ConfigurableTransactionManager... transactionManagers) throws IllegalArgumentException",
+              "return_type": "void",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "transactionManagers",
+                  "type": "ConfigurableTransactionManager[]",
+                  "javadoc": "the transaction managers, such as {@code DataSourceTransactionManager} , {@code JdbcTransactionManager} or {@code JpaTransactionManager}",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [
+                {
+                  "type": "java.lang.IllegalArgumentException",
+                  "condition": "if {@code transactionManagers} or one of them is {@code null}"
+                }
+              ],
+              "javadoc_summary": "Registers a tracker with each of {@code transactionManagers} , before their other execution listeners (see the registration requirements above), replacing any tracker registered with them before.",
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "afterBegin",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "@Override public void afterBegin(final TransactionExecution transaction, final Throwable beginFailure)",
+              "return_type": "void",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "transaction",
+                  "type": "TransactionExecution",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "beginFailure",
+                  "type": "Throwable",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "beforeCommit",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "@Override public void beforeCommit(final TransactionExecution transaction)",
+              "return_type": "void",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "transaction",
+                  "type": "TransactionExecution",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "afterCommit",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "@Override public void afterCommit(final TransactionExecution transaction, final Throwable commitFailure)",
+              "return_type": "void",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "transaction",
+                  "type": "TransactionExecution",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "commitFailure",
+                  "type": "Throwable",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "beforeRollback",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "@Override public void beforeRollback(final TransactionExecution transaction)",
+              "return_type": "void",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "transaction",
+                  "type": "TransactionExecution",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "afterRollback",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "@Override public void afterRollback(final TransactionExecution transaction, final Throwable rollbackFailure)",
+              "return_type": "void",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "transaction",
+                  "type": "TransactionExecution",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "rollbackFailure",
+                  "type": "Throwable",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "fqn": "com.landawn.abacus.jdbc.SpringTransactionTracker.Registrar",
+          "name": "Registrar",
+          "kind": "class",
+          "modifiers": [
+            "public",
+            "static",
+            "final"
+          ],
+          "javadoc_summary": "Registers a tracker, first, with every transaction manager of the Spring application context it is a bean of (see {@link SpringTransactionTracker#register(ConfigurableTransactionManager...)} ): every bean that is a {@code ConfigurableTransactionManager} , once it is initialized.",
+          "thread_safety": "unspecified",
+          "nullability": "unspecified",
+          "type_params": [],
+          "constructors": [
+            {
+              "signature": "public Registrar()",
+              "javadoc_summary": "Creates a registrar.",
+              "params": [],
+              "throws": []
+            }
+          ],
+          "methods": [
+            {
+              "name": "postProcessAfterInitialization",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "@Override public Object postProcessAfterInitialization(final Object bean, final String beanName)",
+              "return_type": "Object",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "bean",
+                  "type": "Object",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "beanName",
+                  "type": "String",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            }
+          ],
+          "fields": []
+        },
+        {
           "fqn": "com.landawn.abacus.jdbc.SqlTransaction",
           "name": "SqlTransaction",
           "kind": "class",

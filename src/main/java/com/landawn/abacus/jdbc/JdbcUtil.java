@@ -13421,7 +13421,8 @@ public final class JdbcUtil {
      * through other code, such as JPA or a {@code JdbcTemplate}, nor in one this library used only inside another transaction
      * manager's transaction begun in it, whose own synchronizations Spring runs meanwhile; a transaction begun from the
      * {@code afterCommit} callbacks of such a transaction still joins it, so begin it there with
-     * {@code PROPAGATION_REQUIRES_NEW} or inside {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)})
+     * {@code PROPAGATION_REQUIRES_NEW} or inside {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)},
+     * or register a {@link SpringTransactionTracker} with its transaction manager, which then reports the completion itself)
      * or {@code afterCompletion} callbacks: it has committed or rolled back, and work joining it would be
      * committed by Spring's cleanup (which restores auto-commit), whatever its outcome; the returned transaction is then a
      * transaction of its own on a connection of its own, taken from {@code ds} outside Spring (the target of a
@@ -13569,7 +13570,7 @@ public final class JdbcUtil {
             final boolean springOwned = isSpringTransactionalUsed(ds) && isBoundToSpringTransaction(ds);
             // Unless the completion of that transaction has started (see isOwnedBySpringTransaction): a transaction of its own
             // then, on a connection of its own.
-            final boolean afterSpringCompletion = springOwned && isSpringTransactionCompleting();
+            final boolean afterSpringCompletion = springOwned && hasSpringCompletionStarted(ds);
             final boolean springParticipating = springOwned && !afterSpringCompletion;
 
             if (springParticipating && !SpringRollbackActions.canMarkRollbackOnly(unwrapSpringDataSource(ds))) {
@@ -13659,7 +13660,24 @@ public final class JdbcUtil {
         // the work, also that of a failed scope. Spring advises a transaction of its own for transactional work started from
         // its completion callbacks. Checked only for a bound transaction: it reads the synchronizations (a sorted copy), on
         // every DAO insert and isInTransaction call.
-        return isBoundToSpringTransaction(ds) && !isSpringTransactionCompleting();
+        return isBoundToSpringTransaction(ds) && !hasSpringCompletionStarted(ds);
+    }
+
+    /**
+     * Returns whether the completion of the Spring-managed transaction that owns the connection holder bound to {@code ds}
+     * has started: as its transaction manager reports it to a {@link SpringTransactionTracker}, if one is registered with it
+     * (the transaction that owns the holder, whatever synchronizations Spring runs meanwhile), or else see
+     * {@link #isSpringTransactionCompleting()} (the innermost transaction on the thread). WHY the owner: the innermost
+     * transaction need not be the one owning {@code ds}, and the owner's {@code afterCommit} callbacks went unrecognized if this
+     * library had used it only inside another transaction manager's transaction begun in it.
+     *
+     * @param ds the data source
+     * @return {@code true} if the transaction's completion has started
+     */
+    private static boolean hasSpringCompletionStarted(final javax.sql.DataSource ds) {
+        final SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(boundSpringResource(ds));
+
+        return owner != null ? owner.isDeciding() : isSpringTransactionCompleting();
     }
 
     /**
