@@ -42,18 +42,11 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * method result is not cached; use an empty {@code Optional}, collection, or other non-null
  * result object when caching an explicit "no result" value is important.</p>
  *
- * <p>Callback writes must run in an independent transaction (for example, DAO {@code REQUIRES_NEW} or an explicit
- * {@code JdbcUtil.beginTransaction} scope). The library rejects SQL execution on a Spring connection known to be
- * completing, including queries since result-producing SQL can write: its clean report covers the original work only,
- * while cleanup may commit a later callback write after another thread has cached the old rows. Register
- * {@code SpringTransactionTracker} to identify the owning transaction even with JPA or synchronization disabled;
- * untracked detection retains the limits below.</p>
- *
- * <p>Without a tracker, the SQL guard can reject an active outer transaction's SQL while another transaction on the thread
- * completes. With a tracker, later execution-listener SQL on the completing owner's connection is refused from the
- * tracker's {@code beforeCommit}/{@code beforeRollback} notification, even before the physical outcome. Use
- * {@code TransactionSynchronization.beforeCommit} for work intended for the original transaction. Independent callback
- * transactions and {@code afterBegin} work remain allowed; see {@link JdbcUtil}.</p>
+ * <p>Spring transaction participation requires {@link com.landawn.abacus.jdbc.SpringTransactionTracker}, registered with
+ * every manager before transactions begin. SQL is refused once its actual owner's beforeCommit/beforeRollback listener
+ * starts, including deferred queries, which can write too. Use an independent transaction for callback work, for example
+ * DAO REQUIRES_NEW or JdbcUtil.beginTransaction. Synchronization beforeCommit/beforeCompletion work remains allowed;
+ * later execution-listener SQL on the completing owner is refused. See {@link JdbcUtil}.</p>
  *
  * <p><strong>Transactions:</strong> inside a transaction on the DAO's data source (a {@code JdbcUtil} transaction, or a
  * Spring-managed transaction that owns its connection, read-only ones included), results are neither served from the cache
@@ -61,17 +54,10 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * or hold work it may still roll back. A {@link RefreshCache @RefreshCache} write there invalidates the cache once the
  * transaction has committed (or its commit failed, as it may have committed), and, unless it joins a {@code JdbcUtil}
  * transaction of its own (see {@link RefreshCache}), right away as well. While a Spring-managed transaction that wrote a
- * table runs, results of that table read outside it are neither served from these caches nor stored in them, as long as the
- * transaction's connection holder records its completion ({@code DataSourceTransactionManager},
- * {@code JdbcTransactionManager}), whatever transaction's synchronizations Spring runs meanwhile: the rows a read between
- * the write and the commit fetched are as they were before the write. That flag can't tell a failed cleanup: without a
- * tracker, a failed commit on a connection bound before the transaction with auto-commit already off lifts the block when
- * Spring clears the holder, although the work is still pending on the connection, so a read then may store rows that the
- * pending work later changes. Register a
- * {@link com.landawn.abacus.jdbc.SpringTransactionTracker} with the transaction managers (first, and with every one on the
- * data source: see its registration requirements) to have the transaction manager report the completion instead, for any
- * transaction manager whose transaction exposes its JDBC connection holder (JPA ones included), published so that every
- * thread sees it. Failed or unreported completion of a tracked transaction keeps affected caches disabled until a clean
+ * table runs, results of that table read outside it are neither served from these caches nor stored in them: reads between
+ * the write and commit still see the earlier committed rows. The required tracker follows the actual owner, including JPA,
+ * disabled synchronization and another manager's inner transaction. Failed or unreported completion keeps caches blocked
+ * until a clean
  * completion report or explicit, transaction-specific
  * {@link com.landawn.abacus.jdbc.SpringTransactionTracker#confirmSettled(long)} confirmation. This applies to JDBC and JPA:
  * holder flags, entity-manager closure and garbage collection do not prove that pending work can no longer commit. Even a
@@ -83,13 +69,8 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * are retained from their first cache-affecting write, without retaining the database resources. Monitor them using
  * {@link com.landawn.abacus.jdbc.SpringTransactionTracker#unresolvedTransactions()}; without confirmed settlement the block
  * remains indefinitely. A block covers the table names written, ignoring case, for the caches of every data source in the
- * process, and the other names sharing their hashed slot (an empty table name blocks every table). For a JPA transaction
- * without a tracker, whose holder records nothing,
- * the commit is observed through Spring's transaction synchronization of the innermost Spring transaction on the thread
- * only: with synchronization disabled, the second invalidation runs right away too, and for a write to the data source of
- * an enclosing transaction while another transaction manager's transaction runs inside it, at that inner transaction's
- * commit, or not at all if it rolls back; a result read outside the transaction before the enclosing commit may then stay
- * cached, until it expires. A result whose read overlapped an invalidation of its table is not stored (it may hold the rows
+ * process, and the other names sharing their hashed slot (an empty table name blocks every table).
+ * A result whose read overlapped an invalidation of its table is not stored (it may hold the rows
  * as they were before): also one that the method's own nested write invalidated.</p>
  *
  * <p>Per its {@code @Target}, this annotation can be placed on an individual DAO method, or on a

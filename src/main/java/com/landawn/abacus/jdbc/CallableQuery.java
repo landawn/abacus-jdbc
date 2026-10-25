@@ -83,6 +83,11 @@ import com.landawn.abacus.util.stream.ObjIteratorEx;
  * <p>Result sets consumed by materializing query methods are always closed after extraction, even if
  * the {@code closeAfterExecution} flag is set to {@code false}.
  *
+ * <p>As with {@link AbstractQuery}, a query created on a Spring-owned connection retains its transaction owners.
+ * Every execution, including scalar reads, OUT-parameter calls and multiple-result calls, throws
+ * {@link IllegalStateException} once any captured owner starts completing, even on a worker thread or after Spring
+ * releases the connection. Callback work must use an independent transaction.</p>
+ *
  * <p>Remember: when using positional methods inherited from {@link AbstractQuery}, parameter/column
  * indexes in {@link CallableStatement}/{@link ResultSet} start from 1, not 0.
  *
@@ -2580,19 +2585,22 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see #executeQuery()
      */
     private ResultSet executeQueryOrNull() throws SQLException {
+        // Validate before touching driver state: the captured owner's connection may already have been released.
+        final CallableStatement queryStatement = executionStatement();
+
         if (!isFetchDirectionSet) {
             // Mirror AbstractQuery.executeQuery(): capture the driver-default direction before
             // mutating so closeStatement() can restore it. Without this, a pooled CallableStatement
             // is silently left at FETCH_FORWARD when its prior caller had configured a different
             // direction (e.g., FETCH_REVERSE on DB2 z/OS scrollable cursors).
             if (defaultFetchDirection < 0) {
-                defaultFetchDirection = cstmt.getFetchDirection();
+                defaultFetchDirection = queryStatement.getFetchDirection();
             }
 
-            cstmt.setFetchDirection(ResultSet.FETCH_FORWARD);
+            queryStatement.setFetchDirection(ResultSet.FETCH_FORWARD);
         }
 
-        boolean ret = JdbcUtil.execute(cstmt);
+        boolean ret = JdbcUtil.execute(queryStatement);
         int updateCount = cstmt.getUpdateCount();
 
         while (ret || updateCount != -1) {
@@ -2774,7 +2782,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param <R> the type of the result returned by the function
      * @param func the function to apply to the executed CallableStatement. Must not be {@code null}.
      * @return the result of applying the function
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code func} is {@code null}
      * @throws SQLException if executing the stored procedure fails, or {@code func} throws {@code SQLException}
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
@@ -2819,7 +2827,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *               the second parameter is {@code true} if the first result is a ResultSet, {@code false} otherwise.
      *               Must not be {@code null}.
      * @return the result of applying the bi-function
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code func} is {@code null}
      * @throws SQLException if executing the stored procedure fails, or {@code func} throws {@code SQLException}
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
@@ -2887,7 +2895,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *               2. List of registered OUT parameters (never {@code null}; empty if none were registered)
      *               3. Boolean indicating if the first result is a ResultSet
      * @return the result of applying the tri-function
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code func} is {@code null}
      * @throws SQLException if executing the stored procedure fails, or {@code func} throws {@code SQLException}
      * @see Jdbc.OutParam
@@ -2900,7 +2908,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(func, cs.func);
 
         try {
-            final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
+            final boolean isFirstResultSet = JdbcUtil.execute(executionStatement());
             final List<Jdbc.OutParam> outParamsToUse = copyOutParams();
 
             return func.apply(cstmt, outParamsToUse, isFirstResultSet);
@@ -2945,7 +2953,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @param consumer the consumer to apply to the executed CallableStatement. Must not be {@code null}.
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code consumer} is {@code null}
      * @throws SQLException if executing the stored procedure fails, or {@code consumer} throws {@code SQLException}
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
@@ -2986,7 +2994,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param consumer the bi-consumer to apply. The first parameter is the executed CallableStatement,
      *                 the second parameter is {@code true} if the first result is a ResultSet.
      *                 Must not be {@code null}.
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code consumer} is {@code null}
      * @throws SQLException if executing the stored procedure fails, or {@code consumer} throws {@code SQLException}
      * @see JdbcUtil#getOutParameters(CallableStatement, List)
@@ -3041,7 +3049,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *                 1. The executed CallableStatement
      *                 2. List of registered OUT parameters (never {@code null}; empty if none were registered)
      *                 3. Boolean indicating if the first result is a ResultSet
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code consumer} is {@code null}
      * @throws SQLException if executing the stored procedure fails, or {@code consumer} throws {@code SQLException}
      * @see Jdbc.OutParam
@@ -3053,7 +3061,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         checkArgNotNull(consumer, cs.consumer);
 
         try {
-            final boolean isFirstResultSet = JdbcUtil.execute(cstmt);
+            final boolean isFirstResultSet = JdbcUtil.execute(executionStatement());
             final List<Jdbc.OutParam> outParamsToUse = copyOutParams();
 
             consumer.accept(cstmt, outParamsToUse, isFirstResultSet);
@@ -3111,7 +3119,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @return a {@link Jdbc.OutParamResult} containing all OUT parameter values; empty if no OUT
      *         parameters were registered
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an
      *         OUT parameter fails
      * @see Jdbc.OutParamResult
@@ -3120,7 +3128,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         assertNotClosed();
 
         try {
-            JdbcUtil.execute(cstmt);
+            JdbcUtil.execute(executionStatement());
 
             // Per JDBC spec, OUT params are only guaranteed final after all result sets and update
             // counts are consumed. SQL Server and Oracle in particular report null/stale OUT values
@@ -3168,7 +3176,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *
      * @return a {@link Tuple2} containing the Dataset (first element) and OUT parameters (second element).
      *         The first element may be {@code null} if the procedure does not return a result set.
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws SQLException if executing the stored procedure, extracting its first result set, draining the
      *         remaining results, or reading an OUT parameter fails
      * @see #queryAndGetOutParameters(Jdbc.ResultExtractor)
@@ -3212,7 +3220,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param resultExtractor the {@link Jdbc.ResultExtractor} to process the result set
      * @return a {@link Tuple2} containing the extracted result (first element) and OUT parameters (second element).
      *         The first element may be {@code null} if no result set is returned.
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an
      *         OUT parameter fails, or the result extractor throws {@code SQLException}
@@ -3278,7 +3286,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param resultExtractor the {@link Jdbc.BiResultExtractor} to process the result set
      * @return a {@link Tuple2} containing the extracted result (first element) and OUT parameters (second element).
      *         The first element may be {@code null} if no result set is returned.
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an
      *         OUT parameter fails, or the result extractor throws {@code SQLException}
@@ -3337,7 +3345,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * }</pre>
      *
      * @return a {@link Tuple2} containing a list of Datasets (one per result set) and OUT parameters
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws SQLException if executing the stored procedure, advancing to the next result set, extracting a
      *         result set, or reading an OUT parameter fails
      * @see #queryAllResultSetsAndGetOutParameters(Jdbc.ResultExtractor)
@@ -3379,7 +3387,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @param resultExtractor the {@link Jdbc.ResultExtractor} to process each result set.
      *                        Must not save or return the ResultSet itself.
      * @return a {@link Tuple2} containing a list of extracted results and OUT parameters
-     * @throws IllegalStateException if this CallableQuery is closed
+     * @throws IllegalStateException if this CallableQuery is closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if executing the stored procedure, advancing to the next result set, or reading an
      *         OUT parameter fails, or the result extractor throws {@code SQLException}
@@ -3396,7 +3404,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(executionStatement());
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
@@ -3451,7 +3459,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of extracted results (one per result set)</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code resultExtractor} is {@code null}
      * @throws SQLException if executing the stored procedure, advancing to the next result set, or reading an
      *         OUT parameter fails, or the result extractor throws {@code SQLException}
@@ -3469,7 +3477,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(executionStatement());
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
@@ -3529,7 +3537,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>Second element: Extracted result from the second result set (or null)</li>
      *           <li>Third element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if either {@code resultExtractor1} or {@code resultExtractor2} is {@code null}
      * @throws SQLException if executing the stored procedure, advancing to the next result set, draining the
      *         remaining results, or reading an OUT parameter fails, or a result extractor throws
@@ -3551,7 +3559,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(executionStatement());
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
@@ -3625,7 +3633,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>Third element: Extracted result from the third result set (or null)</li>
      *           <li>Fourth element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code resultExtractor1}, {@code resultExtractor2}, or {@code resultExtractor3} is {@code null}
      * @throws SQLException if executing the stored procedure, advancing to the next result set, draining the
      *         remaining results, or reading an OUT parameter fails, or a result extractor throws
@@ -3648,7 +3656,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(executionStatement());
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
@@ -3727,7 +3735,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of mapped objects from the result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
      * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the mapping
      *         throws {@code SQLException}; also if closing a consumed result set fails
@@ -3785,7 +3793,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of mapped objects from the result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the row
      *         mapper throws {@code SQLException}; also if closing a consumed result set fails
@@ -3862,7 +3870,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of mapped objects from filtered rows</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the row
      *         filter or mapper throws {@code SQLException}; also if closing a consumed result set fails
@@ -3941,7 +3949,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of mapped objects from the result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the row
      *         mapper throws {@code SQLException}; also if closing a consumed result set fails
@@ -4033,7 +4041,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of mapped objects from filtered rows</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the row
      *         filter or mapper throws {@code SQLException}; also if closing a consumed result set fails
@@ -4109,7 +4117,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of lists, one per result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
      * @throws SQLException if executing the stored procedure, advancing to the next result set, mapping a row,
      *         or reading an OUT parameter fails
@@ -4125,7 +4133,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(executionStatement());
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
@@ -4185,7 +4193,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of lists, one per result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws SQLException if executing the stored procedure, advancing to the next result set, or reading an
      *         OUT parameter fails, or the row mapper throws {@code SQLException}
@@ -4202,7 +4210,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(executionStatement());
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
@@ -4264,7 +4272,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of lists of filtered and mapped objects</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws SQLException if executing the stored procedure, advancing to the next result set, or reading an
      *         OUT parameter fails, or the row filter or mapper throws {@code SQLException}
@@ -4281,7 +4289,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(executionStatement());
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
@@ -4348,7 +4356,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of lists, one per result set</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code rowMapper} is {@code null}
      * @throws SQLException if executing the stored procedure, advancing to the next result set, or reading an
      *         OUT parameter fails, or the row mapper throws {@code SQLException}
@@ -4364,7 +4372,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(executionStatement());
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 
@@ -4446,7 +4454,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>First element: List of lists of filtered and mapped objects</li>
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
-     * @throws IllegalStateException if this query has already been closed
+     * @throws IllegalStateException if this query has already been closed, or a captured Spring transaction has started completing
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is {@code null}
      * @throws SQLException if executing the stored procedure, advancing to the next result set, or reading an
      *         OUT parameter fails, or the row filter or mapper throws {@code SQLException}
@@ -4463,7 +4471,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(cstmt);
+            final boolean isResultSet = JdbcUtil.execute(executionStatement());
 
             iter = JdbcUtil.iterateAllResultSets(cstmt, isResultSet);
 

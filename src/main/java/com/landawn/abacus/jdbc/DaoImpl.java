@@ -3060,10 +3060,10 @@ final class DaoImpl {
      * manager (published in a {@code volatile} field, so that every thread sees it; JPA transactions included), or else the
      * holder of a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction (see
      * {@code JdbcUtil.springResourceRecordingCompletion}), whose transaction-active flag another thread may see change late,
-     * so a delayed observation keeps the caches out longer. Without a tracker that flag cannot distinguish failed cleanup.
-     * Tracked entries are forgotten only after reported or explicitly confirmed settlement, and are held independently of GC
-     * from their first cache-affecting write. A JPA transaction's holder tells nothing: without a tracker, writes in one rely
-     * on the synchronization alone.
+     * so a delayed observation keeps the caches out longer. Normal library SQL now requires tracking; the holder path remains
+     * defensive for application default methods that bypass the library's SQL executors. It cannot prove settlement after
+     * failed cleanup. Tracked entries are forgotten only after reported or explicitly confirmed settlement, and are held
+     * independently of GC from their first cache-affecting write. Direct application JDBC remains outside the SQL guard.
      */
     private static final class PendingCommits {
         /** The index of the holders of the writes of every table (a DAO with an empty table name). */

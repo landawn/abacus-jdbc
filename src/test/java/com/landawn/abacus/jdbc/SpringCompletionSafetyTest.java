@@ -58,10 +58,11 @@ class SpringCompletionSafetyTest extends TestBase {
     // A clean outcome described the original write only. Callback writes were committed by cleanup after another thread
     // cached the old rows. Both a query method and an application default method must fail before writing; REQUIRES_NEW works.
     @ParameterizedTest(name = "afterCommit={0}, tracked={1}, proxy={2}")
-    @CsvSource({ "true,true,false", "false,true,false", "true,false,false", "false,false,false", "true,true,true", "false,true,true" })
+    @CsvSource({ "true,true,false", "false,true,false", "true,true,true", "false,true,true" })
     void callbackWritesRequireAnIndependentTransaction(final boolean afterCommit, final boolean tracked, final boolean proxy) throws Exception {
         final JdbcDataSource ds = dataSource();
-        try (Connection keeper = ds.getConnection(); ExecutorService reader = Executors.newSingleThreadExecutor()) {
+        try (Connection keeper = ds.getConnection();
+             ExecutorService reader = Executors.newSingleThreadExecutor()) {
             initialize(keeper);
             final var dao = cachedDao(proxy ? new TransactionAwareDataSourceProxy(ds) : ds);
             final var manager = new DataSourceTransactionManager(ds);
@@ -108,7 +109,9 @@ class SpringCompletionSafetyTest extends TestBase {
     @CsvSource({ "true,false", "false,false", "true,true", "false,true" })
     void aPreboundConnectionCannotKeepARejectedCallbackWritePending(final boolean afterCommit, final boolean failedReset) throws Exception {
         final JdbcDataSource ds = dataSource();
-        try (Connection keeper = ds.getConnection(); Connection physical = ds.getConnection(); ExecutorService reader = Executors.newSingleThreadExecutor()) {
+        try (Connection keeper = ds.getConnection();
+             Connection physical = ds.getConnection();
+             ExecutorService reader = Executors.newSingleThreadExecutor()) {
             initialize(keeper);
             Connection bound = physical;
             if (failedReset) {
@@ -205,7 +208,7 @@ class SpringCompletionSafetyTest extends TestBase {
         }
     }
 
-    // Without owner tracking the thread-wide fallback also rejects A during B's callbacks. With tracking, A remains usable.
+    // Missing tracking refuses A's SQL regardless of B's phase. With tracking, active A remains usable during B's callbacks.
     @ParameterizedTest(name = "tracked={0}, afterCommit={1}, innerRollback={2}")
     @CsvSource({ "false,true,false", "true,true,false", "false,false,false", "true,false,false", "false,false,true", "true,false,true" })
     void anotherManagersCallbacksRequireTrackingToIdentifyAnActiveOwner(final boolean tracked, final boolean afterCommit, final boolean innerRollback)
@@ -222,15 +225,14 @@ class SpringCompletionSafetyTest extends TestBase {
             final AtomicReference<Throwable> failure = new AtomicReference<>();
             new TransactionTemplate(outerManager).executeWithoutResult(outer -> {
                 new TransactionTemplate(innerManager).executeWithoutResult(inner -> {
-                    JdbcUtil.getConnection(b); // Make B's afterCommit observable to the untracked fallback.
+                    JdbcUtil.getConnection(b); // Register the library's action synchronization on B.
                     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                         private void work() {
                             capture(failure, () -> {
                                 if (tracked) {
                                     JdbcUtil.executeUpdate(a, "INSERT INTO cache_tx_item VALUES (2, 'outer')");
                                 } else {
-                                    assertThrows(IllegalStateException.class,
-                                            () -> JdbcUtil.executeUpdate(a, "INSERT INTO cache_tx_item VALUES (2, 'outer')"));
+                                    assertThrows(IllegalStateException.class, () -> JdbcUtil.executeUpdate(a, "INSERT INTO cache_tx_item VALUES (2, 'outer')"));
                                 }
                             });
                         }
@@ -253,7 +255,12 @@ class SpringCompletionSafetyTest extends TestBase {
                         inner.setRollbackOnly();
                     }
                 });
-                capture(failure, () -> JdbcUtil.executeUpdate(a, "INSERT INTO cache_tx_item VALUES (3, 'after B')"));
+                capture(failure, () -> {
+                    if (tracked)
+                        JdbcUtil.executeUpdate(a, "INSERT INTO cache_tx_item VALUES (3, 'after B')");
+                    else
+                        assertThrows(IllegalStateException.class, () -> JdbcUtil.executeUpdate(a, "INSERT INTO cache_tx_item VALUES (3, 'after B')"));
+                });
                 assertNull(failure.get(), () -> String.valueOf(failure.get()));
                 outer.setRollbackOnly();
             });
@@ -261,11 +268,13 @@ class SpringCompletionSafetyTest extends TestBase {
         }
     }
 
-    // Spring's beforeCommit/beforeCompletion synchronizations run before the physical commit, so their SQL remains part
-    // of the original transaction. In contrast, the execution listener's beforeCommit runs after these synchronizations.
-    @ParameterizedTest(name = "beforeCompletion={0}, tracked={1}")
-    @CsvSource({ "false,false", "false,true", "true,false", "true,true" })
-    void synchronizationWorkBeforeTheCommitRemainsAllowed(final boolean beforeCompletion, final boolean tracked) throws Exception {
+    // Tracked owners permit both synchronization pre-commit phases. Missing tracking is refused in either phase,
+    // regardless of when the library first registered its action synchronization.
+    @ParameterizedTest(name = "beforeCompletion={0}, tracked={1}, alreadyWatching={2}")
+    @CsvSource({ "false,false,false", "false,true,false", "true,false,false", "true,true,false", "false,false,true", "false,true,true", "true,false,true",
+            "true,true,true" })
+    void synchronizationWorkBeforeTheCommitHonorsTheTrackingBoundary(final boolean beforeCompletion, final boolean tracked, final boolean alreadyWatching)
+            throws Exception {
         final JdbcDataSource ds = dataSource();
         try (Connection keeper = ds.getConnection()) {
             initialize(keeper);
@@ -275,12 +284,22 @@ class SpringCompletionSafetyTest extends TestBase {
                 SpringTransactionTracker.register(manager);
             }
             final AtomicReference<Throwable> failure = new AtomicReference<>();
+            final boolean refused = !tracked;
             new TransactionTemplate(manager).executeWithoutResult(status -> {
+                if (alreadyWatching) {
+                    JdbcUtil.releaseConnection(JdbcUtil.getConnection(ds), ds);
+                }
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     private void work() {
                         capture(failure, () -> {
-                            dao.addItem(2);
-                            assertEquals(1, JdbcUtil.executeQuery(ds, "SELECT * FROM FINAL TABLE (INSERT INTO cache_tx_item VALUES (3, 'early'))").size());
+                            if (refused) {
+                                assertThrows(IllegalStateException.class, () -> dao.addItem(2));
+                                assertThrows(IllegalStateException.class,
+                                        () -> JdbcUtil.executeQuery(ds, "SELECT * FROM FINAL TABLE (INSERT INTO cache_tx_item VALUES (3, 'early'))"));
+                            } else {
+                                dao.addItem(2);
+                                assertEquals(1, JdbcUtil.executeQuery(ds, "SELECT * FROM FINAL TABLE (INSERT INTO cache_tx_item VALUES (3, 'early'))").size());
+                            }
                         });
                     }
 
@@ -300,8 +319,8 @@ class SpringCompletionSafetyTest extends TestBase {
                 });
             });
             assertNull(failure.get(), () -> String.valueOf(failure.get()));
-            assertEquals(3, count(keeper));
-            assertEquals(3, dao.cachedCount());
+            assertEquals(refused ? 1 : 3, count(keeper));
+            assertEquals(refused ? 1 : 3, dao.cachedCount());
         }
     }
 
@@ -378,9 +397,8 @@ class SpringCompletionSafetyTest extends TestBase {
     // Regression: an end marker reset the guard before a callback registered later in beforeCompletion. In the late-scope
     // variant the initial-marker fix made this false COMMITTED result newly reachable after a database rollback.
     @ParameterizedTest(name = "tracked={0}, lateScope={1}, rollback={2}, rollbackScope={3}")
-    @CsvSource({ "false,false,false,false", "false,false,true,false", "false,true,false,false", "false,true,true,false",
-            "true,false,false,false", "true,false,true,false", "true,true,false,false", "true,true,true,false",
-            "false,false,false,true", "false,true,false,true", "true,false,false,true", "true,true,false,true" })
+    @CsvSource({ "true,false,false,false", "true,false,true,false", "true,true,false,false", "true,true,true,false", "true,false,false,true",
+            "true,true,false,true" })
     void aLaterCompletionCallbackCannotCompleteAScopeOnTheCompletedTransaction(final boolean tracked, final boolean lateScope, final boolean rollback,
             final boolean rollbackScope) throws Exception {
         final JdbcDataSource ds = dataSource();
@@ -457,7 +475,8 @@ class SpringCompletionSafetyTest extends TestBase {
                 new TransactionTemplate(manager).executeWithoutResult(status -> {
                     try {
                         final String insert = "INSERT INTO cache_tx_item VALUES (2, 'late')";
-                        statement[0] = JdbcUtil.getConnection(ds).prepareStatement(operation.equals("query") ? "SELECT * FROM FINAL TABLE (" + insert + ")" : insert);
+                        statement[0] = JdbcUtil.getConnection(ds)
+                                .prepareStatement(operation.equals("query") ? "SELECT * FROM FINAL TABLE (" + insert + ")" : insert);
                         if (operation.equals("batch") || operation.equals("largeBatch")) {
                             statement[0].addBatch();
                         }
@@ -491,10 +510,10 @@ class SpringCompletionSafetyTest extends TestBase {
         }
     }
 
-    // The captured synchronization belongs to B while the scope belongs to A. Only a tracked owner can safely distinguish
-    // this from a late scope on B itself; the untracked scope must not regain usability merely because a marker ran.
+    // The action synchronization belongs to B while the scope belongs to A. The required owner record keeps A usable
+    // throughout B's callbacks; synchronization ordering cannot distinguish these owners.
     @ParameterizedTest(name = "registerInAfterCommit={0}, innerRollback={1}, tracked={2}")
-    @CsvSource({ "false,false,false", "false,true,false", "true,false,false", "false,false,true", "false,true,true", "true,false,true" })
+    @CsvSource({ "false,false,true", "false,true,true", "true,false,true" })
     void aLateScopeOnAnActiveOuterTransactionRequiresTrackingAfterTheInnerCompletion(final boolean registerInAfterCommit, final boolean innerRollback,
             final boolean tracked) throws Exception {
         final JdbcDataSource a = dataSource();
@@ -580,7 +599,7 @@ class SpringCompletionSafetyTest extends TestBase {
         final AtomicReference<Throwable> failure = new AtomicReference<>();
         final PreparedQuery[] query = new PreparedQuery[1];
         try {
-            new TransactionTemplate(new DataSourceTransactionManager(ds)).executeWithoutResult(status -> {
+            new TransactionTemplate(SpringTestTransactions.manager(ds)).executeWithoutResult(status -> {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void beforeCompletion() {
@@ -725,7 +744,8 @@ class SpringCompletionSafetyTest extends TestBase {
     }
 
     private static int count(final Connection connection) throws SQLException {
-        try (Statement statement = connection.createStatement(); ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM cache_tx_item")) {
+        try (Statement statement = connection.createStatement();
+             ResultSet result = statement.executeQuery("SELECT COUNT(*) FROM cache_tx_item")) {
             result.next();
             return result.getInt(1);
         }

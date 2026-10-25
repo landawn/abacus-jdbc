@@ -17,8 +17,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.jdbc.datasource.DataSourceUtils;
+import org.springframework.jdbc.datasource.TransactionAwareDataSourceProxy;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.landawn.abacus.TestBase;
@@ -122,6 +128,30 @@ class JdbcUtilSpringCloseHandlerTest extends TestBase {
     }
 
     // Guard: outside any Spring scope the handler still closes the connection it obtained, also inside the ignoring scope.
+    @ParameterizedTest(name = "requiresNew={0}, proxy={1}")
+    @CsvSource({ "true,false", "false,false", "true,true", "false,true" })
+    void closingWhileTheOriginalHolderIsSuspendedPreservesItsConnection(final boolean requiresNew, final boolean proxy) throws SQLException {
+        final DataSourceTransactionManager manager = SpringTestTransactions.manager(dataSource);
+        final TransactionTemplate inner = new TransactionTemplate(manager);
+        inner.setPropagationBehavior(requiresNew ? TransactionDefinition.PROPAGATION_REQUIRES_NEW : TransactionDefinition.PROPAGATION_NOT_SUPPORTED);
+        final javax.sql.DataSource querySource = proxy ? new TransactionAwareDataSourceProxy(dataSource) : dataSource;
+        new TransactionTemplate(manager).executeWithoutResult(status -> {
+            final Connection original = ((ConnectionHolder) TransactionSynchronizationManager.getResource(dataSource)).getConnection();
+            try (PreparedQuery query = JdbcUtil.prepareQuery(querySource, "SELECT 1")) {
+                inner.executeWithoutResult(innerStatus -> query.close());
+                assertFalse(original.isClosed(), "closing the query must not close a suspended transaction's connection");
+                assertEquals(1, JdbcUtil.executeUpdate(dataSource, "INSERT INTO close_item(name) VALUES ('outer')"));
+            } catch (final SQLException e) {
+                throw new AssertionError(e);
+            }
+        });
+        try (Statement statement = keeper.createStatement();
+             ResultSet rows = statement.executeQuery("SELECT COUNT(*) FROM close_item")) {
+            assertTrue(rows.next());
+            assertEquals(1, rows.getInt(1));
+        }
+    }
+
     @Test
     void queryOutsideSpringTransaction_closesItsOwnConnection() throws SQLException {
         final PreparedQuery query = JdbcUtil.prepareQuery(dataSource, "SELECT COUNT(*) FROM close_item").closeAfterExecution(false);
@@ -134,7 +164,7 @@ class JdbcUtilSpringCloseHandlerTest extends TestBase {
     }
 
     private TransactionTemplate transactionTemplate() {
-        return new TransactionTemplate(new DataSourceTransactionManager(dataSource));
+        return new TransactionTemplate(SpringTestTransactions.manager(dataSource));
     }
 
     private static void insert(final Connection connection, final String name) throws SQLException {

@@ -97,6 +97,12 @@ import lombok.experimental.Accessors;
  * read column and identifier-case metadata to validate names. INSERT-to-UPDATE conversion reads the database
  * product because parsing caller-provided SQL requires its dialect independently of the quoting policy.</p>
  *
+ * <p>SQL executed to obtain metadata, including the generators' empty column-lookup SELECTs, follows
+ * {@link JdbcUtil}'s Spring transaction checks. A matching Spring transaction must have a
+ * {@link SpringTransactionTracker} registered before it begins; execution throws {@link IllegalStateException}
+ * once that transaction starts completing. Entity generation that obtains usable pre-execution metadata without
+ * executing SQL remains allowed.</p>
+ *
  * <p>SQL-generation examples assume PostgreSQL with lower-case column names unless another database is specified.</p>
  *
  * <p>The generated entity classes can be customized using {@link EntityCodeConfig} to control
@@ -408,10 +414,12 @@ public final class JdbcCodeGenerationUtil {
      *        keys are looked up under it, following the database's case folding for unquoted names, if it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
      *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
-     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
+     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path; fallback execution obeys {@link JdbcUtil}'s Spring completion guard,
+     *         while a usable pre-execution description does not execute the supplied query
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
      *         empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
+     * @throws IllegalStateException if fallback execution uses a Spring connection past the library's execution boundary
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
      */
     public static String generateEntityClassByQuery(final DataSource ds, final String entityName, final String query)
@@ -440,13 +448,15 @@ public final class JdbcCodeGenerationUtil {
      *        case folding for unquoted names, when no configured id field matches a generated field and it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
      *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
-     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
+     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path; fallback execution obeys {@link JdbcUtil}'s Spring completion guard,
+     *         while a usable pre-execution description does not execute the supplied query
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
      *         empty, or if the configuration cannot produce valid Java source (for example, generated names are invalid or collide, an annotation is
      *         unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or
      *         {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
+     * @throws IllegalStateException if fallback execution uses a Spring connection past the library's execution boundary
      * @throws UncheckedSQLException if opening the connection, querying rows or metadata, or closing JDBC resources fails
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
@@ -480,10 +490,12 @@ public final class JdbcCodeGenerationUtil {
      *        keys are looked up under it, following the database's case folding for unquoted names, if it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
      *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
-     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
+     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path; fallback execution obeys {@link JdbcUtil}'s Spring completion guard,
+     *         while a usable pre-execution description does not execute the supplied query
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
      *         empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
+     * @throws IllegalStateException if fallback execution uses a Spring connection past the library's execution boundary
      * @throws UncheckedSQLException if querying rows or metadata, or closing the query's JDBC resources fails
      */
     public static String generateEntityClassByQuery(final Connection conn, final String entityName, final String query)
@@ -513,13 +525,15 @@ public final class JdbcCodeGenerationUtil {
      *        case folding for unquoted names, when no configured id field matches a generated field and it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
      *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
-     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
+     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path; fallback execution obeys {@link JdbcUtil}'s Spring completion guard,
+     *         while a usable pre-execution description does not execute the supplied query
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
      *         empty, or if the configuration cannot produce valid Java source (for example, generated names are invalid or collide, an annotation is
      *         unusable, or a field is both read-only and non-updatable), or {@code config.customFieldMappings} or
      *         {@code config.fieldTypeAnnotationArguments} contains a {@code null} element
+     * @throws IllegalStateException if fallback execution uses a Spring connection past the library's execution boundary
      * @throws UncheckedSQLException if querying rows or metadata, or closing the query's JDBC resources fails
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
@@ -552,7 +566,10 @@ public final class JdbcCodeGenerationUtil {
                 return generateEntityClass(entityName, null, metadata, conn, config);
             }
 
-            try (ResultSet rs = stmt.executeQuery()) {
+            // Caller-supplied SQL can write even when it returns rows (for example, INSERT ... RETURNING). The metadata
+            // fallback must enforce the same Spring completion boundary as ordinary queries; describing without execution
+            // above remains allowed.
+            try (ResultSet rs = JdbcUtil.executeQuery(stmt)) {
                 return generateEntityClass(entityName, rs, config);
             } catch (final SQLException | UncheckedSQLException e) {
                 // The failure of the executed path stays primary, also when the query ran and a later step (column or
@@ -1873,7 +1890,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -1964,7 +1981,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2052,7 +2069,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2143,7 +2160,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2232,7 +2249,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2327,7 +2344,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2417,7 +2434,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2506,7 +2523,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2635,7 +2652,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2756,7 +2773,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2849,7 +2866,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
@@ -2979,7 +2996,7 @@ public final class JdbcCodeGenerationUtil {
         final String query = createQueryByTableName(tableName, identifierQuote);
 
         try (final PreparedStatement stmt = JdbcUtil.prepareStatement(conn, query);
-             final ResultSet rs = stmt.executeQuery()) {
+             final ResultSet rs = JdbcUtil.executeQuery(stmt)) {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 

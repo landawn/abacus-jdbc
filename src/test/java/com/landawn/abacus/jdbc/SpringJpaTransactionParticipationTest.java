@@ -156,8 +156,7 @@ class SpringJpaTransactionParticipationTest extends TestBase {
             outer.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
         }
 
-        final TransactionTemplate innerTemplate = new TransactionTemplate(
-                new org.springframework.jdbc.datasource.DataSourceTransactionManager(innerDataSource));
+        final TransactionTemplate innerTemplate = new TransactionTemplate(SpringTestTransactions.manager(innerDataSource));
 
         new TransactionTemplate(outer.transactionManager).executeWithoutResult(a -> {
             try {
@@ -441,16 +440,11 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         assertNotNull(item.getId());
     }
 
-    // A JPA holder records no completion, but a captured synchronization now keeps its completion observation permanently.
-    // A scope left open past that completion must fail with or without an exact owner record.
-    @ParameterizedTest(name = "tracked={0}")
-    @ValueSource(booleans = { false, true })
-    void theCommitOfAScopeLeftOpenPastASynchronizedJpaTransactionFails(final boolean tracked) throws SQLException {
+    // A JPA holder records no completion; the fixture's required tracker retains the original owner's completion.
+    @Test
+    void theCommitOfAScopeLeftOpenPastASynchronizedJpaTransactionFails() throws SQLException {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
-
-        if (tracked) {
-            jpa.transactionManager.addListener(new SpringTransactionTracker());
-        }
+        assertEquals(1, jpa.transactionManager.getTransactionExecutionListeners().stream().filter(SpringTransactionTracker.class::isInstance).count());
 
         final SqlTransaction[] leftOpen = new SqlTransaction[1];
 
@@ -477,14 +471,10 @@ class SpringJpaTransactionParticipationTest extends TestBase {
     // nothing: a read outside the transaction between the write and the commit stored its result (removed again here by the
     // invalidation after the commit, but kept for good where that invalidation is lost). With a SpringTransactionTracker, the
     // transaction manager tells when the transaction has completed: such a read stores nothing.
-    @ParameterizedTest(name = "tracked={0}")
-    @ValueSource(booleans = { false, true })
-    void aReadOutsideAJpaTransactionThatWroteTheTable_storesNothingWithATracker(final boolean tracked) throws SQLException {
+    @Test
+    void aReadOutsideAJpaTransactionThatWroteTheTable_storesNothingWithATracker() throws SQLException {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
-
-        if (tracked) {
-            jpa.transactionManager.addListener(new SpringTransactionTracker());
-        }
+        assertEquals(1, jpa.transactionManager.getTransactionExecutionListeners().stream().filter(SpringTransactionTracker.class::isInstance).count());
 
         final AtomicInteger stores = new AtomicInteger();
         final CachedItemDao dao = JdbcUtil.createDao(CachedItemDao.class, dataSource,
@@ -499,7 +489,7 @@ class SpringJpaTransactionParticipationTest extends TestBase {
             }
         });
 
-        assertEquals(tracked ? 0 : 1, stores.get(), "the read in between stored its result only without a tracker");
+        assertEquals(0, stores.get(), "the tracked owner keeps the read in between out of the cache");
         assertEquals(1, dao.cachedCount());
     }
 
@@ -517,6 +507,8 @@ class SpringJpaTransactionParticipationTest extends TestBase {
     void aListenerFailingBeforeTheTrackerOfAJpaTransaction_stillReleasesTheCaches(final boolean synchronization, final boolean registeredFirst)
             throws Exception {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+
+        jpa.transactionManager.setTransactionExecutionListeners(new java.util.ArrayList<>());
 
         if (!synchronization) {
             jpa.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
@@ -1021,14 +1013,10 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
             assertThrows(IllegalStateException.class, () -> JdbcUtil.beginTransaction(dataSource));
 
-            try {
-                JdbcUtil.executeUpdate(dataSource, "INSERT INTO jpa_item (name) VALUES ('d')");
-            } catch (final SQLException ex) {
-                throw new IllegalArgumentException(ex);
-            }
+            assertThrows(IllegalStateException.class, () -> JdbcUtil.executeUpdate(dataSource, "INSERT INTO jpa_item (name) VALUES ('d')"));
         });
 
-        assertEquals(1, count());
+        assertEquals(0, count());
     }
 
     // JPA holders have no JDBC transaction-active flag. Reject callback writes from the owner's report rather than waiting
@@ -1253,6 +1241,7 @@ class SpringJpaTransactionParticipationTest extends TestBase {
             }
 
             transactionManager = new JpaTransactionManager(entityManagerFactory);
+            SpringTransactionTracker.register(transactionManager);
             transactionManager.setDataSource(dataSource);
             transactionManager.setJpaDialect(new DefaultJpaDialect() {
                 @Override

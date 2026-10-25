@@ -551,12 +551,22 @@ final class SpringTransactionOwners {
     }
 
     /**
-     * Returns the owner of {@code holder}, if a tracker reported the transaction that last began with it, also once that
-     * transaction has completed.
+     * Requires the owner recorded when the transaction began. A late synchronization cannot provide equivalent detection.
      *
-     * @param holder a connection holder bound to a data source, or {@code null}
-     * @return its owner, or {@code null} if none is known (no tracker is registered with its transaction manager)
+     * @param holder the transaction-owned connection holder
+     * @return its recorded owner
+     * @throws IllegalStateException if the transaction was not tracked
      */
+    static Owner require(final Object holder) {
+        final Owner owner = of(holder);
+        if (owner == null) {
+            throw new IllegalStateException("Spring transaction participation requires SpringTransactionTracker. "
+                    + "Register it with every transaction manager before transactions begin");
+        }
+        return owner;
+    }
+
+    /** Returns the last recorded owner of the holder, or null when none is known. */
     static Owner of(final Object holder) {
         return holder == null || !tracking ? null : owners.get(holder);
     }

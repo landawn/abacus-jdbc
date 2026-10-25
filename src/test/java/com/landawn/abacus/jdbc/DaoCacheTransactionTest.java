@@ -371,8 +371,8 @@ class DaoCacheTransactionTest extends TestBase {
         other.setURL("jdbc:h2:mem:dao_cache_other_" + UUID.randomUUID());
         assertEquals(1, dao.cachedCount()); // cached
 
-        new TransactionTemplate(new DataSourceTransactionManager(dataSource)).executeWithoutResult(outer -> {
-            new TransactionTemplate(new DataSourceTransactionManager(other)).executeWithoutResult(inner -> {
+        new TransactionTemplate(SpringTestTransactions.manager(dataSource)).executeWithoutResult(outer -> {
+            new TransactionTemplate(SpringTestTransactions.manager(other)).executeWithoutResult(inner -> {
                 try {
                     dao.addItem(2); // joins the enclosing transaction, which owns the connection of the DAO's data source
                 } catch (final SQLException e) {
@@ -394,7 +394,7 @@ class DaoCacheTransactionTest extends TestBase {
     // for good. While the transaction that wrote the table runs, its connection holder keeps the shared caches out of reads of
     // the table, whatever the synchronization.
     @ParameterizedTest(name = "innerRollsBack={0}, tracked={1}")
-    @org.junit.jupiter.params.provider.CsvSource({ "false, false", "true, false", "false, true", "true, true" })
+    @org.junit.jupiter.params.provider.CsvSource({ "false, true", "true, true" })
     void aReadBetweenAWriteFromAnotherManagersTransactionAndTheEnclosingCommit_storesNothing(final boolean innerRollsBack, final boolean tracked)
             throws SQLException {
         final JdbcDataSource other = new JdbcDataSource();
@@ -402,7 +402,7 @@ class DaoCacheTransactionTest extends TestBase {
         assertEquals(1, dao.cachedCount()); // cached
 
         template(tracked).executeWithoutResult(outer -> {
-            new TransactionTemplate(new DataSourceTransactionManager(other)).executeWithoutResult(inner -> {
+            new TransactionTemplate(SpringTestTransactions.manager(other)).executeWithoutResult(inner -> {
                 try {
                     dao.addItem(2); // joins the enclosing transaction, which owns the connection of the DAO's data source
                 } catch (final SQLException e) {
@@ -429,7 +429,7 @@ class DaoCacheTransactionTest extends TestBase {
     // External review (tests): several transactions with writes of a table pending (an enclosing one, and a REQUIRES_NEW one
     // inside it that commits first): the caches stay out of the table until the last of them has completed.
     @ParameterizedTest(name = "tracked={0}")
-    @ValueSource(booleans = { false, true })
+    @ValueSource(booleans = { true })
     void severalPendingWriters_keepTheCachesOutUntilTheLastHasCompleted(final boolean tracked) throws SQLException {
         assertEquals(1, dao.cachedCount()); // cached
 
@@ -480,7 +480,7 @@ class DaoCacheTransactionTest extends TestBase {
 
         assertTrue(storing.await(10, java.util.concurrent.TimeUnit.SECONDS), "the read has fetched its rows");
 
-        template(false).executeWithoutResult(status -> {
+        template(true).executeWithoutResult(status -> {
             try {
                 cachedDao.addItem(2);
             } catch (final SQLException e) {
@@ -872,7 +872,7 @@ class DaoCacheTransactionTest extends TestBase {
     // through JdbcUtil.executeUpdate(dataSource(), ...)): a read outside the transaction before the commit stored the old
     // rows for good. Every write in a Spring transaction does now, unless its propagation leaves the transaction.
     @ParameterizedTest(name = "tracked={0}")
-    @ValueSource(booleans = { false, true })
+    @ValueSource(booleans = { true })
     void aDefaultMethodWritingThroughASpringTransaction_keepsTheCachesOutUntilItCompletes(final boolean tracked) throws SQLException {
         final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
         transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
@@ -1005,7 +1005,7 @@ class DaoCacheTransactionTest extends TestBase {
     // invalidations right away, before the commit: a read outside the transaction in between stored the old rows for good.
     @Test
     void aReadBetweenAWriteAndTheCommitOfASpringTransactionWithoutSynchronization_storesNothing() throws SQLException {
-        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSource);
         transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
         final TransactionTemplate unsynchronized = new TransactionTemplate(transactionManager);
 
@@ -1079,7 +1079,7 @@ class DaoCacheTransactionTest extends TestBase {
     // observed: a write in it invalidates the cache right away only.
     @Test
     void aWriteInASpringTransactionWithoutSynchronization_invalidatesTheCacheRightAway() throws SQLException {
-        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSource);
         transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
         assertEquals(1, dao.cachedCount()); // cached
 
@@ -1226,7 +1226,7 @@ class DaoCacheTransactionTest extends TestBase {
 
     private void inTransaction(final boolean spring, final boolean commit, final Throwables.Runnable<SQLException> work) throws SQLException {
         if (spring) {
-            new TransactionTemplate(new DataSourceTransactionManager(dataSource)).executeWithoutResult(status -> {
+            new TransactionTemplate(SpringTestTransactions.manager(dataSource)).executeWithoutResult(status -> {
                 try {
                     work.run();
                 } catch (final SQLException e) {
