@@ -1,34 +1,33 @@
 package com.landawn.abacus.jdbc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Proxy;
 import java.sql.Connection;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.jdbc.datasource.ConnectionHandle;
 import org.springframework.jdbc.datasource.ConnectionHolder;
-import org.springframework.orm.jpa.EntityManagerHolder;
-import org.springframework.transaction.TransactionExecution;
+import org.springframework.jdbc.datasource.JdbcTransactionObjectSupport;
 import org.springframework.transaction.support.DefaultTransactionStatus;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.landawn.abacus.TestBase;
 
-import jakarta.persistence.EntityManager;
-
-// The completion records SpringTransactionTracker reports to, and what tells them the progress of Spring's cleanup after a
-// transaction (the tracker's cleanups).
+// The completion records SpringTransactionTracker reports to, and the tracker's reports.
 class SpringTransactionOwnersTest extends TestBase {
 
     // External review (tests): a failed commit or rollback leaves the outcome uncertain until Spring's cleanup has finished,
@@ -37,20 +36,19 @@ class SpringTransactionOwnersTest extends TestBase {
     @ParameterizedTest(name = "failureReportedFirst={0}")
     @ValueSource(booleans = { true, false })
     void aCleanCompletion_winsOverAFailureReportedForTheSameTransaction(final boolean failureReportedFirst) {
-        final Object holder = new Object();
-        SpringTransactionOwners.began(holder, new SettableCleanup());
-        final SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(holder);
+        final Object holder = ownHandleHolder();
+        final SpringTransactionOwners.Owner owner = began(new Object(), holder);
         assertFalse(owner.isDeciding());
         assertFalse(owner.isCompleted());
 
         if (failureReportedFirst) {
-            SpringTransactionOwners.uncertain(holder);
+            owner.uncertain();
             assertTrue(owner.isDeciding(), "the transaction manager has decided");
             assertFalse(owner.isCompleted(), "uncertain until the cleanup has finished");
-            SpringTransactionOwners.completed(holder);
+            owner.completed();
         } else {
-            SpringTransactionOwners.completed(holder);
-            SpringTransactionOwners.uncertain(holder);
+            owner.completed();
+            owner.uncertain();
         }
 
         assertTrue(owner.isDeciding());
@@ -59,247 +57,502 @@ class SpringTransactionOwnersTest extends TestBase {
         Reference.reachabilityFence(holder);
     }
 
-    // External review: a failed commit or rollback stays pending until Spring's cleanup has finished (not merely begun), with
-    // the holder still reachable.
+    // Spring clears the holder even when restoring auto-commit fails. That cannot confirm settlement.
     @Test
-    void aFailure_isPendingUntilSpringsCleanupHasFinished() {
-        final Object holder = new Object();
-        final SettableCleanup cleanup = new SettableCleanup();
-        SpringTransactionOwners.began(holder, cleanup);
-        SpringTransactionOwners.uncertain(holder);
-        final SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(holder);
+    void aFailureOnAHolderWithSpringsOwnHandle_remainsPendingAfterTheHolderIsCleared() {
+        final ConnectionHolder holder = new ConnectionHolder(mock(Connection.class), true);
+        final SpringTransactionOwners.Owner owner = began(new Object(), holder);
+        owner.uncertain();
 
         assertTrue(owner.isDeciding());
         assertFalse(owner.isCompleted());
 
-        cleanup.finished.set(true);
-        assertTrue(owner.isCompleted(), "completed once the cleanup has finished, the holder still reachable");
-        Reference.reachabilityFence(holder);
+        holder.clear(); // also happens when resetting the connection failed
+        assertFalse(owner.isCompleted());
     }
 
-    // A holder garbage collected has completed: no transaction can use it any more. The only end told where the cleanup's
-    // isn't.
+    // A holder's collection says nothing about a connection independently owned by an entity manager.
     @Test
-    void aCollectedHolder_completesItsTransaction() throws InterruptedException {
-        Object holder = new Object();
-        SpringTransactionOwners.began(holder, new SettableCleanup());
-        SpringTransactionOwners.uncertain(holder);
-        final SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(holder);
-        assertFalse(owner.isCompleted());
+    void aFailureOnAHolderThatTellsNothing_remainsPendingAfterItsHolderIsCollected() throws InterruptedException {
+        ConnectionHolder holder = ownHandleHolder();
+        final SpringTransactionOwners.Owner owner = began(new Object(), holder);
+        owner.uncertain();
+
+        holder.clear();
+        assertFalse(owner.isCompleted(), "the holder's state tells nothing");
         Reference.reachabilityFence(holder);
 
         final WeakReference<Object> collected = new WeakReference<>(holder);
         holder = null;
         awaitCollected(collected);
 
-        assertTrue(owner.isCompleted(), "completed once its holder has been collected");
+        assertFalse(owner.isCompleted(), "GC is not settlement");
     }
 
-    // External review: the owner of a holder that a newer transaction has reused is forgotten, for good; until then, it is
-    // the owner.
+    // External review: a report reaches the record of the transaction it is about, made when that transaction began, not
+    // whichever record the holder's entry holds when it comes: an old transaction's reports, from its listener callbacks or
+    // its synchronization, can't complete a newer transaction on the same holder.
     @Test
-    void anOwnerWhoseHolderIsReused_isForgotten() {
-        final Object holder = new Object();
-        final SettableCleanup cleanup = new SettableCleanup();
-        SpringTransactionOwners.began(holder, cleanup);
-        final SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(holder);
-        SpringTransactionOwners.completed(holder);
-
-        assertSame(owner, SpringTransactionOwners.of(holder));
-
-        cleanup.reused.set(true);
-        assertNull(SpringTransactionOwners.of(holder));
-        assertTrue(owner.isCompleted(), "the forgotten owner still tells its own transaction's completion");
-
-        cleanup.reused.set(false);
-        assertNull(SpringTransactionOwners.of(holder), "forgotten for good");
-        Reference.reachabilityFence(holder);
-    }
-
-    // External review: the start of Spring's cleanup (the status's completion, its first step) was taken for its end. For a
-    // DataSourceTransactionManager transaction, the cleanup then still restores auto-commit, committing what a failed commit
-    // left pending; it clears the holder as its last step, which tells the end.
-    @Test
-    void aHolderCleanup_finishesOnlyWhenTheCleanupClearsTheHolder() {
+    void anOldTransactionsReports_reachOnlyItsOwnRecord() {
+        final SpringTransactionTracker tracker = new SpringTransactionTracker();
         final ConnectionHolder holder = new ConnectionHolder(mock(Connection.class), true);
-        final DefaultTransactionStatus status = newStatus();
-        final SpringTransactionOwners.Cleanup cleanup = new SpringTransactionTracker.HolderCleanup(holder, status);
-
-        assertFalse(cleanup.isFinished());
-
-        status.setCompleted(); // the first step of the cleanup
-        assertFalse(cleanup.isFinished(), "begun, not finished");
-
-        holder.clear(); // its last step
-        assertTrue(cleanup.isFinished());
-    }
-
-    // External review: inside its own cleanup (the status completed, the holder still transaction-active), a transaction's
-    // holder was taken for one a newer transaction had reused, when a connection hook ran library code there. Spring clears
-    // the thread's transaction state as the first step of the cleanup; a newer transaction with synchronization sets it again.
-    // One without synchronization sets nothing, so it is not told (a documented limit).
-    @Test
-    void aHolderCleanup_tellsAReusedHolderByTheThreadsTransactionState() {
-        final ReusableHolder holder = new ReusableHolder(mock(Connection.class));
-        final DefaultTransactionStatus status = newStatus();
-        final SpringTransactionOwners.Cleanup cleanup = new SpringTransactionTracker.HolderCleanup(holder, status);
+        final DefaultTransactionStatus older = newStatus(transactionObject(holder), true);
+        final DefaultTransactionStatus newer = newStatus(transactionObject(holder), true);
 
         try {
-            TransactionSynchronizationManager.setActualTransactionActive(true);
-            assertFalse(cleanup.isHolderReused(), "its own transaction runs");
+            TransactionSynchronizationManager.initSynchronization();
+            tracker.afterBegin(older, null);
+            final SpringTransactionOwners.Owner olderOwner = SpringTransactionOwners.of(holder);
+            final TransactionSynchronization olderSynchronization = TransactionSynchronizationManager.getSynchronizations().get(0);
+            TransactionSynchronizationManager.clearSynchronization();
 
-            status.setCompleted(); // the first steps of the cleanup
-            TransactionSynchronizationManager.setActualTransactionActive(false);
-            assertFalse(cleanup.isHolderReused(), "inside the cleanup: the holder still active, the thread's transaction state cleared");
+            tracker.afterBegin(newer, null);
+            final SpringTransactionOwners.Owner newerOwner = SpringTransactionOwners.of(holder);
+            assertNotSame(olderOwner, newerOwner);
 
-            holder.clear(); // the last step
-            assertFalse(cleanup.isHolderReused(), "after the cleanup");
+            tracker.beforeCommit(older);
+            tracker.afterCommit(older, new IllegalStateException("simulated commit failure"));
+            olderSynchronization.afterCompletion(TransactionSynchronization.STATUS_COMMITTED);
 
-            holder.reuse();
-            assertFalse(cleanup.isHolderReused(), "a newer transaction without synchronization: not told");
-
-            TransactionSynchronizationManager.setActualTransactionActive(true);
-            assertTrue(cleanup.isHolderReused(), "a newer transaction with synchronization");
+            assertTrue(olderOwner.isCompleted());
+            assertFalse(newerOwner.isDeciding(), "the newer transaction is untouched");
+            assertFalse(newerOwner.isCompleted());
+            assertSame(newerOwner, SpringTransactionOwners.of(holder));
         } finally {
-            TransactionSynchronizationManager.setActualTransactionActive(false);
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.clearSynchronization();
+            }
         }
     }
 
-    // External review: for a JPA transaction, the close of its entity manager, the last step of the cleanup (after the
-    // dialect's connection release), tells the end; an entity manager that can't tell leaves it to the holder's collection.
+    // External review: the owner is kept through its transaction's completion and cleanup, also once its holder is
+    // transaction-active again with a Spring transaction active on the thread (which a connection hook inside the cleanup
+    // may begin on another data source): only a tracked transaction beginning with the holder replaces it.
     @Test
-    void anEntityManagerCleanup_finishesWhenTheEntityManagerIsClosed() {
-        final EntityManager entityManager = mock(EntityManager.class);
-        when(entityManager.isOpen()).thenReturn(true);
-        final SpringTransactionOwners.Cleanup cleanup = new SpringTransactionTracker.EntityManagerCleanup(entityManager);
-
-        assertFalse(cleanup.isFinished());
-
-        when(entityManager.isOpen()).thenReturn(false);
-        assertTrue(cleanup.isFinished());
-
-        when(entityManager.isOpen()).thenThrow(new IllegalStateException("cannot tell"));
-        assertFalse(cleanup.isFinished(), "can't tell: left to the holder's garbage collection");
-        assertFalse(cleanup.isHolderReused(), "JpaTransactionManager binds a new holder for each transaction");
-    }
-
-    // External review (tests): which cleanup check each kind of transaction gets. A holder with Spring's own connection handle
-    // (DataSourceTransactionManager, JdbcTransactionManager) gets the holder's.
-    @Test
-    void aHolderWithSpringsOwnHandle_getsTheHolderCleanup() {
-        final ConnectionHolder holder = new ConnectionHolder(mock(Connection.class));
-
-        assertTrue(SpringTransactionTracker.cleanupOf(newStatus(), holder) instanceof SpringTransactionTracker.HolderCleanup);
-    }
-
-    // A holder with a handle of its own whose transaction object keeps an EntityManagerHolder (as JpaTransactionManager's
-    // does, behind a public method of a private class) gets the entity manager's check, on that entity manager.
-    @Test
-    void aJpaTransactionsHolder_getsTheEntityManagerCleanupOfItsEntityManager() {
-        final EntityManager entityManager = mock(EntityManager.class);
-        when(entityManager.isOpen()).thenReturn(true);
-        final DefaultTransactionStatus status = newStatus(new JpaLikeTransactionObject(new EntityManagerHolder(entityManager)));
-        final SpringTransactionOwners.Cleanup cleanup = SpringTransactionTracker.cleanupOf(status, ownHandleHolder());
-
-        assertTrue(cleanup instanceof SpringTransactionTracker.EntityManagerCleanup, String.valueOf(cleanup));
-        assertFalse(cleanup.isFinished());
-
-        when(entityManager.isOpen()).thenReturn(false);
-        assertTrue(cleanup.isFinished(), "told by that entity manager");
-    }
-
-    // Where neither tells the end (a holder with a handle of its own, and no entity manager found: another kind of transaction
-    // object, another kind of execution, or a transaction object without an EntityManagerHolder), the fallback tells
-    // nothing, leaving it to the holder's garbage collection.
-    @ParameterizedTest(name = "{0}")
-    @ValueSource(strings = { "another transaction object", "another execution", "no EntityManagerHolder" })
-    void aHolderWhoseCleanupCantBeTold_getsTheFallback(final String kind) {
-        final TransactionExecution execution = switch (kind) {
-            case "another transaction object" -> newStatus(new Object());
-            case "another execution" -> new TransactionExecution() {
-            };
-            default -> newStatus(new JpaLikeTransactionObject(null));
-        };
-        final SpringTransactionOwners.Cleanup cleanup = SpringTransactionTracker.cleanupOf(execution, ownHandleHolder());
-
-        assertFalse(cleanup instanceof SpringTransactionTracker.HolderCleanup);
-        assertFalse(cleanup instanceof SpringTransactionTracker.EntityManagerCleanup);
-        assertFalse(cleanup.isFinished());
-        assertFalse(cleanup.isHolderReused());
-    }
-
-    // With the fallback, a failed transaction completes once its holder has been garbage collected.
-    @Test
-    void aFailedTransactionWithTheFallback_completesOnceItsHolderIsCollected() throws InterruptedException {
-        ConnectionHolder holder = ownHandleHolder();
-        SpringTransactionOwners.began(holder, SpringTransactionTracker.cleanupOf(newStatus(new Object()), holder));
-        SpringTransactionOwners.uncertain(holder);
+    void anOwner_isKeptUntilATrackedTransactionBeginsWithItsHolder() {
+        final SpringTransactionTracker tracker = new SpringTransactionTracker();
+        final ReusableHolder holder = new ReusableHolder(mock(Connection.class));
+        final DefaultTransactionStatus first = newStatus(transactionObject(holder), true);
+        tracker.afterBegin(first, null);
         final SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(holder);
-        assertFalse(owner.isCompleted());
-        Reference.reachabilityFence(holder);
+        tracker.afterCommit(first, null);
+        first.setCompleted(); // the first step of Spring's cleanup
 
-        final WeakReference<Object> collected = new WeakReference<>(holder);
-        holder = null;
-        awaitCollected(collected);
+        try {
+            TransactionSynchronizationManager.setActualTransactionActive(true);
+            assertSame(owner, SpringTransactionOwners.of(holder), "inside the cleanup, another transaction active on the thread");
 
+            holder.clear();
+            holder.reuse();
+            assertSame(owner, SpringTransactionOwners.of(holder), "reused by a transaction of a transaction manager without a tracker");
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
+
+        tracker.afterBegin(newStatus(transactionObject(holder), true), null);
+        assertNotSame(owner, SpringTransactionOwners.of(holder), "replaced by a tracked transaction");
         assertTrue(owner.isCompleted());
     }
 
-    // External review (tests): a transaction status garbage collected can no longer be committed or rolled back, so Spring's
-    // cleanup after it counts as begun: the holder, active again with a Spring transaction on the thread, is reused.
+    // A scope participating in a transaction, or a savepoint of one, is no new transaction: it is not recorded, and reports
+    // about it reach no record.
     @Test
-    void aHolderCleanupWhoseStatusIsCollected_takesTheCleanupForBegun() throws InterruptedException {
-        final ReusableHolder holder = new ReusableHolder(mock(Connection.class));
-        DefaultTransactionStatus status = newStatus();
-        final SpringTransactionOwners.Cleanup cleanup = new SpringTransactionTracker.HolderCleanup(holder, status);
-        final WeakReference<Object> collected = new WeakReference<>(status);
+    void reportsAboutAnExecutionThatIsNoNewTransaction_areIgnored() {
+        final SpringTransactionTracker tracker = new SpringTransactionTracker();
+        final ConnectionHolder holder = new ConnectionHolder(mock(Connection.class), true);
+        final DefaultTransactionStatus participating = newStatus(transactionObject(holder), false);
 
+        tracker.afterBegin(participating, null);
+        tracker.beforeCommit(participating);
+        tracker.afterCommit(participating, null);
+
+        assertNull(SpringTransactionOwners.of(holder));
+        assertNull(SpringTransactionOwners.ofTransaction(participating));
+    }
+
+    // The strong cache registry must survive collection of both weak map keys and all application references to the owner.
+    @Test
+    void aCacheBlock_survivesCollectionUntilItsOwnSettlementIsConfirmed() throws Exception {
+        Object holder = ownHandleHolder();
+        Object transaction = new Object();
+        SpringTransactionOwners.Owner owner = began(transaction, holder);
+        owner.cacheWrite("owner_gc_test");
+        owner.uncertain();
+        final long id = owner.id();
+        final WeakReference<Object> holderRef = new WeakReference<>(holder);
+        final WeakReference<Object> transactionRef = new WeakReference<>(transaction);
+        final WeakReference<SpringTransactionOwners.Owner> ownerRef = new WeakReference<>(owner);
+        holder = null;
+        transaction = null;
+        owner = null;
         try {
-            TransactionSynchronizationManager.setActualTransactionActive(true);
-            assertFalse(cleanup.isHolderReused(), "its status is reachable and not completed");
-
-            status = null;
-            awaitCollected(collected);
-            assertTrue(cleanup.isHolderReused(), "the status collected: a newer transaction runs with the holder");
+            awaitCollected(holderRef);
+            awaitCollected(transactionRef);
+            assertNotNull(ownerRef.get(), "the cache registry retains only the lightweight owner");
+            assertFalse(ownerRef.get().isCompleted());
+            assertTrue(isListed(id));
+            assertTrue(SpringTransactionTracker.confirmSettled(id));
+            assertTrue(ownerRef.get().isCompleted());
+            assertFalse(SpringTransactionTracker.confirmSettled(id), "idempotent");
+            assertFalse(isListed(id));
         } finally {
-            TransactionSynchronizationManager.setActualTransactionActive(false);
+            SpringTransactionTracker.confirmSettled(id);
         }
     }
 
-    // A holder garbage collected has nothing left to clean up, nor to reuse.
+    // A snapshot taken for A must never release B, including when B fails after the snapshot on another thread.
     @Test
-    void aHolderCleanupWhoseHolderIsCollected_isFinished() throws InterruptedException {
-        ConnectionHolder holder = new ConnectionHolder(mock(Connection.class), true);
-        final SpringTransactionOwners.Cleanup cleanup = new SpringTransactionTracker.HolderCleanup(holder, newStatus());
-        assertFalse(cleanup.isFinished());
-
-        final WeakReference<Object> collected = new WeakReference<>(holder);
-        holder = null;
-        awaitCollected(collected);
-
-        assertTrue(cleanup.isFinished());
-        assertFalse(cleanup.isHolderReused());
+    void confirmingASnapshotId_leavesAConcurrentFailureBlocked() throws Exception {
+        final SpringTransactionOwners.Owner a = began(new Object(), new Object());
+        a.cacheWrite("same_table");
+        a.uncertain();
+        final var snapshot = SpringTransactionTracker.unresolvedTransactions();
+        assertThrows(UnsupportedOperationException.class, () -> snapshot.clear());
+        final var snapshotOfA = snapshot.stream().filter(record -> record.id() == a.id()).toList();
+        assertEquals(1, snapshotOfA.size());
+        assertThrows(UnsupportedOperationException.class, () -> snapshotOfA.get(0).tables().add("other"));
+        final SpringTransactionOwners.Owner b = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            final var owner = began(new Object(), new Object());
+            owner.cacheWrite("same_table");
+            owner.uncertain();
+            return owner;
+        }).get(10, java.util.concurrent.TimeUnit.SECONDS);
+        try {
+            assertTrue(SpringTransactionTracker.confirmSettled(snapshotOfA.get(0).id()));
+            assertFalse(b.isCompleted());
+            assertFalse(isListed(a.id()));
+            assertTrue(isListed(b.id()));
+        } finally {
+            a.completed();
+            b.completed();
+        }
+        assertFalse(isListed(b.id()));
     }
 
-    // An entity manager garbage collected can no longer be used: its cleanup counts as finished.
     @Test
-    void anEntityManagerCleanupWhoseEntityManagerIsCollected_isFinished() throws InterruptedException {
-        EntityManager entityManager = (EntityManager) Proxy.newProxyInstance(EntityManager.class.getClassLoader(), new Class<?>[] { EntityManager.class },
-                (proxy, method, args) -> {
-                    if ("isOpen".equals(method.getName())) {
-                        return true;
+    void aLateCleanCompletion_releasesTheRegistryAndALateFailureCannotReinsertIt() {
+        final var owner = began(new Object(), new Object());
+        owner.cacheWrite("late_completion");
+        owner.uncertain();
+        final long id = owner.id();
+        assertTrue(isListed(id));
+        owner.completed();
+        owner.uncertain();
+        owner.cacheWrite("late_write_notification");
+        assertTrue(owner.isCompleted());
+        assertFalse(SpringTransactionTracker.confirmSettled(id));
+        assertFalse(isListed(id));
+    }
+
+    // A missing callback is detected after the execution ends, but that observation only enters the unresolved state.
+    @Test
+    void aMissingCompletionReport_keepsACacheBlockButTransactionsWithoutCacheWritesAreNotRetained() {
+        final var ended = new java.util.concurrent.atomic.AtomicBoolean();
+        final var owner = SpringTransactionOwners.began(new Object(), new Object(), ended::get, "missing-report");
+        owner.cacheWrite("missing_report_table");
+        assertFalse(isListed(owner.id()), "active transactions are excluded");
+        ended.set(true);
+        final var snapshot = recordOf(owner.id());
+        assertEquals("missing-report", snapshot.transactionName());
+        assertEquals("no completion report", snapshot.failure());
+        assertFalse(owner.isCompleted());
+        assertTrue(owner.isDeciding());
+        assertTrue(SpringTransactionTracker.confirmSettled(owner.id()));
+        final var noWrite = SpringTransactionOwners.began(new Object(), new Object(), () -> true, "no-cache-write");
+        noWrite.uncertain();
+        assertFalse(isListed(noWrite.id()));
+    }
+
+    // External review: a transaction still active with no failure report can't have its settlement confirmed (its work may
+    // still change): one-by-one and in bulk, and in bulk nothing is then confirmed.
+    @Test
+    void confirmingAnActiveTransaction_throwsAndConfirmsNothing() {
+        final var active = began(new Object(), new Object());
+        active.cacheWrite("active_table");
+        final var failed = began(new Object(), new Object());
+        failed.cacheWrite("active_table");
+        failed.uncertain();
+
+        try {
+            assertThrows(IllegalStateException.class, () -> SpringTransactionTracker.confirmSettled(active.id()));
+            assertThrows(IllegalStateException.class, () -> SpringTransactionTracker.confirmSettled(List.of(failed.id(), active.id())));
+            assertTrue(isListed(failed.id()), "nothing confirmed");
+            assertFalse(active.isCompleted());
+        } finally {
+            active.completed();
+            failed.completed();
+        }
+    }
+
+    // External review: bulk confirmation confirms exactly the IDs given (those of a verified snapshot), skips an unknown or
+    // resolved one, and leaves a transaction that became unresolved meanwhile blocked; its arguments are checked first.
+    @Test
+    void confirmingSettledTransactionsInBulk_confirmsOnlyTheGivenIds() throws Exception {
+        final var a = began(new Object(), new Object());
+        a.cacheWrite("bulk_table");
+        a.uncertain();
+        final var b = began(new Object(), new Object());
+        b.cacheWrite("bulk_table");
+        b.uncertain();
+        final var resolved = began(new Object(), new Object());
+        resolved.cacheWrite("bulk_table");
+        resolved.uncertain();
+        resolved.completed();
+        final List<Long> verified = SpringTransactionTracker.unresolvedTransactions()
+                .stream()
+                .map(SpringTransactionTracker.UnresolvedTransaction::id)
+                .filter(id -> id == a.id() || id == b.id())
+                .toList();
+        final var concurrent = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            final var owner = began(new Object(), new Object());
+            owner.cacheWrite("bulk_table");
+            owner.uncertain();
+            return owner;
+        }).get(10, java.util.concurrent.TimeUnit.SECONDS);
+
+        try {
+            assertThrows(IllegalArgumentException.class, () -> SpringTransactionTracker.confirmSettled((java.util.Collection<Long>) null));
+            assertThrows(IllegalArgumentException.class, () -> SpringTransactionTracker.confirmSettled(java.util.Arrays.asList(a.id(), null)));
+            assertTrue(isListed(a.id()), "nothing confirmed by a rejected call");
+
+            final List<Long> ids = new java.util.ArrayList<>(verified);
+            ids.add(resolved.id());
+            ids.add(-1L);
+            ids.add(a.id());
+            assertEquals(List.of(a.id(), b.id()), SpringTransactionTracker.confirmSettled(ids));
+            assertTrue(a.isCompleted());
+            assertTrue(b.isCompleted());
+            assertTrue(isListed(concurrent.id()), "unresolved after the snapshot: stays blocked");
+            assertEquals(SpringTransactionTracker.unresolvedTransactions().size(), SpringTransactionTracker.unresolvedTransactionCount());
+            assertEquals(List.of(), SpringTransactionTracker.confirmSettled(ids), "idempotent");
+        } finally {
+            a.completed();
+            b.completed();
+            concurrent.completed();
+        }
+    }
+
+    // External review: bulk confirmation read the completion flag twice when it checked a supplied ID, so a transaction that
+    // completed between the two reads (a late clean report, or a confirmation by another caller) looked active, and the whole
+    // batch was rejected with IllegalStateException, leaving its other IDs unconfirmed. No hook sits between those reads, so
+    // the race is run many times, the completion delayed by a random spin to sweep the window: the bulk call never throws,
+    // and confirms the other supplied ID every time.
+    @Test
+    void confirmingInBulk_whileASuppliedTransactionCompletesConcurrently_neverRejectsTheBatch() throws Exception {
+        final int rounds = 20_000;
+        final java.util.concurrent.atomic.AtomicReference<SpringTransactionOwners.Owner> target = new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.atomic.AtomicInteger started = new java.util.concurrent.atomic.AtomicInteger(-1);
+        final java.util.concurrent.atomic.AtomicInteger finished = new java.util.concurrent.atomic.AtomicInteger(-1);
+        final java.util.concurrent.atomic.AtomicReference<Throwable> completerFailure = new java.util.concurrent.atomic.AtomicReference<>();
+        final Thread completer = new Thread(() -> {
+            final java.util.Random random = new java.util.Random(42);
+
+            try {
+                for (int round = 0; round < rounds; round++) {
+                    while (started.get() < round) {
+                        if (Thread.currentThread().isInterrupted()) {
+                            return;
+                        }
+
+                        Thread.onSpinWait();
                     }
 
-                    throw new UnsupportedOperationException(method.getName());
-                });
-        final SpringTransactionOwners.Cleanup cleanup = new SpringTransactionTracker.EntityManagerCleanup(entityManager);
-        assertFalse(cleanup.isFinished(), "open");
+                    final SpringTransactionOwners.Owner owner = target.get();
 
-        final WeakReference<Object> collected = new WeakReference<>(entityManager);
-        entityManager = null;
-        awaitCollected(collected);
+                    for (int spin = random.nextInt(64); spin > 0; spin--) {
+                        Thread.onSpinWait();
+                    }
 
-        assertTrue(cleanup.isFinished());
+                    if (round % 2 == 0) {
+                        owner.completed(); // a late clean report
+                    } else {
+                        SpringTransactionTracker.confirmSettled(owner.id()); // another caller's confirmation
+                    }
+
+                    finished.set(round);
+                }
+            } catch (final Throwable e) {
+                completerFailure.set(e);
+                finished.set(Integer.MAX_VALUE);
+            }
+        }, "concurrent-completer");
+        completer.setDaemon(true);
+
+        // Each round leaves two transactions unresolved for a moment, and each logs its warning: 40,000 console lines made
+        // the test take seconds. Quietened for the loop only (the tests' log4j2 configuration logs this package at debug).
+        final String loggerName = SpringTransactionOwners.class.getName();
+        final org.apache.logging.log4j.Level level = org.apache.logging.log4j.LogManager.getLogger(loggerName).getLevel();
+        org.apache.logging.log4j.core.config.Configurator.setLevel(loggerName, org.apache.logging.log4j.Level.ERROR);
+        completer.start();
+
+        int rejected = 0;
+
+        try {
+            for (int round = 0; round < rounds; round++) {
+                final SpringTransactionOwners.Owner a = began(new Object(), new Object());
+                a.cacheWrite("bulk_race_table");
+                a.uncertain();
+                final SpringTransactionOwners.Owner b = began(new Object(), new Object());
+                b.cacheWrite("bulk_race_table");
+                b.uncertain();
+                target.set(a);
+                started.set(round);
+
+                try {
+                    SpringTransactionTracker.confirmSettled(List.of(a.id(), b.id()));
+                    assertTrue(b.isCompleted(), "the other supplied transaction is confirmed, round " + round);
+                } catch (final IllegalStateException e) {
+                    rejected++;
+                }
+
+                while (finished.get() < round) {
+                    Thread.onSpinWait();
+                }
+
+                a.completed();
+                b.completed();
+            }
+        } finally {
+            completer.interrupt();
+            completer.join(10_000);
+            org.apache.logging.log4j.core.config.Configurator.setLevel(loggerName, level);
+        }
+
+        assertNull(completerFailure.get());
+        assertEquals(0, rejected, "batches rejected because a supplied transaction completed concurrently");
+    }
+
+    // External review: the snapshot tells when the transaction began, when its outcome was first seen unresolved, and what
+    // left it unresolved, as a compact description: the reported failure's class and one-line message, truncated, or the
+    // unknown outcome Spring reported without an exception; the first failure with an exception wins.
+    @Test
+    void anUnresolvedTransaction_describesWhenAndWhy() {
+        final long before = System.currentTimeMillis();
+        final var unknown = began(new Object(), new Object());
+        unknown.cacheWrite("diagnosed_table");
+        unknown.uncertain();
+        final var failed = began(new Object(), new Object());
+        failed.cacheWrite("diagnosed_table");
+        failed.uncertain(); // the synchronization's unknown outcome comes first
+        failed.uncertain(new IllegalStateException("first line\n" + "x".repeat(500)));
+        failed.uncertain(new IllegalArgumentException("a later failure"));
+
+        try {
+            final var unknownRecord = recordOf(unknown.id());
+            assertEquals("unknown outcome", unknownRecord.failure());
+            assertTrue(unknownRecord.beganAt().toEpochMilli() >= before);
+            assertFalse(unknownRecord.unresolvedSince().isBefore(unknownRecord.beganAt()));
+
+            final String failure = recordOf(failed.id()).failure();
+            assertTrue(failure.startsWith("java.lang.IllegalStateException: first line x"), failure);
+            assertTrue(failure.endsWith("..."), failure);
+            assertEquals("java.lang.IllegalStateException: ".length() + SpringTransactionOwners.MAX_FAILURE_MESSAGE_LENGTH + 3, failure.length());
+            assertFalse(failure.contains("\n"));
+            assertEquals("java.lang.RuntimeException", SpringTransactionOwners.describe(new RuntimeException()));
+        } finally {
+            unknown.completed();
+            failed.completed();
+        }
+    }
+
+    // External review: no exception object is retained by an owner or its snapshot: one can retain application objects
+    // through its cause or fields for as long as the transaction stays unresolved.
+    @Test
+    void anUnresolvedTransaction_retainsNoException() {
+        for (final java.lang.reflect.Field field : SpringTransactionOwners.Owner.class.getDeclaredFields()) {
+            assertFalse(Throwable.class.isAssignableFrom(field.getType()), field.toString());
+        }
+
+        for (final java.lang.reflect.RecordComponent component : SpringTransactionTracker.UnresolvedTransaction.class.getRecordComponents()) {
+            assertFalse(Throwable.class.isAssignableFrom(component.getType()), component.toString());
+        }
+    }
+
+    // External review: an owner is deciding once Spring has ended its transaction's execution, also when no report came,
+    // so work no longer joins its connection.
+    @Test
+    void anOwner_isDecidingOnceTheExecutionEndedWithoutAReport() {
+        final var ended = new java.util.concurrent.atomic.AtomicBoolean();
+        final var owner = SpringTransactionOwners.began(new Object(), new Object(), ended::get, "");
+
+        assertFalse(owner.isDeciding());
+        ended.set(true);
+        assertTrue(owner.isDeciding());
+        assertFalse(owner.isCompleted(), "no clean report");
+    }
+
+    // External review (efficiency): the completion check runs for every cache read of a table a pending transaction wrote. It
+    // takes no lock while the transaction is in flight, nor once the warning about an unresolved outcome has been logged: it
+    // called a synchronized method on every such read, so the readers of the table contended for the owner's monitor. White
+    // box, deliberately: a helper thread holds that monitor, the lock the readers used to take, while the check runs on
+    // another thread, which must return without waiting for it.
+    @Test
+    void isCompleted_takesNoLockWhileInFlightOrOnceWarned() throws Exception {
+        final var inFlight = began(new Object(), new Object());
+        inFlight.cacheWrite("lock_free_table");
+        final var alreadyWarned = began(new Object(), new Object());
+        alreadyWarned.cacheWrite("lock_free_table");
+        alreadyWarned.uncertain(); // logs the warning, once
+
+        try {
+            assertFalse(checkWhileLocked(inFlight, inFlight::isCompleted), "in flight");
+            assertFalse(checkWhileLocked(alreadyWarned, alreadyWarned::isCompleted), "unresolved, its warning logged already");
+        } finally {
+            inFlight.completed();
+            alreadyWarned.completed();
+        }
+    }
+
+    /**
+     * Runs {@code check} on another thread while a helper thread holds {@code monitor}, failing if the check waits for it.
+     * Released in any case, so that a failure leaves no thread blocked.
+     */
+    private static boolean checkWhileLocked(final Object monitor, final java.util.function.BooleanSupplier check) throws Exception {
+        final java.util.concurrent.CountDownLatch locked = new java.util.concurrent.CountDownLatch(1);
+        final java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        final Thread holder = new Thread(() -> {
+            synchronized (monitor) {
+                locked.countDown();
+
+                try {
+                    release.await();
+                } catch (final InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }, "owner-monitor-holder");
+        holder.setDaemon(true);
+        holder.start();
+        final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+
+        try {
+            assertTrue(locked.await(10, java.util.concurrent.TimeUnit.SECONDS), "the helper thread took the monitor");
+            final java.util.concurrent.Future<Boolean> result = executor.submit(check::getAsBoolean);
+
+            try {
+                return result.get(1, java.util.concurrent.TimeUnit.SECONDS);
+            } catch (final java.util.concurrent.TimeoutException e) {
+                return org.junit.jupiter.api.Assertions.fail("the completion check waited for the owner's lock");
+            }
+        } finally {
+            release.countDown();
+            holder.join(10_000);
+            executor.shutdownNow();
+        }
+    }
+
+    /** Records a tracked transaction that is never reported ended by its status, with no name. */
+    private static SpringTransactionOwners.Owner began(final Object transaction, final Object holder) {
+        return SpringTransactionOwners.began(transaction, holder, () -> false, "");
+    }
+
+    /** Returns whether {@link SpringTransactionTracker#unresolvedTransactions()} lists {@code id}: the registry is process-wide. */
+    private static boolean isListed(final long id) {
+        return SpringTransactionTracker.unresolvedTransactions().stream().anyMatch(record -> record.id() == id);
+    }
+
+    private static SpringTransactionTracker.UnresolvedTransaction recordOf(final long id) {
+        return SpringTransactionTracker.unresolvedTransactions().stream().filter(record -> record.id() == id).findFirst().orElseThrow();
     }
 
     private static void awaitCollected(final WeakReference<?> reference) throws InterruptedException {
@@ -311,12 +564,22 @@ class SpringTransactionOwnersTest extends TestBase {
         assertNull(reference.get(), "not garbage collected");
     }
 
-    private static DefaultTransactionStatus newStatus() {
-        return newStatus(new Object());
+    private static DefaultTransactionStatus newStatus(final Object transaction, final boolean newTransaction) {
+        return new DefaultTransactionStatus(null, transaction, newTransaction, newTransaction, false, false, false, null);
     }
 
-    private static DefaultTransactionStatus newStatus(final Object transaction) {
-        return new DefaultTransactionStatus(null, transaction, true, true, false, false, false, null);
+    /** A transaction object exposing {@code holder}, as DataSourceTransactionManager's does. */
+    private static JdbcTransactionObjectSupport transactionObject(final ConnectionHolder holder) {
+        final JdbcTransactionObjectSupport transactionObject = new JdbcTransactionObjectSupport() {
+            @Override
+            public boolean isRollbackOnly() {
+                return false;
+            }
+        };
+
+        transactionObject.setConnectionHolder(holder);
+
+        return transactionObject;
     }
 
     /** A holder with a connection handle of its own, as a JPA transaction manager binds. */
@@ -324,39 +587,6 @@ class SpringTransactionOwnersTest extends TestBase {
         return new ConnectionHolder((ConnectionHandle) () -> {
             throw new UnsupportedOperationException("not used");
         });
-    }
-
-    /**
-     * Stands for JpaTransactionManager's transaction object: its EntityManagerHolder behind a public method of a private
-     * class.
-     */
-    private static final class JpaLikeTransactionObject {
-        private final EntityManagerHolder entityManagerHolder;
-
-        JpaLikeTransactionObject(final EntityManagerHolder entityManagerHolder) {
-            this.entityManagerHolder = entityManagerHolder;
-        }
-
-        @SuppressWarnings("unused") // read reflectively
-        public EntityManagerHolder getEntityManagerHolder() {
-            return entityManagerHolder;
-        }
-    }
-
-    /** A cleanup whose progress the test sets. */
-    private static final class SettableCleanup implements SpringTransactionOwners.Cleanup {
-        final AtomicBoolean finished = new AtomicBoolean();
-        final AtomicBoolean reused = new AtomicBoolean();
-
-        @Override
-        public boolean isFinished() {
-            return finished.get();
-        }
-
-        @Override
-        public boolean isHolderReused() {
-            return reused.get();
-        }
     }
 
     /** A connection holder that a transaction manager reuses, as it does one bound before its transaction. */

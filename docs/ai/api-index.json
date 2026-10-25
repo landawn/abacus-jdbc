@@ -50344,6 +50344,112 @@
           ],
           "methods": [
             {
+              "name": "unresolvedTransactions",
+              "kind": "static",
+              "modifiers": [
+                "public",
+                "static"
+              ],
+              "signature": "public static List<UnresolvedTransaction> unresolvedTransactions()",
+              "return_type": "List<UnresolvedTransaction>",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "javadoc_summary": "Returns an immutable snapshot of transactions with cache-affecting writes and failed or missing completion reports.",
+              "returns": "unresolved transactions, ordered by ID",
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "unresolvedTransactionCount",
+              "kind": "static",
+              "modifiers": [
+                "public",
+                "static"
+              ],
+              "signature": "public static int unresolvedTransactionCount()",
+              "return_type": "int",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "javadoc_summary": "Returns the current monitoring count; concurrent completion or failure can change it immediately.",
+              "returns": "number of unresolved transactions with cache-affecting writes",
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "confirmSettled",
+              "kind": "static",
+              "modifiers": [
+                "public",
+                "static"
+              ],
+              "signature": "public static boolean confirmSettled(final long transactionId)",
+              "return_type": "boolean",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "transactionId",
+                  "type": "long",
+                  "javadoc": "ID from {@link #unresolvedTransactions()} or its warning log",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [
+                {
+                  "type": "java.lang.IllegalStateException",
+                  "condition": "if the ID belongs to a transaction still active with no failure report"
+                }
+              ],
+              "javadoc_summary": "Acknowledges externally verified settlement of one unresolved transaction and allows its cache blocks to expire on the next read.",
+              "returns": "{@code true} if this call resolved the record; {@code false} if it was already resolved or is unknown",
+              "contract": [
+                "The caller must establish that all its pending work has committed, rolled back or otherwise cannot commit later, including work left by failed cleanup.",
+                "Nothing releases a block automatically, neither elapsed time nor garbage collection: nothing bounds when pending work may still commit."
+              ],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "confirmSettled",
+              "kind": "static",
+              "modifiers": [
+                "public",
+                "static"
+              ],
+              "signature": "public static List<Long> confirmSettled(final Collection<Long> transactionIds) throws IllegalArgumentException, IllegalStateException",
+              "return_type": "List<Long>",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "transactionIds",
+                  "type": "Collection<Long>",
+                  "javadoc": "the IDs, from {@link #unresolvedTransactions()} or the warning log",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [
+                {
+                  "type": "java.lang.IllegalArgumentException",
+                  "condition": "if {@code transactionIds} or one of its elements is {@code null}"
+                },
+                {
+                  "type": "java.lang.IllegalStateException",
+                  "condition": "if one of the IDs belongs to a transaction still active with no failure report"
+                }
+              ],
+              "javadoc_summary": "Acknowledges the externally verified settlement of each of the given unresolved transactions, and of no other (see {@link #confirmSettled(long)} for what the caller must establish first).",
+              "returns": "the IDs this call resolved, in the order given, without duplicates",
+              "contract": [
+                "Acknowledges the externally verified settlement of each of the given unresolved transactions, and of no other (see {@link #confirmSettled(long)} for what the caller must establish first).",
+                "Nothing is confirmed if one of them belongs to a transaction still active with no failure report."
+              ],
+              "examples": [],
+              "see_also": []
+            },
+            {
               "name": "register",
               "kind": "static",
               "modifiers": [
@@ -50487,6 +50593,207 @@
                   "nullability": "unspecified"
                 }
               ],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            }
+          ],
+          "fields": []
+        },
+        {
+          "fqn": "com.landawn.abacus.jdbc.SpringTransactionTracker.UnresolvedTransaction",
+          "name": "UnresolvedTransaction",
+          "kind": "record",
+          "modifiers": [
+            "public"
+          ],
+          "javadoc_summary": "A monitoring snapshot of one transaction that still blocks DAO caching without a confirmed outcome.",
+          "thread_safety": "unspecified",
+          "nullability": "unspecified",
+          "type_params": [],
+          "constructors": [
+            {
+              "signature": "public UnresolvedTransaction",
+              "javadoc_summary": "Creates an immutable snapshot.",
+              "params": [
+                {
+                  "name": "id",
+                  "type": "long",
+                  "javadoc": "transaction ID",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "transactionName",
+                  "type": "String",
+                  "javadoc": "transaction name",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "tables",
+                  "type": "List<String>",
+                  "javadoc": "affected table names",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "beganAt",
+                  "type": "Instant",
+                  "javadoc": "when the transaction began",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "unresolvedSince",
+                  "type": "Instant",
+                  "javadoc": "when its outcome was first seen unresolved",
+                  "nullability": "unspecified"
+                },
+                {
+                  "name": "failure",
+                  "type": "String",
+                  "javadoc": "what left it unresolved",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": []
+            }
+          ],
+          "methods": [
+            {
+              "name": "id",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public long id()",
+              "return_type": "long",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "transactionName",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public String transactionName()",
+              "return_type": "String",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "tables",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public List<String> tables()",
+              "return_type": "List<String>",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "beganAt",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public Instant beganAt()",
+              "return_type": "Instant",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "unresolvedSince",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public Instant unresolvedSince()",
+              "return_type": "Instant",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "failure",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public String failure()",
+              "return_type": "String",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "equals",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public boolean equals(Object other)",
+              "return_type": "boolean",
+              "type_params": [],
+              "params": [
+                {
+                  "name": "other",
+                  "type": "Object",
+                  "nullability": "unspecified"
+                }
+              ],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "hashCode",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public int hashCode()",
+              "return_type": "int",
+              "type_params": [],
+              "params": [],
+              "throws": [],
+              "contract": [],
+              "examples": [],
+              "see_also": []
+            },
+            {
+              "name": "toString",
+              "kind": "instance",
+              "modifiers": [
+                "public"
+              ],
+              "signature": "public String toString()",
+              "return_type": "String",
+              "type_params": [],
+              "params": [],
               "throws": [],
               "contract": [],
               "examples": [],

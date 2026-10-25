@@ -16,15 +16,28 @@
 
 package com.landawn.abacus.jdbc;
 
-import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BooleanSupplier;
+
+import com.landawn.abacus.logging.Logger;
+import com.landawn.abacus.logging.LoggerFactory;
 
 /**
  * The Spring-managed transactions whose transaction manager a {@link SpringTransactionTracker} is registered with, by the
  * connection holder each one binds to its data source: the owner of a connection holder, as reported by its transaction
- * manager. Spring-free: the holders are {@code Object}s, and only {@code SpringTransactionTracker} names Spring types.
+ * manager. Spring-free: the holders and transactions are {@code Object}s, and only {@code SpringTransactionTracker} names
+ * Spring types.
  *
  * <p>WHY: without it, this library told the completion of the Spring transaction that owns a data source's connection from
  * Spring's transaction synchronization, which is that of the innermost transaction on the thread (another transaction
@@ -32,19 +45,86 @@ import java.util.WeakHashMap;
  * transaction-active flag, which only {@code DataSourceTransactionManager} and {@code JdbcTransactionManager} keep, and which
  * another thread reads without any guarantee of seeing it change. The tracker hears from the owning transaction manager
  * itself, and publishes what it hears in {@code volatile} fields.</p>
+ *
+ * <p><b>What does not prove that a transaction's work has settled</b>, so that a DAO cache block must outlast it. Each of
+ * these was used at some point, and each let a read cache rows that pending work later changed:</p>
+ * <ul>
+ *   <li>The connection holder's transaction-active flag. Spring clears the holder even when restoring auto-commit failed;
+ *       and on a holder bound before the transaction, with auto-commit already off, Spring neither restores auto-commit nor
+ *       releases the connection, so a single failed commit leaves the work pending after the holder has been cleared.</li>
+ *   <li>The transaction status's completion. Spring sets it as the first step of its cleanup, before the transaction
+ *       manager's own cleanup, which may still commit the work (restoring auto-commit, or a JPA dialect's connection
+ *       release). It only tells that a report is missing (see {@code Owner.executionEnded}).</li>
+ *   <li>{@code EntityManager.isOpen()}. A provider may mark the entity manager closed before releasing its resources
+ *       (EclipseLink does), and JPA lets a persistence context stay managed when it is closed during an active
+ *       transaction. Nor does {@code close()} returning prove it: Spring logs and swallows a failed connection release
+ *       and a failed close.</li>
+ *   <li>The garbage collection of the holder. An entity manager bound before the transaction (open-in-view) keeps the
+ *       connection, and the pending work, after the holder has been collected.</li>
+ *   <li>The thread's transaction state, to tell that a later transaction reuses a holder. It belongs to whatever
+ *       transaction runs on the thread, possibly on another data source, such as one a connection hook inside Spring's
+ *       cleanup begins (see {@link #owners}).</li>
+ *   <li>Elapsed time, or a restart: nothing bounds when pending work may still commit.</li>
+ * </ul>
+ *
+ * <p>Only a clean commit or rollback report, or an explicit confirmation (see
+ * {@link SpringTransactionTracker#confirmSettled(long)}), ends a block. WHY no cleanup-aware {@code JpaTransactionManager}
+ * subclass reporting once Spring's cleanup has returned: the cleanup returning proves nothing either (see above); observing
+ * the release and the close would mean wrapping the JPA dialect and every entity manager the transaction manager creates;
+ * it would need spring-orm in the main code and the application's own transaction manager bean; and it would still not
+ * cover an entity manager bound before the transaction.</p>
  */
 final class SpringTransactionOwners {
 
+    private static final Logger logger = LoggerFactory.getLogger(SpringTransactionOwners.class);
+
+    /** The longest part of a failure's message kept in its description (see {@link #describe(Throwable)}). */
+    static final int MAX_FAILURE_MESSAGE_LENGTH = 200;
+
+    private static final AtomicLong nextId = new AtomicLong();
+
+    // Strongly held from the first cache-affecting write, not just from a failure callback: that callback may never arrive.
+    // Owners contain no strong reference to a connection, holder, transaction status, entity manager or exception. A weak
+    // PendingCommits key alone allowed GC to resume caching while an independently owned connection could still commit its
+    // pending work.
+    private static final Map<Long, Owner> pending = new ConcurrentHashMap<>();
+
     /**
-     * The owners by connection holder, weakly referenced: an entry stays after its transaction has completed, until its holder
-     * has been garbage collected, a tracked transaction that reuses the holder replaces it, or an untracked one that reuses it
-     * makes it stale (see {@link #of(Object)}). WHY it stays: Spring still runs the transaction's later execution listeners
-     * and cleans up after them, while the holder is bound and transaction-active; a {@code beginTransaction} there that found
-     * no owner joined the committed connection (with synchronization disabled, as nothing else told the completion), and
-     * Spring's cleanup, restoring auto-commit, committed its work although it rolled back. Each {@link Owner} is referenced
-     * strongly by its entry.
+     * A snapshot of an unresolved transaction (see {@link SpringTransactionTracker.UnresolvedTransaction}).
+     *
+     * @param id the owner's ID
+     * @param transactionName Spring's transaction name, or an empty string
+     * @param tables the tables it wrote through DAOs with caches, ordered ignoring case
+     * @param beganAt when the transaction began, in epoch milliseconds
+     * @param unresolvedSince when this library first saw its outcome unresolved, in epoch milliseconds
+     * @param failure the description of the failure reported, or of the missing report
+     */
+    record Unresolved(long id, String transactionName, List<String> tables, long beganAt, long unresolvedSince, String failure) {
+    }
+
+    /**
+     * The owners by connection holder, weakly referenced: the owner of the transaction that last began with a holder, kept
+     * after that transaction has completed until the holder has been garbage collected, or a tracked transaction that begins
+     * with the holder replaces it. WHY it stays: Spring still runs the transaction's later execution listeners and cleans up
+     * after them, while the holder is bound and transaction-active; a {@code beginTransaction} there that found no owner joined
+     * the committed connection (with synchronization disabled, as nothing else told the completion), and Spring's cleanup,
+     * restoring auto-commit, committed its work although it rolled back. WHY nothing else drops it: the owner was dropped once
+     * its holder looked reused by a newer transaction (cleanup begun, holder transaction-active again, a Spring transaction
+     * active on the thread), which the transaction's own cleanup matched as well when a connection hook there began a
+     * transaction on another data source: a scope begun in that one joined the connection the cleanup then committed, its
+     * rollback notwithstanding. A later transaction of a transaction manager without a tracker, on a holder bound before a
+     * tracked one, is so taken for that completed transaction (registering the tracker with only some transaction managers is
+     * unsupported). Each {@link Owner} is referenced strongly by its entry.
      */
     private static final Map<Object, Owner> owners = Collections.synchronizedMap(new WeakHashMap<>());
+
+    /**
+     * The owners by transaction: by the execution object (the transaction status) Spring passes to every callback of one
+     * transaction, weakly referenced, so that each report reaches the record of the transaction it is about. WHY: looked up
+     * by holder when a report came, it reached whichever owner the holder's entry then held, which could be that of a later
+     * transaction on the same holder.
+     */
+    private static final Map<Object, Owner> ownersByTransaction = Collections.synchronizedMap(new WeakHashMap<>());
 
     /**
      * Whether a tracker has reported a transaction: the lookups are skipped until then.
@@ -56,173 +136,417 @@ final class SpringTransactionOwners {
     }
 
     /**
-     * What the transaction manager's side tells of Spring's cleanup after one transaction, which the tracker can't hear of:
-     * Spring calls its execution listeners before the cleanup, not after. Implemented by {@link SpringTransactionTracker},
-     * by the kind of transaction; Spring-free.
-     */
-    interface Cleanup {
-        /**
-         * Returns whether Spring's cleanup after the transaction has finished, so that the connection is settled: the cleanup
-         * may still commit work a failed commit or rollback left pending on it ({@code DataSourceTransactionManager} restores
-         * auto-commit; a JPA dialect's connection release, or the closing of the entity manager, may do likewise). Readable on
-         * any thread, without a guarantee of seeing the end at once (the caches then only stay out longer).
-         *
-         * @return {@code true} if so; {@code false} also if it can't be told (the holder's garbage collection then tells it,
-         *         see {@link Owner#isCompleted()})
-         */
-        boolean isFinished();
-
-        /**
-         * Returns whether the holder of the transaction, bound to its data source on the current thread, belongs to a newer
-         * transaction now (a holder bound before both transactions is reused by each). Called on that thread only.
-         *
-         * @return {@code true} if so
-         */
-        boolean isHolderReused();
-    }
-
-    /**
      * The completion of one Spring-managed transaction, as its transaction manager reports it to a
      * {@link SpringTransactionTracker}. Readable on any thread.
      */
     static final class Owner {
+        private final long id = nextId.incrementAndGet();
+        private final String transactionName;
+        private final long beganAt = System.currentTimeMillis();
+
+        /**
+         * Tells whether Spring has ended the transaction's execution: its status is completed, or has been garbage
+         * collected. Spring completes the status as the first step of its cleanup, after every completion report, so a
+         * transaction whose execution has ended without a clean report either failed or had its report lost (a listener
+         * before the tracker failed, with synchronization disabled). Only used to tell that (see {@link #isDeciding()} and
+         * {@code isUnresolved()}), never to release a cache block: the cleanup that follows may still commit pending work
+         * (see the class description).
+         */
+        private final BooleanSupplier executionEnded;
+
+        /**
+         * The tables the transaction wrote through DAOs with caches, ignoring case; {@code null} until the first such write.
+         * WHY lazily: most transactions write no cached table, and every tracked transaction gets an owner. Guarded by this.
+         */
+        private Set<String> tables;
+
+        /** When this library first saw the outcome unresolved, in epoch milliseconds; {@code 0} before. Guarded by this. */
+        private long unresolvedSince;
+
+        /**
+         * The description of the first failure reported with an exception (see {@link #describe(Throwable)}); {@code null}
+         * if none. WHY not the exception: it can retain application objects through its cause or fields, for as long as the
+         * transaction stays unresolved. Guarded by this.
+         */
+        private String failure;
+
+        /**
+         * Whether the warning about the unresolved outcome has been logged. Volatile, read first without the lock: see
+         * {@link #isCompleted()}.
+         */
+        private volatile boolean warned; //NOSONAR
+
         /** Set once the transaction manager is about to commit or roll back, after the {@code beforeCompletion} callbacks. */
         private volatile boolean deciding; //NOSONAR
 
         /**
          * Set once it has committed or rolled back cleanly: by the tracker's {@code afterCompletion} synchronization, after
-         * the database commit or rollback, or else by its {@code afterCommit}/{@code afterRollback} listener callback.
+         * the database commit or rollback, or else by its {@code afterCommit}/{@code afterRollback} listener callback, or
+         * once its settlement has been confirmed (see {@link #confirmSettled()}).
          */
         private volatile boolean completed; //NOSONAR
 
-        /**
-         * Set once its commit or rollback has failed: its outcome is uncertain until Spring's cleanup has finished, which may
-         * still commit what the failed commit or rollback left pending on the connection.
-         */
+        /** A failed completion needs either a later clean completion report or explicit confirmation of settlement. */
         private volatile boolean uncertain; //NOSONAR
 
+        Owner(final BooleanSupplier executionEnded, final String transactionName) {
+            this.executionEnded = executionEnded;
+            this.transactionName = transactionName == null ? "" : transactionName;
+        }
+
         /**
-         * The holder, for when no completion is reported (see {@link #isCompleted()}): weakly referenced, as the entry of
-         * {@link SpringTransactionOwners#owners} keeps the owner.
+         * Returns the owner's ID, unique within this process.
+         *
+         * @return the ID
          */
-        private final WeakReference<Object> holder;
-
-        /** What tells how far Spring's cleanup after the transaction has got. */
-        private final Cleanup cleanup;
-
-        Owner(final Object holder, final Cleanup cleanup) {
-            this.holder = new WeakReference<>(holder);
-            this.cleanup = cleanup;
+        long id() {
+            return id;
         }
 
         /**
          * Returns whether the outcome of the transaction is being decided or has been: its transaction manager is committing
-         * or rolling it back, runs its completion callbacks, or has completed it. Work that joins it from then on is no part
-         * of the outcome (the cleanup after the transaction commits whatever runs on its connection meanwhile).
+         * or rolling it back, runs its completion callbacks, or has completed it (also when no report of it came: Spring has
+         * ended its execution). Work that joins it from then on is no part of the outcome (the cleanup after the transaction
+         * commits whatever runs on its connection meanwhile).
+         *
+         * <p>WHY the end of the execution as well: with no report at all (a listener before the tracker failed from both
+         * {@code beforeCommit} and {@code afterRollback}, with synchronization disabled), a {@code SqlTransaction} scope left
+         * open in the transaction committed after it, with the status {@code COMMITTED}, although Spring had rolled its work
+         * back.</p>
          *
          * @return {@code true} if so
          */
         boolean isDeciding() {
-            return deciding || completed || uncertain;
+            return deciding || completed || uncertain || executionEnded.getAsBoolean();
         }
 
         /**
-         * Returns whether the transaction has committed or rolled back: as reported (see {@link #completed}), or else once
-         * Spring's cleanup after it has finished (see {@link Cleanup#isFinished()}), if no report came, or the report was a
-         * failure (see {@link #uncertain}). WHY the cleanup: an earlier execution listener that throws keeps Spring from
-         * calling the tracker's, and with synchronization disabled no synchronization reports it either, so the owner stayed
-         * pending, and the caches kept out of the transaction's tables, for good. WHY not a failure report: a read between it
-         * and the end of the cleanup stored the rows as they were before the work that the cleanup then committed; so did one
-         * after the start of the cleanup (the transaction status's completion, which is its first step), before a JPA
-         * dialect's connection release committed the work. A holder garbage collected has completed too: the only end told
-         * where the cleanup's isn't.
+         * Returns whether a clean completion was reported or settlement was explicitly confirmed. Neither GC nor resource
+         * flags prove settlement: an entity manager may outlive its holder, and Spring clears a JDBC holder even when
+         * restoring auto-commit failed (see the class description for every signal that was tried and why it fails). The
+         * weak execution reference is used only to detect a missing report, never to release a cache block.
+         *
+         * <p>Called for every cache read of a table the transaction wrote, while it is pending: it takes no lock unless the
+         * one-time warning about an unresolved outcome is due. WHY: it called a synchronized method on every such read, under
+         * the lock of the pending writes' map, so that the readers of the table contended for the owner's monitor.</p>
          *
          * @return {@code true} if so
          */
         boolean isCompleted() {
-            if (completed) {
-                return true;
+            final boolean done = completed;
+
+            if (!done && !warned && isUnresolved()) {
+                warnIfUnresolved();
             }
 
-            return holder.get() == null || cleanup.isFinished();
+            return done;
+        }
+
+        /**
+         * Records that the transaction is about to commit or roll back.
+         */
+        void deciding() {
+            deciding = true;
+        }
+
+        /**
+         * Records that the transaction has committed or rolled back. The owner stays the holder's until the holder has been
+         * garbage collected (see {@link SpringTransactionOwners#owners}).
+         */
+        synchronized void completed() {
+            completed = true;
+            pending.remove(id, this);
+        }
+
+        /**
+         * Records a failed completion that Spring reported without its exception (an unknown outcome reported to the
+         * synchronizations). A later clean completion wins; a late failure cannot undo a clean completion or reinsert a
+         * resolved record.
+         */
+        void uncertain() {
+            uncertain(null);
+        }
+
+        /**
+         * Records a failed completion, keeping a description of the first failure reported with an exception (not the
+         * exception itself, see {@link #failure}). A later clean completion wins; a late failure cannot undo a clean
+         * completion or reinsert a resolved record. Serialized with the cache writes and the confirmation.
+         *
+         * @param failureReported the failure, or {@code null} if Spring reported none
+         */
+        void uncertain(final Throwable failureReported) {
+            synchronized (this) {
+                uncertain = true;
+
+                if (failure == null && failureReported != null) {
+                    failure = describe(failureReported);
+                }
+
+                noteIfUnresolved();
+            }
+
+            warnIfUnresolved();
+        }
+
+        /**
+         * Records a write of {@code table} through a DAO with a cache: from then on the owner is held strongly until a clean
+         * completion report or a confirmation of its settlement, so that a missing report can't release the cache block.
+         *
+         * <p>WHY from the first such write: not from the transaction's begin, as most transactions write no cached table and
+         * need no record; and not from a failure report, which may never come. WHY strongly: the block is a weak key of the
+         * pending writes' map, which garbage collection released while pending work could still commit. The cost: when the
+         * reports are lost (the tracker registered after a failing listener, with synchronization disabled), every
+         * transaction that writes a cached table stays recorded, and its tables blocked, until its settlement is confirmed,
+         * which the warning and {@link SpringTransactionTracker#unresolvedTransactions()} make visible.</p>
+         *
+         * @param table the table, or an empty name (or {@code null}) for every table
+         */
+        void cacheWrite(final String table) {
+            synchronized (this) {
+                if (completed) {
+                    return;
+                }
+
+                if (tables == null) {
+                    tables = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+                }
+
+                tables.add(table == null ? "" : table);
+                pending.put(id, this);
+                noteIfUnresolved();
+            }
+
+            warnIfUnresolved();
+        }
+
+        private boolean isUnresolved() {
+            return !completed && (uncertain || executionEnded.getAsBoolean());
+        }
+
+        /** Notes when the outcome was first seen unresolved. Called holding the lock. */
+        private void noteIfUnresolved() {
+            if (unresolvedSince == 0 && isUnresolved()) {
+                unresolvedSince = System.currentTimeMillis();
+            }
+        }
+
+        /**
+         * Logs, once, that the transaction's outcome is unresolved, with the tables whose caching it keeps disabled. The
+         * decision is taken under the lock, the logging outside it.
+         */
+        private void warnIfUnresolved() {
+            final List<String> tablesWritten;
+            final String failureDescription;
+
+            synchronized (this) {
+                if (warned || tables == null || !isUnresolved()) {
+                    return;
+                }
+
+                warned = true;
+                noteIfUnresolved();
+                tablesWritten = List.copyOf(tables);
+                failureDescription = failureDescription();
+            }
+
+            logger.warn(
+                    "Spring transaction id={} ('{}') has no confirmed settlement ({}); DAO caching is disabled for tables {} (empty name means all"
+                            + " tables). After verifying that its pending work can no longer commit, call SpringTransactionTracker.confirmSettled({}).",
+                    id, transactionName, failureDescription, tablesWritten, id);
+        }
+
+        /** Returns the description of what left the outcome unresolved. Called holding the lock. */
+        private String failureDescription() {
+            if (failure != null) {
+                return failure;
+            }
+
+            return uncertain ? "unknown outcome" : "no completion report";
+        }
+
+        /**
+         * Returns a snapshot of the owner if its outcome is unresolved.
+         *
+         * @return the snapshot, or {@code null} if the outcome is not unresolved, or the owner blocks no cache
+         */
+        synchronized Unresolved snapshot() {
+            if (tables == null || !isUnresolved()) {
+                return null;
+            }
+
+            noteIfUnresolved();
+
+            return new Unresolved(id, transactionName, List.copyOf(tables), beganAt, unresolvedSince, failureDescription());
+        }
+
+        /**
+         * Returns whether the outcome is unresolved, or the transaction has completed, so that its settlement may be confirmed.
+         *
+         * <p>Synchronized with {@link #completed()} and {@link #confirmSettled()}, which set the completion flag under this
+         * lock, so that the flag is read in one state. WHY: it was read twice without the lock, here and in
+         * {@code isUnresolved()}; a transaction completed in between, by a late clean report or another caller's
+         * confirmation, looked neither completed nor unresolved, that is active, and a bulk confirmation rejected its whole
+         * batch, leaving the other IDs unconfirmed. Bulk confirmation is rare: the lock costs nothing that matters.</p>
+         *
+         * @return {@code false} if the transaction is still active with no failure reported
+         */
+        synchronized boolean isConfirmable() {
+            return completed || isUnresolved();
+        }
+
+        /**
+         * Records an externally verified settlement: the owner completes, and its cache blocks expire on the next read.
+         *
+         * <p>WHY a transaction still active is refused: its work may still change, so releasing its block would let reads
+         * cache rows it then changes; and its ID reaches no caller through a warning or a snapshot (both list unresolved
+         * transactions only), so confirming it is a mistake, such as a stale or guessed ID.</p>
+         *
+         * @return {@code true} if this call resolved it; {@code false} if it had completed already
+         * @throws IllegalStateException if the transaction is still active with no failure reported
+         */
+        synchronized boolean confirmSettled() throws IllegalStateException {
+            if (completed) {
+                return false;
+            }
+
+            if (!isUnresolved()) {
+                throw new IllegalStateException("The Spring transaction is still active, with no failure reported: " + id);
+            }
+
+            completed();
+            return true;
         }
     }
 
     /**
-     * Records the transaction that has just bound {@code holder}.
+     * Returns a compact description of {@code failure}: its class name and its message, on one line, truncated to
+     * {@link #MAX_FAILURE_MESSAGE_LENGTH} characters.
      *
-     * @param holder its connection holder
-     * @param cleanup what tells how far Spring's cleanup after the transaction has got
+     * @param failure the failure
+     * @return the description
      */
-    static void began(final Object holder, final Cleanup cleanup) {
+    static String describe(final Throwable failure) {
+        final String message = failure.getMessage();
+
+        if (message == null || message.isEmpty()) {
+            return failure.getClass().getName();
+        }
+
+        final String oneLine = message.replace('\r', ' ').replace('\n', ' ');
+
+        return failure.getClass().getName() + ": "
+                + (oneLine.length() > MAX_FAILURE_MESSAGE_LENGTH ? oneLine.substring(0, MAX_FAILURE_MESSAGE_LENGTH) + "..." : oneLine);
+    }
+
+    /**
+     * Records the transaction {@code transaction} that has just bound {@code holder}: its owner replaces that of an earlier
+     * transaction with the holder.
+     *
+     * @param transaction the execution object Spring passes to every callback of the transaction
+     * @param holder its connection holder
+     * @param executionEnded tells whether Spring has ended the transaction's execution (see {@link Owner#executionEnded})
+     * @param transactionName Spring's transaction name, or {@code null}
+     * @return its owner, to which the reports of {@code transaction} go
+     */
+    static Owner began(final Object transaction, final Object holder, final BooleanSupplier executionEnded, final String transactionName) {
         tracking = true;
-        owners.put(holder, new Owner(holder, cleanup));
+
+        final Owner owner = new Owner(executionEnded, transactionName);
+        owners.put(holder, owner);
+        ownersByTransaction.put(transaction, owner);
+
+        return owner;
     }
 
     /**
-     * Records that the transaction that bound {@code holder} is about to commit or roll back.
+     * Returns snapshots of the owners whose outcome is unresolved and that block a cache, ordered by ID, logging the warning
+     * of any not warned of yet.
      *
-     * @param holder its connection holder
+     * @return the snapshots
      */
-    static void deciding(final Object holder) {
-        final Owner owner = owners.get(holder);
+    static List<Unresolved> unresolvedTransactions() {
+        final List<Unresolved> result = new ArrayList<>();
 
-        if (owner != null) {
-            owner.deciding = true;
+        for (final Owner owner : pending.values()) {
+            final Unresolved snapshot = owner.snapshot();
+
+            if (snapshot != null) {
+                result.add(snapshot);
+                owner.warnIfUnresolved();
+            }
         }
+
+        result.sort(Comparator.comparingLong(Unresolved::id));
+        return List.copyOf(result);
     }
 
     /**
-     * Records that the transaction that bound {@code holder} has committed or rolled back. Kept until the holder has been
-     * garbage collected (see {@link #owners}).
+     * Confirms the settlement of the owner with ID {@code id} (see {@link Owner#confirmSettled()}).
      *
-     * @param holder its connection holder
+     * @param id the ID
+     * @return {@code true} if this call resolved it; {@code false} if it is unknown or had completed already
+     * @throws IllegalStateException if its transaction is still active with no failure reported
      */
-    static void completed(final Object holder) {
-        final Owner owner = owners.get(holder);
-
-        if (owner != null) {
-            owner.completed = true;
-        }
+    static boolean confirmSettled(final long id) throws IllegalStateException {
+        final Owner owner = pending.get(id);
+        return owner != null && owner.confirmSettled();
     }
 
     /**
-     * Records that the commit or rollback of the transaction that bound {@code holder} has failed: its outcome is uncertain
-     * until Spring's cleanup has finished (see {@link Owner#isCompleted()}). A clean completion reported as well wins: a commit
-     * failure that the transaction manager rolled back cleanly left nothing pending.
+     * Confirms the settlement of the owners with the IDs {@code ids}, and of no other: an ID unknown or completed already is
+     * skipped. Nothing is confirmed if one of them belongs to a transaction still active with no failure reported.
      *
-     * @param holder its connection holder
+     * @param ids the IDs, none {@code null}
+     * @return the IDs this call resolved, in the order given, without duplicates
+     * @throws IllegalStateException if one of them belongs to a transaction still active with no failure reported
      */
-    static void uncertain(final Object holder) {
-        final Owner owner = owners.get(holder);
+    static List<Long> confirmSettled(final Collection<Long> ids) throws IllegalStateException {
+        final List<Owner> toConfirm = new ArrayList<>(ids.size());
 
-        if (owner != null) {
-            owner.uncertain = true;
+        // Checked for all first: an active transaction can only become unresolved or complete, never the reverse, so none of
+        // those checked can make a later confirmation throw.
+        for (final Long id : new LinkedHashSet<>(ids)) {
+            final Owner owner = pending.get(id);
+
+            if (owner != null) {
+                if (!owner.isConfirmable()) {
+                    throw new IllegalStateException("The Spring transaction is still active, with no failure reported: " + id);
+                }
+
+                toConfirm.add(owner);
+            }
         }
+
+        final List<Long> confirmed = new ArrayList<>(toConfirm.size());
+
+        for (final Owner owner : toConfirm) {
+            if (owner.confirmSettled()) {
+                confirmed.add(owner.id());
+            }
+        }
+
+        return List.copyOf(confirmed);
     }
 
     /**
-     * Returns the owner of {@code holder}, if a tracker reported the transaction that bound it, also once it has completed,
-     * unless a newer transaction has reused the holder since (see {@link Cleanup#isHolderReused()}): such an owner is
-     * forgotten. WHY: a holder bound before a transaction is reused by each transaction on it; the owner a tracked one left
-     * was taken for the owner of a later transaction of a transaction manager without a tracker, which was so taken for
-     * completed: work in it ran in a transaction of its own, which survived its rollback.
+     * Returns the owner recorded for {@code transaction} when it began.
      *
-     * @param holder a connection holder bound to a data source on the current thread, or {@code null}
+     * @param transaction the execution object Spring passes to the callbacks of a transaction
+     * @return its owner, or {@code null} if it is not a transaction the tracker recorded (a scope participating in one, or a
+     *         savepoint of one, which complete with it)
+     */
+    static Owner ofTransaction(final Object transaction) {
+        return ownersByTransaction.get(transaction);
+    }
+
+    /**
+     * Returns the owner of {@code holder}, if a tracker reported the transaction that last began with it, also once that
+     * transaction has completed.
+     *
+     * @param holder a connection holder bound to a data source, or {@code null}
      * @return its owner, or {@code null} if none is known (no tracker is registered with its transaction manager)
      */
     static Owner of(final Object holder) {
-        if (holder == null || !tracking) {
-            return null;
-        }
-
-        final Owner owner = owners.get(holder);
-
-        if (owner != null && owner.cleanup.isHolderReused()) {
-            owners.remove(holder, owner);
-            return null;
-        }
-
-        return owner;
+        return holder == null || !tracking ? null : owners.get(holder);
     }
 }

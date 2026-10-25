@@ -3060,9 +3060,10 @@ final class DaoImpl {
      * manager (published in a {@code volatile} field, so that every thread sees it; JPA transactions included), or else the
      * holder of a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction (see
      * {@code JdbcUtil.springResourceRecordingCompletion}), whose transaction-active flag another thread may see change late,
-     * which keeps the caches out longer, never shorter. Read on use; an entry is forgotten once its transaction has completed,
-     * or once it has been garbage collected. A JPA transaction's holder tells nothing: without a tracker, the writes in one
-     * rely on the synchronization alone.
+     * so a delayed observation keeps the caches out longer. Without a tracker that flag cannot distinguish failed cleanup.
+     * Tracked entries are forgotten only after reported or explicitly confirmed settlement, and are held independently of GC
+     * from their first cache-affecting write. A JPA transaction's holder tells nothing: without a tracker, writes in one rely
+     * on the synchronization alone.
      */
     private static final class PendingCommits {
         /** The index of the holders of the writes of every table (a DAO with an empty table name). */
@@ -3099,6 +3100,13 @@ final class DaoImpl {
          * @param holder the owner or the connection holder, from {@link #pendingCommitOf(javax.sql.DataSource)}
          */
         static void add(final String tableName, final Object holder) {
+            if (holder instanceof final SpringTransactionOwners.Owner owner) {
+                // Retain the lightweight owner independently of this weak map, even if no completion callback arrives: as a
+                // weak key alone, garbage collection released the block while pending work could still commit (see
+                // SpringTransactionOwners.Owner.cacheWrite).
+                owner.cacheWrite(tableName);
+            }
+
             final int index = Strings.isEmpty(tableName) ? ALL_TABLES : CacheGenerations.slotOf(tableName);
             Map<Object, Boolean> map = holders.get(index);
 
@@ -9457,6 +9465,10 @@ final class DaoImpl {
                         // registers it before it invalidates).
                         final long generationBeforeRead = CacheGenerations.current(tableGeneration);
                         // Neither served nor stored while a Spring-managed transaction that wrote the table runs (see PendingCommits).
+                        // Decided here, before the query runs, and not again before storing: a read that starts while such a
+                        // transaction is pending (or unresolved) never stores its result, also when the block ends while it runs.
+                        // WHY that is enough: ending a block (a clean report, or a confirmed settlement) then needs no invalidation
+                        // of its own, as no read that may have fetched the rows of the unsettled work can store them.
                         final boolean commitPending = !inTransaction
                                 && (isAnnotatedCacheResult || isLocalThreadCacheableQueryMethod && localThreadCache != null)
                                 && PendingCommits.isPending(tableGeneration);

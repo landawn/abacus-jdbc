@@ -51,17 +51,27 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * table runs, results of that table read outside it are neither served from these caches nor stored in them, as long as the
  * transaction's connection holder records its completion ({@code DataSourceTransactionManager},
  * {@code JdbcTransactionManager}), whatever transaction's synchronizations Spring runs meanwhile: the rows a read between
- * the write and the commit fetched are as they were before the write. Register a
+ * the write and the commit fetched are as they were before the write. That flag can't tell a failed cleanup: without a
+ * tracker, a failed commit on a connection bound before the transaction with auto-commit already off lifts the block when
+ * Spring clears the holder, although the work is still pending on the connection, so a read then may store rows that the
+ * pending work later changes. Register a
  * {@link com.landawn.abacus.jdbc.SpringTransactionTracker} with the transaction managers (first, and with every one on the
  * data source: see its registration requirements) to have the transaction manager report the completion instead, for any
  * transaction manager whose transaction exposes its JDBC connection holder (JPA ones included), published so that every
- * thread sees it. A transaction whose commit or rollback failed keeps them out until Spring's cleanup after it has
- * finished, as the cleanup may still commit the work the failure left pending on the connection: a
- * {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction until its connection holder is
- * cleared (the cleanup's last step, after restoring auto-commit), a JPA transaction until its entity manager is closed (the
- * cleanup's last step, after the dialect's connection release; an entity manager bound before the transaction, as for
- * open-in-view, until it is closed), and another kind of transaction, whose end can't be told, until its connection
- * holder has been garbage collected. For a JPA transaction without one, whose holder records nothing,
+ * thread sees it. Failed or unreported completion of a tracked transaction keeps affected caches disabled until a clean
+ * completion report or explicit, transaction-specific
+ * {@link com.landawn.abacus.jdbc.SpringTransactionTracker#confirmSettled(long)} confirmation. This applies to JDBC and JPA:
+ * holder flags, entity-manager closure and garbage collection do not prove that pending work can no longer commit. Even a
+ * single failed commit can leave pending work after cleanup on a pre-bound JDBC connection with auto-commit already disabled.
+ * A successful rollback reported after a failed commit releases that transaction's cache block automatically:
+ * {@code JdbcTransactionManager} rolls back after a commit failure it translates (such as a deadlock or a serialization
+ * failure), and so does any transaction manager with {@code setRollbackOnCommitFailure(true)}, while a
+ * {@code DataSourceTransactionManager} with its default settings reports every failed commit as an unknown outcome. Records
+ * are retained from their first cache-affecting write, without retaining the database resources. Monitor them using
+ * {@link com.landawn.abacus.jdbc.SpringTransactionTracker#unresolvedTransactions()}; without confirmed settlement the block
+ * remains indefinitely. A block covers the table names written, ignoring case, for the caches of every data source in the
+ * process, and the other names sharing their hashed slot (an empty table name blocks every table). For a JPA transaction
+ * without a tracker, whose holder records nothing,
  * the commit is observed through Spring's transaction synchronization of the innermost Spring transaction on the thread
  * only: with synchronization disabled, the second invalidation runs right away too, and for a write to the data source of
  * an enclosing transaction while another transaction manager's transaction runs inside it, at that inner transaction's
