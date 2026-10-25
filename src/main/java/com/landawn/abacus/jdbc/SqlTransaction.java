@@ -342,14 +342,17 @@ import com.landawn.abacus.util.Throwables;
  *       <pre>{@code
  * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
  * try {
- *     dao.insert(entity); // throws
+ *     dao.insert(entity); // throws SQLException
  *     tran.commit();
  * } finally {
  *     tran.rollbackIfNotCommitted();
  * }
  * }</pre></td>
  *     <td>Database {@code ROLLBACK}; the status is {@link Status#ROLLED_BACK}. Entities that received generated IDs in the
- *         transaction get their previous IDs back, and the connection is restored and released.</td>
+ *         transaction get their previous IDs back, and the connection is restored and released. If the database
+ *         {@code ROLLBACK} fails, {@code rollbackIfNotCommitted()} throws {@link UncheckedSQLException}, the status is
+ *         {@link Status#FAILED_ROLLBACK}, and the connection is aborted and released without restoring its auto-commit mode
+ *         and isolation level (restoring auto-commit would commit the work the rollback failed to undo).</td>
  *   </tr>
  *   <tr>
  *     <td><b>3. Use try-with-resources.</b> {@code close()} does what {@code rollbackIfNotCommitted()} does.
@@ -385,7 +388,9 @@ import com.landawn.abacus.util.Throwables;
  * }</pre></td>
  *     <td>The nested {@code commit()} issues no database {@code COMMIT}: it completes the scope and restores the enclosing
  *         scope's isolation level, and the status stays {@link Status#ACTIVE}. The outermost scope decides the
- *         outcome.</td>
+ *         outcome. If the driver rejects restoring the enclosing scope's isolation level, the nested {@code commit()} throws
+ *         {@link UncheckedSQLException} and the scope stays open, so its {@code close()} can complete it (which exits it
+ *         anyway and marks the transaction rollback-only).</td>
  *   </tr>
  *   <tr>
  *     <td><b>6. Clean up a nested scope without a commit.</b> Its work failed. {@code close()} and the deprecated
@@ -393,7 +398,7 @@ import com.landawn.abacus.util.Throwables;
  *       <pre>{@code
  * SqlTransaction nested = JdbcUtil.beginTransaction(dataSource);
  * try {
- *     dao.insert(entity); // throws
+ *     dao.insert(entity); // throws SQLException
  *     nested.commit();
  * } finally {
  *     nested.rollbackIfNotCommitted();
@@ -422,7 +427,7 @@ import com.landawn.abacus.util.Throwables;
  *         dao.insert(entity);
  *     } // closed without a commit: the transaction is rollback-only
  *
- *     tran.commit(); // throws
+ *     tran.commit(); // throws RollbackOnlyException
  * }
  * }</pre></td>
  *     <td>Database {@code ROLLBACK}, then {@link RollbackOnlyException} (an {@code IllegalStateException}); the status is
@@ -435,13 +440,13 @@ import com.landawn.abacus.util.Throwables;
  *       <pre>{@code
  * int count = JdbcUtil.callInTransaction(dataSource, () -> {
  *     try {
- *         dao.batchInsert(entities); // fails in a nested scope
+ *         dao.batchInsert(entities); // throws SQLException: fails in a nested scope
  *     } catch (SQLException e) {
  *         // swallowed: the work goes on
  *     }
  *
  *     return dao.count(cond);
- * });
+ * }); // throws RollbackOnlyException
  * }</pre></td>
  *     <td>The transaction is rolled back, and {@link RollbackOnlyException} is thrown instead of returning the count: the
  *         caller can't take the rolled-back work for committed.</td>
@@ -452,7 +457,7 @@ import com.landawn.abacus.util.Throwables;
  * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
  * dao.insert(entity);
  * tran.commit();
- * tran.commit(); // throws
+ * tran.commit(); // throws IllegalStateException
  * }</pre></td>
  *     <td>The second call throws {@code IllegalStateException} (the scope has already been committed): {@code commit()} may
  *         be called only once per scope, as in Spring. The database commits once.</td>
@@ -463,7 +468,7 @@ import com.landawn.abacus.util.Throwables;
  * SqlTransaction nested = JdbcUtil.beginTransaction(dataSource);
  * dao.insert(entity);
  * nested.commit();
- * nested.commit(); // throws
+ * nested.commit(); // throws IllegalStateException
  * }</pre></td>
  *     <td>The second call throws {@code IllegalStateException}. The transaction stays {@link Status#ACTIVE}, and the
  *         enclosing scope is unaffected.</td>
@@ -476,7 +481,7 @@ import com.landawn.abacus.util.Throwables;
  * dao.insert(entity);
  * nested.commit();
  * tran.rollbackIfNotCommitted(); // the work is gone
- * nested.commit(); // throws
+ * nested.commit(); // throws IllegalStateException
  * }</pre></td>
  *     <td>{@code IllegalStateException}, reporting the status {@link Status#ROLLED_BACK}: the call can't suggest that the
  *         scope's work was committed.</td>
@@ -487,7 +492,7 @@ import com.landawn.abacus.util.Throwables;
  * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
  * dao.insert(entity);
  * tran.rollbackIfNotCommitted();
- * tran.commit(); // throws
+ * tran.commit(); // throws IllegalStateException
  * }</pre></td>
  *     <td>{@code IllegalStateException}: the scope has already ended without a commit, and the transaction has been rolled
  *         back.</td>
@@ -496,9 +501,9 @@ import com.landawn.abacus.util.Throwables;
  *     <td><b>14. Commit again after a {@code RollbackOnlyException}.</b>
  *       <pre>{@code
  * try {
- *     tran.commit(); // the transaction was marked rollback-only
+ *     tran.commit(); // throws RollbackOnlyException: the transaction was marked rollback-only
  * } catch (RollbackOnlyException e) {
- *     tran.commit(); // throws
+ *     tran.commit(); // throws IllegalStateException
  * }
  * }</pre></td>
  *     <td>The second call throws a plain {@code IllegalStateException}, not another {@code RollbackOnlyException}: the
@@ -526,7 +531,7 @@ import com.landawn.abacus.util.Throwables;
  * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
  * dao.insert(entity);
  * tran.rollback();
- * tran.rollback(); // throws
+ * tran.rollback(); // throws IllegalStateException
  * }</pre></td>
  *     <td>The second call throws {@code IllegalStateException} (the scope has already completed), as in Spring; clean up
  *         with {@code rollbackIfNotCommitted()} or {@code close()} instead. The database rolls back once.</td>
@@ -537,7 +542,7 @@ import com.landawn.abacus.util.Throwables;
  * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
  * dao.insert(entity);
  * tran.commit();
- * tran.rollback(); // throws
+ * tran.rollback(); // throws IllegalStateException
  * }</pre></td>
  *     <td>{@code IllegalStateException}, reporting the status {@link Status#COMMITTED}: nothing is undone.</td>
  *   </tr>
@@ -547,7 +552,7 @@ import com.landawn.abacus.util.Throwables;
  * SqlTransaction nested = JdbcUtil.beginTransaction(dataSource);
  * dao.insert(entity);
  * nested.commit();
- * nested.rollback(); // throws
+ * nested.rollback(); // throws IllegalStateException
  * }</pre></td>
  *     <td>{@code IllegalStateException}. The transaction is not marked rollback-only and stays {@link Status#ACTIVE}.</td>
  *   </tr>
@@ -568,7 +573,7 @@ import com.landawn.abacus.util.Throwables;
  * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
  * SqlTransaction nested = JdbcUtil.beginTransaction(dataSource);
  * dao.insert(entity); // nested is never completed
- * tran.commit(); // throws
+ * tran.commit(); // throws RollbackOnlyException
  * }</pre></td>
  *     <td>The inner scope is exited, never having completed, and the transaction is marked rollback-only. An outermost
  *         {@code commit()} then rolls back and throws {@link RollbackOnlyException}; a nested one throws
@@ -578,7 +583,7 @@ import com.landawn.abacus.util.Throwables;
  *     <td><b>21. Commit a scope that an enclosing scope exited.</b>
  *       <pre>{@code
  * // continues row 20: tran.commit() exited nested
- * nested.commit(); // throws
+ * nested.commit(); // throws IllegalStateException
  * }</pre></td>
  *     <td>{@code IllegalStateException}: an enclosing scope completed while the scope was still open and exited it, and the
  *         transaction has been rolled back.</td>
@@ -589,7 +594,7 @@ import com.landawn.abacus.util.Throwables;
  * // continues row 20
  * nested.rollbackIfNotCommitted(); // no-op
  * nested.close(); // no-op
- * nested.rollback(); // throws
+ * nested.rollback(); // throws IllegalStateException
  * }</pre></td>
  *     <td>{@code rollbackIfNotCommitted()} and {@code close()} do nothing; the deprecated {@code rollback()} throws
  *         {@code IllegalStateException} (the scope has already completed).</td>
@@ -601,7 +606,7 @@ import com.landawn.abacus.util.Throwables;
  * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
  *         SqlTransaction nested = JdbcUtil.beginTransaction(dataSource)) {
  *     dao.insert(entity);
- *     tran.commit(); // throws: nested is still open
+ *     tran.commit(); // throws RollbackOnlyException: nested is still open
  *     nested.commit();
  * }
  * }</pre></td>
@@ -615,7 +620,7 @@ import com.landawn.abacus.util.Throwables;
  *       <pre>{@code
  * SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
  * dao.insert(entity);
- * executor.submit(() -> tran.commit()); // fails
+ * executor.submit(() -> tran.commit()); // throws IllegalStateException in the task
  * }</pre></td>
  *     <td>{@code IllegalStateException}: the transaction is bound to the thread that began it. Every completion call
  *         ({@code commit()}, {@code rollback()}, {@code rollbackIfNotCommitted()}, {@code close()}) checks the thread
@@ -666,7 +671,7 @@ import com.landawn.abacus.util.Throwables;
  *     dao.insert(entity);
  * }); // Spring commits the row
  *
- * leaked[0].rollbackIfNotCommitted(); // throws
+ * leaked[0].rollbackIfNotCommitted(); // throws IllegalStateException
  * }</pre></td>
  *     <td>{@code IllegalStateException}; the status is {@link Status#FAILED_ROLLBACK}. Generated IDs are not put back but
  *         left to the Spring transaction's outcome (kept here, as the row is committed). The scope is completed: a later
@@ -707,7 +712,7 @@ import com.landawn.abacus.util.Throwables;
  *     SqlTransaction tran = JdbcUtil.beginTransaction(dataSource);
  *     dao.insert(entity);
  *     tran.commit();
- *     tran.commit(); // throws
+ *     tran.commit(); // throws IllegalStateException
  * });
  * }</pre></td>
  *     <td>The same rules as rows 10 to 19: a repeated {@code commit()} or deprecated {@code rollback()} throws
