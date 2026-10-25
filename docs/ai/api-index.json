@@ -50047,7 +50047,7 @@
           "modifiers": [
             "public"
           ],
-          "javadoc_summary": "Thrown by the outermost {@link SqlTransaction#commit()} of a transaction that a nested scope marked rollback-only ( {@link Transaction.Status#MARKED_ROLLBACK} ), after the transaction has been rolled back: none of its work was committed.",
+          "javadoc_summary": "Thrown by the outermost {@link SqlTransaction#commit()} of a transaction that a nested scope marked rollback-only ( {@link SqlTransaction.Status#MARKED_ROLLBACK} ), after the transaction has been rolled back: none of its work was committed.",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -50861,7 +50861,7 @@
             "public",
             "final"
           ],
-          "javadoc_summary": "Default {@link Transaction} implementation backed by a JDBC {@link Connection} .",
+          "javadoc_summary": "A JDBC transaction managed by this library, backed by a {@link Connection} .",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -50873,7 +50873,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override public String id()",
+              "signature": "public String id()",
               "return_type": "String",
               "type_params": [],
               "params": [],
@@ -50914,7 +50914,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override public IsolationLevel isolationLevel()",
+              "signature": "public IsolationLevel isolationLevel()",
               "return_type": "IsolationLevel",
               "type_params": [],
               "params": [],
@@ -50935,19 +50935,19 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override public Transaction.Status status()",
-              "return_type": "Transaction.Status",
+              "signature": "public Status status()",
+              "return_type": "Status",
               "type_params": [],
               "params": [],
               "throws": [],
               "javadoc_summary": "Returns the current status of the transaction this scope belongs to: {@link Status#ACTIVE} until the transaction is marked rollback-only ( {@link Status#MARKED_ROLLBACK} ) or the outermost scope completes.",
               "returns": "the current transaction status, never {@code null}",
               "contract": [
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) { if (tran.status() == Transaction.Status.ACTIVE) { // The transaction can still be committed } } } </pre>"
+                "<p> <b> Usage Examples: </b> </p> <pre> {@code try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) { if (tran.status() == SqlTransaction.Status.ACTIVE) { // The transaction can still be committed } } } </pre>"
               ],
               "examples": [],
               "see_also": [
-                "Transaction.Status"
+                "Status"
               ]
             },
             {
@@ -50956,7 +50956,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override public boolean isActive()",
+              "signature": "public boolean isActive()",
               "return_type": "boolean",
               "type_params": [],
               "params": [],
@@ -50975,7 +50975,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override public void commit() throws IllegalStateException, UncheckedSQLException",
+              "signature": "public void commit() throws IllegalStateException, UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [],
@@ -51015,7 +51015,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Deprecated @Override public void rollback() throws IllegalStateException, UncheckedSQLException",
+              "signature": "@Deprecated public void rollback() throws IllegalStateException, UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [],
@@ -51053,7 +51053,7 @@
               "modifiers": [
                 "public"
               ],
-              "signature": "@Override public void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException",
+              "signature": "public void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException",
               "return_type": "void",
               "type_params": [],
               "params": [],
@@ -51226,198 +51226,13 @@
           "fields": []
         },
         {
-          "fqn": "com.landawn.abacus.jdbc.Transaction",
-          "name": "Transaction",
-          "kind": "interface",
-          "modifiers": [
-            "public"
-          ],
-          "javadoc_summary": "Minimal contract for a JDBC transaction managed by this library.",
-          "thread_safety": "unspecified",
-          "nullability": "unspecified",
-          "type_params": [],
-          "constructors": [],
-          "methods": [
-            {
-              "name": "id",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "String id()",
-              "return_type": "String",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "javadoc_summary": "Returns the unique identifier of this transaction.",
-              "returns": "the unique identifier of the transaction, never {@code null}",
-              "contract": [
-                "The identifier is typically generated when the transaction is created and remains constant throughout the transaction's lifecycle."
-              ],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "isolationLevel",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "IsolationLevel isolationLevel()",
-              "return_type": "IsolationLevel",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "javadoc_summary": "Returns the isolation level of this transaction.",
-              "returns": "the isolation level of the transaction, never {@code null}",
-              "contract": [
-                "The isolation level determines how and when changes made by this transaction become visible to other concurrent transactions, controlling the trade-off between performance and consistency.",
-                "<p> Common isolation levels include: </p> <ul> <li> {@code READ_UNCOMMITTED} - allows dirty reads </li> <li> {@code READ_COMMITTED} - prevents dirty reads </li> <li> {@code REPEATABLE_READ} - prevents dirty and non-repeatable reads </li> <li> {@code SERIALIZABLE} - prevents dirty reads, non-repeatable reads, and phantom reads </li> </ul> <p> <b> Usage Examples: </b> </p> <pre> {@code IsolationLevel level = transaction.isolationLevel(); if (level == IsolationLevel.SERIALIZABLE) { // Handle high isolation scenario } } </pre>"
-              ],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "status",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "Status status()",
-              "return_type": "Status",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "javadoc_summary": "Returns the current status of this transaction.",
-              "returns": "the current status of the transaction, never {@code null}",
-              "contract": [
-                "<p> <b> Usage Examples: </b> </p> <pre> {@code Status status = transaction.status(); if (status == Status.ACTIVE) { // Transaction is still active and can be committed or rolled back } } </pre>"
-              ],
-              "examples": [],
-              "see_also": [
-                "Status"
-              ]
-            },
-            {
-              "name": "isActive",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "boolean isActive()",
-              "return_type": "boolean",
-              "type_params": [],
-              "params": [],
-              "throws": [],
-              "javadoc_summary": "Checks if this transaction is currently active.",
-              "returns": "{@code true} if the transaction is active, {@code false} otherwise",
-              "contract": [
-                "Checks if this transaction is currently active.",
-                "<p> This is a convenience method equivalent to checking if the status equals {@link Status#ACTIVE} .",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code if (transaction.isActive()) { // Safe to perform operations within this transaction performDatabaseOperations(); } } </pre>"
-              ],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "commit",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "void commit() throws IllegalStateException, UncheckedSQLException",
-              "return_type": "void",
-              "type_params": [],
-              "params": [],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if called from a thread other than the transaction owner, or if the transaction is not in a valid state for committing. Note: {@link SqlTransaction} (the built-in implementation) throws for a scope that has completed: commit() may be called only once per scope, also after a successful one, and a scope that ended without a commit (rolled back, its commit failed, or exited by an enclosing scope) can't commit its work; it throws {@link RollbackOnlyException} (an {@code IllegalStateException} ) when the outermost scope finds the transaction marked rollback-only and rolls it back."
-                },
-                {
-                  "type": "com.landawn.abacus.exception.UncheckedSQLException",
-                  "condition": "if an SQL error occurs during commit, rollback of a rollback-only transaction, or restoration of a nested scope's isolation level"
-                }
-              ],
-              "javadoc_summary": "Commits the current transaction, making all changes permanent.",
-              "contract": [
-                "<p> If the commit fails, the transaction passes through {@link Status#FAILED_COMMIT} and an exception is thrown.",
-                "</p> <p> A {@link SqlTransaction} that participates in a Spring-managed transaction issues no database commit: the commit completes its scope, and Spring commits the work when its own transaction completes.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code try { updateRecords(); transaction.commit(); } finally { // Also rolls back when the work, rather than commit itself, fails."
-              ],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "rollback",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "void rollback() throws IllegalStateException, UncheckedSQLException",
-              "return_type": "void",
-              "type_params": [],
-              "params": [],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if called from a thread other than the transaction owner, or if the transaction is not in a valid state for rollback. Note: {@link SqlTransaction} (the built-in implementation) throws it for a scope that has already completed, as Spring does (it used to log and ignore the call); its {@code rollbackIfNotCommitted()} and {@code close()} stay no-ops on a completed scope."
-                },
-                {
-                  "type": "com.landawn.abacus.exception.UncheckedSQLException",
-                  "condition": "if an SQL error occurs during the rollback (an implementation may also report a failure to restore a nested scope's isolation level; {@link SqlTransaction} logs it, and exits the scope all the same)"
-                }
-              ],
-              "javadoc_summary": "Rolls back the current transaction, undoing all changes made within the transaction scope.",
-              "contract": [
-                "For nested scopes in {@link SqlTransaction} , an inner rollback instead marks the shared transaction rollback-only; the database rollback occurs when the outermost scope completes.",
-                "<p> If the rollback fails, the transaction status will be set to {@link Status#FAILED_ROLLBACK} and an exception will be thrown.",
-                "</p> <p> A {@link SqlTransaction} that participates in a Spring-managed transaction issues no database rollback: it marks the Spring transaction rollback-only, so Spring rolls the work back when its transaction completes.",
-                "</p> <p> <b> Usage Examples: </b> </p> <pre> {@code try { performRiskyOperation(); if (!isStillWanted()) { transaction.rollback(); // only on a scope that has not completed return; } transaction.commit(); } finally { // Rolls back if the work or the commit failed; a no-op after the rollback() or commit() above.",
-                "transaction.rollbackIfNotCommitted(); } } </pre> <p> Don't call it after a failed {@code commit()} : the commit completes the scope also when it fails, so {@link SqlTransaction} throws {@link IllegalStateException} there, and a {@code rollback()} in a {@code catch} block hid the commit's own failure."
-              ],
-              "examples": [],
-              "see_also": []
-            },
-            {
-              "name": "rollbackIfNotCommitted",
-              "kind": "instance",
-              "modifiers": [
-                "public"
-              ],
-              "signature": "void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException",
-              "return_type": "void",
-              "type_params": [],
-              "params": [],
-              "throws": [
-                {
-                  "type": "java.lang.IllegalStateException",
-                  "condition": "if called from a thread other than the transaction owner, or if the transaction is in an unexpected status (other than {@link Status#ACTIVE} , {@link Status#MARKED_ROLLBACK} , or {@link Status#FAILED_COMMIT} ) when the rollback is actually performed ( {@link SqlTransaction} : if the rollback of a transaction participating in a Spring-managed one can't mark it rollback-only)"
-                },
-                {
-                  "type": "com.landawn.abacus.exception.UncheckedSQLException",
-                  "condition": "if an SQL error occurs during the rollback (an implementation may also report a failure to restore a nested scope's isolation level; {@link SqlTransaction} logs it, and exits the scope all the same)"
-                }
-              ],
-              "javadoc_summary": "Rolls back the transaction if it has not been committed successfully.",
-              "contract": [
-                "Rolls back the transaction if it has not been committed successfully."
-              ],
-              "examples": [],
-              "see_also": []
-            }
-          ],
-          "fields": []
-        },
-        {
-          "fqn": "com.landawn.abacus.jdbc.Transaction.Status",
+          "fqn": "com.landawn.abacus.jdbc.SqlTransaction.Status",
           "name": "Status",
           "kind": "enum",
           "modifiers": [
-            "public",
-            "static"
+            "public"
           ],
-          "javadoc_summary": "Enumeration representing the various states a transaction can be in during its lifecycle.",
+          "javadoc_summary": "The status of a transaction, shared by all its scopes (see {@link SqlTransaction#status()} ).",
           "thread_safety": "unspecified",
           "nullability": "unspecified",
           "type_params": [],
@@ -51433,7 +51248,7 @@
               ],
               "type": "Status",
               "value": "new Status()",
-              "javadoc_summary": "The transaction is active and can accept operations."
+              "javadoc_summary": "The transaction is open and not marked rollback-only: the status from its beginning until it is marked rollback-only or its outermost scope completes."
             },
             {
               "name": "MARKED_ROLLBACK",
@@ -51444,7 +51259,7 @@
               ],
               "type": "Status",
               "value": "new Status()",
-              "javadoc_summary": "The transaction has been marked for rollback only."
+              "javadoc_summary": "The transaction can only end rolled back: a nested scope rolled back (for example, its work threw and its cleanup call ended it), a scope completed while a scope opened inside it was still open, or the exit of a nested scope could not restore the enclosing scope's isolation level."
             },
             {
               "name": "COMMITTED",
@@ -51455,7 +51270,7 @@
               ],
               "type": "Status",
               "value": "new Status()",
-              "javadoc_summary": "The transaction has been successfully committed."
+              "javadoc_summary": "The outermost scope committed the transaction: the database {@code COMMIT} succeeded."
             },
             {
               "name": "FAILED_COMMIT",
@@ -51466,7 +51281,7 @@
               ],
               "type": "Status",
               "value": "new Status()",
-              "javadoc_summary": "The transaction commit operation failed."
+              "javadoc_summary": "The outermost commit did not complete."
             },
             {
               "name": "ROLLED_BACK",
@@ -51477,7 +51292,7 @@
               ],
               "type": "Status",
               "value": "new Status()",
-              "javadoc_summary": "The transaction has been successfully rolled back."
+              "javadoc_summary": "The outermost scope rolled the transaction back: its {@link SqlTransaction#rollbackIfNotCommitted()} (or {@link SqlTransaction#close()} , or the deprecated {@link SqlTransaction#rollback()} ) ran without a commit, its commit found the transaction marked rollback-only (or a scope opened inside it still open), or its database commit failed and was rolled back automatically."
             },
             {
               "name": "FAILED_ROLLBACK",
@@ -51488,7 +51303,7 @@
               ],
               "type": "Status",
               "value": "new Status()",
-              "javadoc_summary": "The transaction rollback operation failed."
+              "javadoc_summary": "The rollback failed: the database {@code ROLLBACK} threw, and the connection was aborted and released without restoring its auto-commit mode and isolation level."
             }
           ]
         },

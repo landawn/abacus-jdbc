@@ -325,14 +325,20 @@ public class SqlTransactionTest extends TestBase {
 
         assertEquals(IsolationLevel.READ_COMMITTED, transaction.isolationLevel());
         transaction.rollbackIfNotCommitted();
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
     }
 
     @Test
     public void testStatus() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
 
-        assertEquals(Transaction.Status.ACTIVE, transaction.status());
+        assertEquals(SqlTransaction.Status.ACTIVE, transaction.status());
+    }
+
+    @Test
+    public void testStatusValues() {
+        assertArrayEquals(new SqlTransaction.Status[] { SqlTransaction.Status.ACTIVE, SqlTransaction.Status.MARKED_ROLLBACK, SqlTransaction.Status.COMMITTED,
+                SqlTransaction.Status.FAILED_COMMIT, SqlTransaction.Status.ROLLED_BACK, SqlTransaction.Status.FAILED_ROLLBACK }, SqlTransaction.Status.values());
     }
 
     @Test
@@ -348,7 +354,7 @@ public class SqlTransactionTest extends TestBase {
 
         transaction.commit();
 
-        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, transaction.status());
         assertFalse(transaction.isActive());
         verify(connection).commit();
         verify(connection).setAutoCommit(true);
@@ -361,7 +367,7 @@ public class SqlTransactionTest extends TestBase {
 
         transaction.commit();
 
-        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, transaction.status());
         verify(connection).commit();
         verify(connection).setAutoCommit(false);
     }
@@ -372,7 +378,7 @@ public class SqlTransactionTest extends TestBase {
         doThrow(new SQLException("Commit failed")).when(connection).commit();
 
         assertThrows(UncheckedSQLException.class, transaction::commit);
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
     }
 
@@ -386,7 +392,7 @@ public class SqlTransactionTest extends TestBase {
         doThrow(new IllegalStateException("non-sql commit failure")).when(connection).commit();
 
         assertThrows(IllegalStateException.class, transaction::commit);
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
     }
 
@@ -399,7 +405,7 @@ public class SqlTransactionTest extends TestBase {
         doThrow(new IllegalStateException("non-sql rollback failure")).when(connection).rollback();
 
         assertThrows(IllegalStateException.class, transaction::rollback);
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
     }
 
     // TX-3: addRollbackAction(Runnable) mutates the transaction's rollback-action log, which is not thread-safe and whose
@@ -431,7 +437,7 @@ public class SqlTransactionTest extends TestBase {
             transaction.rollbackIfNotCommitted();
         }
 
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         assertTrue(ownerActionRan.get());
         assertFalse(foreignActionRan.get());
     }
@@ -446,7 +452,7 @@ public class SqlTransactionTest extends TestBase {
 
         transaction.rollback();
 
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
     }
 
@@ -461,7 +467,7 @@ public class SqlTransactionTest extends TestBase {
         transaction.rollback();
 
         assertEquals(List.of("second", "first"), order);
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         assertNull(rollbackActions(transaction));
         verify(connection).rollback();
         verify(connection).close();
@@ -495,7 +501,7 @@ public class SqlTransactionTest extends TestBase {
 
         nested.rollback();
 
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
         assertEquals(1, nestedRuns.get());
         assertEquals(1, outerRuns.get());
         assertNull(rollbackActions(outer));
@@ -504,7 +510,7 @@ public class SqlTransactionTest extends TestBase {
         nested.rollbackIfNotCommitted(); // the cleanup paired with the nested scope's explicit rollback(): a no-op
         outer.rollbackIfNotCommitted();
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertEquals(1, nestedRuns.get());
         assertEquals(1, outerRuns.get());
         verify(connection).rollback();
@@ -527,7 +533,7 @@ public class SqlTransactionTest extends TestBase {
         assertDoesNotThrow(() -> transaction.rollback());
 
         assertEquals(List.of("newest", "failing", "oldest"), order);
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         assertNull(rollbackActions(transaction));
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         final InOrder inOrder = inOrder(connection);
@@ -557,7 +563,7 @@ public class SqlTransactionTest extends TestBase {
         assertSame(rollbackFailure, thrown.getCause());
         assertArrayEquals(new Throwable[] { actionFailure }, thrown.getSuppressed());
         assertEquals(List.of("failing", "oldest"), order);
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
         assertNull(rollbackActions(transaction));
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection).close();
@@ -583,7 +589,7 @@ public class SqlTransactionTest extends TestBase {
         assertSame(commitFailure, thrown.getCause());
         assertEquals(0, thrown.getSuppressed().length);
         assertEquals(List.of("failing", "oldest"), order);
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         assertNull(rollbackActions(transaction));
         final InOrder inOrder = inOrder(connection);
         inOrder.verify(connection).commit();
@@ -603,7 +609,7 @@ public class SqlTransactionTest extends TestBase {
 
         transaction.rollback();
 
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         assertFalse(transaction.isActive());
         verify(connection).rollback();
     }
@@ -615,7 +621,7 @@ public class SqlTransactionTest extends TestBase {
 
         transaction.rollback();
 
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
         verify(connection).setAutoCommit(false);
     }
@@ -626,7 +632,7 @@ public class SqlTransactionTest extends TestBase {
 
         transaction.rollbackIfNotCommitted();
 
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
     }
 
@@ -637,7 +643,7 @@ public class SqlTransactionTest extends TestBase {
         transaction.commit();
         transaction.rollbackIfNotCommitted();
 
-        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, transaction.status());
         verify(connection, times(1)).commit();
         verify(connection, never()).rollback();
     }
@@ -649,7 +655,7 @@ public class SqlTransactionTest extends TestBase {
 
         nested.rollbackIfNotCommitted();
 
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, transaction.status());
         verify(connection, never()).rollback();
     }
 
@@ -661,7 +667,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertThrows(RollbackOnlyException.class, transaction::commit);
 
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
     }
 
@@ -697,13 +703,13 @@ public class SqlTransactionTest extends TestBase {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
         final SqlTransaction nested = transaction.context().enterScope(IsolationLevel.READ_COMMITTED);
         nested.rollbackIfNotCommitted();
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, transaction.status());
 
         transaction.runOutsideTransaction(() -> assertEquals(null, TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL)));
 
         assertSame(transaction.context(), TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
         transaction.rollbackIfNotCommitted();
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
     }
 
     @Test
@@ -762,7 +768,7 @@ public class SqlTransactionTest extends TestBase {
 
         transaction.close();
 
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
     }
 
@@ -885,7 +891,7 @@ public class SqlTransactionTest extends TestBase {
             assertDoesNotThrow(nested::rollbackIfNotCommitted);
         }
 
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
         assertTrue(JdbcUtil.isInTransaction(dataSource));
 
         try {
@@ -894,7 +900,7 @@ public class SqlTransactionTest extends TestBase {
             outer.rollbackIfNotCommitted();
         }
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         final org.mockito.InOrder inOrder = Mockito.inOrder(connection);
         inOrder.verify(connection).rollback();
@@ -950,7 +956,7 @@ public class SqlTransactionTest extends TestBase {
             assertSame(restoreFailure, assertThrows(restoreFailure.getClass(), nested::rollbackIfNotCommitted));
         }
 
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
         assertEquals(IsolationLevel.READ_COMMITTED, outer.isolationLevel());
         assertEquals(1, nestedActionRuns.get());
         assertTrue(JdbcUtil.isInTransaction(dataSource));
@@ -961,7 +967,7 @@ public class SqlTransactionTest extends TestBase {
             outer.rollbackIfNotCommitted();
         }
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertEquals(1, nestedActionRuns.get());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         final InOrder inOrder = inOrder(connection);
@@ -1082,7 +1088,7 @@ public class SqlTransactionTest extends TestBase {
         final IllegalStateException thrown = assertThrows(IllegalStateException.class, transaction::commit);
         assertTrue(thrown.getMessage().contains("has already been committed (status: COMMITTED)"), thrown.getMessage());
         assertFalse(thrown instanceof RollbackOnlyException);
-        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, transaction.status());
         verify(connection, times(1)).commit();
     }
 
@@ -1111,7 +1117,7 @@ public class SqlTransactionTest extends TestBase {
             final SqlTransaction committed = JdbcUtil.beginTransaction(dataSource);
             committed.commit();
             assertThrows(IllegalStateException.class, committed::rollback);
-            assertEquals(Transaction.Status.ACTIVE, outer.status(), "the transaction is not marked rollback-only");
+            assertEquals(SqlTransaction.Status.ACTIVE, outer.status(), "the transaction is not marked rollback-only");
 
             final SqlTransaction middle = JdbcUtil.beginTransaction(dataSource);
             final SqlTransaction inner = JdbcUtil.beginTransaction(dataSource);
@@ -1189,12 +1195,12 @@ public class SqlTransactionTest extends TestBase {
         // nested rollback: marks MARKED_ROLLBACK, does NOT actually roll back
         nested.rollback();
 
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, transaction.status());
         verify(connection, never()).rollback();
 
         // outermost rollback: actually rolls back
         transaction.rollback();
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection, times(1)).rollback();
     }
 
@@ -1206,7 +1212,7 @@ public class SqlTransactionTest extends TestBase {
         transaction.rollbackIfNotCommitted(); // actual rollback
         transaction.rollbackIfNotCommitted(); // a no-op: the scope has completed
 
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection, times(1)).rollback();
     }
 
@@ -1217,7 +1223,7 @@ public class SqlTransactionTest extends TestBase {
         doThrow(new SQLException("Rollback failed")).when(connection).rollback();
 
         assertThrows(UncheckedSQLException.class, transaction::rollback);
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
     }
 
     // resetAndCloseConnection() swallows SQLException from setAutoCommit (L507-508)
@@ -1228,7 +1234,7 @@ public class SqlTransactionTest extends TestBase {
 
         // rollback should succeed even if resetting connection fails
         assertDoesNotThrow((org.junit.jupiter.api.function.Executable) transaction::rollback);
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
     }
 
@@ -1243,7 +1249,7 @@ public class SqlTransactionTest extends TestBase {
         assertEquals(1, thrown.getSuppressed().length);
         assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException);
         assertEquals("Rollback also failed", thrown.getSuppressed()[0].getCause().getMessage());
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
         verify(connection).rollback();
     }
 
@@ -1259,7 +1265,7 @@ public class SqlTransactionTest extends TestBase {
         assertEquals(1, thrown.getSuppressed().length);
         assertTrue(thrown.getSuppressed()[0] instanceof AssertionError);
         assertEquals("Rollback error", thrown.getSuppressed()[0].getMessage());
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
     }
 
     @Test
@@ -1274,7 +1280,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertSame(commitFailure, thrown);
         assertArrayEquals(new Throwable[] { rollbackFailure }, thrown.getSuppressed());
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
     }
 
     // rollback() after a commit throws: it returned normally, as if it had undone the committed work.
@@ -1285,7 +1291,7 @@ public class SqlTransactionTest extends TestBase {
         transaction.commit();
 
         assertTrue(assertThrows(IllegalStateException.class, transaction::rollback).getMessage().contains("status: COMMITTED"));
-        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, transaction.status());
         verify(connection, never()).rollback();
     }
 
@@ -1312,7 +1318,7 @@ public class SqlTransactionTest extends TestBase {
 
         nested.rollback();
 
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, transaction.status());
         assertEquals(1, transaction.context().depth(), "the nested scope was exited");
         assertThrows(IllegalStateException.class, nested::commit, "the nested scope has completed");
         assertThrows(RollbackOnlyException.class, transaction::commit);
@@ -1330,11 +1336,11 @@ public class SqlTransactionTest extends TestBase {
 
         assertSame(restoreFailure, assertThrows(IllegalStateException.class, nested::rollback));
 
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, transaction.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, transaction.status());
         assertEquals(1, transaction.context().depth());
         doNothing().when(connection).setTransactionIsolation(org.mockito.ArgumentMatchers.anyInt()); // the outermost cleanup restores it
         transaction.rollbackIfNotCommitted();
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
     }
 
     // Round 16 review: callOutsideTransaction noticed a transaction its command left open only while this transaction was still
@@ -1351,7 +1357,7 @@ public class SqlTransactionTest extends TestBase {
                 outerTx.commit();
             }));
             assertTrue(thrown.getMessage().contains("Another transaction is opened but not closed"), thrown.getMessage());
-            assertEquals(Transaction.Status.COMMITTED, outerTx.status());
+            assertEquals(SqlTransaction.Status.COMMITTED, outerTx.status());
         } finally {
             if (opened.get() != null) {
                 opened.get().rollbackIfNotCommitted();
@@ -1427,12 +1433,12 @@ public class SqlTransactionTest extends TestBase {
             assertTrue(thrown.getMessage().contains("it has been rolled back"), thrown.getMessage());
 
             assertNotSame(outerTx.context(), opened.get().context());
-            assertEquals(Transaction.Status.ROLLED_BACK, opened.get().status());
+            assertEquals(SqlTransaction.Status.ROLLED_BACK, opened.get().status());
             assertTrue(openedNested.get().isCompleted(), "its nested scope was exited first");
             verify(connection2).rollback();
             verify(connection, never()).rollback();
 
-            assertEquals(Transaction.Status.ACTIVE, outerTx.status());
+            assertEquals(SqlTransaction.Status.ACTIVE, outerTx.status());
             assertSame(outerTx.context(), TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
 
             final SqlTransaction joined = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
@@ -1551,7 +1557,7 @@ public class SqlTransactionTest extends TestBase {
             });
             assertSame(markFailure, thrown);
 
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
             assertEquals(0, undone.get(), "the in-memory changes are left to the Spring transaction's outcome");
             assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
             jdbcUtil.verify(() -> JdbcUtil.releaseSpringManagedConnection(connection, dataSource));
@@ -1560,7 +1566,7 @@ public class SqlTransactionTest extends TestBase {
             // The paired cleanup of the finally idiom, and close(): no retry, no second completion.
             assertDoesNotThrow(transaction::rollbackIfNotCommitted);
             assertDoesNotThrow(transaction::close);
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
             assertEquals(0, undone.get());
             jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource), times(1));
             jdbcUtil.verify(() -> JdbcUtil.releaseSpringManagedConnection(connection, dataSource), times(1));
@@ -1592,7 +1598,7 @@ public class SqlTransactionTest extends TestBase {
             transaction.context().addRollbackAction(undone::incrementAndGet);
             transaction.rollbackIfNotCommitted();
 
-            assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+            assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
             assertEquals(1, undone.get());
             assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
             jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource));
@@ -1642,7 +1648,7 @@ public class SqlTransactionTest extends TestBase {
             inner.rollback();
             middle.rollbackIfNotCommitted();
 
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
             assertEquals(0, undone.get(), "Spring decides the outcome until the outermost scope has marked its transaction");
             jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource), never());
 
@@ -1652,13 +1658,13 @@ public class SqlTransactionTest extends TestBase {
                 assertTrue(thrown.getMessage().contains("marked it rollback-only")
                         && thrown.getMessage().contains("will be rolled back by the Spring-managed transaction it participates in")
                         && !thrown.getMessage().contains("has been rolled back"), thrown.getMessage());
-                assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+                assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
                 assertEquals(2, undone.get());
             } else {
                 final IllegalStateException thrown = assertThrows(IllegalStateException.class, outer::commit);
                 assertSame(markFailure, thrown);
                 assertReasonAttached(thrown, "marked it rollback-only", false);
-                assertEquals(Transaction.Status.FAILED_ROLLBACK, outer.status());
+                assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, outer.status());
                 assertEquals(0, undone.get(), "Spring may still commit the work");
             }
 
@@ -1866,12 +1872,12 @@ public class SqlTransactionTest extends TestBase {
 
         inner.rollbackIfNotCommitted(); // still the no-op paired with inner.commit()
 
-        assertEquals(Transaction.Status.ACTIVE, outer.status());
+        assertEquals(SqlTransaction.Status.ACTIVE, outer.status());
         verify(connection, never()).rollback();
 
         outer.commit();
 
-        assertEquals(Transaction.Status.COMMITTED, outer.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, outer.status());
         verify(connection).commit();
         verify(connection, never()).rollback();
     }
@@ -1896,7 +1902,7 @@ public class SqlTransactionTest extends TestBase {
                 inner.rollbackIfNotCommitted(); // must stay the no-op paired with inner.commit()
             }
 
-            assertEquals(Transaction.Status.ACTIVE, outer.status());
+            assertEquals(SqlTransaction.Status.ACTIVE, outer.status());
             assertSame(outer.context(), TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
             verify(connection, never()).rollback();
 
@@ -1905,7 +1911,7 @@ public class SqlTransactionTest extends TestBase {
             outer.rollbackIfNotCommitted();
         }
 
-        assertEquals(Transaction.Status.COMMITTED, outer.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, outer.status());
         verify(connection).commit();
         verify(connection, never()).rollback();
     }
@@ -1935,14 +1941,14 @@ public class SqlTransactionTest extends TestBase {
             });
             assertSame(failure, thrown);
 
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
             assertSame(outer.context(), TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
             verify(connection, never()).rollback();
         } finally {
             outer.rollbackIfNotCommitted(); // the outer scope's failure-path cleanup performs the real rollback
         }
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertTrue(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL) == null);
         verify(connection).rollback();
         verify(connection, never()).commit();
@@ -1973,14 +1979,14 @@ public class SqlTransactionTest extends TestBase {
                 });
             } // middle.close(): the no-op paired with middle.commit()
 
-            assertEquals(Transaction.Status.ACTIVE, outer.status());
+            assertEquals(SqlTransaction.Status.ACTIVE, outer.status());
             assertSame(outer.context(), TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
             verify(connection, never()).rollback();
 
             outer.commit();
         }
 
-        assertEquals(Transaction.Status.COMMITTED, outer.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, outer.status());
         verify(dataSource, times(1)).getConnection();
         verify(connection).commit();
         verify(connection, never()).rollback();
@@ -2007,13 +2013,13 @@ public class SqlTransactionTest extends TestBase {
                 throw failure;
             })));
 
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
             verify(connection, never()).rollback();
         } finally {
             outer.rollbackIfNotCommitted();
         }
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertTrue(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL) == null);
         verify(connection).rollback();
     }
@@ -2117,7 +2123,7 @@ public class SqlTransactionTest extends TestBase {
             try {
                 final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, transaction::rollbackIfNotCommitted);
                 assertSame(rollbackFailure, thrown.getCause());
-                assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+                assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
                 assertFalse(actual.getAutoCommit());
                 assertEquals(0, JdbcUtil.prepareQuery(observer, "SELECT COUNT(*) FROM pending_work").queryForInt().orElse(-1));
                 verify(failingConnection, never()).setAutoCommit(true);
@@ -2164,7 +2170,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertSame(cleanupFailure, thrown);
         assertEquals(0, thrown.getSuppressed().length);
-        assertEquals(Transaction.Status.COMMITTED, transaction.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, transaction.status());
         verify(connection).commit();
         verify(connection).close();
         verify(connection, never()).rollback();
@@ -2180,7 +2186,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertSame(cleanupFailure, thrown);
         assertEquals(0, thrown.getSuppressed().length);
-        assertEquals(Transaction.Status.ROLLED_BACK, transaction.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, transaction.status());
         verify(connection).rollback();
         verify(connection).close();
     }
@@ -2201,7 +2207,7 @@ public class SqlTransactionTest extends TestBase {
 
             assertSame(cleanupFailure, thrown);
             assertEquals(0, thrown.getSuppressed().length);
-            assertEquals(commit ? Transaction.Status.COMMITTED : Transaction.Status.ROLLED_BACK, transaction.status());
+            assertEquals(commit ? SqlTransaction.Status.COMMITTED : SqlTransaction.Status.ROLLED_BACK, transaction.status());
             verify(localConnection).close();
             verify(localConnection, times(commit ? 1 : 0)).commit();
             verify(localConnection, times(commit ? 0 : 1)).rollback();
@@ -2223,7 +2229,7 @@ public class SqlTransactionTest extends TestBase {
             assertSame(rollbackFailure, thrown.getCause());
             // A later failure remains attached to the primary operation.
             assertArrayEquals(new Throwable[] { cleanupFailure }, thrown.getSuppressed());
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, transaction.status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, transaction.status());
             verify(connection).close();
             verify(connection, never()).setAutoCommit(true);
         });
@@ -2381,7 +2387,7 @@ public class SqlTransactionTest extends TestBase {
 
             final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, failing::commit);
             assertTrue(List.of(thrown.getSuppressed()).contains(actionError), "the action's Error is attached to the commit failure");
-            assertEquals(Transaction.Status.ROLLED_BACK, failing.status());
+            assertEquals(SqlTransaction.Status.ROLLED_BACK, failing.status());
         } finally {
             failing.rollbackIfNotCommitted();
         }
@@ -2407,7 +2413,7 @@ public class SqlTransactionTest extends TestBase {
 
             assertSame(actionError, assertThrows(AssertionError.class, tran::commit));
             assertTrue(List.of(actionError.getSuppressed()).contains(cleanupFailure));
-            assertEquals(Transaction.Status.COMMITTED, tran.status());
+            assertEquals(SqlTransaction.Status.COMMITTED, tran.status());
             assertEquals(List.of("next"), ran, "a failing action does not stop the others");
             verify(connection).close();
         } finally {
@@ -2440,7 +2446,7 @@ public class SqlTransactionTest extends TestBase {
             outer.rollbackIfNotCommitted();
         }
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection).rollback();
         verify(connection).close();
@@ -2462,7 +2468,7 @@ public class SqlTransactionTest extends TestBase {
             outer.rollbackIfNotCommitted();
         }
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertEquals(1, undone.get());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection).rollback();
@@ -2482,7 +2488,7 @@ public class SqlTransactionTest extends TestBase {
         final IllegalStateException thrown = assertThrows(IllegalStateException.class, outer::commit);
 
         assertTrue(thrown.getMessage().contains("never completed"), thrown.getMessage());
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection).rollback();
         verify(connection, never()).commit();
@@ -2504,7 +2510,7 @@ public class SqlTransactionTest extends TestBase {
             JdbcUtil.beginTransaction(dataSource); // never completed
 
             assertThrows(IllegalStateException.class, middle::commit);
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
             assertEquals(1, outer.context().depth());
             assertDoesNotThrow(middle::close);
 
@@ -2513,7 +2519,7 @@ public class SqlTransactionTest extends TestBase {
             outer.rollbackIfNotCommitted();
         }
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         verify(connection).rollback();
         verify(connection, never()).commit();
     }
@@ -2531,7 +2537,7 @@ public class SqlTransactionTest extends TestBase {
             inner.close();
             assertThrows(IllegalStateException.class, inner::commit); // only once per scope
 
-            assertEquals(Transaction.Status.ACTIVE, outer.status());
+            assertEquals(SqlTransaction.Status.ACTIVE, outer.status());
             assertEquals(1, outer.context().depth());
 
             outer.commit();
@@ -2539,7 +2545,7 @@ public class SqlTransactionTest extends TestBase {
             outer.rollbackIfNotCommitted();
         }
 
-        assertEquals(Transaction.Status.COMMITTED, outer.status());
+        assertEquals(SqlTransaction.Status.COMMITTED, outer.status());
         verify(connection).commit();
         verify(connection, never()).rollback();
     }
@@ -2602,13 +2608,13 @@ public class SqlTransactionTest extends TestBase {
                 // no inner.commit(): the scope ends rolled back and marks the transaction rollback-only
             }
 
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
             assertThrows(RollbackOnlyException.class, outer::commit);
         } finally {
             assertDoesNotThrow(outer::rollbackIfNotCommitted); // the paired cleanup is a no-op
         }
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertEquals(1, undone.get());
         verify(connection).rollback();
         verify(connection, never()).commit();
@@ -2623,7 +2629,7 @@ public class SqlTransactionTest extends TestBase {
 
         outer.close(); // completes first: exits inner and rolls back
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         final IllegalStateException thrown = assertThrows(IllegalStateException.class, inner::commit);
         assertTrue(thrown.getMessage().contains("has been rolled back"), thrown.getMessage());
         assertDoesNotThrow(inner::close);
@@ -2643,7 +2649,7 @@ public class SqlTransactionTest extends TestBase {
         }));
 
         assertFalse(thrown instanceof RollbackOnlyException, thrown.toString());
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection, never()).commit();
         verify(connection, times(1)).rollback();
@@ -2659,7 +2665,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertThrows(UncheckedSQLException.class, outer::close); // completes first: exits inner, and fails to roll back
 
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, outer.status());
         assertLateCommitOfAnExitedScopeFails(inner, "could not be rolled back");
         verify(connection, never()).commit();
         verify(connection, times(1)).rollback();
@@ -2679,7 +2685,7 @@ public class SqlTransactionTest extends TestBase {
 
             assertSame(markFailure, assertThrows(IllegalStateException.class, outer::close)); // exits inner, and fails to mark
 
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, outer.status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, outer.status());
             assertLateCommitOfAnExitedScopeFails(inner, "could not be rolled back");
             jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource), times(1));
         }
@@ -2698,12 +2704,12 @@ public class SqlTransactionTest extends TestBase {
 
         middle.close(); // completes first: exits inner and marks the transaction rollback-only
 
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
         assertLateCommitOfAnExitedScopeFails(inner, "is marked for rollback");
 
         assertThrows(RollbackOnlyException.class, outer::commit);
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertLateCommitOfAnExitedScopeFails(inner, "has been rolled back");
         verify(connection, never()).commit();
         verify(connection, times(1)).rollback();
@@ -2735,7 +2741,7 @@ public class SqlTransactionTest extends TestBase {
         assertThrows(RollbackOnlyException.class, outer::commit);
 
         assertTrue(rolledBack.get());
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertEquals(1, undone.get());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection, never()).commit();
@@ -2757,7 +2763,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertSame(driverFailure, thrown);
         assertTrue(thrown.getSuppressed()[0] instanceof RollbackOnlyException);
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertEquals(1, undone.get());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection).rollback();
@@ -2777,7 +2783,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertSame(driverFailure, assertThrows(IllegalStateException.class, outer::rollback));
 
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection).rollback();
         verify(connection).close();
@@ -2811,7 +2817,7 @@ public class SqlTransactionTest extends TestBase {
 
         middle.rollback();
 
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
         assertEquals(1, outer.context().depth());
         assertDoesNotThrow(inner::close);
         verify(connection, never()).rollback();
@@ -2820,10 +2826,10 @@ public class SqlTransactionTest extends TestBase {
         final SqlTransaction joined = JdbcUtil.beginTransaction(dataSource);
         assertSame(outer.context(), joined.context());
         joined.commit();
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
 
         outer.rollbackIfNotCommitted();
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         verify(connection).rollback();
     }
 
@@ -2867,7 +2873,7 @@ public class SqlTransactionTest extends TestBase {
             assertFalse(thrown instanceof RollbackOnlyException);
             assertTrue(thrown.getMessage().contains("already ended without a commit") && thrown.getMessage().contains("has been rolled back"),
                     thrown.getMessage());
-            assertEquals(Transaction.Status.ROLLED_BACK, tran.status());
+            assertEquals(SqlTransaction.Status.ROLLED_BACK, tran.status());
         }
 
         verify(connection, never()).commit();
@@ -2891,7 +2897,7 @@ public class SqlTransactionTest extends TestBase {
         doThrow(new SQLException("commit failed")).when(connection).commit();
 
         assertThrows(UncheckedSQLException.class, tran::commit);
-        assertEquals(Transaction.Status.ROLLED_BACK, tran.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, tran.status());
 
         assertTrue(assertThrows(IllegalStateException.class, tran::commit).getMessage().contains("has been rolled back"));
         verify(connection, times(1)).commit();
@@ -2910,7 +2916,7 @@ public class SqlTransactionTest extends TestBase {
         final IllegalStateException whileOpen = assertThrows(IllegalStateException.class, nested::commit);
         assertTrue(whileOpen.getMessage().contains("has already been committed (status: ACTIVE)"), whileOpen.getMessage());
         assertDoesNotThrow(nested::close);
-        assertEquals(Transaction.Status.ACTIVE, outer.status());
+        assertEquals(SqlTransaction.Status.ACTIVE, outer.status());
         assertEquals(1, outer.context().depth(), "the enclosing scope stays open");
 
         outer.rollbackIfNotCommitted();
@@ -2935,7 +2941,7 @@ public class SqlTransactionTest extends TestBase {
     public void testAScopeBegunInATransactionMarkedRollbackOnlyJoinsIt() throws SQLException {
         final SqlTransaction outer = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
         JdbcUtil.beginTransaction(dataSource).close(); // a nested scope ends rolled back
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
 
         final AtomicInteger undone = new AtomicInteger();
         final SqlTransaction joined = JdbcUtil.beginTransaction(dataSource, IsolationLevel.SERIALIZABLE);
@@ -2946,7 +2952,7 @@ public class SqlTransactionTest extends TestBase {
 
         joined.context().addRollbackAction(undone::incrementAndGet);
         joined.commit();
-        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
         assertEquals(1, outer.context().depth());
         assertEquals(0, undone.get(), "the joined scope committed: its actions run when the transaction rolls back");
 
@@ -2977,7 +2983,7 @@ public class SqlTransactionTest extends TestBase {
             final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, tran::rollbackIfNotCommitted);
 
             assertEquals("rollback failed", thrown.getCause().getMessage());
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
 
             final InOrder inOrder = inOrder(connection);
             inOrder.verify(connection).rollback();
@@ -3003,7 +3009,7 @@ public class SqlTransactionTest extends TestBase {
             final SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
             final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, tran::rollbackIfNotCommitted);
 
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
             verify(connection).close();
             assertEquals(!(abortError instanceof LinkageError), List.of(thrown.getSuppressed()).contains(abortError));
             assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
@@ -3019,7 +3025,7 @@ public class SqlTransactionTest extends TestBase {
         doThrow(new SQLException("rollback failed")).when(connection).rollback();
 
         assertThrows(UncheckedSQLException.class, tran::commit);
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
         verify(connection).abort(ArgumentMatchers.any());
         verify(connection).close();
 
@@ -3032,7 +3038,7 @@ public class SqlTransactionTest extends TestBase {
             jdbcUtil.when(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource)).thenThrow(new IllegalStateException("mark failed"));
 
             assertThrows(IllegalStateException.class, participating::rollbackIfNotCommitted);
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, participating.status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, participating.status());
             jdbcUtil.verify(() -> JdbcUtil.releaseSpringManagedConnection(springConnection, dataSource));
         }
 
@@ -3052,7 +3058,7 @@ public class SqlTransactionTest extends TestBase {
         try {
             final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, middle::commit);
             assertTrue(thrown.getSuppressed().length > 0 && thrown.getSuppressed()[0].getMessage().contains("never completed"));
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
             assertEquals(2, outer.context().depth());
         } finally {
             middle.rollbackIfNotCommitted(); // the retry exits the scope
@@ -3140,7 +3146,7 @@ public class SqlTransactionTest extends TestBase {
 
             assertTrue(thrown.getMessage().contains("never completed") && thrown.getMessage().contains("will be rolled back by the Spring-managed transaction")
                     && !thrown.getMessage().contains("has been rolled back"), thrown.getMessage());
-            assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+            assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
             assertEquals(1, undone.get());
             assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
             jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource));
@@ -3211,7 +3217,7 @@ public class SqlTransactionTest extends TestBase {
 
             thrown = assertThrows(Throwable.class, () -> outermostEnd.accept(outer));
 
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, outer.status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, outer.status());
             assertEquals(0, undone.get(), "the in-memory changes are left to the Spring transaction's outcome");
             assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
             jdbcUtil.verify(() -> JdbcUtil.releaseSpringManagedConnection(connection, dataSource));
@@ -3246,7 +3252,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertSame(rollbackFailure, thrown.getCause());
         assertLeakDescribedWithoutClaimingARollback(thrown);
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, outer.status());
         assertEquals(1, undone.get(), "the work was never committed: its in-memory changes are undone either way");
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection, never()).commit();
@@ -3278,7 +3284,7 @@ public class SqlTransactionTest extends TestBase {
         assertFalse(suppressed[1] instanceof RollbackOnlyException, suppressed[1].toString());
         assertTrue(suppressed[1].getMessage().contains("never completed") && suppressed[1].getMessage().contains("could not be rolled back"),
                 suppressed[1].getMessage());
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, outer.status());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection, never()).commit();
         verify(connection).close();
@@ -3300,7 +3306,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertSame(cleanupFailure, thrown);
         assertReasonAttached(thrown, "never completed", true);
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertEquals(1, undone.get());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection).rollback();
@@ -3334,7 +3340,7 @@ public class SqlTransactionTest extends TestBase {
             assertReasonAttached(thrown, "never completed", true);
             assertTrue(thrown.getSuppressed()[0].getMessage().contains("will be rolled back by the Spring-managed transaction"),
                     thrown.getSuppressed()[0].getMessage());
-            assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+            assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
             assertEquals(1, undone.get(), "the Spring transaction can only end rolled back");
             assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
             jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource), times(1));
@@ -3364,7 +3370,7 @@ public class SqlTransactionTest extends TestBase {
 
         assertSame(rollbackFailure, thrown.getCause());
         assertReasonAttached(thrown, "marked it rollback-only", false);
-        assertEquals(Transaction.Status.FAILED_ROLLBACK, outer.status());
+        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, outer.status());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection, never()).commit();
         verify(connection, never()).setAutoCommit(true); // restoring auto-commit would commit the pending work
@@ -3386,7 +3392,7 @@ public class SqlTransactionTest extends TestBase {
         assertSame(cleanupFailure, thrown);
         assertReasonAttached(thrown, "marked it rollback-only", true);
         assertTrue(thrown.getSuppressed()[0].getMessage().contains("rolled back instead of committed"), thrown.getSuppressed()[0].getMessage());
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertFalse(JdbcUtil.isInTransaction(dataSource));
         verify(connection).rollback();
         verify(connection, never()).commit();
@@ -3420,7 +3426,7 @@ public class SqlTransactionTest extends TestBase {
         assertSame(newer, assertThrows(RollbackActionError.class, tran::rollbackIfNotCommitted));
         assertArrayEquals(new Throwable[] { older }, newer.getSuppressed());
         assertEquals(2, undone.get());
-        assertEquals(Transaction.Status.ROLLED_BACK, tran.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, tran.status());
         assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
         assertDoesNotThrow(tran::close);
         verify(connection).rollback();
@@ -3442,7 +3448,7 @@ public class SqlTransactionTest extends TestBase {
 
             assertSame(error, assertThrows(RollbackActionError.class, deprecatedRollback ? inner::rollback : inner::close));
 
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
             assertEquals(1, outer.context().depth(), "the nested scope has exited");
             assertDoesNotThrow(inner::close);
             assertThrows(RollbackOnlyException.class, outer::commit);
@@ -3468,7 +3474,7 @@ public class SqlTransactionTest extends TestBase {
         assertSame(error, assertThrows(RollbackActionError.class, outer::commit));
 
         assertReasonAttached(error, "never completed", true);
-        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
         assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
         verify(connection).rollback();
         verify(connection, never()).commit();
@@ -3492,7 +3498,7 @@ public class SqlTransactionTest extends TestBase {
 
             assertSame(error, assertThrows(RollbackActionError.class, outer::rollbackIfNotCommitted));
 
-            assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+            assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
             assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
             jdbcUtil.verify(() -> JdbcUtil.markSpringTransactionRollbackOnly(dataSource));
             jdbcUtil.verify(() -> JdbcUtil.releaseSpringManagedConnection(connection, dataSource));

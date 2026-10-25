@@ -2338,7 +2338,7 @@ public class JoinEntityHelperTest extends TestBase {
                 assertSame(failure, assertThrows(SQLException.class, () -> dao.deleteJoinEntities(entity, List.of("orders", "addresses"), executor)));
                 verify(dao, Mockito.never()).deleteJoinEntities(entity, "addresses");
                 assertTrue(submitted.isEmpty(), "no task went to the executor");
-                assertEquals(com.landawn.abacus.jdbc.Transaction.Status.MARKED_ROLLBACK, tran.status());
+                assertEquals(com.landawn.abacus.jdbc.SqlTransaction.Status.MARKED_ROLLBACK, tran.status());
 
                 // The collection overload too.
                 Mockito.doThrow(failure).when(dao).deleteJoinEntities(List.of(entity), "orders");

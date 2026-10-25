@@ -18,7 +18,7 @@ import java.io.Serial;
 
 /**
  * Thrown by the outermost {@link SqlTransaction#commit()} of a transaction that a nested scope marked rollback-only
- * ({@link Transaction.Status#MARKED_ROLLBACK}), after the transaction has been rolled back: none of its work was committed.
+ * ({@link SqlTransaction.Status#MARKED_ROLLBACK}), after the transaction has been rolled back: none of its work was committed.
  * For a transaction that participates in a Spring-managed transaction, that rollback is the rollback-only mark of the Spring
  * transaction, which rolls back the work when it completes.
  *
@@ -49,7 +49,7 @@ import java.io.Serial;
  * }</pre>
  *
  * @see SqlTransaction#commit()
- * @see Transaction.Status#MARKED_ROLLBACK
+ * @see SqlTransaction.Status#MARKED_ROLLBACK
  */
 public class RollbackOnlyException extends IllegalStateException {
 

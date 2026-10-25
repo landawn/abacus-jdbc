@@ -139,7 +139,7 @@ import com.landawn.abacus.jdbc.Propagation;
  *
  * @see Propagation
  * @see IsolationLevel
- * @see com.landawn.abacus.jdbc.Transaction
+ * @see com.landawn.abacus.jdbc.SqlTransaction
  * @see org.springframework.transaction.annotation.Transactional
  */
 @Documented

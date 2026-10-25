@@ -553,7 +553,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 assertEquals(0, countItems(keeperA), "Spring's connection is not committed by the JdbcUtil transaction");
                 assertEquals(2, countItems(spring));
                 assertEquals(!scopeCommits, status.isRollbackOnly());
-                assertEquals(scopeCommits ? Transaction.Status.COMMITTED : Transaction.Status.ROLLED_BACK, tran.status());
+                assertEquals(scopeCommits ? SqlTransaction.Status.COMMITTED : SqlTransaction.Status.ROLLED_BACK, tran.status());
             } catch (final SQLException e) {
                 throw new IllegalStateException(e);
             } finally {
@@ -1145,7 +1145,7 @@ class SpringTransactionParticipationTest extends TestBase {
             assertEquals(0, tran.context().rollbackActionCount(), "registered with Spring's synchronization");
 
             assertSame(actionError, assertThrows(AssertionError.class, tran::rollbackIfNotCommitted));
-            assertEquals(Transaction.Status.ROLLED_BACK, tran.status());
+            assertEquals(SqlTransaction.Status.ROLLED_BACK, tran.status());
             assertEquals(List.of("older"), ran);
             assertDoesNotThrow(tran::close);
         }));
@@ -1173,7 +1173,7 @@ class SpringTransactionParticipationTest extends TestBase {
         assertEquals(0, countItems(keeperA));
         final IllegalStateException thrown = assertThrows(IllegalStateException.class, leaked[0]::commit);
         assertTrue(thrown.getMessage().contains("has completed"), thrown.getMessage());
-        assertEquals(Transaction.Status.FAILED_COMMIT, leaked[0].status());
+        assertEquals(SqlTransaction.Status.FAILED_COMMIT, leaked[0].status());
 
         // Round 17 review: a later commit() said that the transaction "is marked for rollback", which it never was.
         final IllegalStateException again = assertThrows(IllegalStateException.class, leaked[0]::commit);
@@ -1224,7 +1224,7 @@ class SpringTransactionParticipationTest extends TestBase {
         final SqlTransaction[] leaked = new SqlTransaction[2];
         final PreparedQuery[] query = new PreparedQuery[1];
         final RuntimeException[] failures = new RuntimeException[3];
-        final Transaction.Status[] statuses = new Transaction.Status[2];
+        final SqlTransaction.Status[] statuses = new SqlTransaction.Status[2];
 
         transactionTemplate().executeWithoutResult(status -> {
             leaked[0] = JdbcUtil.beginTransaction(dataSourceA);
@@ -1249,7 +1249,7 @@ class SpringTransactionParticipationTest extends TestBase {
         assertEquals(0, countItems(keeperA), "Spring rolled the work back");
         assertTrue(failures[0] instanceof IllegalStateException, String.valueOf(failures[0]));
         assertTrue(failures[0].getMessage().contains("runs its completion callbacks"), failures[0].getMessage());
-        assertEquals(Transaction.Status.FAILED_COMMIT, statuses[0]);
+        assertEquals(SqlTransaction.Status.FAILED_COMMIT, statuses[0]);
 
         transactionTemplate().executeWithoutResult(status -> {
             leaked[1] = JdbcUtil.beginTransaction(dataSourceA);
@@ -1282,7 +1282,7 @@ class SpringTransactionParticipationTest extends TestBase {
             assertTrue(failures[1] instanceof IllegalStateException, String.valueOf(failures[1]));
             assertTrue(failures[2] instanceof IllegalStateException, String.valueOf(failures[2]));
             assertTrue(failures[2].getMessage().contains("runs its completion callbacks"), failures[2].getMessage());
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, statuses[1]);
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, statuses[1]);
             assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL));
         } finally {
             query[0].close();
@@ -1330,7 +1330,7 @@ class SpringTransactionParticipationTest extends TestBase {
             }
 
             leftOpen[0].commit();
-            assertEquals(Transaction.Status.COMMITTED, leftOpen[0].status());
+            assertEquals(SqlTransaction.Status.COMMITTED, leftOpen[0].status());
         });
 
         try {
@@ -1445,11 +1445,11 @@ class SpringTransactionParticipationTest extends TestBase {
             if (tracked) {
                 assertTrue(failures[0] instanceof IllegalStateException, String.valueOf(failures[0]));
                 assertTrue(failures[1] instanceof IllegalStateException, String.valueOf(failures[1]));
-                assertEquals(Transaction.Status.FAILED_COMMIT, leftOpen[0].status());
+                assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
             } else {
                 assertNull(failures[0], "the documented limit without a tracker: the query ran");
                 assertNull(failures[1], "and the scope committed");
-                assertEquals(Transaction.Status.COMMITTED, leftOpen[0].status());
+                assertEquals(SqlTransaction.Status.COMMITTED, leftOpen[0].status());
             }
         } finally {
             query[0].close();
@@ -1487,7 +1487,7 @@ class SpringTransactionParticipationTest extends TestBase {
             assertEquals(List.of("committed"), itemNames());
             assertThrows(IllegalStateException.class, () -> query[0].queryForInt());
             assertThrows(IllegalStateException.class, leftOpen[0]::commit);
-            assertEquals(Transaction.Status.FAILED_COMMIT, leftOpen[0].status());
+            assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
         } finally {
             query[0].close();
         }
@@ -1680,7 +1680,7 @@ class SpringTransactionParticipationTest extends TestBase {
 
         final RuntimeException commitFailure = thrownBy(leftOpen[0]::commit);
         assertTrue(commitFailure instanceof IllegalStateException, String.valueOf(commitFailure));
-        assertEquals(Transaction.Status.FAILED_COMMIT, leftOpen[0].status());
+        assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
     }
 
     // External review (tests): a scope left open in a tracked transaction whose commit fails can't commit: the transaction
@@ -1741,7 +1741,7 @@ class SpringTransactionParticipationTest extends TestBase {
         }
 
         assertTrue(failure[0] instanceof IllegalStateException, String.valueOf(failure[0]));
-        assertEquals(Transaction.Status.FAILED_COMMIT, leftOpen[0].status());
+        assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
         assertEquals(List.of("pending"), itemNames(), "Spring's cleanup committed what the failed commit left on the connection");
     }
 
@@ -1915,7 +1915,7 @@ class SpringTransactionParticipationTest extends TestBase {
                     assertNotSame(hidden.context(), hiding.context());
 
                     hiding.runOutsideTransaction(() -> hiding.runOutsideTransaction(hiding::commit));
-                    assertEquals(Transaction.Status.COMMITTED, hiding.status());
+                    assertEquals(SqlTransaction.Status.COMMITTED, hiding.status());
                 });
 
                 final SqlTransaction joined = JdbcUtil.beginTransaction(dataSourceA);
@@ -2258,7 +2258,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 assertFalse(innerStatus.isRollbackOnly(), "the inner scope is not marked");
             });
 
-            assertEquals(commit ? Transaction.Status.COMMITTED : Transaction.Status.ROLLED_BACK, participating.status());
+            assertEquals(commit ? SqlTransaction.Status.COMMITTED : SqlTransaction.Status.ROLLED_BACK, participating.status());
             assertEquals(!commit, status.isRollbackOnly(), "the transaction participated in is marked");
         });
 
@@ -2330,7 +2330,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 insertItem(dataSource, "failed");
                 rollbackFails.set(true);
                 assertThrows(UncheckedSQLException.class, tran::rollbackIfNotCommitted);
-                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+                assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
                 rollbackFails.set(false);
 
                 insertItem(dataSource, "later"); // auto-commit, on a new connection
@@ -3006,7 +3006,7 @@ class SpringTransactionParticipationTest extends TestBase {
                         tran.rollbackIfNotCommitted();
                     }
 
-                    assertEquals(Transaction.Status.ROLLED_BACK, tran.status());
+                    assertEquals(SqlTransaction.Status.ROLLED_BACK, tran.status());
                 } catch (final SQLException e) {
                     throw new IllegalStateException(e);
                 }
@@ -3600,7 +3600,7 @@ class SpringTransactionParticipationTest extends TestBase {
                         explicitRollback ? tran::rollback : tran::rollbackIfNotCommitted);
                 assertEquals("cannot mark", failure.getMessage());
 
-                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+                assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
                 assertEquals(id, item.getId(), "the ID is kept: Spring may still commit the row");
                 assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL), "the scope is completed");
                 assertFalse(spring.isClosed());
@@ -3609,7 +3609,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 // The paired cleanup call of the finally idiom, and close(): no second attempt, nothing thrown.
                 assertDoesNotThrow(tran::rollbackIfNotCommitted);
                 assertDoesNotThrow(tran::close);
-                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+                assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
                 assertEquals(id, item.getId());
                 assertFalse(spring.isClosed());
             } catch (final SQLException e) {
@@ -3668,7 +3668,7 @@ class SpringTransactionParticipationTest extends TestBase {
 
                     if (!innerLeaked) {
                         inner.rollbackIfNotCommitted();
-                        assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+                        assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
                         assertEquals(id, item.getId(), "Spring decides the outcome until the outermost scope has marked its transaction");
                     }
 
@@ -3679,12 +3679,12 @@ class SpringTransactionParticipationTest extends TestBase {
                             outermostEnd.complete(outer);
                         }
 
-                        assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+                        assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
                         assertNull(item.getId(), "put back once the Spring transaction is marked");
                     } else {
                         final IllegalStateException failure = assertThrows(IllegalStateException.class, () -> outermostEnd.complete(outer));
                         assertEquals("cannot mark", failure.getMessage());
-                        assertEquals(Transaction.Status.FAILED_ROLLBACK, outer.status());
+                        assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, outer.status());
                         assertEquals(id, item.getId(), "kept: Spring may still commit the row");
                     }
 
@@ -3768,7 +3768,7 @@ class SpringTransactionParticipationTest extends TestBase {
 
             final IllegalStateException failure = assertThrows(IllegalStateException.class, leaked[0]::rollbackIfNotCommitted);
             assertTrue(failure.getMessage().contains("it has completed"), failure.getMessage());
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, leaked[0].status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, leaked[0].status());
             assertEquals(id, item.getId(), "the row is committed: its ID is kept");
             assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL), "the scope is completed");
             assertDoesNotThrow(leaked[0]::close);

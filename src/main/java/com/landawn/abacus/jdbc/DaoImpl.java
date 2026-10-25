@@ -6780,7 +6780,7 @@ final class DaoImpl {
 
                                         // commit() can still throw from the connection cleanup after the commit went through: the rows
                                         // exist then, so their IDs are kept (and the returned ones assigned below) before rethrowing.
-                                        if (tran.status() != Transaction.Status.COMMITTED) {
+                                        if (tran.status() != SqlTransaction.Status.COMMITTED) {
                                             restoreGeneratedIds(generatedIdRestorer, e);
                                             throw e;
                                         }
@@ -6840,7 +6840,7 @@ final class DaoImpl {
 
                                     // commit() can still throw from the connection cleanup after the commit went through: the rows exist
                                     // then, so their IDs are kept (and the returned ones assigned below) before rethrowing.
-                                    if (tran.status() != Transaction.Status.COMMITTED) {
+                                    if (tran.status() != SqlTransaction.Status.COMMITTED) {
                                         restoreGeneratedIds(generatedIdRestorer, e);
                                         throw e;
                                     }
@@ -6971,7 +6971,7 @@ final class DaoImpl {
 
                                     // commit() can still throw from the connection cleanup after the commit went through: the rows exist
                                     // then, so their IDs are kept (and the returned ones assigned below) before rethrowing.
-                                    if (tran.status() != Transaction.Status.COMMITTED) {
+                                    if (tran.status() != SqlTransaction.Status.COMMITTED) {
                                         restoreGeneratedIds(generatedIdRestorer, e);
                                         throw e;
                                     }
@@ -7101,7 +7101,7 @@ final class DaoImpl {
 
                                     // commit() can still throw from the connection cleanup after the commit went through: the rows exist
                                     // then, so their IDs are kept (and the returned ones assigned below) before rethrowing.
-                                    if (tran.status() != Transaction.Status.COMMITTED) {
+                                    if (tran.status() != SqlTransaction.Status.COMMITTED) {
                                         restoreGeneratedIds(generatedIdRestorer, e);
                                         throw e;
                                     }
@@ -8710,7 +8710,7 @@ final class DaoImpl {
                                         // commit() can still throw from the connection cleanup after the commit went through: the rows
                                         // exist then, so the keys they returned are still written back below (as the built-in batchInsert
                                         // does) before rethrowing; the entities used to keep null IDs for committed rows.
-                                        if (tran.status() != Transaction.Status.COMMITTED) {
+                                        if (tran.status() != SqlTransaction.Status.COMMITTED) {
                                             throw e;
                                         }
 

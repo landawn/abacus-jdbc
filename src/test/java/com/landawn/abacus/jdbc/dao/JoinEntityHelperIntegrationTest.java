@@ -33,7 +33,6 @@ import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
-import com.landawn.abacus.jdbc.Transaction;
 import com.landawn.abacus.jdbc.annotation.DaoConfig;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.query.SqlDialect;
@@ -635,7 +634,7 @@ public class JoinEntityHelperIntegrationTest extends TestBase {
             assertThrows(IllegalArgumentException.class, () -> userDao.deleteJoinEntities(seeded, names, DIRECT_EXECUTOR));
             assertThrows(IllegalArgumentException.class, () -> checkedDao.deleteJoinEntities(List.of(seeded), names, DIRECT_EXECUTOR));
 
-            assertEquals(Transaction.Status.ACTIVE, tran.status(), "no delete ran in a nested scope: the transaction is not rollback-only");
+            assertEquals(SqlTransaction.Status.ACTIVE, tran.status(), "no delete ran in a nested scope: the transaction is not rollback-only");
             assertEquals(2, orderCountForUser(seeded.getId()), "nothing was deleted");
 
             final JoinUser loaded = userDao.getOrNull(seeded.getId());
