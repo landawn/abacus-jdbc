@@ -308,7 +308,7 @@ class SpringJpaTransactionParticipationTest extends TestBase {
 
             final IllegalStateException failure = assertThrows(IllegalStateException.class, tran::rollbackIfNotCommitted);
             assertTrue(failure.getCause() instanceof jakarta.persistence.PersistenceException, String.valueOf(failure.getCause()));
-            assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
             assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL), "the scope is completed");
             assertNotNull(item.getId(), "the ID follows the outcome, which the JPA transaction decides");
 
@@ -359,7 +359,7 @@ class SpringJpaTransactionParticipationTest extends TestBase {
 
                 final IllegalStateException failure = assertThrows(IllegalStateException.class, tran::rollbackIfNotCommitted);
                 assertTrue(failure.getCause() instanceof jakarta.persistence.PersistenceException, String.valueOf(failure.getCause()));
-                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+                assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
                 assertNotNull(item.getId(), "the ID is not put back before the JPA transaction decides the outcome");
             } finally {
                 TransactionSynchronizationManager.unbindResource(otherFactory);
@@ -394,7 +394,7 @@ class SpringJpaTransactionParticipationTest extends TestBase {
             try {
                 final IllegalStateException failure = assertThrows(IllegalStateException.class, tran::rollbackIfNotCommitted);
                 assertTrue(failure.getMessage().contains("no active JPA transaction owning the connection"), failure.getMessage());
-                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+                assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
                 assertNotNull(item.getId(), "the ID follows the outcome, which the JPA transaction decides");
             } finally {
                 jpa.entityTransaction.active = true;
@@ -430,7 +430,7 @@ class SpringJpaTransactionParticipationTest extends TestBase {
             notSupported.executeWithoutResult(suspended -> {
                 final IllegalStateException failure = assertThrows(IllegalStateException.class, tran::rollbackIfNotCommitted);
                 assertTrue(failure.getMessage().contains("can't be reached while it is suspended"), failure.getMessage());
-                assertEquals(Transaction.Status.FAILED_ROLLBACK, tran.status());
+                assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, tran.status());
                 assertNotNull(item.getId(), "the ID follows the outcome, which the JPA transaction decides");
             });
         });
@@ -471,10 +471,10 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         if (tracked) {
             final IllegalStateException thrown = assertThrows(IllegalStateException.class, leftOpen[0]::commit);
             assertTrue(thrown.getMessage().contains("has completed"), thrown.getMessage());
-            assertEquals(Transaction.Status.FAILED_COMMIT, leftOpen[0].status());
+            assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
         } else {
             leftOpen[0].commit(); // the documented limit without a tracker
-            assertEquals(Transaction.Status.COMMITTED, leftOpen[0].status());
+            assertEquals(SqlTransaction.Status.COMMITTED, leftOpen[0].status());
         }
     }
 

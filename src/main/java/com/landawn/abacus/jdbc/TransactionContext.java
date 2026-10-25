@@ -25,7 +25,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.SqlTransaction.CreatedBy;
-import com.landawn.abacus.jdbc.Transaction.Status;
+import com.landawn.abacus.jdbc.SqlTransaction.Status;
 import com.landawn.abacus.logging.Logger;
 import com.landawn.abacus.logging.LoggerFactory;
 import com.landawn.abacus.util.N;

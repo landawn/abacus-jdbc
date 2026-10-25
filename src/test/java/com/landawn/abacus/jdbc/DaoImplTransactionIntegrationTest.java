@@ -367,9 +367,9 @@ class DaoImplTransactionIntegrationTest extends TestBase {
                     throw failure;
                 })));
 
-                assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status());
+                assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status());
                 assertThrows(RollbackOnlyException.class, outer::commit);
-                assertEquals(Transaction.Status.ROLLED_BACK, outer.status());
+                assertEquals(SqlTransaction.Status.ROLLED_BACK, outer.status());
                 assertTrue(status.isRollbackOnly());
             } finally {
                 outer.rollbackIfNotCommitted();
@@ -661,7 +661,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
                 assertThrows(SQLException.class, () -> dao.required(() -> {
                     throw new SQLException("nested work failed");
                 }), logging.name());
-                assertEquals(Transaction.Status.MARKED_ROLLBACK, outer.status(), logging.name());
+                assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, outer.status(), logging.name());
 
                 assertEquals(42, dao.required(() -> {
                     assertEquals(2, outer.context().depth());
@@ -767,7 +767,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
             assertNotNull(inserted.getId(), "inserted");
 
             assertThrows(IllegalStateException.class, () -> generatedDao.batchUpsert(List.of(generated("same"), generated("other")), List.of("name")));
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, tran.status());
             assertThrows(RollbackOnlyException.class, tran::commit);
         } finally {
             tran.rollbackIfNotCommitted();
@@ -796,7 +796,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
                 assertThrows(DuplicateResultException.class, () -> checkedDao.upsert(generated(3L, "new"), Filters.eq("name", "same")));
             }
 
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, tran.status());
             assertThrows(RollbackOnlyException.class, tran::commit);
         } finally {
             tran.rollbackIfNotCommitted();
@@ -820,7 +820,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
 
         try {
             assertThrows(DuplicateResultException.class, () -> generatedDao.upsert(generated(3L, "new"), Filters.eq("name", "same")));
-            assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status());
+            assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, tran.status());
             assertThrows(RollbackOnlyException.class, tran::commit);
         } finally {
             tran.rollbackIfNotCommitted();

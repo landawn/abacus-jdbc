@@ -21,7 +21,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.Throwables;
 
 /**
- * Default {@link Transaction} implementation backed by a JDBC {@link Connection}. It is the transaction returned by
+ * A JDBC transaction managed by this library, backed by a {@link Connection}. It is the transaction returned by
  * {@link JdbcUtil#beginTransaction(javax.sql.DataSource)} and its overloads, the one that
  * {@link JdbcUtil#callInTransaction(javax.sql.DataSource, Throwables.Callable) callInTransaction} /
  * {@link JdbcUtil#runInTransaction(javax.sql.DataSource, Throwables.Runnable) runInTransaction} and DAO methods annotated with
@@ -735,7 +735,7 @@ import com.landawn.abacus.util.Throwables;
  *       the transaction's outcome.</li>
  * </ol>
  *
- * @see Transaction
+ * @see Status
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource)
  * @see JdbcUtil#beginTransaction(javax.sql.DataSource, IsolationLevel)
  * @see JdbcUtil#callInTransaction(javax.sql.DataSource, Throwables.Callable)
@@ -744,7 +744,7 @@ import com.landawn.abacus.util.Throwables;
  * @see com.landawn.abacus.jdbc.annotation.Transactional
  */
 @SuppressWarnings("resource")
-public final class SqlTransaction implements Transaction, AutoCloseable {
+public final class SqlTransaction implements AutoCloseable {
 
     /**
      * The state this scope shares with the other scopes of its transaction.
@@ -806,7 +806,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * @return the unique transaction identifier, never {@code null}
      */
-    @Override
     public String id() {
         return _context.id();
     }
@@ -849,7 +848,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @return the isolation level of this scope, never {@code null}
      * @see IsolationLevel
      */
-    @Override
     public IsolationLevel isolationLevel() {
         return _isolationLevel;
     }
@@ -861,17 +859,16 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
-     *     if (tran.status() == Transaction.Status.ACTIVE) {
+     *     if (tran.status() == SqlTransaction.Status.ACTIVE) {
      *         // The transaction can still be committed
      *     }
      * }
      * }</pre>
      *
      * @return the current transaction status, never {@code null}
-     * @see Transaction.Status
+     * @see Status
      */
-    @Override
-    public Transaction.Status status() {
+    public Status status() {
         return _context.status();
     }
 
@@ -889,7 +886,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *
      * @return {@code true} if the transaction is active, {@code false} otherwise
      */
-    @Override
     public boolean isActive() {
         return _context.status() == Status.ACTIVE;
     }
@@ -964,7 +960,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      *         rollback-only transaction. A failed database commit triggers an automatic rollback; any rollback failure is
      *         suppressed on the commit exception.
      */
-    @Override
     public void commit() throws IllegalStateException, UncheckedSQLException {
         _context.commit(this);
     }
@@ -997,7 +992,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @deprecated replaced by {@link #rollbackIfNotCommitted()}
      */
     @Deprecated
-    @Override
     public void rollback() throws IllegalStateException, UncheckedSQLException {
         _context.rollback(this);
     }
@@ -1040,7 +1034,6 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
      * @throws RuntimeException if marking the Spring transaction rollback-only fails with another exception (an {@link Error}
      *         from the mark propagates as well); the status is then {@link Status#FAILED_ROLLBACK}
      */
-    @Override
     public void rollbackIfNotCommitted() throws IllegalStateException, UncheckedSQLException {
         _context.rollbackIfNotCommitted(this);
     }
@@ -1191,6 +1184,75 @@ public final class SqlTransaction implements Transaction, AutoCloseable {
     @Override
     public String toString() {
         return "SqlTransaction={id=" + _context.id() + ", outermost=" + _outermost + ", completed=" + _completed + "}";
+    }
+
+    /**
+     * The status of a transaction, shared by all its scopes (see {@link SqlTransaction#status()}). It changes from
+     * {@link #ACTIVE} only when the transaction is marked rollback-only or when its outermost scope completes:
+     * <pre>
+     * ACTIVE → MARKED_ROLLBACK (a nested scope rolled back or was never completed, or the enclosing scope's isolation level
+     *                          could not be restored when a nested scope exited)
+     * ACTIVE → COMMITTED (the outermost commit() succeeds)
+     * ACTIVE → FAILED_COMMIT → ROLLED_BACK / FAILED_ROLLBACK (the database commit fails, and is rolled back automatically)
+     * ACTIVE / MARKED_ROLLBACK → ROLLED_BACK / FAILED_ROLLBACK (the outermost scope rolls back, or its commit() finds the
+     *                                                          transaction marked rollback-only)
+     * </pre>
+     *
+     * <p>For a transaction that participates in a Spring-managed transaction, {@code COMMITTED} and {@code ROLLED_BACK}
+     * describe the completion of its scope (the Spring transaction decides the outcome of the work), {@code FAILED_ROLLBACK}
+     * means that the Spring transaction could not be marked rollback-only, and {@code FAILED_COMMIT}, final for such a
+     * transaction, that the Spring transaction had completed (or begun to complete) before the outermost commit, deciding the
+     * outcome of the work without it.</p>
+     */
+    public enum Status {
+        /**
+         * The transaction is open and not marked rollback-only: the status from its beginning until it is marked rollback-only
+         * or its outermost scope completes.
+         */
+        ACTIVE,
+
+        /**
+         * The transaction can only end rolled back: a nested scope rolled back (for example, its work threw and its cleanup call
+         * ended it), a scope completed while a scope opened inside it was still open, or the exit of a nested scope could not
+         * restore the enclosing scope's isolation level. Scopes begun meanwhile join the transaction, and their work is rolled
+         * back with it; the outermost scope rolls back even if it calls {@link SqlTransaction#commit()}, which then throws
+         * {@link RollbackOnlyException} (or the failure of that rollback).
+         */
+        MARKED_ROLLBACK,
+
+        /**
+         * The outermost scope committed the transaction: the database {@code COMMIT} succeeded. For a transaction that
+         * participates in a Spring-managed transaction, its outermost scope completed without a database {@code COMMIT}, and
+         * Spring commits the work when its own transaction completes.
+         */
+        COMMITTED,
+
+        /**
+         * The outermost commit did not complete. For a transaction of this library's own, the status is transient, never
+         * reported once {@link SqlTransaction#commit()} has returned or thrown: a failed database commit is rolled back
+         * automatically, ending {@link #ROLLED_BACK} or {@link #FAILED_ROLLBACK}. For a transaction that participates in a
+         * Spring-managed transaction, it is final: the Spring transaction had completed (or begun to complete, in its
+         * completion callbacks) before the outermost commit, and decided the outcome of the work without it, so nothing is
+         * rolled back.
+         */
+        FAILED_COMMIT,
+
+        /**
+         * The outermost scope rolled the transaction back: its {@link SqlTransaction#rollbackIfNotCommitted()} (or
+         * {@link SqlTransaction#close()}, or the deprecated {@link SqlTransaction#rollback()}) ran without a commit, its commit
+         * found the transaction marked rollback-only (or a scope opened inside it still open), or its database commit failed
+         * and was rolled back automatically. For a transaction that participates in a Spring-managed transaction, the Spring
+         * transaction has been marked rollback-only instead, and Spring rolls the work back when its transaction completes.
+         */
+        ROLLED_BACK,
+
+        /**
+         * The rollback failed: the database {@code ROLLBACK} threw, and the connection was aborted and released without
+         * restoring its auto-commit mode and isolation level. Manual intervention may be required to restore database
+         * consistency. For a transaction that participates in a Spring-managed transaction, the Spring transaction could not
+         * be marked rollback-only, so Spring may still commit the work.
+         */
+        FAILED_ROLLBACK
     }
 
     /**

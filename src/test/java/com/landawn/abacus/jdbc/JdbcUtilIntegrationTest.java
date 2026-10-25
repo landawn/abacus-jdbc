@@ -421,10 +421,10 @@ public class JdbcUtilIntegrationTest extends TestBase {
                     }
                 });
 
-                assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status(), "large=" + large);
+                assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, tran.status(), "large=" + large);
                 assertEquals(2, JdbcUtil.executeBatchUpdate(ds, sql, List.of(new Object[] { 1_000_003L, "d", 4 }, new Object[] { 1_000_004L, "e", 5 })),
                         "a further batch joins the rollback-only transaction");
-                assertEquals(Transaction.Status.MARKED_ROLLBACK, tran.status(), "large=" + large);
+                assertEquals(SqlTransaction.Status.MARKED_ROLLBACK, tran.status(), "large=" + large);
                 assertThrows(RollbackOnlyException.class, tran::commit);
             } finally {
                 tran.rollbackIfNotCommitted();
@@ -577,7 +577,7 @@ public class JdbcUtilIntegrationTest extends TestBase {
                 final IllegalArgumentException missing = assertThrows(IllegalArgumentException.class, () -> batch(large, named, missingEntry));
                 assertTrue(missing.getMessage().contains("'qty' (the parameter set at index 1)"), missing.getMessage());
 
-                assertEquals(Transaction.Status.ACTIVE, tran.status(), "nothing ran: the transaction is not marked rollback-only");
+                assertEquals(SqlTransaction.Status.ACTIVE, tran.status(), "nothing ran: the transaction is not marked rollback-only");
                 assertEquals(2L, batch(large, positional, List.of(new Object[] { "c", 3 }, new Object[] { "d", 4 })), "it still accepts work");
                 tran.commit();
             } finally {
@@ -613,7 +613,7 @@ public class JdbcUtilIntegrationTest extends TestBase {
             assertEquals(1, JdbcUtil.executeBatchUpdate(ds, "INSERT INTO widget (name, qty) VALUES (?, ?)", List.<Object[]> of(new Object[] { "joined", 2 })));
             assertThrows(SQLException.class, () -> JdbcUtil.executeLargeBatchUpdate(ds, "INSERT INTO widget (id, name, qty) VALUES (?, ?, ?)",
                     List.<Object[]> of(new Object[] { id, "duplicate", 3 })));
-            assertEquals(Transaction.Status.ACTIVE, tran.status(), "a single statement's failure does not mark the transaction");
+            assertEquals(SqlTransaction.Status.ACTIVE, tran.status(), "a single statement's failure does not mark the transaction");
             assertEquals(1, JdbcUtil.prepareQuery(ds, "SELECT COUNT(*) FROM widget WHERE name = 'joined'").queryForInt().orElse(-1));
         } finally {
             tran.rollbackIfNotCommitted();

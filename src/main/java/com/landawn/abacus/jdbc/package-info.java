@@ -26,7 +26,7 @@
  * handler, and caching contracts.</p>
  *
  * <p>The package also provides transaction management through
- * {@link com.landawn.abacus.jdbc.Transaction}, bulk import, export, and database-copy
+ * {@link com.landawn.abacus.jdbc.SqlTransaction}, bulk import, export, and database-copy
  * operations through {@link com.landawn.abacus.jdbc.DataTransferUtil}, and schema-driven
  * source and SQL generation through {@link com.landawn.abacus.jdbc.JdbcCodeGenerationUtil}.</p>
  *
@@ -35,6 +35,6 @@
  * @see com.landawn.abacus.jdbc.PreparedQuery
  * @see com.landawn.abacus.jdbc.NamedQuery
  * @see com.landawn.abacus.jdbc.CallableQuery
- * @see com.landawn.abacus.jdbc.Transaction
+ * @see com.landawn.abacus.jdbc.SqlTransaction
  */
 package com.landawn.abacus.jdbc;
