@@ -365,9 +365,8 @@ final class TransactionContext {
             // connection Spring had released by then (or, in its completion callbacks, in a transaction of the connection that
             // Spring's cleanup committed whatever its outcome). Not read from the thread's binding: any thread checks here.
             if (hasParticipatedTransactionCompleted()) {
-                throw new IllegalStateException("Transaction(id=" + _timedId + ") participated in a Spring-managed transaction that has completed,"
-                        + " or runs its completion callbacks: a query prepared in it can't run any more, as the connection it was prepared on has"
-                        + " been released (or, in those callbacks, Spring's cleanup would commit its work whatever the outcome)");
+                throw new IllegalStateException("Transaction(id=" + _timedId + "): a query prepared in it can't run any more because "
+                        + springCompletionReason());
             }
 
             return;
@@ -822,10 +821,8 @@ final class TransactionContext {
                 _status = Status.FAILED_COMMIT;
                 discardLocalRollbackActions("the Spring-managed transaction it participates in has completed");
 
-                final IllegalStateException failure = new IllegalStateException("Transaction(id=" + _timedId
-                        + ") cannot be committed: the Spring-managed transaction it participates in has completed, or runs its completion"
-                        + " callbacks (this scope was left open past its commit or rollback), and decided the outcome of its work, which may"
-                        + " have been rolled back");
+                final IllegalStateException failure = new IllegalStateException("Transaction(id=" + _timedId + ") cannot be committed because "
+                        + springCompletionReason() + "; its work may already have been rolled back");
 
                 complete(failure);
                 throw failure;
@@ -1033,14 +1030,13 @@ final class TransactionContext {
             Error actionError = null;
 
             try {
-                if (_springOwner != null ? _springOwner.isDeciding() : JdbcUtil.isSpringCompletionInProgress(_springSynchronization)) {
+                if (_springOwner != null ? _springOwner.isDeciding() : JdbcUtil.hasSpringSynchronizationCompletionStarted(_springSynchronization)) {
                     // WHY: the rollback of a scope left open into the completion callbacks of the Spring transaction (where Spring
                     // still binds its connection) marked it, which had no effect any more, and reported ROLLED_BACK, also after
                     // Spring had committed the work. Once the callbacks have run, a completed transaction's holder is no longer
                     // bound (or no longer transaction-active), which the marks below find.
                     throw new IllegalStateException("Cannot mark the Spring-managed transaction that transaction(id=" + _timedId
-                            + ") participates in rollback-only: it runs its completion callbacks (this scope was left open past its commit"
-                            + " or rollback), so the mark can't change the outcome of its work any more");
+                            + ") participates in rollback-only because " + springCompletionReason() + "; the mark may no longer change the outcome");
                 }
 
                 if (isParticipatedResourceBound()) {
@@ -1413,20 +1409,32 @@ final class TransactionContext {
      * Returns whether the Spring-managed transaction this one participates in is known to have decided the outcome of its
      * work. As its transaction manager reports it to a {@link SpringTransactionTracker}, if one is registered with it: the
      * manager is committing or rolling it back, runs its completion callbacks, or has completed it. Otherwise: it runs its
-     * completion callbacks, as recorded by the synchronization registered when this transaction began (see
-     * {@link JdbcUtil#isSpringCompletionInProgress(Object)}, the innermost transaction on the thread then, until a
-     * synchronization registered after this library's has run), or it has completed, as recorded by its connection holder
+     * completion callbacks or has done so, as recorded permanently by the synchronization captured when this transaction began
+     * (see {@link JdbcUtil#hasSpringSynchronizationCompletionStarted(Object)}, the innermost transaction on the thread then),
+     * or it has completed, as recorded by its connection holder
      * (see {@link JdbcUtil#hasSpringTransactionCompleted(Object)}: a {@code DataSourceTransactionManager} or
      * {@code JdbcTransactionManager} transaction only). Readable on any thread.
      *
-     * @return {@code true} if so
+     * <p>Without a tracker, completion of an inner transaction can therefore reject this scope even while its actual outer
+     * owner remains active. Resetting that observation based on callback ordering allowed a scope on a rolled-back owner to
+     * claim COMMITTED. Register a tracker to distinguish the owners rather than infer one from a synchronization.</p>
+     *
+     * @return {@code true} if completion was observed for the owner or, without tracking, the captured synchronization
      */
     private boolean hasParticipatedTransactionCompleted() {
         if (_springOwner != null) {
             return _springOwner.isDeciding();
         }
 
-        return JdbcUtil.isSpringCompletionInProgress(_springSynchronization) || JdbcUtil.hasSpringTransactionCompleted(_springResource);
+        return JdbcUtil.hasSpringSynchronizationCompletionStarted(_springSynchronization) || JdbcUtil.hasSpringTransactionCompleted(_springResource);
+    }
+
+    /** Explains the conservative untracked case without asserting that the actual owner is necessarily the completed one. */
+    private String springCompletionReason() {
+        return _springOwner == null && JdbcUtil.hasSpringSynchronizationCompletionStarted(_springSynchronization)
+                ? "a captured Spring synchronization has completed or runs its completion callbacks; without SpringTransactionTracker the owning transaction"
+                        + " cannot be distinguished from an inner transaction. Register a tracker with every transaction manager"
+                : "the owning Spring-managed transaction has completed or runs its completion callbacks";
     }
 
     /**

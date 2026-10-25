@@ -1289,14 +1289,12 @@ class SpringTransactionParticipationTest extends TestBase {
         }
     }
 
-    // External review: a scope begun inside another transaction manager's transaction, participating in the enclosing one
-    // through its data source, recorded the inner transaction's synchronization, and the completion of that inner one counted as
-    // that of the enclosing one for good: once it had completed, a query prepared in the scope was refused, and a commit of the
-    // scope failed, although the enclosing transaction and its connection were still in use. The completion counts only while
-    // its callbacks run; after them, the connection holder of the transaction participated in tells.
+    // Without owner tracking a scope on A can capture B's synchronization. Once B completes, the old scope is conservatively
+    // refused: clearing its observation from an end marker also let scopes on rolled-back owners claim COMMITTED. A fresh
+    // scope on A after B returns can still run; the tracked test below verifies that the original scope remains usable too.
     @ParameterizedTest(name = "innerRollsBack={0}")
     @ValueSource(booleans = { false, true })
-    void aScopeBegunInsideAnotherManagersTransaction_remainsUsableUntilTheTransactionItParticipatesInCompletes(final boolean innerRollsBack)
+    void anUntrackedScopeCapturingAnotherManagersCompletionCannotClaimSuccess(final boolean innerRollsBack)
             throws SQLException {
         final PreparedQuery[] query = new PreparedQuery[1];
         final SqlTransaction[] leftOpen = new SqlTransaction[1];
@@ -1323,14 +1321,18 @@ class SpringTransactionParticipationTest extends TestBase {
             });
 
             try {
-                assertEquals(1, query[0].queryForInt().orElseThrow(), "the transaction it participates in still runs");
-                insertItem(dataSourceA, "left open");
+                assertThrows(IllegalStateException.class, () -> query[0].queryForInt());
+                final IllegalStateException rejected = assertThrows(IllegalStateException.class, leftOpen[0]::commit);
+                assertTrue(rejected.getMessage().contains("SpringTransactionTracker"));
+                assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
+                try (SqlTransaction fresh = JdbcUtil.beginTransaction(dataSourceA)) {
+                    insertItem(dataSourceA, "left open");
+                    fresh.commit();
+                }
             } catch (final SQLException e) {
                 throw new IllegalArgumentException(e);
             }
 
-            leftOpen[0].commit();
-            assertEquals(SqlTransaction.Status.COMMITTED, leftOpen[0].status());
         });
 
         try {
@@ -1394,14 +1396,11 @@ class SpringTransactionParticipationTest extends TestBase {
         }
     }
 
-    // External review: this library's end-of-completion marker runs after the synchronizations registered before it, not after
-    // one that another synchronization registers in its afterCommit callback with the same (lowest) precedence: in such a late
-    // callback, a query prepared in a participating scope ran, on the connection of a transaction that had committed, and so
-    // would a commit of such a scope. With a SpringTransactionTracker, the transaction manager reports that its outcome is
-    // being decided, whatever callbacks run; without one, this remains a documented limit.
+    // A callback registered in afterCommit ran after the old end marker and let an untracked scope report COMMITTED.
+    // Completion observations are now permanent, so neither queries nor scope commits regain access in a later callback.
     @ParameterizedTest(name = "tracked={0}")
     @ValueSource(booleans = { false, true })
-    void aSynchronizationRegisteredLateInTheCompletionCallbacks_seesTheCompletionWithATracker(final boolean tracked) throws SQLException {
+    void aLateCompletionCallbackCannotExecuteSqlOrCommitAParticipatingScope(final boolean tracked) throws SQLException {
         final PreparedQuery[] query = new PreparedQuery[1];
         final SqlTransaction[] leftOpen = new SqlTransaction[1];
         final RuntimeException[] failures = new RuntimeException[2];
@@ -1423,7 +1422,7 @@ class SpringTransactionParticipationTest extends TestBase {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                 @Override
                 public void afterCommit() {
-                    // Registered now, with the lowest precedence, as this library's marker: it runs after the marker.
+                    // Registered with the lowest precedence after all beforeCompletion callbacks: formerly after the marker.
                     TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                         @Override
                         public void afterCompletion(final int completionStatus) {
@@ -1442,15 +1441,9 @@ class SpringTransactionParticipationTest extends TestBase {
         });
 
         try {
-            if (tracked) {
-                assertTrue(failures[0] instanceof IllegalStateException, String.valueOf(failures[0]));
-                assertTrue(failures[1] instanceof IllegalStateException, String.valueOf(failures[1]));
-                assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
-            } else {
-                assertNull(failures[0], "the documented limit without a tracker: the query ran");
-                assertNull(failures[1], "and the scope committed");
-                assertEquals(SqlTransaction.Status.COMMITTED, leftOpen[0].status());
-            }
+            assertTrue(failures[0] instanceof IllegalStateException, String.valueOf(failures[0]));
+            assertTrue(failures[1] instanceof IllegalStateException, String.valueOf(failures[1]));
+            assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
         } finally {
             query[0].close();
         }
@@ -3767,7 +3760,7 @@ class SpringTransactionParticipationTest extends TestBase {
             assertNotNull(id);
 
             final IllegalStateException failure = assertThrows(IllegalStateException.class, leaked[0]::rollbackIfNotCommitted);
-            assertTrue(failure.getMessage().contains("it has completed"), failure.getMessage());
+            assertTrue(failure.getMessage().contains("has completed"), failure.getMessage());
             assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, leaked[0].status());
             assertEquals(id, item.getId(), "the row is committed: its ID is kept");
             assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL), "the scope is completed");

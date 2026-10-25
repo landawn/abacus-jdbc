@@ -131,12 +131,16 @@ import com.landawn.abacus.util.stream.Stream;
  * methods that check whether it is closed (such as {@code setFetchSize}, {@code configureStatement},
  * {@code addBatchParameters} and {@code onClose}), throw {@link IllegalStateException} when called on another thread, or
  * once the transaction has completed and released its connection (for a transaction participating in a Spring-managed
- * one, whose connection Spring keeps until its own transaction completes: once that Spring transaction has completed,
- * detected for a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction), closing it in that
+ * one, whose connection Spring keeps: once the tracker, captured synchronization, or JDBC holder reports completion,
+ * subject to the untracked conservative limits described in {@link SqlTransaction}), closing it in that
  * case unless {@code closeAfterExecution(false)} is set; {@code callAsync}/{@code runAsync} reject it, whatever the
  * executor. The deferred execution of a stream it returned is
  * checked only for the transaction's completion, so that a parallel stream's worker threads can run it while the owner
  * thread waits for the stream: don't hand such a stream to another thread.</p>
+ *
+ * <p>SQL execution also rejects a connection whose Spring transaction is known to be completing, including a statement
+ * prepared before completion and queries that return rows (which can still write). Use an independent transaction for
+ * completion-callback work. See {@link JdbcUtil} for the guard's tracking requirements.</p>
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  *

@@ -3139,16 +3139,40 @@ final class DaoImpl {
             }
 
             final Map<Object, Boolean> map = holders.get(index);
+            List<SpringTransactionOwners.Owner> warnings = null;
+            final boolean pending;
 
             synchronized (map) {
-                // An owner, as its transaction manager reports it (published in a volatile field), or else a holder's flag.
-                map.keySet()
-                        .removeIf(pending -> pending instanceof final SpringTransactionOwners.Owner owner ? owner.isCompleted()
-                                : JdbcUtil.hasSpringTransactionCompleted(pending));
-                counts.set(index, map.size());
+                for (final Iterator<Object> iterator = map.keySet().iterator(); iterator.hasNext();) {
+                    final Object entry = iterator.next();
 
-                return !map.isEmpty();
+                    if (entry instanceof final SpringTransactionOwners.Owner owner) {
+                        if (owner.isCompleted()) {
+                            iterator.remove();
+                        } else if (owner.needsWarning()) {
+                            if (warnings == null) {
+                                warnings = new ArrayList<>();
+                            }
+
+                            warnings.add(owner);
+                        }
+                    } else if (JdbcUtil.hasSpringTransactionCompleted(entry)) {
+                        iterator.remove();
+                    }
+                }
+
+                counts.set(index, map.size());
+                pending = !map.isEmpty();
             }
+
+            // A logger/appender is external code and may block or reenter a DAO. Never call it under the map monitor.
+            if (warnings != null) {
+                for (final SpringTransactionOwners.Owner owner : warnings) {
+                    owner.warnIfUnresolved();
+                }
+            }
+
+            return pending;
         }
     }
 
