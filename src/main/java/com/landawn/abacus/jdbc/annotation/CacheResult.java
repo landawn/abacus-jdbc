@@ -42,18 +42,12 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * method result is not cached; use an empty {@code Optional}, collection, or other non-null
  * result object when caching an explicit "no result" value is important.</p>
  *
- * <p>Callback writes must run in an independent transaction (for example, DAO {@code REQUIRES_NEW} or an explicit
- * {@code JdbcUtil.beginTransaction} scope). The library rejects SQL execution on a Spring connection known to be
- * completing, including queries since result-producing SQL can write: its clean report covers the original work only,
- * while cleanup may commit a later callback write after another thread has cached the old rows. Register
- * {@code SpringTransactionTracker} to identify the owning transaction even with JPA or synchronization disabled;
- * untracked detection retains the limits below.</p>
- *
- * <p>Without a tracker, the SQL guard can reject an active outer transaction's SQL while another transaction on the thread
- * completes. With a tracker, later execution-listener SQL on the completing owner's connection is refused from the
- * tracker's {@code beforeCommit}/{@code beforeRollback} notification, even before the physical outcome. Use
- * {@code TransactionSynchronization.beforeCommit} for work intended for the original transaction. Independent callback
- * transactions and {@code afterBegin} work remain allowed; see {@link JdbcUtil}.</p>
+ * <p>Database work in Spring completion callbacks must use an independent transaction, such as Spring's
+ * {@code PROPAGATION_REQUIRES_NEW} or DAO {@code REQUIRES_NEW}. This applies to both {@code afterCommit} and
+ * {@code afterCompletion}; see {@link JdbcUtil} for Spring's guidance. Statement execution does not reject SQL based on
+ * Spring's completion phase, even with {@code SpringTransactionTracker}. Writes on the completing transaction are outside
+ * the cache-consistency guarantee: the original outcome covers only the original work, and cleanup may commit a callback
+ * write after another thread has cached old rows. Immediate invalidation at write time does not close that window.</p>
  *
  * <p><strong>Transactions:</strong> inside a transaction on the DAO's data source (a {@code JdbcUtil} transaction, or a
  * Spring-managed transaction that owns its connection, read-only ones included), results are neither served from the cache

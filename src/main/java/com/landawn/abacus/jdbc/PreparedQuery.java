@@ -53,4 +53,5 @@ public final class PreparedQuery extends AbstractQuery<PreparedStatement, Prepar
     PreparedQuery(final PreparedStatement stmt) throws IllegalArgumentException {
         super(stmt);
     }
+
 }

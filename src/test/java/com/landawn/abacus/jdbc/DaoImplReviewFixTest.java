@@ -72,6 +72,8 @@ class DaoImplReviewFixTest extends TestBase {
         final String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
         final List<String> command = new ArrayList<>();
         command.add(Path.of(System.getProperty("java.home"), "bin", executable).toString());
+        // Bound heap and CPU-sized worker pools so these small probes fit alongside the suite JVM.
+        command.addAll(List.of("-Xms16m", "-Xmx256m", "-XX:+UseSerialGC", "-XX:ActiveProcessorCount=2"));
         // Forward the test runtime's module access (java.lang for the shutdown-hook count, Kryo's --add-opens) so the
         // probe JVM behaves like the suite JVM.
         final List<String> runtimeArguments = ManagementFactory.getRuntimeMXBean().getInputArguments();

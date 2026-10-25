@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.core.Ordered;
 import org.springframework.jdbc.datasource.JdbcTransactionObjectSupport;
 import org.springframework.transaction.ConfigurableTransactionManager;
 import org.springframework.transaction.TransactionExecution;
@@ -33,39 +34,27 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 /**
  * Tells this library, from a Spring transaction manager, when each transaction it runs is committed or rolled back, so that
- * the library follows the transaction that actually owns a data source's connection. Optional: register it with every
+ * the library follows the transaction that actually owns a data source's connection. Required for participating
+ * {@link SqlTransaction} scopes; optional for ordinary SQL and scope-free queries. Register it before transactions begin with every
  * transaction manager whose transactions this library's work joins ({@code DataSourceTransactionManager},
  * {@code JdbcTransactionManager}, {@code JpaTransactionManager} or another {@code AbstractPlatformTransactionManager} whose
  * transaction object exposes its JDBC connection holder); it needs Spring 6.1 or later. One instance can be registered with
  * any number of transaction managers: it keeps no state of its own.
  *
- * <p>Without it, participating scopes retain completion observations from the synchronization captured when they began,
- * and can also detect JDBC holder cleanup. The captured synchronization belongs to the innermost transaction, which need
- * not own the scope's connection. SQL execution separately uses the current thread's completion state. These fallbacks
- * have user-visible limits, rather than merely delayed detection:</p>
- * <ul>
- *   <li>Work joining a transaction from inside another transaction manager's transaction begun in it: the completion of
- *       that inner transaction permanently prevents the captured scope's outermost commit/rollback and prepared queries,
- *       even while the enclosing transaction remains active. Clearing the observation from an end marker instead allowed
- *       a late callback to report COMMITTED after rollback. A tracker is required to distinguish these owners.</li>
- *   <li>While one transaction completes, SQL on an untracked, otherwise active transaction on another data source can be
- *       rejected. After those callbacks return, fresh SQL on the active transaction can run again; a scope that captured
- *       the completed synchronization remains refused as above. A tracked active owner stays usable in both cases.</li>
- *   <li>The enclosing transaction's {@code afterCommit} callbacks are not recognized if this library used it only inside
- *       an inner transaction, or its first use is already in afterCommit. With synchronization disabled there is no callback
- *       observation at all. JPA holders expose no completion flag, so an untracked scope left open past such a transaction
- *       can report a successful commit despite rollback. Register a tracker for these cases.</li>
- *   <li>A write in an untracked JPA transaction keeps the DAO result caches out of a table only until
- *       Spring's synchronization reports the innermost transaction's commit (see
- *       {@link com.landawn.abacus.jdbc.annotation.CacheResult}).</li>
- *   <li>Another thread may read the holder's flag without seeing it change: the caches then stay out of a table longer.</li>
- * </ul>
+ * <p>Participating scopes require the owner recorded when the transaction began. Synchronizations first registered in
+ * {@code beforeCompletion} miss Spring's snapshot, and worker threads cannot observe their owner's thread-local phase.
+ * A scope therefore cannot infer its lifetime from synchronization ordering or another manager's transaction.
+ * Ordinary SQL and scope-free queries remain usable without tracking. The tracker does not prevent asynchronous handoff
+ * of scope-free queries or propagate Spring transactions to worker threads; see {@link AbstractQuery} for the caller's
+ * responsibilities. Untracked DAO caches retain the holder/synchronization limits described in
+ * {@link com.landawn.abacus.jdbc.annotation.CacheResult}.</p>
  *
- * <p><b>Execution-listener SQL.</b> The tracker marks the owner as deciding in its {@code beforeCommit}/{@code beforeRollback}
- * listener. SQL on that owner's connection from a later execution listener is deliberately rejected, even before the
- * physical commit/rollback starts. Use {@code TransactionSynchronization.beforeCommit} for work intended for the original
- * transaction. This does not prohibit {@code afterBegin} SQL, SQL on another tracked active owner, or work on an independent
- * transaction from a completion callback (for example, DAO {@code REQUIRES_NEW} or {@link JdbcUtil#beginTransaction(javax.sql.DataSource)}).</p>
+ * <p>The tracker marks the owner as deciding in its {@code beforeCommit}/{@code beforeRollback} listener. Participating
+ * scopes and queries associated with them use that boundary even before the physical commit/rollback starts. The tracker
+ * does not prohibit statement execution on the completing connection. Database work in completion callbacks must use an
+ * independent transaction such as Spring's {@code PROPAGATION_REQUIRES_NEW} or DAO {@code REQUIRES_NEW}; Spring gives this
+ * guidance for both {@code afterCommit} and {@code afterCompletion}. Work on the completing transaction has no SQL safety
+ * or cache-consistency guarantee. See {@link JdbcUtil} for the callback contract and Spring documentation.</p>
  *
  * <p><b>Registration requirements.</b> Register it <i>first</i>, before the other execution listeners of a transaction
  * manager: Spring calls them in order, and one that throws from {@code afterCommit} or {@code afterRollback} keeps Spring
@@ -76,13 +65,13 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * {@code UnexpectedRollbackException} (such as a {@code TransactionSystemException}) from {@code beforeCommit} (unless
  * {@code rollbackOnCommitFailure} is set), keeps Spring from calling every listener's {@code afterRollback} or
  * {@code afterCommit}, wherever the tracker is registered. In these cases the tracker's synchronization still reports the
- * completion, unless synchronization is disabled (see below). A listener that throws an
+ * completion, unless synchronization is disabled (see below). A listener or synchronization that throws an
  * {@code UnexpectedRollbackException} from {@code beforeCommit} is unsupported: Spring then reports a clean rollback to
  * every listener and synchronization, although it neither committed nor rolled back, and its cleanup may then commit the
  * work (restoring auto-commit commits it). The tracker cannot tell this from a real rollback, so it releases the caches,
  * and a read before that commit can store rows that the work then changes. Register it with <i>every</i> transaction
  * manager on a data source: registered with some only, it is unsupported (the transactions of a transaction manager
- * without it get the behavior described above, and one of them on a connection holder bound to the data source before a
+ * without a recorded owner cannot be joined by a scope; one on a connection holder bound to the data source before a
  * tracked transaction, which it reuses, is taken for that completed transaction: work in it runs apart from it, and
  * survives its rollback). A transaction begun before the tracker is registered is not tracked; nor is a participating
  * scope or a savepoint of a tracked transaction, which completes with it.</p>
@@ -90,7 +79,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * <p>Each report applies to the record of the transaction it is about, made when that transaction began: a later
  * transaction with the same connection holder gets a record of its own. The completion is also reported by a transaction
  * synchronization the tracker registers when a transaction begins, as Spring runs every synchronization's
- * {@code afterCompletion} callback whatever the others throw.</p>
+ * {@code afterCompletion} callback whatever the others throw. This synchronization runs first, including ahead of
+ * equal-priority callbacks installed by the manager before {@code afterBegin}, while preserving their relative order.
+ * A failing {@code beforeCommit} synchronization can skip the execution-listener notification; this fallback still
+ * publishes completion before application callbacks attempt to complete participating scopes.</p>
  *
  * <p>A failed or unreported completion keeps affected DAO caches disabled until a later clean completion report or
  * explicit {@link #confirmSettled(long)} confirmation. This applies to JDBC and JPA alike: Spring clears JDBC holders even
@@ -338,7 +330,17 @@ public final class SpringTransactionTracker implements TransactionExecutionListe
                 // the afterCommit or afterRollback listeners, and with STATUS_UNKNOWN in the beforeRollback and beforeCommit
                 // cases named here.
                 if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                    // A failing beforeCommit synchronization can skip every execution-listener decision notification.
+                    // Publish the outcome before application afterCompletion callbacks so a scope cannot claim COMMITTED
+                    // after rollback. Highest precedence alone loses ties to callbacks preinstalled by the manager.
+                    // Preserve their relative order while placing this owner's report first; no callbacks run here.
+                    final List<TransactionSynchronization> existing = TransactionSynchronizationManager.getSynchronizations();
+                    if (!existing.isEmpty()) {
+                        TransactionSynchronizationManager.clearSynchronization();
+                        TransactionSynchronizationManager.initSynchronization();
+                    }
                     TransactionSynchronizationManager.registerSynchronization(new CompletionSynchronization(owner));
+                    existing.forEach(TransactionSynchronizationManager::registerSynchronization);
                 }
             }
         }
@@ -375,6 +377,11 @@ public final class SpringTransactionTracker implements TransactionExecutionListe
 
         CompletionSynchronization(final SpringTransactionOwners.Owner owner) {
             this.owner = owner;
+        }
+
+        @Override
+        public int getOrder() {
+            return Ordered.HIGHEST_PRECEDENCE;
         }
 
         @Override

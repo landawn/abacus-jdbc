@@ -209,6 +209,10 @@ class JdbcUtilTransactionTest extends JdbcUtilTestSupport {
             return ormConnection;
         });
 
+        // This fixture represents an existing tracked ORM transaction. Keep testing the provider's LinkageError rather
+        // than the separate missing-tracker precondition for participating scopes.
+        SpringTransactionOwners.began(new Object(), ormHolder, () -> false, "provider failure fixture");
+
         try (org.mockito.MockedStatic<org.springframework.transaction.support.TransactionSynchronizationManager> synchronizationManager = org.mockito.Mockito
                 .mockStatic(org.springframework.transaction.support.TransactionSynchronizationManager.class)) {
             synchronizationManager

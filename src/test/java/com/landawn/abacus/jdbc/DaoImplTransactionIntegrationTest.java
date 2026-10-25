@@ -193,7 +193,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
             throws SQLException {
         final TransactionDao<?> dao = daos.get(logging);
         final org.springframework.transaction.support.TransactionTemplate template = new org.springframework.transaction.support.TransactionTemplate(
-                new org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource));
+                SpringTestTransactions.manager(dataSource));
 
         for (final boolean springRollsBack : new boolean[] { true, false }) {
             template.executeWithoutResult(status -> {
@@ -243,7 +243,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
     void transactional_required_keepsOwnScopeInNonTransactionalSpringScope(final Logging logging) {
         final TransactionDao<?> dao = daos.get(logging);
         final org.springframework.transaction.support.TransactionTemplate template = new org.springframework.transaction.support.TransactionTemplate(
-                new org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource));
+                SpringTestTransactions.manager(dataSource));
         template.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_SUPPORTS);
         final SQLException failure = new SQLException("work failed after insert");
 
@@ -285,7 +285,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
             throws SQLException {
         final TransactionDao<?> dao = daos.get(logging);
         final org.springframework.transaction.support.TransactionTemplate template = new org.springframework.transaction.support.TransactionTemplate(
-                new org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource));
+                SpringTestTransactions.manager(dataSource));
         final SQLException failure = new SQLException("work failed after insert");
 
         assertThrows(org.springframework.transaction.UnexpectedRollbackException.class, () -> template.executeWithoutResult(status -> {
@@ -349,7 +349,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
             throws SQLException {
         final TransactionDao<?> dao = daos.get(logging);
         final org.springframework.transaction.support.TransactionTemplate template = new org.springframework.transaction.support.TransactionTemplate(
-                new org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource));
+                SpringTestTransactions.manager(dataSource));
         final SQLException failure = new SQLException("work failed after insert");
 
         assertThrows(org.springframework.transaction.UnexpectedRollbackException.class, () -> template.executeWithoutResult(status -> {
@@ -394,7 +394,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
     void builtInBatch_inSpringManagedTransaction_leavesItsCompletionToSpring(final BuiltInBatch batch, final boolean inRequiredMethod) throws SQLException {
         final TransactionDao<?> dao = daos.get(Logging.NONE);
         final org.springframework.transaction.support.TransactionTemplate template = new org.springframework.transaction.support.TransactionTemplate(
-                new org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource));
+                SpringTestTransactions.manager(dataSource));
         final SQLException failure = new SQLException("work failed after batch");
 
         try (Statement statement = keeper.createStatement()) {
@@ -571,7 +571,7 @@ class DaoImplTransactionIntegrationTest extends TestBase {
     void transactional_required_keepsOwnScopeWhenSpringParticipationIsDisabled(final Logging logging) throws SQLException {
         final TransactionDao<?> dao = daos.get(logging);
         final org.springframework.transaction.support.TransactionTemplate template = new org.springframework.transaction.support.TransactionTemplate(
-                new org.springframework.jdbc.datasource.DataSourceTransactionManager(dataSource));
+                SpringTestTransactions.manager(dataSource));
         final SQLException failure = new SQLException("work failed after insert");
 
         template.executeWithoutResult(status -> {

@@ -160,21 +160,26 @@ import lombok.experimental.Accessors;
  * set and bound with independent cursors. Single occurrences and positional values remain streamed;
  * custom Type handlers keep their own semantics. The caller retains ownership of the original resource.</p>
  *
- * <p>SQL execution refuses a connection whose Spring transaction is known to be completing, with
- * {@link IllegalStateException}, including statements prepared earlier.
- * A callback's new work is not covered by the original commit/rollback report, and cleanup may commit it later. Queries
- * are included because result-producing SQL can also write. Use an independent transaction for such work, for example
- * {@link #beginTransaction(javax.sql.DataSource)} or DAO
- * {@link Propagation#REQUIRES_NEW}. Register {@link SpringTransactionTracker} with each manager for exact owner detection,
- * including JPA and disabled synchronization; without it, detection has the synchronization limits described by
- * {@link #beginTransaction(javax.sql.DataSource)}. Direct JDBC execution by application code is outside this guard.</p>
+ * <p>Database work in Spring completion callbacks must use an independent transaction, such as Spring's
+ * {@code PROPAGATION_REQUIRES_NEW} or DAO {@link Propagation#REQUIRES_NEW}. Spring gives this guidance for both
+ * <a href="https://docs.spring.io/spring-framework/docs/7.0.9/javadoc-api/org/springframework/transaction/support/TransactionSynchronization.html#afterCommit()">afterCommit</a>
+ * and
+ * <a href="https://docs.spring.io/spring-framework/docs/7.0.9/javadoc-api/org/springframework/transaction/support/TransactionSynchronization.html#afterCompletion(int)">afterCompletion</a>:
+ * resources may still be accessible although the transaction has already committed or rolled back.</p>
  *
- * <p>With a tracker, the boundary starts at its {@code beforeCommit}/{@code beforeRollback} execution-listener notification.
- * SQL on that connection from a later execution listener is rejected even though the physical commit/rollback has not yet
- * started. Put work for the original transaction in {@code TransactionSynchronization.beforeCommit}. This is not a blanket
- * ban on listener SQL: {@code afterBegin} work and work on an independent transaction remain allowed. Without a tracker,
- * another transaction completing on the thread can conservatively reject SQL on an otherwise active outer transaction's
- * connection. Register the tracker with every transaction manager to distinguish those owners.</p>
+ * <p>Statement execution does not check Spring's completion phase. SQL on a completing Spring transaction is delegated
+ * to JDBC without a safety or cache-consistency guarantee, whether or not {@link SpringTransactionTracker} is registered.
+ * A callback's additional work is not covered by the original outcome: it may commit during cleanup, remain pending, or
+ * be discarded, depending on the driver and transaction manager. Even immediate cache invalidation cannot prevent another
+ * thread from caching old rows before a later callback write commits. Participating {@link SqlTransaction} scopes and
+ * queries associated with them retain their lifecycle checks; removing statement-level enforcement does not make a
+ * completed scope usable again. Opening a scope on a Spring transaction requires tracking; scope-free SQL does not.
+ * Query construction does not inspect Spring connection ownership. Queries associated with a {@code JdbcUtil} transaction
+ * reject {@code callAsync}/{@code runAsync}; scope-free queries do not enforce that restriction for Spring connections.
+ * Async submission does not propagate Spring's thread-bound transaction or guarantee connection lifetime or exclusive use.
+ * For transactional asynchronous work, start the transaction and create the query inside the worker task, using a
+ * connection owned by that task.
+ * See {@link #beginTransaction(javax.sql.DataSource)} for participation requirements.</p>
  *
  * <p><b>Key Features:</b></p>
  * <ul>
@@ -1314,7 +1319,8 @@ public final class JdbcUtil {
      * Spring's transaction completion, which releases it. On the acquiring thread it is released to Spring even inside a
      * {@link #runIgnoringSpringTransaction(Throwables.Runnable)} scope, or work run outside the transaction on {@code ds}
      * ({@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}): it is Spring's connection, whatever the
-     * thread's setting at close time.</p>
+     * thread's setting at close time. If its original holder is suspended or has been unbound, release only that holder's
+     * request and leave the physical connection to its transaction, as for a participating scope.</p>
      *
      * @param conn The database Connection to release.
      * @param ds The DataSource from which the connection was obtained.
@@ -1323,12 +1329,18 @@ public final class JdbcUtil {
     static Runnable createCloseHandler(final Connection conn, final javax.sql.DataSource ds) {
         if (conn != null && ds != null && isSpringTransactionalUsed(ds) && isBoundBySpring(conn, ds)) {
             final Thread acquiringThread = Thread.currentThread();
+            final Object acquiringResource = boundSpringResource(ds);
 
             return () -> {
                 if (Thread.currentThread() == acquiringThread) {
                     // Not releaseConnection: that re-reads the thread's Spring setting at close time and, inside a
                     // runIgnoringSpringTransaction scope, closed the Spring transaction's connection mid-transaction.
-                    releaseSpringManagedConnection(conn, ds);
+                    if (boundSpringResource(ds) == acquiringResource) {
+                        releaseSpringManagedConnection(conn, ds);
+                    } else {
+                        // DataSourceUtils would close the outer connection while REQUIRES_NEW has another holder bound.
+                        releaseUnboundParticipatingConnection(ds, acquiringResource);
+                    }
                 } else if (logger.isDebugEnabled()) {
                     logger.debug("Not releasing the Spring-bound connection on thread '{}': it was obtained on thread '{}', and Spring's transaction"
                             + " completion releases it", Thread.currentThread().getName(), acquiringThread.getName());
@@ -6982,7 +6994,6 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static ResultSet executeQuery(final PreparedStatement stmt) throws SQLException {
-        assertSpringExecutionAllowed(stmt);
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
@@ -7034,7 +7045,6 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static int executeUpdate(final PreparedStatement stmt, final Runnable afterExecution) throws SQLException {
-        assertSpringExecutionAllowed(stmt);
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
@@ -7079,26 +7089,6 @@ public final class JdbcUtil {
     }
 
     /**
-     * Rejects execution on a Spring connection whose transaction is already completing. Its clean completion report applies
-     * only to the original work: a callback write may be committed later by auto-commit restoration, or remain pending on a
-     * prebound connection even after its holder is cleared. Checked at execution, including statements prepared earlier.
-     * Result-producing queries can write too, so the execution method cannot determine whether SQL is safe. A statement on
-     * an independent connection remains usable (for example, DAO REQUIRES_NEW or a new SqlTransaction).
-     * With a tracker this conservative boundary begins before the physical commit/rollback, at the tracker's execution
-     * listener notification; later execution-listener SQL is rejected, while synchronization beforeCommit work is allowed.
-     * Without a tracker the thread's completing transaction can also block a different, still-active owner's connection.
-     *
-     * @param stmt the statement about to execute
-     * @throws SQLException if a connection needed for the identity check cannot be read
-     * @throws IllegalStateException if the statement would execute through a completing Spring transaction
-     */
-    private static void assertSpringExecutionAllowed(final Statement stmt) throws SQLException {
-        if (isInSpring) {
-            SpringRollbackActions.assertExecutionAllowed(stmt);
-        }
-    }
-
-    /**
      * Executes the given {@link PreparedStatement} as a large update, handling SQL performance logging
      * when enabled. Parameter clearing is attempted after execution except for {@link CallableStatement}s,
      * whose bindings and OUT registrations are retained.
@@ -7111,7 +7101,6 @@ public final class JdbcUtil {
      *         the statement is not executed in that case, so use {@link #executeUpdate(PreparedStatement)} with such a driver.
      */
     static long executeLargeUpdate(final PreparedStatement stmt) throws SQLException, UnsupportedOperationException {
-        assertSpringExecutionAllowed(stmt);
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
@@ -7161,7 +7150,6 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static int[] executeBatch(final Statement stmt, final Runnable afterExecution) throws SQLException {
-        assertSpringExecutionAllowed(stmt);
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
         final boolean logSql = JdbcUtil.isToHandleSqlLog(sqlLogConfig);
         final long startTimeMillis = logSql ? System.currentTimeMillis() : 0;
@@ -7203,7 +7191,6 @@ public final class JdbcUtil {
      *         {@link #executeBatch(Statement)} with such a driver instead of retrying on the same batch.
      */
     static long[] executeLargeBatch(final Statement stmt) throws SQLException, UnsupportedOperationException {
-        assertSpringExecutionAllowed(stmt);
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
         final boolean logSql = JdbcUtil.isToHandleSqlLog(sqlLogConfig);
         final long startTimeMillis = logSql ? System.currentTimeMillis() : 0;
@@ -7331,7 +7318,6 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement is closed or its JDBC execution operation fails.
      */
     static boolean execute(final PreparedStatement stmt) throws SQLException {
-        assertSpringExecutionAllowed(stmt);
         final SqlLogConfig sqlLogConfig = JdbcUtil.sqlPerfLogThresholdMillis_TL.get();
 
         if (JdbcUtil.isToHandleSqlLog(sqlLogConfig)) {
@@ -13457,30 +13443,19 @@ public final class JdbcUtil {
      * be identified) is refused with an {@code IllegalStateException} before any work runs. Nested scopes and
      * queries on {@code ds} on this thread join the participating transaction as usual. A connection Spring binds merely
      * for synchronization (for example in a {@code SUPPORTS} scope without a transaction) is not a transaction: the
-     * returned transaction then commits and rolls back that connection itself. Neither is a Spring transaction whose
-     * completion has started, in its {@code afterCommit} callbacks (recognized in a Spring transaction this library has taken a
-     * connection of, or begun a scope in, while its synchronizations were the ones Spring runs: not in one whose work all went
-     * through other code, such as JPA or a {@code JdbcTemplate}, nor in one this library used only inside another transaction
-     * manager's transaction begun in it, whose own synchronizations Spring runs meanwhile; a transaction begun from the
-     * {@code afterCommit} callbacks of such a transaction still joins it, so begin it there with
-     * {@code PROPAGATION_REQUIRES_NEW} or inside {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)},
-     * or register a {@link SpringTransactionTracker} with its transaction manager, which then reports the completion itself)
-     * or {@code afterCompletion} callbacks: it has committed or rolled back, and work joining it would be
-     * committed by Spring's cleanup (which restores auto-commit), whatever its outcome; the returned transaction is then a
-     * transaction of its own on a connection of its own, taken from {@code ds} outside Spring (the target of a
-     * {@code TransactionAwareDataSourceProxy}), as {@code PROPAGATION_REQUIRES_NEW} would begin it, which Spring advises for
-     * transactional work started from such callbacks. Spring exposes the completion of the innermost transaction on the
-     * thread only: in the completion callbacks of a transaction that another transaction manager began inside the one
-     * owning {@code ds}, that one counts as completing too, so the returned transaction does not join it either.</p>
+     * returned transaction then commits and rolls back that connection itself.</p>
      *
-     * <p>Without a tracker, a participating scope captures the innermost transaction's synchronization. Once that
-     * synchronization starts completion, the participating transaction's outermost commit/rollback and prepared queries
-     * are refused, even after its callbacks return. It may have captured an inner transaction while its actual outer owner remains active: the
-     * library cannot safely distinguish that case from an already completed owner. A tracker is required to keep such a
-     * scope usable across the inner transaction's completion; it follows the actual owner instead of the captured
-     * synchronization. A callback registered later cannot release this conservative guard. Without synchronization and a
-     * tracker, only a JDBC holder's cleanup flag is available; completion callbacks themselves, and JPA completion, cannot
-     * be reliably detected.</p>
+     * <p>Opening a scope on a transaction-owned Spring connection requires {@link SpringTransactionTracker}, registered
+     * with its manager before the transaction begins. The recorded owner identifies whether this scope participates or
+     * starts independently after completion begins. Missing tracking is rejected before acquiring another connection;
+     * synchronization-only bindings and connections outside Spring do not require it. This requirement applies to scopes,
+     * including DAO methods that open them, not ordinary SQL execution or scope-free query creation.</p>
+     *
+     * <p>Participating scopes and their associated queries follow their captured owner's lifetime, including disabled
+     * synchronization, late first use during {@code beforeCompletion}, and another manager's inner transaction. Once the
+     * owner starts completion, a new scope uses an independent connection outside Spring; an existing participating scope
+     * cannot commit, roll back or execute its queries. Spring {@code PROPAGATION_REQUIRES_NEW} and
+     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)} also provide independent callback work.</p>
      *
      * <p>While a participating transaction is open, Spring may bind another transaction to {@code ds} (a
      * {@code REQUIRES_NEW} scope) or none (it suspends its transaction for a {@code NOT_SUPPORTED} scope):
@@ -13622,8 +13597,10 @@ public final class JdbcUtil {
             // Unless the completion of that transaction has started (see isOwnedBySpringTransaction): a transaction of its own
             // then, on a connection of its own.
             // A JPA provider may already have restored auto-commit while its completed holder remains bound. That connection
-            // must still be left to Spring: starting a new local transaction on it would be rejected by the execution guard.
-            final boolean afterSpringCompletion = springBound && hasSpringCompletionStarted(ds);
+            // must still be left to Spring: a local transaction started on it would not be independent of Spring's connection
+            // and cleanup.
+            final SpringTransactionOwners.Owner springOwner = springBound ? SpringTransactionOwners.require(boundSpringResource(ds)) : null;
+            final boolean afterSpringCompletion = springOwner != null && springOwner.isDeciding();
             final boolean springParticipating = springBound && !afterSpringCompletion && isBoundToSpringTransaction(ds);
 
             if (springParticipating && !SpringRollbackActions.canMarkRollbackOnly(unwrapSpringDataSource(ds))) {
@@ -13924,17 +13901,11 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns whether the captured synchronization has started completion, permanently once observed. Readable on any
-     * thread. Without an owner record it may belong to an inner transaction rather than the one a scope participates in:
-     * refusing that scope thereafter is conservative; a tracker is required to distinguish the actual owner.
-     *
-     * <p>WHY no end marker: even LOWEST_PRECEDENCE ran before callbacks registered later at the same precedence. Clearing
-     * this flag there let a late scope commit report COMMITTED after Spring rolled its work back. A holder still marked
-     * active cannot disprove completion either: Spring clears it only during cleanup, after those callbacks. Only an owner
-     * record can safely allow an outer transaction to continue after a captured inner synchronization completes.</p>
+     * Returns whether an action synchronization has observed completion. Scope lifecycle checks use the recorded owner;
+     * this observation does not impose any statement-level SQL restriction.
      *
      * @param synchronization a synchronization from {@link #participationSynchronization()}, or {@code null}
-     * @return {@code true} once completion has started; {@code false} for {@code null}
+     * @return whether its completion callback has started
      */
     static boolean hasSpringSynchronizationCompletionStarted(final Object synchronization) {
         // Null checked first: the instanceof would load SpringRollbackActions, which needs Spring.
@@ -14315,54 +14286,6 @@ public final class JdbcUtil {
             org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(rollbackActions);
 
             return rollbackActions;
-        }
-
-        /** Checks tracked owners or the untracked thread-wide fallback; ordinary executions do not read or unwrap a connection. */
-        static void assertExecutionAllowed(final Statement stmt) throws SQLException {
-            Connection statementConnection = null;
-            Boolean untrackedCompletion = null;
-
-            for (final Object resource : org.springframework.transaction.support.TransactionSynchronizationManager.getResourceMap().values()) {
-                if (!(resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder)) {
-                    continue;
-                }
-
-                final SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(holder);
-                final boolean completing;
-
-                if (owner != null) {
-                    completing = owner.isDeciding();
-                } else {
-                    if (untrackedCompletion == null) {
-                        untrackedCompletion = isSpringTransactionCompleting();
-                    }
-
-                    completing = untrackedCompletion;
-                }
-
-                if (!completing || !SpringConnectionHolderAccess.isOwnedByTransaction(holder)) {
-                    continue;
-                }
-
-                if (statementConnection == null) {
-                    statementConnection = underlyingConnection(stmt.getConnection());
-                }
-
-                if (statementConnection == underlyingConnection(holder.getConnection())) {
-                    if (owner == null) {
-                        throw new IllegalStateException("Cannot execute SQL on an untracked Spring connection while a transaction on this thread is completing. "
-                                + "Register SpringTransactionTracker with every transaction manager to distinguish an active outer owner");
-                    }
-                    throw new IllegalStateException("Cannot execute SQL through a Spring-managed transaction whose completion has started. "
-                            + "Run callback work in an independent transaction (REQUIRES_NEW or JdbcUtil.beginTransaction) instead");
-                }
-            }
-        }
-
-        /** Unwraps Spring and JDBC wrappers so a statement returning the physical connection still matches its holder. */
-        private static Connection underlyingConnection(final Connection connection) throws SQLException {
-            final Connection target = org.springframework.jdbc.datasource.DataSourceUtils.getTargetConnection(connection);
-            return target.isWrapperFor(Connection.class) ? target.unwrap(Connection.class) : target;
         }
 
         /**
@@ -14754,7 +14677,8 @@ public final class JdbcUtil {
         public void afterCommit() {
             completing = true;
 
-            // WHY deferred: this synchronization runs first (see getOrder), and Spring calls the afterCommit callbacks without
+            // WHY deferred: this synchronization runs before lower-precedence callbacks (see getOrder), and Spring calls
+            // afterCommit callbacks without
             // catching, so an Error thrown here skipped the afterCommit callbacks of every other synchronization, the
             // application's own (such as @TransactionalEventListener(AFTER_COMMIT)) included, for a failure of a cache
             // invalidation. Thrown from afterCompletion instead, where Spring logs it.

@@ -63,6 +63,15 @@ public class SqlTransactionTest extends TestBase {
         when(connection.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
     }
 
+    // These unit fixtures mock Spring's marking/release operations and have no real resource binding. Supply the active
+    // owner required by a participating context; integration tests exercise registration against actual Spring managers.
+    private TransactionContext participatingContext(final Connection springConnection) throws SQLException {
+        try (MockedStatic<SpringTransactionOwners> owners = Mockito.mockStatic(SpringTransactionOwners.class)) {
+            owners.when(() -> SpringTransactionOwners.require(null)).thenReturn(new SpringTransactionOwners.Owner(() -> false, "unit fixture"));
+            return new TransactionContext(dataSource, springConnection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true, true);
+        }
+    }
+
     @Test
     public void testId() throws SQLException {
         final SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
@@ -337,8 +346,10 @@ public class SqlTransactionTest extends TestBase {
 
     @Test
     public void testStatusValues() {
-        assertArrayEquals(new SqlTransaction.Status[] { SqlTransaction.Status.ACTIVE, SqlTransaction.Status.MARKED_ROLLBACK, SqlTransaction.Status.COMMITTED,
-                SqlTransaction.Status.FAILED_COMMIT, SqlTransaction.Status.ROLLED_BACK, SqlTransaction.Status.FAILED_ROLLBACK }, SqlTransaction.Status.values());
+        assertArrayEquals(
+                new SqlTransaction.Status[] { SqlTransaction.Status.ACTIVE, SqlTransaction.Status.MARKED_ROLLBACK, SqlTransaction.Status.COMMITTED,
+                        SqlTransaction.Status.FAILED_COMMIT, SqlTransaction.Status.ROLLED_BACK, SqlTransaction.Status.FAILED_ROLLBACK },
+                SqlTransaction.Status.values());
     }
 
     @Test
@@ -1533,8 +1544,7 @@ public class SqlTransactionTest extends TestBase {
     }
 
     private void assertParticipatingRollbackLeavesTheOutcomeToSpringWhenTheMarkFails(final boolean explicitRollback) throws SQLException {
-        final SqlTransaction transaction = new TransactionContext(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true,
-                true).enterScope(IsolationLevel.DEFAULT);
+        final SqlTransaction transaction = participatingContext(connection).enterScope(IsolationLevel.DEFAULT);
         TransactionContext.putTransaction(transaction.context());
 
         final AtomicInteger undone = new AtomicInteger();
@@ -1585,8 +1595,7 @@ public class SqlTransactionTest extends TestBase {
     // locally recorded rollback actions right away.
     @Test
     public void testParticipatingRollbackRunsTheRollbackActionsOnceTheSpringTransactionIsMarked() throws SQLException {
-        final SqlTransaction transaction = new TransactionContext(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true,
-                true).enterScope(IsolationLevel.DEFAULT);
+        final SqlTransaction transaction = participatingContext(connection).enterScope(IsolationLevel.DEFAULT);
         TransactionContext.putTransaction(transaction.context());
 
         final AtomicInteger undone = new AtomicInteger();
@@ -1626,8 +1635,7 @@ public class SqlTransactionTest extends TestBase {
 
     @SuppressWarnings("deprecation")
     private void assertParticipatingNestedRollbackLeavesTheRollbackActionsToTheOutermostMark(final boolean markable) throws SQLException {
-        final SqlTransaction outer = new TransactionContext(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true, true)
-                .enterScope(IsolationLevel.DEFAULT);
+        final SqlTransaction outer = participatingContext(connection).enterScope(IsolationLevel.DEFAULT);
         TransactionContext.putTransaction(outer.context());
 
         final AtomicInteger undone = new AtomicInteger();
@@ -2674,8 +2682,7 @@ public class SqlTransactionTest extends TestBase {
     // The same for a participating transaction whose rollback-only mark failed: Spring may still commit the work.
     @Test
     public void testCommitOfAScopeExitedByItsEnclosingScopeWhenTheSpringMarkFailed() throws SQLException {
-        final SqlTransaction outer = new TransactionContext(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true, true)
-                .enterScope(IsolationLevel.DEFAULT);
+        final SqlTransaction outer = participatingContext(connection).enterScope(IsolationLevel.DEFAULT);
         TransactionContext.putTransaction(outer.context());
         final IllegalStateException markFailure = new IllegalStateException("cannot mark");
 
@@ -3030,8 +3037,7 @@ public class SqlTransactionTest extends TestBase {
         verify(connection).close();
 
         final Connection springConnection = Mockito.mock(Connection.class);
-        final SqlTransaction participating = new TransactionContext(dataSource, springConnection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL,
-                true, true).enterScope(IsolationLevel.DEFAULT);
+        final SqlTransaction participating = participatingContext(springConnection).enterScope(IsolationLevel.DEFAULT);
         TransactionContext.putTransaction(participating.context());
 
         try (MockedStatic<JdbcUtil> jdbcUtil = Mockito.mockStatic(JdbcUtil.class)) {
@@ -3132,8 +3138,7 @@ public class SqlTransactionTest extends TestBase {
     // RollbackOnlyException.
     @Test
     public void testParticipatingCommitWithALeakedScopeMarksTheSpringTransactionAndThrows() throws SQLException {
-        final SqlTransaction outer = new TransactionContext(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true, true)
-                .enterScope(IsolationLevel.DEFAULT);
+        final SqlTransaction outer = participatingContext(connection).enterScope(IsolationLevel.DEFAULT);
         TransactionContext.putTransaction(outer.context());
         final AtomicInteger undone = new AtomicInteger();
 
@@ -3203,8 +3208,7 @@ public class SqlTransactionTest extends TestBase {
      */
     private Throwable completeParticipatingTransactionWithALeakedScopeWhenTheSpringMarkFails(final Throwable markFailure,
             final java.util.function.Consumer<SqlTransaction> outermostEnd) throws SQLException {
-        final SqlTransaction outer = new TransactionContext(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true, true)
-                .enterScope(IsolationLevel.DEFAULT);
+        final SqlTransaction outer = participatingContext(connection).enterScope(IsolationLevel.DEFAULT);
         TransactionContext.putTransaction(outer.context());
         final AtomicInteger undone = new AtomicInteger();
         final Throwable thrown;
@@ -3322,8 +3326,7 @@ public class SqlTransactionTest extends TestBase {
     // the connection to Spring then failed.
     @Test
     public void testParticipatingCommitWithALeakedScopeWhenReleasingTheConnectionFailsAfterTheMark() throws SQLException {
-        final SqlTransaction outer = new TransactionContext(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true, true)
-                .enterScope(IsolationLevel.DEFAULT);
+        final SqlTransaction outer = participatingContext(connection).enterScope(IsolationLevel.DEFAULT);
         TransactionContext.putTransaction(outer.context());
         final AtomicInteger undone = new AtomicInteger();
         final IllegalStateException releaseFailure = new IllegalStateException("release failed");
@@ -3485,8 +3488,7 @@ public class SqlTransactionTest extends TestBase {
     // once its outermost scope has marked the Spring transaction rollback-only.
     @Test
     public void testErrorOfARollbackActionPropagatesFromAParticipatingRollbackOnceTheSpringTransactionIsMarked() throws SQLException {
-        final SqlTransaction outer = new TransactionContext(dataSource, connection, IsolationLevel.DEFAULT, SqlTransaction.CreatedBy.JDBC_UTIL, true, true)
-                .enterScope(IsolationLevel.DEFAULT);
+        final SqlTransaction outer = participatingContext(connection).enterScope(IsolationLevel.DEFAULT);
         TransactionContext.putTransaction(outer.context());
         final RollbackActionError error = new RollbackActionError("participating");
 

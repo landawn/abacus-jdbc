@@ -131,16 +131,23 @@ import com.landawn.abacus.util.stream.Stream;
  * methods that check whether it is closed (such as {@code setFetchSize}, {@code configureStatement},
  * {@code addBatchParameters} and {@code onClose}), throw {@link IllegalStateException} when called on another thread, or
  * once the transaction has completed and released its connection (for a transaction participating in a Spring-managed
- * one, whose connection Spring keeps: once the tracker, captured synchronization, or JDBC holder reports completion,
- * subject to the untracked conservative limits described in {@link SqlTransaction}), closing it in that
+ * one, whose connection Spring keeps: once its required tracker reports completion), closing it in that
  * case unless {@code closeAfterExecution(false)} is set; {@code callAsync}/{@code runAsync} reject it, whatever the
  * executor. The deferred execution of a stream it returned is
  * checked only for the transaction's completion, so that a parallel stream's worker threads can run it while the owner
  * thread waits for the stream: don't hand such a stream to another thread.</p>
  *
- * <p>SQL execution also rejects a connection whose Spring transaction is known to be completing, including a statement
- * prepared before completion and queries that return rows (which can still write). Use an independent transaction for
- * completion-callback work. See {@link JdbcUtil} for the guard's tracking requirements.</p>
+ * <p>Query construction does not inspect Spring connection ownership. A query without an associated {@code JdbcUtil}
+ * transaction is not rejected by {@code callAsync}/{@code runAsync} merely because its connection belongs to Spring,
+ * whether or not a tracker is registered. This does not propagate Spring's thread-bound transaction or guarantee that
+ * the connection remains usable when the task runs. The caller is responsible for connection lifetime and exclusive use.
+ * For transactional asynchronous work, start the transaction and create the query inside the worker task, using a
+ * connection owned by that task.</p>
+ *
+ * <p>The lifecycle checks above apply to queries associated with a {@code JdbcUtil} transaction. Statement execution has
+ * no general guard against using a completing Spring transaction, including for result-producing SQL that can also write.
+ * Database work in Spring's {@code afterCommit} and {@code afterCompletion} callbacks must use an independent transaction
+ * such as {@code REQUIRES_NEW}. See {@link JdbcUtil} for the callback contract and Spring's guidance.</p>
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  *
@@ -11222,6 +11229,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * outside the transaction
      * ({@link JdbcUtil#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), on a connection of its own.</p>
      *
+     * <p>Scope-free Spring queries are not checked for transaction ownership. Submission does not propagate the Spring
+     * transaction or guarantee connection lifetime or exclusive use. For transactional asynchronous work, start the
+     * transaction and create the query inside the worker task, using a connection owned by that task.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<List<User>> future = preparedQuery
@@ -11240,8 +11251,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         this method; it is held by the returned future and surfaces from it (as an
      *         {@code ExecutionException} from {@code get()}).
      * @throws IllegalStateException if this query is closed, or the default async executor has already been shut down, or it
-     *         was prepared in a transaction (from a data source, on the transaction's connection, which is used only on the
-     *         transaction's thread)
+     *         is associated with a {@code JdbcUtil} transaction (including a scope participating in Spring)
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws RejectedExecutionException if the executor refuses the task; no future is returned
      * @see #callAsync(Throwables.Function, Executor)
@@ -11288,6 +11298,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * outside the transaction
      * ({@link JdbcUtil#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), on a connection of its own.</p>
      *
+     * <p>Scope-free Spring queries are not checked for transaction ownership. Submission does not propagate the Spring
+     * transaction or guarantee connection lifetime or exclusive use. For transactional asynchronous work, start the
+     * transaction and create the query inside the worker task, using a connection owned by that task.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ExecutorService customExecutor = Executors.newFixedThreadPool(10);
@@ -11311,8 +11325,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
      *         this method; it is held by the returned future and surfaces from it (as an
      *         {@code ExecutionException} from {@code get()}).
-     * @throws IllegalStateException if this query is closed, or it was prepared in a transaction (from a data source, on the
-     *         transaction's connection, which is used only on the transaction's thread)
+     * @throws IllegalStateException if this query is closed or associated with a {@code JdbcUtil} transaction
+     *         (including a scope participating in Spring)
      * @throws IllegalArgumentException if {@code sqlAction} or {@code executor} is null
      * @throws RejectedExecutionException if the {@code executor} refuses the task; no future is returned
      * @see #callAsync(Throwables.Function)
@@ -11359,6 +11373,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * outside the transaction
      * ({@link JdbcUtil#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), on a connection of its own.</p>
      *
+     * <p>Scope-free Spring queries are not checked for transaction ownership. Submission does not propagate the Spring
+     * transaction or guarantee connection lifetime or exclusive use. For transactional asynchronous work, start the
+     * transaction and create the query inside the worker task, using a connection owned by that task.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ContinuableFuture<Void> future = preparedQuery
@@ -11379,8 +11397,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         this method; it is held by the returned future and surfaces from it (as an
      *         {@code ExecutionException} from {@code get()}).
      * @throws IllegalStateException if this query is closed, or the default async executor has already been shut down, or it
-     *         was prepared in a transaction (from a data source, on the transaction's connection, which is used only on the
-     *         transaction's thread)
+     *         is associated with a {@code JdbcUtil} transaction (including a scope participating in Spring)
      * @throws IllegalArgumentException if {@code sqlAction} is {@code null}
      * @throws RejectedExecutionException if the executor refuses the task; no future is returned
      * @see #runAsync(Throwables.Consumer, Executor)
@@ -11429,6 +11446,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * outside the transaction
      * ({@link JdbcUtil#callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), on a connection of its own.</p>
      *
+     * <p>Scope-free Spring queries are not checked for transaction ownership. Submission does not propagate the Spring
+     * transaction or guarantee connection lifetime or exclusive use. For transactional asynchronous work, start the
+     * transaction and create the query inside the worker task, using a connection owned by that task.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
@@ -11453,8 +11474,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         A failure raised by {@code sqlAction} itself (including {@code SQLException}) is never thrown by
      *         this method; it is held by the returned future and surfaces from it (as an
      *         {@code ExecutionException} from {@code get()}).
-     * @throws IllegalStateException if this query is closed, or it was prepared in a transaction (from a data source, on the
-     *         transaction's connection, which is used only on the transaction's thread)
+     * @throws IllegalStateException if this query is closed or associated with a {@code JdbcUtil} transaction
+     *         (including a scope participating in Spring)
      * @throws IllegalArgumentException if {@code sqlAction} or {@code executor} is null
      * @throws RejectedExecutionException if the {@code executor} refuses the task; no future is returned
      * @see #runAsync(Throwables.Consumer)
@@ -11900,18 +11921,17 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Rejects running this query asynchronously if it was prepared in a transaction (see {@link #transaction}): its connection
-     * is used only on the transaction's thread. The query is closed first, as on a failed submission.
+     * Rejects asynchronous handoff of a query associated with a {@code JdbcUtil} transaction, including a scope participating
+     * in Spring. Its connection belongs to the transaction's thread. Uses the same cleanup policy as a failed submission.
      *
-     * @throws IllegalStateException if this query was prepared in a transaction
+     * @throws IllegalStateException if this query is associated with a {@code JdbcUtil} transaction
      */
     private void assertNotPreparedInTransaction() throws IllegalStateException {
         final TransactionContext tran = transaction;
 
         if (tran != null) {
-            final IllegalStateException failure = new IllegalStateException(
-                    "This " + ClassUtil.getSimpleClassName(getClass()) + " was prepared in transaction(id=" + tran.id()
-                            + ") on its connection, which is used only on the transaction's thread:" + " it can't run asynchronously");
+            final IllegalStateException failure = new IllegalStateException("This " + ClassUtil.getSimpleClassName(getClass()) + " was prepared in "
+                    + "transaction(id=" + tran.id() + ")" + " on its connection, which is used only on the transaction's thread: it can't run asynchronously");
             closeAfterFailedAsyncSubmission(failure);
             throw failure;
         }

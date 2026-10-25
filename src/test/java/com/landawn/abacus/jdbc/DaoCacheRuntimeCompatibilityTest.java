@@ -112,6 +112,8 @@ class DaoCacheRuntimeCompatibilityTest {
         final String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
         final List<String> command = new ArrayList<>();
         command.add(Path.of(System.getProperty("java.home"), "bin", executable).toString());
+        // Bound heap and CPU-sized worker pools so these small probes fit alongside the suite JVM.
+        command.addAll(List.of("-Xms16m", "-Xmx256m", "-XX:+UseSerialGC", "-XX:ActiveProcessorCount=2"));
         // Keep the existing test runtime's module access so disabling Unsafe actually reaches DAO copying,
         // instead of letting an unrelated parser-initialization failure bypass the ordinary-copy assertions.
         final List<String> runtimeArguments = ManagementFactory.getRuntimeMXBean().getInputArguments();

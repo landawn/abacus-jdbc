@@ -52,10 +52,11 @@ import com.landawn.abacus.annotation.Beta;
  * application, or one whose propagation leaves the transaction: {@code REQUIRES_NEW}, {@code NOT_SUPPORTED} or
  * {@code NEVER}).</p>
  *
- * <p>Writes from Spring completion callbacks need an independent transaction, for example {@code REQUIRES_NEW} or an
- * explicit {@code JdbcUtil.beginTransaction} scope. SQL execution (including queries, which can write) refuses a Spring connection
- * known to be completing; its original completion report cannot settle the callback's additional work. See
- * {@link CacheResult} for tracking requirements.</p>
+ * <p>Database work in Spring's {@code afterCommit} and {@code afterCompletion} callbacks must use an independent
+ * transaction, such as Spring's {@code PROPAGATION_REQUIRES_NEW} or DAO {@code REQUIRES_NEW}. Statement execution does not
+ * enforce this requirement. Cache invalidation cannot guarantee consistency for writes on the completing transaction:
+ * its original outcome does not cover the additional work, and another thread can cache old rows before that work commits
+ * during cleanup. See {@link CacheResult} and {@link com.landawn.abacus.jdbc.JdbcUtil} for details and Spring's guidance.</p>
  *
  * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when the
  * method name starts with that entry (case-insensitive), or when the entry matches the full method name

@@ -550,6 +550,16 @@ final class SpringTransactionOwners {
         return ownersByTransaction.get(transaction);
     }
 
+    /** Requires an owner for a participating scope; a late synchronization cannot identify its lifetime reliably. */
+    static Owner require(final Object holder) {
+        final Owner owner = of(holder);
+        if (owner == null) {
+            throw new IllegalStateException("Spring transaction participation requires SpringTransactionTracker. "
+                    + "Register it with every transaction manager before transactions begin");
+        }
+        return owner;
+    }
+
     /**
      * Returns the owner of {@code holder}, if a tracker reported the transaction that last began with it, also once that
      * transaction has completed.

@@ -91,6 +91,8 @@ class SpringAbsentRuntimeCompatibilityTest {
         final String executable = System.getProperty("os.name").startsWith("Windows") ? "java.exe" : "java";
         final List<String> command = new ArrayList<>();
         command.add(Path.of(System.getProperty("java.home"), "bin", executable).toString());
+        // Bound heap and CPU-sized worker pools so these small probes fit alongside the suite JVM.
+        command.addAll(List.of("-Xms16m", "-Xmx256m", "-XX:+UseSerialGC", "-XX:ActiveProcessorCount=2"));
         final List<String> runtimeArguments = ManagementFactory.getRuntimeMXBean().getInputArguments();
 
         for (int i = 0; i < runtimeArguments.size(); i++) {

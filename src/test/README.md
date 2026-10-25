@@ -24,6 +24,13 @@ After moving or deleting test classes, run `mvn clean test jacoco:report` once t
 remove obsolete compiled classes. Coverage is written to `target/site/jacoco`.
 Use `-Djacoco.skip=true` when coverage is not needed.
 
+Compatibility and cache-lifecycle probes launch separate JVMs with a 16 MiB
+initial heap, a 256 MiB maximum heap, Serial GC, and two visible processors. These
+explicit limits keep the probes from selecting large default heaps and worker
+pools based on host resources and exhausting Windows' available committed memory
+while the suite or IDE is also running. They apply to the child probes,
+independently of the suite JVM's settings.
+
 ## Ownership and grouping
 
 Keep tests beside the production package and name each class for its production

@@ -272,17 +272,11 @@ import com.landawn.abacus.util.Throwables;
  * Nested scopes and queries on the data source on this thread use the participating transaction as they would any other,
  * except while Spring binds another transaction to the data source ({@code REQUIRES_NEW}) or none (it suspended its
  * transaction for {@code NOT_SUPPORTED}): they follow Spring's binding then, until Spring binds the
- * participated transaction again. A Spring transaction whose completion has started (its {@code afterCommit} or
- * {@code afterCompletion} callbacks run; {@code afterCommit} recognized once this library has taken a connection of the
- * transaction or begun a scope in it while it was the innermost Spring transaction on the thread, not only inside another
- * transaction manager's transaction begun in it) is not participated in: a transaction begun there is one of its own, on a
- * connection of its own (see {@link JdbcUtil#beginTransaction(javax.sql.DataSource)}). A participating scope left open into
- * those callbacks can neither commit nor roll back there (see {@link #commit()}), nor can a query prepared in it run.
- * Without a tracker, completion of the synchronization captured when the scope began permanently refuses its outermost
- * commit/rollback and prepared queries. That synchronization may belong to an inner transaction while the scope's outer
- * owner remains active: a tracker is required to keep the scope usable across the inner transaction's completion. A late
- * callback cannot release this guard; resetting it based on callback ordering allowed a scope to report COMMITTED after
- * its work was rolled back.
+ * participated transaction again. A Spring transaction whose completion has been observed is not participated in: a
+ * transaction begun there is one of its own, on a connection of its own (see {@link JdbcUtil#beginTransaction(javax.sql.DataSource)}
+ * for independent callback work). A participating scope left open into those callbacks can neither commit nor roll back
+ * there (see {@link #commit()}), nor can a query prepared in it execute. Participation requires the actual owner to be
+ * tracked before the transaction begins. Another manager's inner completion does not complete this scope's owner.
  * Register a {@link SpringTransactionTracker} with the transaction managers (first, before their other execution listeners,
  * as {@code SpringTransactionTracker.register} does, and with every one on the data source, as its {@code Registrar}
  * does) to have the transaction manager that owns the connection report when its transaction commits or rolls back: the
@@ -683,14 +677,9 @@ import com.landawn.abacus.util.Throwables;
  *         {@code close()} does nothing. A {@code leaked[0].commit()} in place of the rollback throws
  *         {@code IllegalStateException} too, and ends {@link Status#FAILED_COMMIT}: Spring decided the outcome of the work
  *         without it. Both fail the same way in the Spring transaction's {@code afterCommit} or {@code afterCompletion}
- *         callbacks, where Spring still binds its connection: detected there through the synchronization this library
- *         registers with the synchronizations Spring runs when the scope begins. That completion observation is permanent,
- *         including after a JPA transaction's callbacks and inside callbacks registered later. If the captured synchronization
- *         belongs to an inner transaction, the untracked scope is conservatively refused even though its actual outer owner
- *         still runs. With no synchronization, only a JDBC holder's cleanup flag remains: a JPA transaction's completion
- *         cannot be detected, nor can completion callbacks be reliably identified. With a {@link SpringTransactionTracker}
- *         registered with every transaction manager, the actual owner is followed instead: from its
- *         {@code beforeCommit}/{@code beforeRollback} on.</td>
+ *         callbacks, where Spring still binds its connection. The required {@link SpringTransactionTracker} follows the
+ *         actual owner from its beforeCommit/beforeRollback notification, including with disabled synchronization, JPA,
+ *         or late synchronization registration. An inner transaction completing does not complete an active outer owner.</td>
  *   </tr>
  *   <tr>
  *     <td><b>28. Participating: complete the scope while Spring runs another transaction on the data source.</b>

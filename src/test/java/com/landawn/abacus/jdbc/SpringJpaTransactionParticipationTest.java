@@ -16,6 +16,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
@@ -25,9 +27,11 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.jdbc.datasource.ConnectionHandle;
 import org.springframework.jdbc.datasource.ConnectionHolder;
+import org.springframework.jdbc.datasource.SimpleConnectionHandle;
 import org.springframework.orm.jpa.DefaultJpaDialect;
 import org.springframework.orm.jpa.EntityManagerFactoryInfo;
 import org.springframework.orm.jpa.EntityManagerHolder;
@@ -80,6 +84,71 @@ class SpringJpaTransactionParticipationTest extends TestBase {
     @AfterEach
     void closeDatabase() throws SQLException {
         keeper.close();
+    }
+
+    // A JPA connection handle does not impose an async submission restriction on scope-free queries. The callbacks below
+    // do no JDBC work, and the owner thread waits and closes each query; acceptance alone is not a connection-safety guarantee.
+    @ParameterizedTest(name = "connectionOverload={0}, tracked={1}")
+    @CsvSource({ "false,false", "false,true", "true,false", "true,true" })
+    void scopeFreeJpaQueriesAllowAsyncSubmissionWithoutOwnershipChecks(final boolean connectionOverload, final boolean tracked) throws SQLException {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, true, true);
+        if (!tracked) {
+            jpa.transactionManager.setTransactionExecutionListeners(new java.util.ArrayList<>());
+        }
+        try (Connection original = jpa.connection;
+             Connection independent = dataSource.getConnection()) {
+            new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+                final ConnectionHolder holder = (ConnectionHolder) TransactionSynchronizationManager.getResource(dataSource);
+                assertNotNull(holder);
+                assertFalse(holder.getConnectionHandle() instanceof SimpleConnectionHandle, "exercise a JPA connection binding");
+                assertSame(original, holder.getConnection());
+                assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL), "no explicit library scope");
+                for (final String action : new String[] { "call", "run", "callExecutor", "runExecutor" }) {
+                    try (PreparedQuery query = (connectionOverload ? JdbcUtil.prepareQuery(original, "SELECT 1")
+                            : JdbcUtil.prepareQuery(dataSource, "SELECT 1")).closeAfterExecution(false)) {
+                        final AtomicBoolean invoked = new AtomicBoolean();
+                        final AtomicBoolean submitted = new AtomicBoolean();
+                        final var future = switch (action) {
+                            case "call" -> query.callAsync(q -> {
+                                invoked.set(true);
+                                return 1;
+                            });
+                            case "run" -> query.runAsync(q -> invoked.set(true));
+                            case "callExecutor" -> query.callAsync(q -> {
+                                invoked.set(true);
+                                return 1;
+                            }, task -> {
+                                submitted.set(true);
+                                task.run();
+                            });
+                            default -> query.runAsync(q -> invoked.set(true), task -> {
+                                submitted.set(true);
+                                task.run();
+                            });
+                        };
+                        future.get(10, TimeUnit.SECONDS);
+                        assertTrue(invoked.get());
+                        assertEquals(action.endsWith("Executor"), submitted.get());
+                        assertFalse(query.isClosed);
+                        assertFalse(original.isClosed());
+                    } catch (final Exception e) {
+                        throw new AssertionError(e);
+                    }
+                }
+                try (PreparedQuery synchronous = connectionOverload ? JdbcUtil.prepareQuery(original, "SELECT 1")
+                        : JdbcUtil.prepareQuery(dataSource, "SELECT 1");
+                     PreparedQuery unrelated = JdbcUtil.prepareQuery(independent, "SELECT 1")) {
+                    assertEquals(1, synchronous.queryForInt().orElseThrow(), "ordinary execution remains available in the JPA transaction");
+                    assertEquals(1, unrelated.callAsync(q -> q.queryForInt().orElseThrow()).get(10, TimeUnit.SECONDS),
+                            "the JPA holder must not claim an independent connection");
+                    assertFalse(independent.isClosed());
+                } catch (final Exception e) {
+                    throw new AssertionError(e);
+                }
+            });
+            assertTrue(jpa.entityTransaction.committed);
+            assertFalse(original.isClosed(), "query cleanup must leave connection ownership with the JPA provider");
+        }
     }
 
     @Test
@@ -156,8 +225,7 @@ class SpringJpaTransactionParticipationTest extends TestBase {
             outer.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
         }
 
-        final TransactionTemplate innerTemplate = new TransactionTemplate(
-                new org.springframework.jdbc.datasource.DataSourceTransactionManager(innerDataSource));
+        final TransactionTemplate innerTemplate = new TransactionTemplate(SpringTestTransactions.manager(innerDataSource));
 
         new TransactionTemplate(outer.transactionManager).executeWithoutResult(a -> {
             try {
@@ -441,16 +509,12 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         assertNotNull(item.getId());
     }
 
-    // A JPA holder records no completion, but a captured synchronization now keeps its completion observation permanently.
-    // A scope left open past that completion must fail with or without an exact owner record.
-    @ParameterizedTest(name = "tracked={0}")
-    @ValueSource(booleans = { false, true })
-    void theCommitOfAScopeLeftOpenPastASynchronizedJpaTransactionFails(final boolean tracked) throws SQLException {
+    // JPA holders expose no completion flag. The required tracker records the participating scope's actual owner.
+    @Test
+    void theCommitOfAScopeLeftOpenPastASynchronizedJpaTransactionFails() throws SQLException {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
 
-        if (tracked) {
-            jpa.transactionManager.addListener(new SpringTransactionTracker());
-        }
+        assertEquals(1, jpa.transactionManager.getTransactionExecutionListeners().stream().filter(SpringTransactionTracker.class::isInstance).count());
 
         final SqlTransaction[] leftOpen = new SqlTransaction[1];
 
@@ -482,8 +546,8 @@ class SpringJpaTransactionParticipationTest extends TestBase {
     void aReadOutsideAJpaTransactionThatWroteTheTable_storesNothingWithATracker(final boolean tracked) throws SQLException {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
 
-        if (tracked) {
-            jpa.transactionManager.addListener(new SpringTransactionTracker());
+        if (!tracked) {
+            jpa.transactionManager.setTransactionExecutionListeners(new java.util.ArrayList<>());
         }
 
         final AtomicInteger stores = new AtomicInteger();
@@ -517,6 +581,8 @@ class SpringJpaTransactionParticipationTest extends TestBase {
     void aListenerFailingBeforeTheTrackerOfAJpaTransaction_stillReleasesTheCaches(final boolean synchronization, final boolean registeredFirst)
             throws Exception {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+        // Deliberately construct the bad listener order instead of retaining the fixture's first tracker.
+        jpa.transactionManager.setTransactionExecutionListeners(new java.util.ArrayList<>());
 
         if (!synchronization) {
             jpa.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
@@ -1031,11 +1097,12 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         assertEquals(1, count());
     }
 
-    // JPA holders have no JDBC transaction-active flag. Reject callback writes from the owner's report rather than waiting
-    // for holder cleanup, including when synchronization is disabled; an explicitly independent transaction stays usable.
+    // Statement execution does not enforce Spring completion boundaries, including for JPA. This fixture's provider has
+    // already restored auto-commit, so unsupported callback reuse commits immediately. Independent work still uses its own
+    // connection and outcome; real providers can behave differently when their completed connection is reused.
     @ParameterizedTest(name = "rollback={0}, synchronization={1}")
     @org.junit.jupiter.params.provider.CsvSource({ "false,false", "false,true", "true,false", "true,true" })
-    void callbackWritesOnAJpaConnectionRequireAnIndependentTransaction(final boolean rollback, final boolean synchronization) throws Exception {
+    void jpaCallbackSqlReachesJdbcAndIndependentWorkUsesItsOwnConnection(final boolean rollback, final boolean synchronization) throws Exception {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
         final CachedItemDao dao = JdbcUtil.createDao(CachedItemDao.class, dataSource,
                 JdbcUtil.DaoCreationOptions.builder().cache(Jdbc.DaoCache.createByMap()).build());
@@ -1047,14 +1114,14 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         try (java.util.concurrent.ExecutorService reader = java.util.concurrent.Executors.newSingleThreadExecutor()) {
             final Runnable callback = () -> {
                 try {
-                    assertThrows(IllegalStateException.class, () -> dao.addItem("late"));
+                    dao.addItem("late");
                     try (SqlTransaction independent = JdbcUtil.beginTransaction(dataSource)) {
                         // The provider has already restored auto-commit, but its completed connection is still Spring's.
                         assertNotSame(jpa.connection, independent.connection());
                         dao.addItem("new");
                         independent.commit();
                     }
-                    assertEquals(rollback ? 1 : 2, reader.submit(dao::cachedCount).get(10, java.util.concurrent.TimeUnit.SECONDS));
+                    assertEquals(rollback ? 2 : 3, reader.submit(dao::cachedCount).get(10, java.util.concurrent.TimeUnit.SECONDS));
                 } catch (final Throwable ex) {
                     failure.compareAndSet(null, ex);
                 }
@@ -1095,8 +1162,8 @@ class SpringJpaTransactionParticipationTest extends TestBase {
             if (failure.get() != null) {
                 throw new AssertionError("JPA completion callback failed", failure.get());
             }
-            assertEquals(rollback ? 1 : 2, count());
-            assertEquals(rollback ? 1 : 2, reader.submit(dao::cachedCount).get(10, java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(rollback ? 2 : 3, count());
+            assertEquals(rollback ? 2 : 3, reader.submit(dao::cachedCount).get(10, java.util.concurrent.TimeUnit.SECONDS));
         } finally {
             jpa.connection.close();
         }
@@ -1253,6 +1320,7 @@ class SpringJpaTransactionParticipationTest extends TestBase {
             }
 
             transactionManager = new JpaTransactionManager(entityManagerFactory);
+            SpringTransactionTracker.register(transactionManager);
             transactionManager.setDataSource(dataSource);
             transactionManager.setJpaDialect(new DefaultJpaDialect() {
                 @Override
