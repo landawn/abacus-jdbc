@@ -147,10 +147,20 @@ final class SpringTransactionOwners {
         /**
          * Tells whether Spring has ended the transaction's execution: its status is completed, or has been garbage
          * collected. Spring completes the status as the first step of its cleanup, after every completion report, so a
-         * transaction whose execution has ended without a clean report either failed or had its report lost (a listener
-         * before the tracker failed, with synchronization disabled). Only used to tell that (see {@link #isDeciding()} and
-         * {@code isUnresolved()}), never to release a cache block: the cleanup that follows may still commit pending work
-         * (see the class description).
+         * transaction whose execution has ended without a clean report either failed or had its report lost (a failing
+         * listener, with synchronization disabled: see the registration requirements of {@link SpringTransactionTracker}).
+         * Only used to tell that (see {@link #isDeciding()} and {@code isUnresolved()}), never to release a cache block: the
+         * cleanup that follows may still commit pending work (see the class description).
+         *
+         * <p>Spring keeps the completion in a plain, non-volatile field, written by the thread that completes the
+         * transaction, so the Java memory model gives another thread no happens-before with that write. Cross-thread
+         * detection of missing completion reports is therefore best-effort and is not guaranteed while the transaction
+         * status remains reachable. Until detection, unresolved snapshots may omit the transaction and confirmation may be
+         * rejected; caching remains blocked. The thread that completes the transaction sees the completion at once.
+         * {@code isDeciding()} is also read on other threads: the parallel-stream worker threads of a deferred query (see
+         * {@code TransactionContext.assertDeferredQueryCanRun()}). Such a worker sees a completion that happened before the
+         * stream ran, as the stream hands it the owner thread's earlier actions. A thread that consumes the stream without
+         * that handoff (which is unsupported) may miss the completion, and the deferred query then runs.</p>
          */
         private final BooleanSupplier executionEnded;
 
@@ -209,7 +219,7 @@ final class SpringTransactionOwners {
          * ended its execution). Work that joins it from then on is no part of the outcome (the cleanup after the transaction
          * commits whatever runs on its connection meanwhile).
          *
-         * <p>WHY the end of the execution as well: with no report at all (a listener before the tracker failed from both
+         * <p>WHY the end of the execution as well: with no report at all (here, a listener before the tracker failed from both
          * {@code beforeCommit} and {@code afterRollback}, with synchronization disabled), a {@code SqlTransaction} scope left
          * open in the transaction committed after it, with the status {@code COMMITTED}, although Spring had rolled its work
          * back.</p>
@@ -295,7 +305,8 @@ final class SpringTransactionOwners {
          * <p>WHY from the first such write: not from the transaction's begin, as most transactions write no cached table and
          * need no record; and not from a failure report, which may never come. WHY strongly: the block is a weak key of the
          * pending writes' map, which garbage collection released while pending work could still commit. The cost: when the
-         * reports are lost (the tracker registered after a failing listener, with synchronization disabled), every
+         * reports are lost (a failing listener, with synchronization disabled: see the registration requirements of
+         * {@link SpringTransactionTracker}), every
          * transaction that writes a cached table stays recorded, and its tables blocked, until its settlement is confirmed,
          * which the warning and {@link SpringTransactionTracker#unresolvedTransactions()} make visible.</p>
          *

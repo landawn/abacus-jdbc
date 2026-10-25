@@ -943,6 +943,64 @@ class DaoCacheTransactionTest extends TestBase {
         verify(builtIn, times(1)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(), any());
     }
 
+    // External review: registering the tracker first does not keep every report. Spring calls the afterCommit (afterRollback)
+    // listeners only once every listener's beforeCommit (beforeRollback) has returned, so a listener after the tracker that
+    // throws a TransactionException other than an UnexpectedRollbackException (here a TransactionSystemException) from
+    // beforeCommit, or anything from beforeRollback, keeps Spring from calling the tracker's too; with synchronization
+    // disabled no report comes at all. (An UnexpectedRollbackException is reported as a clean rollback, which is
+    // unsupported: see the tracker.) Spring's cleanup then commits the work the skipped commit or
+    // rollback left on the connection (restoring auto-commit), so the caches stay out of the table until its settlement is
+    // confirmed. Detected here on the transaction's own thread (another thread's detection is best-effort: see the tracker).
+    @ParameterizedTest(name = "rollback={0}")
+    @ValueSource(booleans = { false, true })
+    void aListenerFailingAfterTheTrackerBeforeTheCompletion_leavesTheCachesBlockedUntilConfirmed(final boolean rollback) throws Exception {
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSource);
+        transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        transactionManager.addListener(new org.springframework.transaction.TransactionExecutionListener() {
+            @Override
+            public void beforeCommit(final org.springframework.transaction.TransactionExecution transaction) {
+                throw new org.springframework.transaction.TransactionSystemException("beforeCommit listener failed");
+            }
+
+            @Override
+            public void beforeRollback(final org.springframework.transaction.TransactionExecution transaction) {
+                throw new IllegalStateException("beforeRollback listener failed");
+            }
+        });
+        SpringTransactionTracker.register(transactionManager);
+        assertTrue(transactionManager.getTransactionExecutionListeners().iterator().next() instanceof SpringTransactionTracker, "tracker first");
+
+        final Jdbc.DaoCache builtIn = Mockito.spy(Jdbc.DaoCache.createByMap());
+        final CachedItemDao cachedDao = JdbcUtil.createDao(CachedItemDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().cache(builtIn).build());
+
+        final RuntimeException failure = org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+                () -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                    try {
+                        cachedDao.addItem(2);
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+
+                    if (rollback) {
+                        status.setRollbackOnly();
+                    }
+                }));
+
+        assertEquals(rollback ? "beforeRollback listener failed" : "beforeCommit listener failed", failure.getMessage());
+        assertEquals(2, countRows(), "Spring's cleanup committed the work the skipped " + (rollback ? "rollback" : "commit") + " left pending");
+
+        final var unresolved = newUnresolvedTransactions();
+        assertEquals(1, unresolved.size());
+        assertEquals("no completion report", unresolved.get(0).failure());
+        assertEquals(2, cachedDao.cachedCount());
+        assertEquals(2, cachedDao.cachedCount());
+        verify(builtIn, times(0)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(), any());
+
+        assertTrue(SpringTransactionTracker.confirmSettled(unresolved.get(0).id())); // database commit verified above
+        assertEquals(2, cachedDao.cachedCount());
+        verify(builtIn, times(1)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(), any());
+    }
+
     // External review: with Spring's transaction synchronization disabled, a write in a Spring transaction ran both of its
     // invalidations right away, before the commit: a read outside the transaction in between stored the old rows for good.
     @Test

@@ -58,15 +58,24 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * </ul>
  *
  * <p><b>Registration requirements.</b> Register it <i>first</i>, before the other execution listeners of a transaction
- * manager: Spring calls them in order, and one that throws keeps Spring from calling those after it, so a tracker after it
- * does not hear of the completion from its own callbacks (see below for what tells it then).
+ * manager: Spring calls them in order, and one that throws from {@code afterCommit} or {@code afterRollback} keeps Spring
+ * from calling those after it, so a tracker after it does not hear of the completion from its own callbacks.
  * {@link #register(ConfigurableTransactionManager...)} does that, and a {@link Registrar} bean does it for every transaction
- * manager of a Spring application context. Register it with <i>every</i> transaction manager on a data source: registered
- * with some only, it is unsupported (the transactions of a transaction manager without it get the behavior described above,
- * and one of them on a connection holder bound to the data source before a tracked transaction, which it reuses, is taken
- * for that completed transaction: work in it runs apart from it, and survives its rollback). A transaction begun before the
- * tracker is registered is not tracked; nor is a participating scope or a savepoint of a tracked transaction, which
- * completes with it.</p>
+ * manager of a Spring application context. Registering it first does not cover every failing listener: one that throws
+ * from {@code beforeRollback}, or throws a {@code TransactionException} other than an
+ * {@code UnexpectedRollbackException} (such as a {@code TransactionSystemException}) from {@code beforeCommit} (unless
+ * {@code rollbackOnCommitFailure} is set), keeps Spring from calling every listener's {@code afterRollback} or
+ * {@code afterCommit}, wherever the tracker is registered. In these cases the tracker's synchronization still reports the
+ * completion, unless synchronization is disabled (see below). A listener that throws an
+ * {@code UnexpectedRollbackException} from {@code beforeCommit} is unsupported: Spring then reports a clean rollback to
+ * every listener and synchronization, although it neither committed nor rolled back, and its cleanup may then commit the
+ * work (restoring auto-commit commits it). The tracker cannot tell this from a real rollback, so it releases the caches,
+ * and a read before that commit can store rows that the work then changes. Register it with <i>every</i> transaction
+ * manager on a data source: registered with some only, it is unsupported (the transactions of a transaction manager
+ * without it get the behavior described above, and one of them on a connection holder bound to the data source before a
+ * tracked transaction, which it reuses, is taken for that completed transaction: work in it runs apart from it, and
+ * survives its rollback). A transaction begun before the tracker is registered is not tracked; nor is a participating
+ * scope or a savepoint of a tracked transaction, which completes with it.</p>
  *
  * <p>Each report applies to the record of the transaction it is about, made when that transaction began: a later
  * transaction with the same connection holder gets a record of its own. The completion is also reported by a transaction
@@ -97,7 +106,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  *
  * <p>{@link #unresolvedTransactions()} and {@link #unresolvedTransactionCount()} expose failed completions and missing
  * reports detected after Spring marks the execution completed (or its status becomes unreachable). Detection of a missing
- * report can be delayed until the next cache read or monitoring call. A warning identifies the transaction ID and tables.
+ * report can be delayed until the next cache read or monitoring call. Cross-thread detection of missing completion reports
+ * is best-effort and is not guaranteed while the transaction status remains reachable (Spring keeps its completion in a
+ * plain field). Until detection, unresolved snapshots may omit the transaction and confirmation may be rejected; caching
+ * remains blocked. A warning identifies the transaction ID and tables.
  * Recovery is per transaction, never global: after verifying that that transaction's pending work can no longer commit,
  * confirm its ID. Closing an entity manager or returning from Spring's cleanup is not that verification. Without a clean
  * report or explicit confirmation, caching remains disabled indefinitely. The registry is process-local; restarting is not
@@ -308,9 +320,13 @@ public final class SpringTransactionTracker implements TransactionExecutionListe
                     return status == null || status.isCompleted();
                 }, transaction.getTransactionName());
 
-                // WHY also a synchronization: an earlier execution listener that throws from afterCommit or afterRollback keeps
-                // Spring from calling this one's, which left the transaction pending for good; Spring calls every
-                // synchronization's afterCompletion, whatever the others throw, after the database commit or rollback.
+                // WHY also a synchronization: an earlier execution listener that throws from afterCommit or afterRollback, or
+                // any listener that throws from beforeRollback (or, unless rollbackOnCommitFailure is set, a
+                // TransactionException other than an UnexpectedRollbackException from beforeCommit), keeps Spring from calling
+                // this one's, which left the transaction pending for good; Spring calls every synchronization's afterCompletion,
+                // whatever the others throw, once the outcome is decided: with STATUS_COMMITTED or STATUS_ROLLED_BACK before
+                // the afterCommit or afterRollback listeners, and with STATUS_UNKNOWN in the beforeRollback and beforeCommit
+                // cases named here.
                 if (TransactionSynchronizationManager.isSynchronizationActive()) {
                     TransactionSynchronizationManager.registerSynchronization(new CompletionSynchronization(owner));
                 }
