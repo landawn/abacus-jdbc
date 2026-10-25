@@ -17,22 +17,19 @@
 package com.landawn.abacus.jdbc;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.Method;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.beans.factory.config.BeanPostProcessor;
-import org.springframework.jdbc.datasource.ConnectionHolder;
 import org.springframework.jdbc.datasource.JdbcTransactionObjectSupport;
-import org.springframework.jdbc.datasource.SimpleConnectionHandle;
 import org.springframework.transaction.ConfigurableTransactionManager;
 import org.springframework.transaction.TransactionExecution;
 import org.springframework.transaction.TransactionExecutionListener;
 import org.springframework.transaction.support.DefaultTransactionStatus;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
-
-import com.landawn.abacus.util.ClassUtil;
 
 /**
  * Tells this library, from a Spring transaction manager, when each transaction it runs is committed or rolled back, so that
@@ -62,25 +59,49 @@ import com.landawn.abacus.util.ClassUtil;
  *
  * <p><b>Registration requirements.</b> Register it <i>first</i>, before the other execution listeners of a transaction
  * manager: Spring calls them in order, and one that throws keeps Spring from calling those after it, so a tracker after it
- * does not hear of the completion from its own callbacks (see below for what tells it then). {@link #register(ConfigurableTransactionManager...)} does that, and a
- * {@link Registrar} bean does it for every transaction manager of a Spring application context. Register it with
- * <i>every</i> transaction manager on a data source: registered with some only, it is unsupported (the transactions of a
- * transaction manager without it get the behavior described above; the record a tracked transaction left on a connection
- * holder bound to the data source before it, which a later transaction reuses, is dropped once that transaction is active
- * with synchronization, while one with synchronization disabled can't be told from the tracked transaction's cleanup, and
- * is taken for completed). A transaction begun before the tracker is registered is not tracked; nor is a participating
- * scope or a savepoint of a tracked transaction, which completes with it.</p>
+ * does not hear of the completion from its own callbacks (see below for what tells it then).
+ * {@link #register(ConfigurableTransactionManager...)} does that, and a {@link Registrar} bean does it for every transaction
+ * manager of a Spring application context. Register it with <i>every</i> transaction manager on a data source: registered
+ * with some only, it is unsupported (the transactions of a transaction manager without it get the behavior described above,
+ * and one of them on a connection holder bound to the data source before a tracked transaction, which it reuses, is taken
+ * for that completed transaction: work in it runs apart from it, and survives its rollback). A transaction begun before the
+ * tracker is registered is not tracked; nor is a participating scope or a savepoint of a tracked transaction, which
+ * completes with it.</p>
  *
- * <p>The completion is also reported by a transaction synchronization the tracker registers when a transaction begins, as
- * Spring runs every synchronization's {@code afterCompletion} callback whatever the others throw. Without synchronization,
- * a failing listener before the tracker leaves the completion to Spring's cleanup after it, as described next: register
- * the tracker first. A commit or rollback that fails leaves the outcome uncertain until Spring's cleanup has finished, which
- * may still commit the work the failure left pending on the connection, so the caches stay out of its tables until then:
- * for a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction, whose cleanup restores
- * auto-commit, until its connection holder tells the end; for a JPA transaction, whose dialect releases the connection in
- * the cleanup, until its entity manager is closed (the last step of the cleanup; an entity manager bound before the
- * transaction, as for open-in-view, until its owner closes it). Where neither tells it (another kind of transaction
- * manager whose holder keeps a handle of its own), until the holder has been garbage collected.</p>
+ * <p>Each report applies to the record of the transaction it is about, made when that transaction began: a later
+ * transaction with the same connection holder gets a record of its own. The completion is also reported by a transaction
+ * synchronization the tracker registers when a transaction begins, as Spring runs every synchronization's
+ * {@code afterCompletion} callback whatever the others throw.</p>
+ *
+ * <p>A failed or unreported completion keeps affected DAO caches disabled until a later clean completion report or
+ * explicit {@link #confirmSettled(long)} confirmation. This applies to JDBC and JPA alike: Spring clears JDBC holders even
+ * when resetting the connection failed. A single failed commit can also leave pending work on a pre-bound connection
+ * whose auto-commit was already disabled: Spring neither restores auto-commit nor releases that connection during cleanup.
+ * Neither an entity manager's closed flag nor garbage collection proves that pending database work has settled.
+ * A successful rollback reported after a failed commit automatically releases that transaction's cache block; explicit
+ * confirmation is needed only when no clean completion is reported. Cache-affecting transactions are retained from their
+ * first write, so a missing notification cannot silently release the cache block. Transactions that affect no DAO cache
+ * need no retained record.
+ * Only metadata is retained, not connections, entity managers, transaction statuses or exceptions.</p>
+ *
+ * <p><b>Avoiding confirmations.</b> {@code DataSourceTransactionManager} with its default settings reports every failed
+ * commit as an unknown outcome (it wraps the {@code SQLException} in a {@code TransactionSystemException}), also a routine
+ * one such as a deadlock or a serialization failure, which the database has rolled back: each then needs a confirmation.
+ * {@code JdbcTransactionManager} translates a recognized commit failure into a {@code DataAccessException}, for which Spring
+ * rolls the transaction back, and {@code setRollbackOnCommitFailure(true)} makes any transaction manager roll back after a
+ * failed commit: a clean rollback report then releases the block without a confirmation.</p>
+ *
+ * <p><b>Scope of a block.</b> The blocks are kept per table name, ignoring case, not per data source or cache: an unresolved
+ * transaction keeps the DAO caches of every data source in the process out of the tables it wrote, and out of the other
+ * table names that share their hashed slot; a write through a DAO with an empty table name blocks every table.</p>
+ *
+ * <p>{@link #unresolvedTransactions()} and {@link #unresolvedTransactionCount()} expose failed completions and missing
+ * reports detected after Spring marks the execution completed (or its status becomes unreachable). Detection of a missing
+ * report can be delayed until the next cache read or monitoring call. A warning identifies the transaction ID and tables.
+ * Recovery is per transaction, never global: after verifying that that transaction's pending work can no longer commit,
+ * confirm its ID. Closing an entity manager or returning from Spring's cleanup is not that verification. Without a clean
+ * report or explicit confirmation, caching remains disabled indefinitely. The registry is process-local; restarting is not
+ * a substitute for settling database work or invalidating any externally persisted cache.</p>
  *
  * <p><b>Spring Configuration Examples:</b></p>
  * <pre>{@code
@@ -109,6 +130,111 @@ public final class SpringTransactionTracker implements TransactionExecutionListe
      */
     public SpringTransactionTracker() {
         // stateless
+    }
+
+    /**
+     * A monitoring snapshot of one transaction that still blocks DAO caching without a confirmed outcome.
+     *
+     * @param id unique ID within this process, used by {@link #confirmSettled(long)}
+     * @param transactionName Spring's transaction name, or an empty string when unnamed
+     * @param tables immutable table-name list, ordered ignoring case; an empty name in the list means every table. The block
+     *        covers these names for the DAO caches of every data source, and the other names sharing their hashed slot (see
+     *        the scope of a block above)
+     * @param beganAt when the transaction began
+     * @param unresolvedSince when this library first saw its outcome unresolved: at the failure report, or, when no report
+     *        came, at the first cache read or monitoring call after Spring ended the transaction's execution
+     * @param failure a compact description of what left it unresolved: the class and message (truncated to 200 characters)
+     *        of the failure the transaction manager reported, {@code "unknown outcome"} when Spring reported only an unknown
+     *        status, or {@code "no completion report"} when no report came. The exception itself is not retained: it can
+     *        retain application objects through its cause or fields
+     */
+    public record UnresolvedTransaction(long id, String transactionName, List<String> tables, Instant beganAt, Instant unresolvedSince, String failure) {
+        /**
+         * Creates an immutable snapshot. Constructing one does not register or resolve a transaction.
+         *
+         * @param id transaction ID
+         * @param transactionName transaction name
+         * @param tables affected table names
+         * @param beganAt when the transaction began
+         * @param unresolvedSince when its outcome was first seen unresolved
+         * @param failure what left it unresolved
+         */
+        public UnresolvedTransaction {
+            tables = List.copyOf(tables);
+        }
+    }
+
+    /**
+     * Returns an immutable snapshot of transactions with cache-affecting writes and failed or missing completion reports.
+     * Active transactions are excluded. Concurrent completion or failure can change the registry after this snapshot.
+     *
+     * @return unresolved transactions, ordered by ID
+     */
+    public static List<UnresolvedTransaction> unresolvedTransactions() {
+        return SpringTransactionOwners.unresolvedTransactions()
+                .stream()
+                .map(record -> new UnresolvedTransaction(record.id(), record.transactionName(), record.tables(), Instant.ofEpochMilli(record.beganAt()),
+                        Instant.ofEpochMilli(record.unresolvedSince()), record.failure()))
+                .toList();
+    }
+
+    /**
+     * Returns the current monitoring count; concurrent completion or failure can change it immediately.
+     *
+     * @return number of unresolved transactions with cache-affecting writes
+     */
+    public static int unresolvedTransactionCount() {
+        return SpringTransactionOwners.unresolvedTransactions().size();
+    }
+
+    /**
+     * Acknowledges externally verified settlement of one unresolved transaction and allows its cache blocks to expire on
+     * the next read. The caller must establish that all its pending work has committed, rolled back or otherwise cannot
+     * commit later, including work left by failed cleanup. This method does not perform database recovery. An entity
+     * manager's close, holder collection or Spring cleanup returning is insufficient evidence on its own.
+     *
+     * <p>Evidence of settlement is, for example, that the physical connection holding the work was closed or aborted (not
+     * returned to a pool), that the database ended its session, or that the database shows no open transaction for it.
+     * Seeing the expected rows in a query is not: pending work could still commit afterwards. Nothing releases a block
+     * automatically, neither elapsed time nor garbage collection: nothing bounds when pending work may still commit. The
+     * registry is process-local, but a restart doesn't settle the database work either.</p>
+     *
+     * <p>Only this ID is affected; other transactions, including failures arriving concurrently, remain blocked. Repeated
+     * confirmation is harmless. A clean completion report also removes the record. Reads that began while the block was
+     * present remain ineligible to cache their results.</p>
+     *
+     * @param transactionId ID from {@link #unresolvedTransactions()} or its warning log
+     * @return {@code true} if this call resolved the record; {@code false} if it was already resolved or is unknown
+     * @throws IllegalStateException if the ID belongs to a transaction still active with no failure report
+     */
+    public static boolean confirmSettled(final long transactionId) {
+        return SpringTransactionOwners.confirmSettled(transactionId);
+    }
+
+    /**
+     * Acknowledges the externally verified settlement of each of the given unresolved transactions, and of no other (see
+     * {@link #confirmSettled(long)} for what the caller must establish first). Pass the IDs of a snapshot from
+     * {@link #unresolvedTransactions()} whose transactions were verified: a transaction that becomes unresolved meanwhile is
+     * not among them, and stays blocked. An ID unknown or resolved already is skipped. Nothing is confirmed if one of them
+     * belongs to a transaction still active with no failure report.
+     *
+     * @param transactionIds the IDs, from {@link #unresolvedTransactions()} or the warning log
+     * @return the IDs this call resolved, in the order given, without duplicates
+     * @throws IllegalArgumentException if {@code transactionIds} or one of its elements is {@code null}
+     * @throws IllegalStateException if one of the IDs belongs to a transaction still active with no failure report
+     */
+    public static List<Long> confirmSettled(final Collection<Long> transactionIds) throws IllegalArgumentException, IllegalStateException {
+        if (transactionIds == null) {
+            throw new IllegalArgumentException("'transactionIds' cannot be null");
+        }
+
+        for (final Long transactionId : transactionIds) {
+            if (transactionId == null) {
+                throw new IllegalArgumentException("An element of 'transactionIds' cannot be null");
+            }
+        }
+
+        return SpringTransactionOwners.confirmSettled(transactionIds);
     }
 
     /**
@@ -174,13 +300,19 @@ public final class SpringTransactionTracker implements TransactionExecutionListe
             final Object holder = connectionHolderOf(transaction);
 
             if (holder != null) {
-                SpringTransactionOwners.began(holder, cleanupOf(transaction, holder));
+                // A missing report may be detected from the status, but its completion/GC never proves resource settlement.
+                // Keep only a weak status reference: pending cache records must not retain database resources.
+                final WeakReference<TransactionExecution> execution = new WeakReference<>(transaction);
+                final SpringTransactionOwners.Owner owner = SpringTransactionOwners.began(transaction, holder, () -> {
+                    final TransactionExecution status = execution.get();
+                    return status == null || status.isCompleted();
+                }, transaction.getTransactionName());
 
                 // WHY also a synchronization: an earlier execution listener that throws from afterCommit or afterRollback keeps
                 // Spring from calling this one's, which left the transaction pending for good; Spring calls every
                 // synchronization's afterCompletion, whatever the others throw, after the database commit or rollback.
                 if (TransactionSynchronizationManager.isSynchronizationActive()) {
-                    TransactionSynchronizationManager.registerSynchronization(new CompletionSynchronization(holder));
+                    TransactionSynchronizationManager.registerSynchronization(new CompletionSynchronization(owner));
                 }
             }
         }
@@ -207,224 +339,51 @@ public final class SpringTransactionTracker implements TransactionExecutionListe
     }
 
     /**
-     * Reports the completion of a tracked transaction from its {@code afterCompletion} callback.
+     * Reports the completion of a tracked transaction from its {@code afterCompletion} callback, to the owner recorded when
+     * the transaction began (not to the holder's owner at that time, which may be a later transaction's). An unknown outcome
+     * ({@code STATUS_UNKNOWN}) comes without its exception: the listener report that follows, if it comes, adds the failure's
+     * description.
      */
     private static final class CompletionSynchronization implements TransactionSynchronization {
-        private final Object holder;
+        private final SpringTransactionOwners.Owner owner;
 
-        CompletionSynchronization(final Object holder) {
-            this.holder = holder;
+        CompletionSynchronization(final SpringTransactionOwners.Owner owner) {
+            this.owner = owner;
         }
 
         @Override
         public void afterCompletion(final int status) {
             if (status == STATUS_UNKNOWN) {
-                SpringTransactionOwners.uncertain(holder);
+                owner.uncertain();
             } else {
-                SpringTransactionOwners.completed(holder);
+                owner.completed();
             }
         }
-    }
-
-    /**
-     * Returns what tells how far Spring's cleanup after {@code transaction} has got (see
-     * {@link SpringTransactionOwners.Cleanup}), by the kind of transaction: one whose holder has Spring's own connection
-     * handle ({@code DataSourceTransactionManager}, {@code JdbcTransactionManager}), a JPA one whose entity manager is found,
-     * or else one whose cleanup's end can't be told.
-     *
-     * @param transaction the execution reported
-     * @param holder the connection holder its transaction has bound
-     * @return what tells it
-     */
-    static SpringTransactionOwners.Cleanup cleanupOf(final TransactionExecution transaction, final Object holder) {
-        if (holder instanceof final ConnectionHolder connectionHolder && connectionHolder.getConnectionHandle() instanceof SimpleConnectionHandle) {
-            return new HolderCleanup(connectionHolder, transaction);
-        }
-
-        final Object entityManager = entityManagerOf(transaction);
-
-        return entityManager != null ? new EntityManagerCleanup(entityManager) : UNTOLD_CLEANUP;
-    }
-
-    /**
-     * The cleanup after a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager} transaction: its connection
-     * holder tells the end, as the cleanup clears the holder's transaction-active flag as its last step, after restoring
-     * auto-commit (which commits what a failed commit or rollback left pending), resetting and releasing the connection.
-     */
-    static final class HolderCleanup implements SpringTransactionOwners.Cleanup {
-        private final WeakReference<ConnectionHolder> holder;
-        private final WeakReference<TransactionExecution> status;
-
-        HolderCleanup(final ConnectionHolder holder, final TransactionExecution status) {
-            this.holder = new WeakReference<>(holder);
-            this.status = new WeakReference<>(status);
-        }
-
-        @Override
-        public boolean isFinished() {
-            final ConnectionHolder bound = holder.get();
-
-            return bound == null || JdbcUtil.hasSpringTransactionCompleted(bound);
-        }
-
-        /**
-         * {@inheritDoc}
-         *
-         * <p>Reused once Spring's cleanup after this transaction has begun (its status is completed, Spring's first step of the
-         * cleanup, or has been garbage collected) while the holder is transaction-active again and a Spring transaction is
-         * active on the thread. WHY the thread: until its last step clears the holder, the cleanup leaves it
-         * transaction-active, and runs application code meanwhile (the hooks of a connection wrapper or a pool on restoring
-         * auto-commit, resetting or releasing the connection); taken for a newer transaction there, the owner was forgotten,
-         * and a scope begun from such a hook joined the connection the cleanup then committed, its rollback notwithstanding.
-         * Spring clears the thread's transaction state as the first step of the cleanup, and a newer transaction with
-         * synchronization sets it again. One without synchronization sets nothing: such a transaction of a transaction manager
-         * without a tracker is not told apart, and the owner is kept.</p>
-         */
-        @Override
-        public boolean isHolderReused() {
-            final TransactionExecution execution = status.get();
-            final ConnectionHolder bound = holder.get();
-
-            return (execution == null || execution.isCompleted()) && bound != null && !JdbcUtil.hasSpringTransactionCompleted(bound)
-                    && TransactionSynchronizationManager.isActualTransactionActive();
-        }
-    }
-
-    /**
-     * The cleanup after a JPA transaction: {@code JpaTransactionManager} closes the transaction's entity manager as the last
-     * step of its cleanup, after releasing the JDBC connection through its JPA dialect (and Hibernate marks a session closed
-     * only once it has closed its JDBC coordinator). An entity manager bound before the transaction (open-in-view) is not
-     * closed by the cleanup: the end is then told once its owner closes it. WHY not the start of the cleanup (the
-     * transaction status's completion, its first step), as it was: a dialect whose connection release committed the work a
-     * failed commit left pending made a read in between cache the rows as they were before it. Asked on any thread: for
-     * Hibernate's resource-local transactions, {@code isOpen()} reads the session's state only.
-     */
-    static final class EntityManagerCleanup implements SpringTransactionOwners.Cleanup {
-        private final WeakReference<Object> entityManager;
-
-        EntityManagerCleanup(final Object entityManager) {
-            this.entityManager = new WeakReference<>(entityManager);
-        }
-
-        @Override
-        public boolean isFinished() {
-            final Object em = entityManager.get();
-
-            if (em == null) {
-                return true; // garbage collected: no transaction can use it any more
-            }
-
-            try {
-                return !Boolean.TRUE.equals(IS_OPEN_BY_ENTITY_MANAGER_CLASS.methodOf(em.getClass()).invoke(em));
-            } catch (final ReflectiveOperationException | RuntimeException e) {
-                return false; // can't tell: the holder's garbage collection tells it
-            }
-        }
-
-        @Override
-        public boolean isHolderReused() {
-            return false; // JpaTransactionManager binds a new holder for each transaction
-        }
-    }
-
-    /**
-     * The cleanup after a transaction whose holder keeps a handle of its own and whose entity manager isn't found (another
-     * kind of transaction manager, or a JPA one whose transaction object can't be read): its end can't be told, so the
-     * holder's garbage collection tells it (see {@link SpringTransactionOwners.Owner#isCompleted()}).
-     */
-    private static final SpringTransactionOwners.Cleanup UNTOLD_CLEANUP = new SpringTransactionOwners.Cleanup() {
-        @Override
-        public boolean isFinished() {
-            return false;
-        }
-
-        @Override
-        public boolean isHolderReused() {
-            return false;
-        }
-    };
-
-    // spring-orm and the JPA API are optional, so their accessors are resolved reflectively, once per class (see
-    // JdbcUtil.MethodValue).
-    private static final JdbcUtil.MethodValue GET_ENTITY_MANAGER_HOLDER_BY_TRANSACTION_CLASS = new JdbcUtil.MethodValue("getEntityManagerHolder",
-            transactionClass -> {
-                final Method method = transactionClass.getMethod("getEntityManagerHolder");
-
-                // The transaction object's class (JpaTransactionManager.JpaTransactionObject) is private.
-                if (!method.trySetAccessible()) {
-                    throw new NoSuchMethodException("Cannot access " + transactionClass.getName() + ".getEntityManagerHolder()");
-                }
-
-                return method;
-            });
-    private static final JdbcUtil.MethodValue GET_ENTITY_MANAGER_BY_HOLDER_CLASS = new JdbcUtil.MethodValue("getEntityManager");
-    // Resolved through the JPA interface: the provider's implementation class need not be accessible.
-    private static final JdbcUtil.MethodValue IS_OPEN_BY_ENTITY_MANAGER_CLASS = new JdbcUtil.MethodValue("isOpen",
-            entityManagerClass -> entityManagerType(entityManagerClass).getMethod("isOpen"));
-
-    /**
-     * Returns the entity manager of a {@code JpaTransactionManager} transaction: the one the {@code EntityManagerHolder} of
-     * its transaction object keeps.
-     *
-     * @param transaction the execution reported
-     * @return the entity manager, or {@code null} if {@code transaction} is not such a transaction, or its transaction object
-     *         can't be read
-     */
-    private static Object entityManagerOf(final TransactionExecution transaction) {
-        if (!(transaction instanceof final DefaultTransactionStatus status) || status.getTransaction() == null) {
-            return null;
-        }
-
-        try {
-            final Object transactionObject = status.getTransaction();
-            final Object entityManagerHolder = GET_ENTITY_MANAGER_HOLDER_BY_TRANSACTION_CLASS.methodOf(transactionObject.getClass()).invoke(transactionObject);
-
-            return entityManagerHolder == null ? null : GET_ENTITY_MANAGER_BY_HOLDER_CLASS.methodOf(entityManagerHolder.getClass()).invoke(entityManagerHolder);
-        } catch (final ReflectiveOperationException | RuntimeException e) {
-            return null;
-        }
-    }
-
-    /**
-     * Returns the JPA {@code EntityManager} interface (jakarta or javax) that {@code entityManagerClass} implements.
-     *
-     * @param entityManagerClass the class of an entity manager
-     * @return the interface
-     * @throws NoSuchMethodException if it implements none
-     */
-    private static Class<?> entityManagerType(final Class<?> entityManagerClass) throws NoSuchMethodException {
-        for (Class<?> c = entityManagerClass; c != null; c = c.getSuperclass()) {
-            for (final Class<?> type : ClassUtil.getAllInterfaces(c)) {
-                if (type.getName().endsWith(".persistence.EntityManager")) {
-                    return type;
-                }
-            }
-        }
-
-        throw new NoSuchMethodException("No JPA EntityManager interface on " + entityManagerClass.getName());
     }
 
     private static void deciding(final TransactionExecution transaction) {
-        final Object holder = connectionHolderOf(transaction);
+        final SpringTransactionOwners.Owner owner = SpringTransactionOwners.ofTransaction(transaction);
 
-        if (holder != null) {
-            SpringTransactionOwners.deciding(holder);
+        if (owner != null) {
+            owner.deciding();
         }
     }
 
     /**
-     * Reports the completion of {@code transaction}. WHY a failure apart: after a failed commit or rollback, the work is still
-     * pending on the connection until Spring's cleanup, which restores auto-commit, commits it; reported as completed, the
-     * caches served and stored rows of its tables again before that, which the cleanup then made stale for good.
+     * Reports the completion of {@code transaction}. WHY a failure apart: a failed commit or rollback proves nothing about the
+     * work on the connection. Spring's cleanup may still commit it (restoring auto-commit), or leave it pending (on a
+     * connection bound before the transaction with auto-commit already off, which the cleanup neither resets nor releases, or
+     * on one an entity manager keeps after the transaction), so the outcome stays unresolved until a clean report or a
+     * confirmation of its settlement; reported as completed, the caches stored rows that the pending work then changed.
      */
     private static void completed(final TransactionExecution transaction, final Throwable failure) {
-        final Object holder = connectionHolderOf(transaction);
+        final SpringTransactionOwners.Owner owner = SpringTransactionOwners.ofTransaction(transaction);
 
-        if (holder != null) {
+        if (owner != null) {
             if (failure == null) {
-                SpringTransactionOwners.completed(holder);
+                owner.completed();
             } else {
-                SpringTransactionOwners.uncertain(holder);
+                owner.uncertain(failure);
             }
         }
     }

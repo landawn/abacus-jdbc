@@ -12871,6 +12871,40 @@ Tells this library, from a Spring transaction manager, when each transaction it 
 - `public SpringTransactionTracker()` — Creates a tracker.
 
 #### Public Static Methods
+##### unresolvedTransactions(...) -> List<UnresolvedTransaction>
+- **Signature:** `public static List<UnresolvedTransaction> unresolvedTransactions()`
+- **Summary:** Returns an immutable snapshot of transactions with cache-affecting writes and failed or missing completion reports.
+- **Parameters:**
+  - (none)
+- **Returns:** unresolved transactions, ordered by ID
+##### unresolvedTransactionCount(...) -> int
+- **Signature:** `public static int unresolvedTransactionCount()`
+- **Summary:** Returns the current monitoring count; concurrent completion or failure can change it immediately.
+- **Parameters:**
+  - (none)
+- **Returns:** number of unresolved transactions with cache-affecting writes
+##### confirmSettled(...) -> boolean
+- **Signature:** `public static boolean confirmSettled(final long transactionId)`
+- **Summary:** Acknowledges externally verified settlement of one unresolved transaction and allows its cache blocks to expire on the next read.
+- **Contract:**
+  - The caller must establish that all its pending work has committed, rolled back or otherwise cannot commit later, including work left by failed cleanup.
+  - Nothing releases a block automatically, neither elapsed time nor garbage collection: nothing bounds when pending work may still commit.
+- **Parameters:**
+  - `transactionId` (`long`) — ID from {@link #unresolvedTransactions()} or its warning log
+- **Returns:** {@code true} if this call resolved the record; {@code false} if it was already resolved or is unknown
+- **Throws:**
+  - `java.lang.IllegalStateException` — if the ID belongs to a transaction still active with no failure report
+- **Signature:** `public static List<Long> confirmSettled(final Collection<Long> transactionIds) throws IllegalArgumentException, IllegalStateException`
+- **Summary:** Acknowledges the externally verified settlement of each of the given unresolved transactions, and of no other (see {@link #confirmSettled(long)} for what the caller must establish first).
+- **Contract:**
+  - Acknowledges the externally verified settlement of each of the given unresolved transactions, and of no other (see {@link #confirmSettled(long)} for what the caller must establish first).
+  - Nothing is confirmed if one of them belongs to a transaction still active with no failure report.
+- **Parameters:**
+  - `transactionIds` (`Collection<Long>`) — the IDs, from {@link #unresolvedTransactions()} or the warning log
+- **Returns:** the IDs this call resolved, in the order given, without duplicates
+- **Throws:**
+  - `java.lang.IllegalArgumentException` — if {@code transactionIds} or one of its elements is {@code null}
+  - `java.lang.IllegalStateException` — if one of the IDs belongs to a transaction still active with no failure report
 ##### register(...) -> void
 - **Signature:** `public static void register(final ConfigurableTransactionManager... transactionManagers) throws IllegalArgumentException`
 - **Summary:** Registers a tracker with each of {@code transactionManagers} , before their other execution listeners (see the registration requirements above), replacing any tracker registered with them before.
@@ -12903,6 +12937,65 @@ Tells this library, from a Spring transaction manager, when each transaction it 
 - **Parameters:**
   - `transaction` (`TransactionExecution`)
   - `rollbackFailure` (`Throwable`)
+
+### Record UnresolvedTransaction (com.landawn.abacus.jdbc.SpringTransactionTracker.UnresolvedTransaction)
+A monitoring snapshot of one transaction that still blocks DAO caching without a confirmed outcome.
+
+**Thread-safety:** unspecified
+**Nullability:** unspecified
+
+#### Public Constructors
+- `public UnresolvedTransaction` — Creates an immutable snapshot.
+
+#### Public Static Methods
+- (none)
+
+#### Public Instance Methods
+##### id(...) -> long
+- **Signature:** `public long id()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### transactionName(...) -> String
+- **Signature:** `public String transactionName()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### tables(...) -> List<String>
+- **Signature:** `public List<String> tables()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### beganAt(...) -> Instant
+- **Signature:** `public Instant beganAt()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### unresolvedSince(...) -> Instant
+- **Signature:** `public Instant unresolvedSince()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### failure(...) -> String
+- **Signature:** `public String failure()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### equals(...) -> boolean
+- **Signature:** `public boolean equals(Object other)`
+- **Parameters:**
+  - `other` (`Object`)
+- **Returns:** unspecified
+##### hashCode(...) -> int
+- **Signature:** `public int hashCode()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
+##### toString(...) -> String
+- **Signature:** `public String toString()`
+- **Parameters:**
+  - (none)
+- **Returns:** unspecified
 
 ### Class Registrar (com.landawn.abacus.jdbc.SpringTransactionTracker.Registrar)
 Registers a tracker, first, with every transaction manager of the Spring application context it is a bean of (see {@link SpringTransactionTracker#register(ConfigurableTransactionManager...)} ): every bean that is a {@code ConfigurableTransactionManager} , once it is initialized.

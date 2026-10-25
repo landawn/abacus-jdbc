@@ -14148,7 +14148,10 @@ public final class JdbcUtil {
          * until the first. A holder found here needs no lookup of the synchronization: it is registered with the
          * synchronizations Spring runs now (unless they were replaced without telling it, as by a programmatic
          * {@code TransactionSynchronizationManager.clearSynchronization()}: a holder of a later transaction is not found here,
-         * and registers it again).
+         * and registers it again). WHY not cleared when the transaction completes, as was tried: a DAO call from a later
+         * synchronization's {@code afterCompletion} callback (Spring's synchronization still active, the holder still bound)
+         * watches again and fills it anew, and a {@code SqlTransaction} that keeps this synchronization keeps the holder
+         * itself anyway (see {@code TransactionContext._springResource}), so clearing it freed nothing.
          */
         private Set<Object> watchedHolders;
 

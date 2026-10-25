@@ -136,7 +136,10 @@ final class TransactionContext {
     /**
      * For a participating transaction, the resource Spring bound to the data source for the transaction it participates in
      * (its connection holder): while Spring binds another one, or none, the transaction is hidden from
-     * {@link #getTransaction(javax.sql.DataSource, CreatedBy)}.
+     * {@link #getTransaction(javax.sql.DataSource, CreatedBy)}. Held strongly for the transaction's lifetime. WHY not weakly
+     * once its scopes have ended, as was tried: the DAO caches don't wait for the holder's garbage collection (it proves no
+     * settlement, see {@code SpringTransactionOwners}), so holding it weakly only added a "collected means completed" case to
+     * the checks of a {@code SqlTransaction} the application keeps, and of the queries prepared in it.
      */
     private final Object _springResource; //NOSONAR
 

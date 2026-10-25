@@ -68,8 +68,15 @@ class DaoCacheTransactionTest extends TestBase {
         }
     }
 
+    /** The unresolved transactions listed before the test: the registry is process-wide (see newUnresolvedTransactions). */
+    private java.util.Set<Long> unresolvedBefore;
+
     @BeforeEach
     void resetRowsAndCache() throws SQLException {
+        unresolvedBefore = SpringTransactionTracker.unresolvedTransactions()
+                .stream()
+                .map(SpringTransactionTracker.UnresolvedTransaction::id)
+                .collect(java.util.stream.Collectors.toSet());
         try (Statement statement = keeper.createStatement()) {
             statement.executeUpdate("DELETE FROM cache_tx_item");
             statement.executeUpdate("INSERT INTO cache_tx_item (id, name) VALUES (1, 'a')");
@@ -521,7 +528,7 @@ class DaoCacheTransactionTest extends TestBase {
     // External review: the tracker took a failed commit (or rollback) for a completion, so the caches served and stored rows of
     // the transaction's table again before Spring's cleanup, which, restoring auto-commit, then committed the work the failed
     // commit had left pending on the connection: a read in between stored the old count for good. Such an outcome is uncertain
-    // until the cleanup is done, which the connection holder tells.
+    // until a clean completion or explicit settlement confirmation: holder clearing does not prove reset succeeded.
     @ParameterizedTest(name = "rollback={0}, synchronization={1}")
     @org.junit.jupiter.params.provider.CsvSource({ "false, false", "false, true", "true, false", "true, true" })
     void aReadAfterAFailedCommitOrRollback_storesNothingBeforeTheCleanup(final boolean rollback, final boolean synchronization) throws Exception {
@@ -570,6 +577,9 @@ class DaoCacheTransactionTest extends TestBase {
         assertEquals(List.of(1), readsInBetween, "the read in between saw the rows committed before");
         assertEquals(2, countRows(), "Spring's cleanup committed the work the failed commit or rollback left pending");
         assertEquals(2, cachedDao.cachedCount(), "the read in between stored nothing");
+        final var unresolved = newUnresolvedTransactions();
+        assertEquals(1, unresolved.size());
+        assertTrue(SpringTransactionTracker.confirmSettled(unresolved.get(0).id())); // actual database commit verified above
     }
 
     // External review (tests): a commit that fails and that the transaction manager then rolls back cleanly
@@ -624,11 +634,158 @@ class DaoCacheTransactionTest extends TestBase {
         assertEquals(1, cachedDao.cachedCount(), "the read in between was stored");
     }
 
+    // Spring logs a failed auto-commit reset and still clears a pre-bound holder, without returning its connection to a
+    // pool. Pending work can commit later; holder clearing must not restore caching even for a JDBC transaction manager.
+    @ParameterizedTest(name = "rollback={0}, synchronization={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "false, false", "false, true", "true, false", "true, true" })
+    void aFailedCompletionAndFailedResetOnAPreboundConnection_requireExplicitSettlement(final boolean rollback, final boolean synchronization)
+            throws Exception {
+        final Jdbc.DaoCache cache = Mockito.spy(Jdbc.DaoCache.createByMap());
+        final CachedItemDao cachedDao = JdbcUtil.createDao(CachedItemDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().cache(cache).build());
+        assertEquals(1, cachedDao.cachedCount());
+        final var armed = new java.util.concurrent.atomic.AtomicBoolean();
+        try (Connection target = dataSource.getConnection()) {
+            final Connection wrapper = (Connection) java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(),
+                    new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+                        if (armed.get() && (method.getName().equals(rollback ? "rollback" : "commit")
+                                || method.getName().equals("setAutoCommit") && Boolean.TRUE.equals(args[0]))) {
+                            throw new SQLException("simulated completion/reset failure");
+                        }
+                        try {
+                            return method.invoke(target, args);
+                        } catch (final java.lang.reflect.InvocationTargetException e) {
+                            throw e.getCause();
+                        }
+                    });
+            final var holder = new org.springframework.jdbc.datasource.ConnectionHolder(wrapper);
+            org.springframework.transaction.support.TransactionSynchronizationManager.bindResource(dataSource, holder);
+            try {
+                final DataSourceTransactionManager manager = new DataSourceTransactionManager(dataSource);
+                if (!synchronization) {
+                    manager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+                }
+                SpringTransactionTracker.register(manager);
+                org.junit.jupiter.api.Assertions.assertThrows(org.springframework.transaction.TransactionException.class,
+                        () -> new TransactionTemplate(manager).executeWithoutResult(status -> {
+                            try {
+                                cachedDao.addItem(2);
+                            } catch (final SQLException e) {
+                                throw new IllegalArgumentException(e);
+                            }
+                            armed.set(true);
+                            if (rollback) {
+                                status.setRollbackOnly();
+                            }
+                        }));
+                assertTrue(JdbcUtil.hasSpringTransactionCompleted(holder), "Spring cleared the holder despite the reset failure");
+                assertEquals(1, countRows());
+                assertEquals(1, readOutside(cachedDao, dataSource));
+                verify(cache, times(1)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(),
+                        any());
+                final var unresolved = newUnresolvedTransactions();
+                assertEquals(1, unresolved.size());
+                target.commit(); // the pending row commits AFTER holder clearing and the uncached read
+                assertEquals(2, countRows());
+                assertEquals(2, readOutside(cachedDao, dataSource));
+                verify(cache, times(1)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(),
+                        any());
+                assertTrue(SpringTransactionTracker.confirmSettled(unresolved.get(0).id()));
+                assertEquals(2, readOutside(cachedDao, dataSource));
+                assertEquals(2, readOutside(cachedDao, dataSource));
+                verify(cache, times(2)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(),
+                        any());
+            } finally {
+                org.springframework.transaction.support.TransactionSynchronizationManager.unbindResource(dataSource);
+            }
+        }
+    }
+
+    // A single failed commit is enough when a pre-bound connection already has auto-commit disabled: Spring neither
+    // restores auto-commit nor releases that connection. Clearing its holder leaves work that can still commit later.
+    @ParameterizedTest(name = "synchronization={0}")
+    @ValueSource(booleans = { false, true })
+    void aFailedCommitOnAPreboundConnectionWithAutoCommitDisabled_requiresExplicitSettlement(final boolean synchronization) throws Exception {
+        final Jdbc.DaoCache cache = Mockito.spy(Jdbc.DaoCache.createByMap());
+        final CachedItemDao cachedDao = JdbcUtil.createDao(CachedItemDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().cache(cache).build());
+        assertEquals(1, cachedDao.cachedCount());
+        final var commitCalls = new java.util.concurrent.atomic.AtomicInteger();
+        final var autoCommitSetterCalls = new java.util.concurrent.atomic.AtomicInteger();
+
+        try (Connection target = dataSource.getConnection()) {
+            target.setAutoCommit(false); // already disabled before Spring begins the transaction
+            final Connection wrapper = (Connection) java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(),
+                    new Class<?>[] { Connection.class }, (proxy, method, args) -> {
+                        if (method.getName().equals("commit")) {
+                            commitCalls.incrementAndGet();
+                            throw new SQLException("simulated commit failure");
+                        }
+                        if (method.getName().equals("setAutoCommit")) {
+                            autoCommitSetterCalls.incrementAndGet();
+                        }
+                        try {
+                            return method.invoke(target, args);
+                        } catch (final java.lang.reflect.InvocationTargetException e) {
+                            throw e.getCause();
+                        }
+                    });
+            final var holder = new org.springframework.jdbc.datasource.ConnectionHolder(wrapper);
+            org.springframework.transaction.support.TransactionSynchronizationManager.bindResource(dataSource, holder);
+            try {
+                final DataSourceTransactionManager manager = new DataSourceTransactionManager(dataSource);
+                if (!synchronization) {
+                    manager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+                }
+                SpringTransactionTracker.register(manager);
+                org.junit.jupiter.api.Assertions.assertThrows(org.springframework.transaction.TransactionException.class,
+                        () -> new TransactionTemplate(manager).executeWithoutResult(status -> {
+                            try {
+                                cachedDao.addItem(2);
+                            } catch (final SQLException e) {
+                                throw new IllegalArgumentException(e);
+                            }
+                        }));
+
+                assertEquals(1, commitCalls.get(), "only the commit failed");
+                assertEquals(0, autoCommitSetterCalls.get(), "Spring never attempts to restore auto-commit");
+                assertTrue(JdbcUtil.hasSpringTransactionCompleted(holder), "Spring cleared the holder despite the pending work");
+                assertSame(holder, org.springframework.transaction.support.TransactionSynchronizationManager.getResource(dataSource));
+                assertEquals(1, countRows());
+                assertEquals(1, readOutside(cachedDao, dataSource));
+                verify(cache, times(1)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(),
+                        any());
+                final var unresolved = newUnresolvedTransactions();
+                assertEquals(1, unresolved.size());
+
+                target.commit(); // settle the database work after cleanup and the uncached read
+                assertEquals(2, countRows());
+                assertEquals(2, readOutside(cachedDao, dataSource), "the earlier read must not have cached the old count");
+                verify(cache, times(1)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(),
+                        any());
+                assertTrue(SpringTransactionTracker.confirmSettled(unresolved.get(0).id()));
+                assertEquals(2, readOutside(cachedDao, dataSource));
+                assertEquals(2, readOutside(cachedDao, dataSource));
+                verify(cache, times(2)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(),
+                        any());
+            } finally {
+                org.springframework.transaction.support.TransactionSynchronizationManager.unbindResource(dataSource);
+            }
+        }
+    }
+
     /**
      * Wraps the test's data source: the next call of a connection's no-argument {@code failingMethod} ({@code commit} or
      * {@code rollback}) after {@code failNext} is set fails, without reaching the database.
      */
     private javax.sql.DataSource failingDataSource(final String failingMethod, final java.util.concurrent.atomic.AtomicBoolean failNext) {
+        return failingDataSource(failingMethod, failNext, () -> new SQLException("Simulated " + failingMethod + " failure"));
+    }
+
+    /**
+     * Wraps the test's data source: the next call of a connection's no-argument {@code failingMethod} after {@code failNext}
+     * is set throws the exception {@code failure} supplies, without reaching the database.
+     */
+    private javax.sql.DataSource failingDataSource(final String failingMethod, final java.util.concurrent.atomic.AtomicBoolean failNext,
+            final java.util.function.Supplier<SQLException> failure) {
         return new org.springframework.jdbc.datasource.DelegatingDataSource(dataSource) {
             @Override
             public Connection getConnection() throws SQLException {
@@ -637,7 +794,7 @@ class DaoCacheTransactionTest extends TestBase {
                 return (Connection) java.lang.reflect.Proxy.newProxyInstance(Connection.class.getClassLoader(), new Class<?>[] { Connection.class },
                         (proxy, method, args) -> {
                             if (method.getName().equals(failingMethod) && (args == null || args.length == 0) && failNext.getAndSet(false)) {
-                                throw new SQLException("Simulated " + method.getName() + " failure");
+                                throw failure.get();
                             }
 
                             try {
@@ -648,6 +805,58 @@ class DaoCacheTransactionTest extends TestBase {
                         });
             }
         };
+    }
+
+    /** The unresolved transactions listed now that weren't before the test: the registry is process-wide. */
+    private List<SpringTransactionTracker.UnresolvedTransaction> newUnresolvedTransactions() {
+        return SpringTransactionTracker.unresolvedTransactions().stream().filter(record -> !unresolvedBefore.contains(record.id())).toList();
+    }
+
+    // External review (docs): a DataSourceTransactionManager with its default settings reports every failed commit as an
+    // unknown outcome, which keeps the caches out until its settlement is confirmed (see the tests above). JdbcTransactionManager
+    // translates a recognized commit failure (here a serialization failure) into a DataAccessException, for which Spring rolls
+    // the transaction back: the clean rollback report releases the caches without a confirmation.
+    @ParameterizedTest(name = "synchronization={0}")
+    @ValueSource(booleans = { false, true })
+    void aTranslatedCommitFailureOfAJdbcTransactionManager_isRolledBackAndReleasesTheCaches(final boolean synchronization) throws Exception {
+        final java.util.concurrent.atomic.AtomicBoolean failNext = new java.util.concurrent.atomic.AtomicBoolean();
+        final javax.sql.DataSource failing = failingDataSource("commit", failNext,
+                () -> new java.sql.SQLTransactionRollbackException("Simulated serialization failure", "40001"));
+        final CachedItemDao cachedDao = JdbcUtil.createDao(CachedItemDao.class, failing,
+                JdbcUtil.DaoCreationOptions.builder().cache(Jdbc.DaoCache.createByMap()).build());
+        assertEquals(1, cachedDao.cachedCount()); // cached
+
+        final org.springframework.jdbc.support.JdbcTransactionManager transactionManager = new org.springframework.jdbc.support.JdbcTransactionManager(failing);
+
+        if (!synchronization) {
+            transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+
+        SpringTransactionTracker.register(transactionManager);
+
+        final RuntimeException failure = org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+                () -> new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+                    try {
+                        cachedDao.addItem(2);
+                    } catch (final SQLException e) {
+                        throw new IllegalArgumentException(e);
+                    }
+
+                    failNext.set(true);
+                }));
+
+        assertTrue(failure instanceof org.springframework.dao.DataAccessException, String.valueOf(failure));
+        assertEquals(1, countRows(), "Spring rolled the work back");
+        assertEquals(List.of(), newUnresolvedTransactions(), "the clean rollback report settled it: no confirmation needed");
+
+        assertEquals(1, cachedDao.cachedCount()); // read, and stored
+
+        // A row the caches don't hear of: a stored result keeps serving the count read after the rollback.
+        try (Statement statement = keeper.createStatement()) {
+            statement.executeUpdate("INSERT INTO cache_tx_item (id, name) VALUES (3, 'c')");
+        }
+
+        assertEquals(1, cachedDao.cachedCount(), "the caches serve and store the table's rows again");
     }
 
     private static int readOutside(final CachedItemDao cachedDao, final javax.sql.DataSource dataSource) {
@@ -689,7 +898,7 @@ class DaoCacheTransactionTest extends TestBase {
 
     // External review: an execution listener registered before the tracker that threw from afterCommit kept Spring from
     // calling the tracker's, so the transaction stayed pending, and the caches kept out of its table, for good. The tracker's
-    // synchronization reports the completion as well, and without synchronization, the connection holder does.
+    // synchronization reports completion too; without it the missing report remains blocked until explicitly confirmed.
     @ParameterizedTest(name = "synchronization={0}")
     @ValueSource(booleans = { false, true })
     void aListenerFailingBeforeTheTracker_stillReleasesTheCaches(final boolean synchronization) throws Exception {
@@ -723,6 +932,14 @@ class DaoCacheTransactionTest extends TestBase {
         assertEquals(2, countRows(), "committed");
         assertEquals(2, cachedDao.cachedCount());
         assertEquals(2, cachedDao.cachedCount());
+        if (!synchronization) {
+            verify(builtIn, times(0)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(),
+                    any());
+            final var unresolved = newUnresolvedTransactions();
+            assertEquals(1, unresolved.size());
+            assertTrue(SpringTransactionTracker.confirmSettled(unresolved.get(0).id())); // database commit verified above
+            assertEquals(2, cachedDao.cachedCount());
+        }
         verify(builtIn, times(1)).put(anyString(), any(), org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyLong(), any(), any(), any());
     }
 
