@@ -131,18 +131,16 @@ import com.landawn.abacus.util.stream.Stream;
  * methods that check whether it is closed (such as {@code setFetchSize}, {@code configureStatement},
  * {@code addBatchParameters} and {@code onClose}), throw {@link IllegalStateException} when called on another thread, or
  * once the transaction has completed and released its connection (for a transaction participating in a Spring-managed
- * one, whose connection Spring keeps: once the required tracker reports completion), closing it in that
+ * one, whose connection Spring keeps: once the tracker, captured synchronization, or JDBC holder reports completion,
+ * subject to the untracked conservative limits described in {@link SqlTransaction}), closing it in that
  * case unless {@code closeAfterExecution(false)} is set; {@code callAsync}/{@code runAsync} reject it, whatever the
  * executor. The deferred execution of a stream it returned is
  * checked only for the transaction's completion, so that a parallel stream's worker threads can run it while the owner
  * thread waits for the stream: don't hand such a stream to another thread.</p>
  *
- * <p>Spring-backed queries capture every matching transaction owner when created on the owning thread, even without an
- * explicit SqlTransaction and through Connection overloads. The tracker must be registered before the transaction begins.
- * Each execution checks those original identities, including deferred parallel workers: a completed owner's connection
- * may have been returned to a pool or reused, and callback work may otherwise be committed by Spring's cleanup. Scope-free
- * Spring queries also reject callAsync/runAsync; a parallel stream remains supported while its owner waits for consumption.
- * This does not authorize handing raw JDBC statements/connections to unrelated threads. See {@link JdbcUtil}.</p>
+ * <p>SQL execution also rejects a connection whose Spring transaction is known to be completing, including a statement
+ * prepared before completion and queries that return rows (which can still write). Use an independent transaction for
+ * completion-callback work. See {@link JdbcUtil} for the guard's tracking requirements.</p>
  *
  * <p>Remember: parameter/column index in {@code PreparedStatement/ResultSet} starts from 1, not 0.</p>
  *
@@ -291,51 +289,14 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      */
     volatile TransactionContext transaction;
 
-    // Capture transaction identities, not holders: a pooled connection/holder may later belong to another transaction.
-    // Scope-free Spring queries need this too: parallel stream workers have no owning Spring thread-local binding.
-    private final SpringTransactionOwners.Owner[] springOwners;
-
     /**
      * Creates a query that owns the supplied JDBC statement.
      *
      * @param stmt the statement to wrap; must not be {@code null}
      * @throws IllegalArgumentException if {@code stmt} is {@code null}
-     * @throws IllegalStateException if the connection belongs to an untracked Spring transaction
-     * @throws UncheckedSQLException if the statement's connection identity cannot be read
      */
     AbstractQuery(final Stmt stmt) throws IllegalArgumentException {
-        this(stmt, true);
-    }
-
-    /**
-     * Captures query ownership with an explicit construction-failure cleanup policy. Binding adapters borrow their
-     * statements, whereas query factories have just created statements that would leak if capture failed.
-     *
-     * @param stmt the statement to wrap; must not be {@code null}
-     * @param closeOnCaptureFailure whether a failed owner capture must close the statement
-     * @throws IllegalArgumentException if {@code stmt} is {@code null}
-     * @throws IllegalStateException if the connection belongs to an untracked Spring transaction
-     * @throws UncheckedSQLException if the statement's connection identity cannot be read
-     */
-    AbstractQuery(final Stmt stmt, final boolean closeOnCaptureFailure) throws IllegalArgumentException {
         this.stmt = N.checkArgNotNull(stmt, cs.stmt);
-
-        try {
-            springOwners = JdbcUtil.captureSpringQueryOwners(stmt);
-        } catch (final RuntimeException | Error failure) {
-            if (closeOnCaptureFailure) {
-                // No query/close handler can take ownership after a factory's capture failure. Borrowed binding
-                // statements must remain usable; the factory, Spring or caller still owns the connection either way.
-                try {
-                    stmt.close();
-                } catch (final Throwable closeFailure) {
-                    if (closeFailure != failure) {
-                        failure.addSuppressed(closeFailure);
-                    }
-                }
-            }
-            throw failure;
-        }
     }
 
     //        /**
@@ -6159,7 +6120,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
             iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
@@ -6233,7 +6194,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
             iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
@@ -6325,7 +6286,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
             iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
@@ -6382,7 +6343,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
             iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
@@ -7844,7 +7805,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
             iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
@@ -7904,7 +7865,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
             iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
@@ -7964,7 +7925,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
             iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
@@ -8027,7 +7988,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
             iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
@@ -8095,7 +8056,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         Throwable primaryFailure = null;
 
         try {
-            final boolean isResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isResultSet = JdbcUtil.execute(stmt);
 
             iter = JdbcUtil.iterateAllResultSets(stmt, isResultSet);
 
@@ -8920,7 +8881,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Creates a lazily-evaluated supplier that runs {@code JdbcUtil.execute(executionStatement())} when {@code get()} is
+     * Creates a lazily-evaluated supplier that runs {@code JdbcUtil.execute(stmt)} when {@code get()} is
      * called. The supplier checks that this query is still open before executing. A {@link SQLException}
      * is wrapped in {@link UncheckedSQLException}; an execution failure closes this query first if
      * automatic closing is enabled, with cleanup failures suppressed on the execution failure.
@@ -8932,7 +8893,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             assertNotClosedForDeferredExecution();
 
             try {
-                return JdbcUtil.execute(executionStatement());
+                return JdbcUtil.execute(stmt);
             } catch (final SQLException e) {
                 final UncheckedSQLException primaryFailure = new UncheckedSQLException(e);
                 closeAfterExecutionIfAllowed(primaryFailure);
@@ -9983,8 +9944,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if reading or setting the statement's fetch direction, or executing the query, fails
      */
     protected ResultSet executeQuery() throws SQLException {
-        final Stmt queryStatement = executionStatement();
-
         if (!isFetchDirectionSet) {
             // Capture the driver-default direction before mutating so closeStatement() can restore
             // it. Without this, a pooled statement is silently left at FETCH_FORWARD even when
@@ -9997,7 +9956,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
         }
 
-        return JdbcUtil.executeQuery(queryStatement);
+        return JdbcUtil.executeQuery(stmt);
     }
 
     /**
@@ -10254,7 +10213,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(isDefaultIdTester, cs.isDefaultIdTester);
 
         try {
-            JdbcUtil.executeUpdate(executionStatement());
+            JdbcUtil.executeUpdate(stmt);
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 final ID id = rs.next() ? autoGeneratedKeyExtractor.apply(rs) : null;
@@ -10312,7 +10271,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             // The hook runs inside executeUpdate, right after the statement executed: run after it returned, the hook was
             // skipped when clearing the parameters or the SQL log handler threw an Error, although the row was inserted.
-            JdbcUtil.executeUpdate(executionStatement(), afterExecution);
+            JdbcUtil.executeUpdate(stmt, afterExecution);
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
                 if (rs.next()) {
@@ -10473,7 +10432,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(isDefaultIdTester, cs.isDefaultIdTester);
 
         try {
-            JdbcUtil.executeBatch(executionStatement());
+            JdbcUtil.executeBatch(stmt);
 
             final List<ID> ids = new ArrayList<>();
 
@@ -10542,7 +10501,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             // The hook runs inside executeBatch, right after the batch executed: run after it returned, the hook was skipped
             // when clearing the batch or the SQL log handler threw an Error, although the rows were inserted.
-            JdbcUtil.executeBatch(executionStatement(), afterExecution);
+            JdbcUtil.executeBatch(stmt, afterExecution);
 
             final List<ID> ids = new ArrayList<>();
 
@@ -10596,7 +10555,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try {
-            return JdbcUtil.executeUpdate(executionStatement());
+            return JdbcUtil.executeUpdate(stmt);
         } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
             closeAfterExecutionIfAllowed(primaryFailure);
             throw primaryFailure;
@@ -10647,7 +10606,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(autoGeneratedKeyExtractor, cs.autoGeneratedKeyExtractor);
 
         try {
-            final int updatedRowCount = JdbcUtil.executeUpdate(executionStatement());
+            final int updatedRowCount = JdbcUtil.executeUpdate(stmt);
             final List<T> generatedKeysList = new ArrayList<>();
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -10706,7 +10665,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(autoGeneratedKeyExtractor, cs.autoGeneratedKeyExtractor);
 
         try {
-            final int updatedRowCount = JdbcUtil.executeUpdate(executionStatement());
+            final int updatedRowCount = JdbcUtil.executeUpdate(stmt);
             final List<T> generatedKeysList = new ArrayList<>();
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -10776,7 +10735,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try {
-            return JdbcUtil.executeBatch(executionStatement());
+            return JdbcUtil.executeBatch(stmt);
         } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
             closeAfterExecutionIfAllowed(primaryFailure);
             throw primaryFailure;
@@ -10826,7 +10785,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(autoGeneratedKeyExtractor, cs.autoGeneratedKeyExtractor);
 
         try {
-            final int[] updatedRowCount = JdbcUtil.executeBatch(executionStatement());
+            final int[] updatedRowCount = JdbcUtil.executeBatch(stmt);
             final List<T> generatedKeysList = new ArrayList<>();
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -10881,7 +10840,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(autoGeneratedKeyExtractor, cs.autoGeneratedKeyExtractor);
 
         try {
-            final int[] updatedRowCount = JdbcUtil.executeBatch(executionStatement());
+            final int[] updatedRowCount = JdbcUtil.executeBatch(stmt);
             final List<T> generatedKeysList = new ArrayList<>();
 
             try (ResultSet rs = stmt.getGeneratedKeys()) {
@@ -10931,7 +10890,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try {
-            return JdbcUtil.executeLargeUpdate(executionStatement());
+            return JdbcUtil.executeLargeUpdate(stmt);
         } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
             closeAfterExecutionIfAllowed(primaryFailure);
             throw primaryFailure;
@@ -10976,7 +10935,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try {
-            return JdbcUtil.executeLargeBatch(executionStatement());
+            return JdbcUtil.executeLargeBatch(stmt);
         } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
             closeAfterExecutionIfAllowed(primaryFailure);
             throw primaryFailure;
@@ -11025,7 +10984,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
 
         try {
-            return JdbcUtil.execute(executionStatement());
+            return JdbcUtil.execute(stmt);
         } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
             closeAfterExecutionIfAllowed(primaryFailure);
             throw primaryFailure;
@@ -11086,7 +11045,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(func, cs.func);
 
         try {
-            JdbcUtil.execute(executionStatement());
+            JdbcUtil.execute(stmt);
 
             return func.apply(stmt);
         } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
@@ -11133,7 +11092,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(func, cs.func);
 
         try {
-            final boolean isFirstResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isFirstResultSet = JdbcUtil.execute(stmt);
 
             return func.apply(stmt, isFirstResultSet);
         } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
@@ -11183,7 +11142,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(consumer, cs.consumer);
 
         try {
-            JdbcUtil.execute(executionStatement());
+            JdbcUtil.execute(stmt);
 
             consumer.accept(stmt);
         } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
@@ -11231,7 +11190,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(consumer, cs.consumer);
 
         try {
-            final boolean isFirstResultSet = JdbcUtil.execute(executionStatement());
+            final boolean isFirstResultSet = JdbcUtil.execute(stmt);
 
             consumer.accept(stmt, isFirstResultSet);
         } catch (final Throwable primaryFailure) { // NOSONAR - preserve execution failure over automatic-close cleanup
@@ -11920,15 +11879,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
     }
 
     /**
-     * Returns the statement only while its captured Spring owners still allow execution. Subclass executors must use
-     * this accessor too: the statement-level check cannot find the original owner on a worker or after Spring cleanup.
-     */
-    final Stmt executionStatement() {
-        JdbcUtil.assertSpringOwnersAllowed(springOwners);
-        return stmt;
-    }
-
-    /**
      * As {@link #assertNotClosed()}, for the deferred execution of a lazy result (a {@code Stream}) that an execution method
      * returned after checking this query on the calling thread: a query prepared in a transaction is only checked to run
      * before the transaction completes. A parallel stream starts the execution on one of its worker threads while the
@@ -11941,7 +11891,6 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
             throw new IllegalStateException("This " + ClassUtil.getSimpleClassName(getClass()) + " has already been closed");
         }
 
-        JdbcUtil.assertSpringOwnersAllowed(springOwners);
         final TransactionContext tran = transaction;
 
         if (tran != null) {
@@ -11954,15 +11903,15 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Rejects running this query asynchronously if it was prepared in a transaction (see {@link #transaction}): its connection
      * is used only on the transaction's thread. The query is closed first, as on a failed submission.
      *
-     * @throws IllegalStateException if this query was prepared in a local or Spring-managed transaction
+     * @throws IllegalStateException if this query was prepared in a transaction
      */
     private void assertNotPreparedInTransaction() throws IllegalStateException {
         final TransactionContext tran = transaction;
 
-        if (tran != null || springOwners != null) {
-            final IllegalStateException failure = new IllegalStateException("This " + ClassUtil.getSimpleClassName(getClass()) + " was prepared in "
-                    + (tran == null ? "a Spring-managed transaction" : "transaction(id=" + tran.id() + ")")
-                    + " on its connection, which is used only on the transaction's thread: it can't run asynchronously");
+        if (tran != null) {
+            final IllegalStateException failure = new IllegalStateException(
+                    "This " + ClassUtil.getSimpleClassName(getClass()) + " was prepared in transaction(id=" + tran.id()
+                            + ") on its connection, which is used only on the transaction's thread:" + " it can't run asynchronously");
             closeAfterFailedAsyncSubmission(failure);
             throw failure;
         }

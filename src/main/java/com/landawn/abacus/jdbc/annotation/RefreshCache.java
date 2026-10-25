@@ -54,9 +54,7 @@ import com.landawn.abacus.annotation.Beta;
  *
  * <p>Writes from Spring completion callbacks need an independent transaction, for example {@code REQUIRES_NEW} or an
  * explicit {@code JdbcUtil.beginTransaction} scope. SQL execution (including queries, which can write) refuses a Spring connection
- * whose owner is completing; its original completion report cannot settle the callback's additional work. Registration of
- * SpringTransactionTracker before every manager's transactions begin is required. Its owner identity is retained by queries
- * for deferred worker execution; independent callback transactions remain usable. See
+ * known to be completing; its original completion report cannot settle the callback's additional work. See
  * {@link CacheResult} for tracking requirements.</p>
  *
  * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when the

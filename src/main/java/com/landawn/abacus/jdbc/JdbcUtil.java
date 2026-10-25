@@ -160,20 +160,21 @@ import lombok.experimental.Accessors;
  * set and bound with independent cursors. Single occurrences and positional values remain streamed;
  * custom Type handlers keep their own semantics. The caller retains ownership of the original resource.</p>
  *
- * <p>Spring transaction participation requires {@link SpringTransactionTracker}, registered with every transaction manager
- * before transactions begin. Query creation, SQL execution and participating scopes refuse a matching transaction-owned
- * connection without its recorded owner. Synchronization-only bindings and independent connections remain usable.
- * Queries retain the matching owners when created, including the {@code Connection} overloads, so deferred parallel
- * execution checks the original transaction even on workers without Spring thread-local bindings. Create such queries on
- * the owning thread and keep it waiting while a parallel stream is consumed; do not hand raw statements or transaction
- * connections to unrelated threads. Direct application JDBC calls are outside this guard.</p>
+ * <p>SQL execution refuses a connection whose Spring transaction is known to be completing, with
+ * {@link IllegalStateException}, including statements prepared earlier.
+ * A callback's new work is not covered by the original commit/rollback report, and cleanup may commit it later. Queries
+ * are included because result-producing SQL can also write. Use an independent transaction for such work, for example
+ * {@link #beginTransaction(javax.sql.DataSource)} or DAO
+ * {@link Propagation#REQUIRES_NEW}. Register {@link SpringTransactionTracker} with each manager for exact owner detection,
+ * including JPA and disabled synchronization; without it, detection has the synchronization limits described by
+ * {@link #beginTransaction(javax.sql.DataSource)}. Direct JDBC execution by application code is outside this guard.</p>
  *
- * <p>SQL is refused once its owner's tracker receives {@code beforeCommit}/{@code beforeRollback}, including statements
- * prepared earlier and queries that return rows (which can write). Later execution-listener SQL is rejected even before
- * the physical commit/rollback. Synchronization beforeCommit/beforeCompletion and afterBegin work remain allowed.
- * Callback work needs an independent transaction, for example DAO {@link Propagation#REQUIRES_NEW},
- * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)} or {@link #beginTransaction(javax.sql.DataSource)}.
- * A Spring REQUIRES_NEW transaction must itself be tracked. Another manager's completion does not block an active owner.</p>
+ * <p>With a tracker, the boundary starts at its {@code beforeCommit}/{@code beforeRollback} execution-listener notification.
+ * SQL on that connection from a later execution listener is rejected even though the physical commit/rollback has not yet
+ * started. Put work for the original transaction in {@code TransactionSynchronization.beforeCommit}. This is not a blanket
+ * ban on listener SQL: {@code afterBegin} work and work on an independent transaction remain allowed. Without a tracker,
+ * another transaction completing on the thread can conservatively reject SQL on an otherwise active outer transaction's
+ * connection. Register the tracker with every transaction manager to distinguish those owners.</p>
  *
  * <p><b>Key Features:</b></p>
  * <ul>
@@ -1313,8 +1314,7 @@ public final class JdbcUtil {
      * Spring's transaction completion, which releases it. On the acquiring thread it is released to Spring even inside a
      * {@link #runIgnoringSpringTransaction(Throwables.Runnable)} scope, or work run outside the transaction on {@code ds}
      * ({@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}): it is Spring's connection, whatever the
-     * thread's setting at close time. If its original holder is suspended or has been unbound, release only that holder's
-     * request and leave the physical connection to its transaction, as for a participating scope.</p>
+     * thread's setting at close time.</p>
      *
      * @param conn The database Connection to release.
      * @param ds The DataSource from which the connection was obtained.
@@ -1323,18 +1323,12 @@ public final class JdbcUtil {
     static Runnable createCloseHandler(final Connection conn, final javax.sql.DataSource ds) {
         if (conn != null && ds != null && isSpringTransactionalUsed(ds) && isBoundBySpring(conn, ds)) {
             final Thread acquiringThread = Thread.currentThread();
-            final Object acquiringResource = boundSpringResource(ds);
 
             return () -> {
                 if (Thread.currentThread() == acquiringThread) {
                     // Not releaseConnection: that re-reads the thread's Spring setting at close time and, inside a
                     // runIgnoringSpringTransaction scope, closed the Spring transaction's connection mid-transaction.
-                    if (boundSpringResource(ds) == acquiringResource) {
-                        releaseSpringManagedConnection(conn, ds);
-                    } else {
-                        // DataSourceUtils would close the outer connection while REQUIRES_NEW has another holder bound.
-                        releaseUnboundParticipatingConnection(ds, acquiringResource);
-                    }
+                    releaseSpringManagedConnection(conn, ds);
                 } else if (logger.isDebugEnabled()) {
                     logger.debug("Not releasing the Spring-bound connection on thread '{}': it was obtained on thread '{}', and Spring's transaction"
                             + " completion releases it", Thread.currentThread().getName(), acquiringThread.getName());
@@ -3419,7 +3413,6 @@ public final class JdbcUtil {
      * @see PreparedQuery
      * @see #prepareQuery(Connection, String)
      * @see #executeQuery(javax.sql.DataSource, String, Object...)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -3479,7 +3472,6 @@ public final class JdbcUtil {
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see Statement#RETURN_GENERATED_KEYS
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -3541,7 +3533,6 @@ public final class JdbcUtil {
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see Connection#prepareStatement(String, int[])
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -3603,7 +3594,6 @@ public final class JdbcUtil {
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see Connection#prepareStatement(String, String[])
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -3660,7 +3650,6 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if acquiring a connection fails; connection acquisition follows
      *         {@link #getConnection(javax.sql.DataSource)}, including its Spring integration behavior.
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static PreparedQuery prepareQuery(final javax.sql.DataSource ds, final String sql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
@@ -3713,8 +3702,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #prepareQuery(javax.sql.DataSource, String)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -3746,8 +3733,6 @@ public final class JdbcUtil {
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -3784,8 +3769,6 @@ public final class JdbcUtil {
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code sql} or {@code generatedKeyColumnIndexes} is {@code null} or empty.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -3823,8 +3806,6 @@ public final class JdbcUtil {
      * @return A new {@link PreparedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code sql} or {@code generatedKeyColumnNames} is {@code null} or empty.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -3862,8 +3843,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} or {@code stmtCreator} is {@code null}, if {@code sql} is {@code null} or empty, or if
      *         {@code stmtCreator} returns {@code null}.
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static PreparedQuery prepareQuery(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -3907,7 +3886,6 @@ public final class JdbcUtil {
      *         for Spring integration behavior.
      * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
      * @see #prepareQueryForLargeResult(Connection, String)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     @Beta
     public static PreparedQuery prepareQueryForLargeResult(final javax.sql.DataSource ds, final String sql)
@@ -3943,8 +3921,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty.
      * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
      * @see #prepareQueryForLargeResult(javax.sql.DataSource, String)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     @Beta
     public static PreparedQuery prepareQueryForLargeResult(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
@@ -3981,7 +3957,6 @@ public final class JdbcUtil {
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see NamedQuery
      * @see #prepareNamedQuery(Connection, String)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -4045,7 +4020,6 @@ public final class JdbcUtil {
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -4111,7 +4085,6 @@ public final class JdbcUtil {
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -4177,7 +4150,6 @@ public final class JdbcUtil {
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -4239,7 +4211,6 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final String namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
@@ -4296,8 +4267,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code namedSql} is {@code null}, empty, or blank, mixes parameter styles,
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -4336,8 +4305,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code namedSql} is {@code null}, empty, or blank, mixes parameter styles,
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -4379,8 +4346,6 @@ public final class JdbcUtil {
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters; or {@code generatedKeyColumnIndexes} is
      *         {@code null} or empty.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -4423,8 +4388,6 @@ public final class JdbcUtil {
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters; or {@code generatedKeyColumnNames} is
      *         {@code null} or empty.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -4464,8 +4427,6 @@ public final class JdbcUtil {
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters; or {@code stmtCreator} is {@code null} or
      *         returns {@code null}.
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final String namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -4509,7 +4470,6 @@ public final class JdbcUtil {
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -4568,7 +4528,6 @@ public final class JdbcUtil {
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -4631,7 +4590,6 @@ public final class JdbcUtil {
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -4695,7 +4653,6 @@ public final class JdbcUtil {
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -4756,7 +4713,6 @@ public final class JdbcUtil {
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static NamedQuery prepareNamedQuery(final javax.sql.DataSource ds, final ParsedSql namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator)
@@ -4811,8 +4767,6 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -4849,8 +4803,6 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final boolean autoGeneratedKeys)
             throws IllegalArgumentException, SQLException {
@@ -4889,8 +4841,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, if {@code namedSql} contains positional parameters
      *         without names, or if {@code generatedKeyColumnIndexes} is {@code null} or empty.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final int[] generatedKeyColumnIndexes)
             throws IllegalArgumentException, SQLException {
@@ -4929,8 +4879,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, if {@code namedSql} contains positional parameters
      *         without names, or if {@code generatedKeyColumnNames} is {@code null} or empty.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql, final String[] generatedKeyColumnNames)
             throws IllegalArgumentException, SQLException {
@@ -4969,8 +4917,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn}, {@code namedSql}, or {@code stmtCreator} is {@code null}, if {@code namedSql} contains
      *         positional parameters without names, or if {@code stmtCreator} returns {@code null}.
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static NamedQuery prepareNamedQuery(final Connection conn, final ParsedSql namedSql,
             final Throwables.BiFunction<Connection, String, PreparedStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -5014,7 +4960,6 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if acquiring a connection fails; see {@link #getConnection(javax.sql.DataSource)}
      *         for Spring integration behavior.
      * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final String namedSql)
@@ -5053,7 +4998,6 @@ public final class JdbcUtil {
      * @throws UncheckedSQLException if acquiring a connection fails; see {@link #getConnection(javax.sql.DataSource)}
      *         for Spring integration behavior.
      * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final javax.sql.DataSource ds, final ParsedSql namedSql)
@@ -5089,8 +5033,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}, or {@code namedSql} is {@code null}, empty, or blank, mixes parameter styles,
      *         contains a malformed parameter placeholder, or contains positional (unnamed) parameters.
      * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final String namedSql) throws IllegalArgumentException, SQLException {
@@ -5112,8 +5054,6 @@ public final class JdbcUtil {
      * @return A new {@link NamedQuery} instance configured for large result sets.
      * @throws IllegalArgumentException if {@code conn} or {@code namedSql} is {@code null}, or if {@code namedSql} contains positional parameters without names.
      * @throws SQLException if preparing the statement or configuring its fetch direction or fetch size fails.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     @Beta
     public static NamedQuery prepareNamedQueryForLargeResult(final Connection conn, final ParsedSql namedSql) throws IllegalArgumentException, SQLException {
@@ -5152,7 +5092,6 @@ public final class JdbcUtil {
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql)
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -5230,7 +5169,6 @@ public final class JdbcUtil {
      * @see #prepareCallableQuery(javax.sql.DataSource, String)
      * @see #getConnection(javax.sql.DataSource)
      * @see #releaseConnection(Connection, javax.sql.DataSource)
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
      */
     public static CallableQuery prepareCallableQuery(final javax.sql.DataSource ds, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator)
@@ -5291,8 +5229,6 @@ public final class JdbcUtil {
      * @return A new {@link CallableQuery} instance.
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty.
      * @throws SQLException if the connection is closed or the driver cannot prepare the SQL with the requested statement options.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql) throws IllegalArgumentException, SQLException {
         N.checkArgNotNull(conn, cs.conn);
@@ -5332,8 +5268,6 @@ public final class JdbcUtil {
      * @throws IllegalArgumentException if {@code conn} or {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null} or returns
      *         {@code null}.
      * @throws SQLException if the supplied statement creator throws while preparing the requested statement.
-     * @throws IllegalStateException if the connection belongs to a Spring transaction without a registered tracker
-     * @throws UncheckedSQLException if reading the connection identity for the Spring query guard fails
      */
     public static CallableQuery prepareCallableQuery(final Connection conn, final String sql,
             final Throwables.BiFunction<Connection, String, CallableStatement, SQLException> stmtCreator) throws IllegalArgumentException, SQLException {
@@ -7152,9 +7086,7 @@ public final class JdbcUtil {
      * an independent connection remains usable (for example, DAO REQUIRES_NEW or a new SqlTransaction).
      * With a tracker this conservative boundary begins before the physical commit/rollback, at the tracker's execution
      * listener notification; later execution-listener SQL is rejected, while synchronization beforeCommit work is allowed.
-     * A matching transaction-owned connection without tracking is refused before execution. Synchronization priority cannot
-     * fix late registration: first use during beforeCompletion misses its callback snapshot. This guard uses current thread
-     * bindings; query objects additionally retain their owners for deferred worker execution.
+     * Without a tracker the thread's completing transaction can also block a different, still-active owner's connection.
      *
      * @param stmt the statement about to execute
      * @throws SQLException if a connection needed for the identity check cannot be read
@@ -7163,41 +7095,6 @@ public final class JdbcUtil {
     private static void assertSpringExecutionAllowed(final Statement stmt) throws SQLException {
         if (isInSpring) {
             SpringRollbackActions.assertExecutionAllowed(stmt);
-        }
-    }
-
-    /**
-     * Captures every transaction owner matching a query's physical connection on its creating thread. No completion check
-     * is made here: consumption may be deferred, and must check these same identities immediately before executing SQL.
-     * No Spring resources are retained by the returned owners. A raw statement first handed to another thread has no such
-     * captured binding; passing Spring connections between unrelated threads is not supported.
-     *
-     * @param stmt the query's statement
-     * @return the matching owners, or {@code null} for an independent connection
-     * @throws IllegalStateException if a matching transaction has no tracker
-     * @throws UncheckedSQLException if connection identity cannot be read
-     */
-    static SpringTransactionOwners.Owner[] captureSpringQueryOwners(final Statement stmt) {
-        if (!isInSpring) {
-            return null;
-        }
-
-        try {
-            return SpringRollbackActions.matchingOwners(stmt, true);
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
-    }
-
-    /** Checks captured identities without consulting a worker's unrelated Spring thread-local bindings. */
-    static void assertSpringOwnersAllowed(final SpringTransactionOwners.Owner[] owners) {
-        if (owners != null) {
-            for (final SpringTransactionOwners.Owner owner : owners) {
-                if (owner.isDeciding()) {
-                    throw new IllegalStateException("Cannot execute SQL through a Spring-managed transaction whose completion has started. "
-                            + "Run callback work in an independent transaction instead");
-                }
-            }
         }
     }
 
@@ -13560,18 +13457,30 @@ public final class JdbcUtil {
      * be identified) is refused with an {@code IllegalStateException} before any work runs. Nested scopes and
      * queries on {@code ds} on this thread join the participating transaction as usual. A connection Spring binds merely
      * for synchronization (for example in a {@code SUPPORTS} scope without a transaction) is not a transaction: the
-     * returned transaction then commits and rolls back that connection itself.</p>
+     * returned transaction then commits and rolls back that connection itself. Neither is a Spring transaction whose
+     * completion has started, in its {@code afterCommit} callbacks (recognized in a Spring transaction this library has taken a
+     * connection of, or begun a scope in, while its synchronizations were the ones Spring runs: not in one whose work all went
+     * through other code, such as JPA or a {@code JdbcTemplate}, nor in one this library used only inside another transaction
+     * manager's transaction begun in it, whose own synchronizations Spring runs meanwhile; a transaction begun from the
+     * {@code afterCommit} callbacks of such a transaction still joins it, so begin it there with
+     * {@code PROPAGATION_REQUIRES_NEW} or inside {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)},
+     * or register a {@link SpringTransactionTracker} with its transaction manager, which then reports the completion itself)
+     * or {@code afterCompletion} callbacks: it has committed or rolled back, and work joining it would be
+     * committed by Spring's cleanup (which restores auto-commit), whatever its outcome; the returned transaction is then a
+     * transaction of its own on a connection of its own, taken from {@code ds} outside Spring (the target of a
+     * {@code TransactionAwareDataSourceProxy}), as {@code PROPAGATION_REQUIRES_NEW} would begin it, which Spring advises for
+     * transactional work started from such callbacks. Spring exposes the completion of the innermost transaction on the
+     * thread only: in the completion callbacks of a transaction that another transaction manager began inside the one
+     * owning {@code ds}, that one counts as completing too, so the returned transaction does not join it either.</p>
      *
-     * <p>Participation requires {@link SpringTransactionTracker} registered with every transaction manager before its
-     * transactions begin; an untracked transaction-owned connection is refused. The captured owner decides whether a scope
-     * and its queries remain usable, regardless of synchronization ordering, disabled synchronization or another manager's
-     * inner transaction. A late first use during beforeCompletion cannot be protected by synchronization priority alone:
-     * it misses Spring's callback snapshot. The tracker observes the manager's decision independently.</p>
-     *
-     * <p>Once the owning tracker reports completion has started, this method opens an independent transaction on a connection
-     * taken outside Spring (the target of a TransactionAwareDataSourceProxy). Joining the completed connection could let
-     * cleanup commit callback work regardless of the original outcome. Spring PROPAGATION_REQUIRES_NEW and
-     * {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)} also provide independent callback work.</p>
+     * <p>Without a tracker, a participating scope captures the innermost transaction's synchronization. Once that
+     * synchronization starts completion, the participating transaction's outermost commit/rollback and prepared queries
+     * are refused, even after its callbacks return. It may have captured an inner transaction while its actual outer owner remains active: the
+     * library cannot safely distinguish that case from an already completed owner. A tracker is required to keep such a
+     * scope usable across the inner transaction's completion; it follows the actual owner instead of the captured
+     * synchronization. A callback registered later cannot release this conservative guard. Without synchronization and a
+     * tracker, only a JDBC holder's cleanup flag is available; completion callbacks themselves, and JPA completion, cannot
+     * be reliably detected.</p>
      *
      * <p>While a participating transaction is open, Spring may bind another transaction to {@code ds} (a
      * {@code REQUIRES_NEW} scope) or none (it suspends its transaction for a {@code NOT_SUPPORTED} scope):
@@ -14015,11 +13924,17 @@ public final class JdbcUtil {
     }
 
     /**
-     * Returns whether this synchronization has observed completion. This is an action-lifecycle signal only; it does not
-     * guard SQL or scope completion, which require the actual transaction owner recorded by SpringTransactionTracker.
+     * Returns whether the captured synchronization has started completion, permanently once observed. Readable on any
+     * thread. Without an owner record it may belong to an inner transaction rather than the one a scope participates in:
+     * refusing that scope thereafter is conservative; a tracker is required to distinguish the actual owner.
+     *
+     * <p>WHY no end marker: even LOWEST_PRECEDENCE ran before callbacks registered later at the same precedence. Clearing
+     * this flag there let a late scope commit report COMMITTED after Spring rolled its work back. A holder still marked
+     * active cannot disprove completion either: Spring clears it only during cleanup, after those callbacks. Only an owner
+     * record can safely allow an outer transaction to continue after a captured inner synchronization completes.</p>
      *
      * @param synchronization a synchronization from {@link #participationSynchronization()}, or {@code null}
-     * @return whether its completion callback has started
+     * @return {@code true} once completion has started; {@code false} for {@code null}
      */
     static boolean hasSpringSynchronizationCompletionStarted(final Object synchronization) {
         // Null checked first: the instanceof would load SpringRollbackActions, which needs Spring.
@@ -14243,7 +14158,7 @@ public final class JdbcUtil {
          * Not volatile, as the commit actions are not: Spring calls a synchronization's {@code afterCommit} and then its
          * {@code afterCompletion} in one call chain, on one thread ({@code AbstractPlatformTransactionManager.processCommit};
          * for a JTA transaction, whose {@code afterCompletion} may come from another thread, {@code JtaAfterCompletionSynchronization}
-         * calls both from it). Only the completion flags are read on other threads.
+         * calls both from it). Only {@link #completing} is read on other threads.
          */
         private Error deferredCommitActionError;
 
@@ -14402,28 +14317,30 @@ public final class JdbcUtil {
             return rollbackActions;
         }
 
-        /** Checks the actual connection only; an unrelated untracked holder cannot prohibit independent work. */
+        /** Checks tracked owners or the untracked thread-wide fallback; ordinary executions do not read or unwrap a connection. */
         static void assertExecutionAllowed(final Statement stmt) throws SQLException {
-            matchingOwners(stmt, false);
-        }
-
-        /**
-         * Either captures all matching owners, or validates execution against current bindings. Any matching untracked
-         * holder is refused: a synchronization registered during beforeCompletion misses Spring's callback snapshot, so
-         * its flags cannot prove that the original transaction is still active. Only the manager's tracker can do that.
-         */
-        private static SpringTransactionOwners.Owner[] matchingOwners(final Statement stmt, final boolean capture) throws SQLException {
             Connection statementConnection = null;
-            List<SpringTransactionOwners.Owner> owners = null;
+            Boolean untrackedCompletion = null;
 
             for (final Object resource : org.springframework.transaction.support.TransactionSynchronizationManager.getResourceMap().values()) {
-                if (!(resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder)
-                        || !SpringConnectionHolderAccess.isOwnedByTransaction(holder)) {
+                if (!(resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder)) {
                     continue;
                 }
 
-                SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(holder);
-                if (!capture && owner != null && !owner.isDeciding()) {
+                final SpringTransactionOwners.Owner owner = SpringTransactionOwners.of(holder);
+                final boolean completing;
+
+                if (owner != null) {
+                    completing = owner.isDeciding();
+                } else {
+                    if (untrackedCompletion == null) {
+                        untrackedCompletion = isSpringTransactionCompleting();
+                    }
+
+                    completing = untrackedCompletion;
+                }
+
+                if (!completing || !SpringConnectionHolderAccess.isOwnedByTransaction(holder)) {
                     continue;
                 }
 
@@ -14433,22 +14350,13 @@ public final class JdbcUtil {
 
                 if (statementConnection == underlyingConnection(holder.getConnection())) {
                     if (owner == null) {
-                        owner = SpringTransactionOwners.require(holder);
+                        throw new IllegalStateException("Cannot execute SQL on an untracked Spring connection while a transaction on this thread is completing. "
+                                + "Register SpringTransactionTracker with every transaction manager to distinguish an active outer owner");
                     }
-                    if (!capture) {
-                        throw new IllegalStateException("Cannot execute SQL through a Spring-managed transaction whose completion has started. "
-                                + "Run callback work in an independent transaction (REQUIRES_NEW or JdbcUtil.beginTransaction) instead");
-                    }
-                    if (owners == null) {
-                        owners = new ArrayList<>();
-                    }
-                    if (!owners.contains(owner)) {
-                        owners.add(owner);
-                    }
+                    throw new IllegalStateException("Cannot execute SQL through a Spring-managed transaction whose completion has started. "
+                            + "Run callback work in an independent transaction (REQUIRES_NEW or JdbcUtil.beginTransaction) instead");
                 }
             }
-
-            return owners == null ? null : owners.toArray(new SpringTransactionOwners.Owner[0]);
         }
 
         /** Unwraps Spring and JDBC wrappers so a statement returning the physical connection still matches its holder. */
@@ -14846,9 +14754,8 @@ public final class JdbcUtil {
         public void afterCommit() {
             completing = true;
 
-            // WHY deferred: this synchronization precedes lower-priority callbacks (equal-priority callbacks registered
-            // earlier still precede it), and Spring calls the afterCommit callbacks without
-            // catching, so an Error thrown here skipped the remaining afterCommit callbacks, the
+            // WHY deferred: this synchronization runs first (see getOrder), and Spring calls the afterCommit callbacks without
+            // catching, so an Error thrown here skipped the afterCommit callbacks of every other synchronization, the
             // application's own (such as @TransactionalEventListener(AFTER_COMMIT)) included, for a failure of a cache
             // invalidation. Thrown from afterCompletion instead, where Spring logs it.
             deferredCommitActionError = runCommitActions();

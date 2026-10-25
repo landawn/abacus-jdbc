@@ -233,7 +233,7 @@ class SpringTransactionParticipationTest extends TestBase {
     void required_onDataSourceWithoutATransaction_commitsItsOwnWhileATransactionRunsOnAnotherDataSource(final boolean logging) {
         final ItemDaoBase<?> daoA = logging ? loggingItemDaoAutoCommitOff : itemDaoAutoCommitOff;
 
-        new TransactionTemplate(SpringTestTransactions.manager(dataSourceB)).executeWithoutResult(status -> {
+        new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(status -> {
             final Connection boundA = DataSourceUtils.getConnection(autoCommitOffA);
 
             try {
@@ -270,11 +270,7 @@ class SpringTransactionParticipationTest extends TestBase {
             connection.setAutoCommit(false);
             TransactionSynchronizationManager.initSynchronization();
             TransactionSynchronizationManager.setActualTransactionActive(true);
-            final ConnectionHolder fixtureHolder = holderKind.holder(connection);
-            TransactionSynchronizationManager.bindResource(dataSourceA, fixtureHolder);
-            if (holderKind.joins && holderKind != HolderKind.JPA_CONNECTION_HANDLE) {
-                SpringTransactionOwners.began(new Object(), fixtureHolder, () -> false, "fixture");
-            }
+            TransactionSynchronizationManager.bindResource(dataSourceA, holderKind.holder(connection));
 
             try {
                 assertEquals(holderKind.joins, JdbcUtil.isInTransaction(dataSourceA));
@@ -686,7 +682,7 @@ class SpringTransactionParticipationTest extends TestBase {
             }
         });
 
-        new TransactionTemplate(SpringTestTransactions.manager(dataSourceB)).executeWithoutResult(status -> {
+        new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(status -> {
             final Connection boundA = DataSourceUtils.getConnection(dataSourceA);
 
             try {
@@ -786,7 +782,7 @@ class SpringTransactionParticipationTest extends TestBase {
     @MethodSource("synchronizedSpringScopes")
     void outsideOfATransactionOfItsOwn_whileSpringSynchronizes_commitsOnItsOwn(final String springScope, final boolean call) {
         final TransactionTemplate template = "SUPPORTS".equals(springScope) ? supportsTemplate(dataSourceA)
-                : new TransactionTemplate(SpringTestTransactions.manager(dataSourceB));
+                : new TransactionTemplate(new DataSourceTransactionManager(dataSourceB));
 
         template.executeWithoutResult(status -> {
             final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
@@ -854,7 +850,7 @@ class SpringTransactionParticipationTest extends TestBase {
             return insertItem(dataSourceB, "b");
         };
 
-        assertThrows(IllegalStateException.class, () -> new TransactionTemplate(SpringTestTransactions.manager(dataSourceB)).executeWithoutResult(status -> {
+        assertThrows(IllegalStateException.class, () -> new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(status -> {
             try {
                 switch (route) {
                     case "callOutsideTransaction" -> JdbcUtil.callOutsideTransaction(dataSourceA, work::get);
@@ -899,7 +895,7 @@ class SpringTransactionParticipationTest extends TestBase {
             try {
                 insertItem(dataSourceA, "outer");
 
-                final TransactionTemplate inner = new TransactionTemplate(SpringTestTransactions.manager(dataSourceA));
+                final TransactionTemplate inner = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
                 inner.setPropagationBehavior(propagation);
                 inner.executeWithoutResult(innerStatus -> {
                     assertNull(TransactionContext.getTransaction(dataSourceA, SqlTransaction.CreatedBy.JDBC_UTIL), "the participating transaction is hidden");
@@ -971,16 +967,6 @@ class SpringTransactionParticipationTest extends TestBase {
         assertEquals(fails ? List.of() : List.of("callback"), itemNames());
     }
 
-    private void runParticipatingCallbackWork() {
-        try (SqlTransaction scope = JdbcUtil.beginTransaction(dataSourceA)) {
-            assertTrue(JdbcUtil.isInTransaction(dataSourceA));
-            insertItem(dataSourceA, "callback");
-            scope.commit();
-        } catch (final SQLException e) {
-            throw new IllegalStateException(e);
-        }
-    }
-
     private void runCallbackWork(final boolean fails) {
         assertFalse(JdbcUtil.isInTransaction(dataSourceA), "the Spring transaction is completing");
 
@@ -999,8 +985,11 @@ class SpringTransactionParticipationTest extends TestBase {
         }
     }
 
-    // A callback on B must not commit A's connection independently. The tracked active owner A remains the owner of
-    // callback work on its data source, and rolling A back rolls back both its original and callback writes.
+    // Round 14 review: Spring exposes the completion of the innermost transaction on the thread only. In the completion callbacks
+    // of a transaction that another transaction manager began inside the Spring transaction owning data source A, that one
+    // counted as completing too, and a transaction begun there took Spring's connection of A and committed it, with the work the
+    // enclosing transaction had done so far, which then could not roll back. Such a transaction runs on a connection of its own
+    // now, as REQUIRES_NEW would.
     @ParameterizedTest(name = "afterCommit={0}")
     @ValueSource(booleans = { false, true })
     void workBegunFromTheCompletionCallbacksOfAnInnerTransactionOfAnotherManager_leavesTheEnclosingOneAlone(final boolean afterCommit) {
@@ -1011,7 +1000,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 throw new IllegalArgumentException(e);
             }
 
-            new TransactionTemplate(SpringTestTransactions.manager(dataSourceB)).executeWithoutResult(innerStatus -> {
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(innerStatus -> {
                 if (afterCommit) {
                     // Participating in the transaction of A registers this library's synchronization with the inner transaction.
                     JdbcUtil.beginTransaction(dataSourceA).commit();
@@ -1021,14 +1010,14 @@ class SpringTransactionParticipationTest extends TestBase {
                     @Override
                     public void afterCommit() {
                         if (afterCommit) {
-                            runParticipatingCallbackWork();
+                            runCallbackWork(false);
                         }
                     }
 
                     @Override
                     public void afterCompletion(final int completionStatus) {
                         if (!afterCommit) {
-                            runParticipatingCallbackWork();
+                            runCallbackWork(false);
                         }
                     }
                 });
@@ -1037,7 +1026,7 @@ class SpringTransactionParticipationTest extends TestBase {
             throw new IllegalStateException("the outer Spring transaction rolls back");
         }));
 
-        assertEquals(List.of(), itemNames(), "the callback joined active A and rolled back with it");
+        assertEquals(List.of("callback"), itemNames(), "the outer work rolled back; the callback's committed on its own");
     }
 
     // Round 15 review: the afterCommit callbacks of a Spring transaction were recognized only once this library had begun a scope
@@ -1076,7 +1065,7 @@ class SpringTransactionParticipationTest extends TestBase {
         transactionTemplate().executeWithoutResult(status -> {
             try {
                 if (firstSeenInAnInnerTransaction) {
-                    new TransactionTemplate(SpringTestTransactions.manager(dataSourceB)).executeWithoutResult(inner -> {
+                    new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
                         try {
                             assertEquals(0, JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").queryForInt().orElseThrow());
                         } catch (final SQLException e) {
@@ -1101,11 +1090,13 @@ class SpringTransactionParticipationTest extends TestBase {
         assertEquals(List.of("work"), itemNames(), "the callback's work rolled back");
     }
 
-    // B's afterCommit does not complete owner A, regardless of where A's connection was first used by this library.
-    // Callback scopes on A still participate and their writes roll back with A.
+    // As above, for the afterCommit callbacks of the inner transaction, which count as the completion of the transaction owning
+    // data source A (Spring exposes the innermost transaction only): a transaction begun there is one of its own, also when its
+    // connection was first taken in the outer transaction.
     @ParameterizedTest(name = "firstSeenInTheOuterTransaction={0}")
     @ValueSource(booleans = { false, true })
-    void aTransactionBegunInAnInnerTransactionsAfterCommit_stillJoinsItsActiveOuterOwner(final boolean firstSeenInTheOuterTransaction) {
+    void aTransactionBegunInTheAfterCommitCallbacksOfAnInnerTransaction_isOneOfItsOwn_whereverTheConnectionWasFirstTaken(
+            final boolean firstSeenInTheOuterTransaction) {
         transactionTemplate().executeWithoutResult(outer -> {
             try {
                 if (firstSeenInTheOuterTransaction) {
@@ -1115,7 +1106,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 throw new IllegalArgumentException(e);
             }
 
-            new TransactionTemplate(SpringTestTransactions.manager(dataSourceB)).executeWithoutResult(inner -> {
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
                 try {
                     assertNotNull(JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item").queryForInt());
                 } catch (final SQLException e) {
@@ -1125,7 +1116,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
                     @Override
                     public void afterCommit() {
-                        runParticipatingCallbackWork(); // commits
+                        runCallbackWork(false); // commits
                     }
                 });
             });
@@ -1133,7 +1124,7 @@ class SpringTransactionParticipationTest extends TestBase {
             outer.setRollbackOnly();
         });
 
-        assertEquals(List.of(), itemNames(), "the callback joined active A and rolled back with it");
+        assertEquals(List.of("callback"), itemNames(), "committed on its own, though the outer transaction rolled back");
     }
 
     // Round 16 review: the Error of a rollback action that Spring's transaction synchronization ran once a participating rollback
@@ -1298,16 +1289,18 @@ class SpringTransactionParticipationTest extends TestBase {
         }
     }
 
-    // A scope on A can register its action synchronization with B. Mandatory owner tracking keeps both the old query
-    // and a scope left open on A usable after B completes, until A itself decides its outcome.
+    // Without owner tracking a scope on A can capture B's synchronization. Once B completes, the old scope is conservatively
+    // refused: clearing its observation from an end marker also let scopes on rolled-back owners claim COMMITTED. A fresh
+    // scope on A after B returns can still run; the tracked test below verifies that the original scope remains usable too.
     @ParameterizedTest(name = "innerRollsBack={0}")
     @ValueSource(booleans = { false, true })
-    void aTrackedScopeRemainsUsableAfterAnotherManagersCompletion(final boolean innerRollsBack) throws SQLException {
+    void anUntrackedScopeCapturingAnotherManagersCompletionCannotClaimSuccess(final boolean innerRollsBack)
+            throws SQLException {
         final PreparedQuery[] query = new PreparedQuery[1];
         final SqlTransaction[] leftOpen = new SqlTransaction[1];
 
         transactionTemplate().executeWithoutResult(outer -> {
-            new TransactionTemplate(SpringTestTransactions.manager(dataSourceB)).executeWithoutResult(inner -> {
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
                 final SqlTransaction committed = JdbcUtil.beginTransaction(dataSourceA); // participates in the outer transaction
 
                 try {
@@ -1328,9 +1321,10 @@ class SpringTransactionParticipationTest extends TestBase {
             });
 
             try {
-                assertEquals(1, query[0].queryForInt().orElseThrow());
-                leftOpen[0].commit();
-                assertEquals(SqlTransaction.Status.COMMITTED, leftOpen[0].status());
+                assertThrows(IllegalStateException.class, () -> query[0].queryForInt());
+                final IllegalStateException rejected = assertThrows(IllegalStateException.class, leftOpen[0]::commit);
+                assertTrue(rejected.getMessage().contains("SpringTransactionTracker"));
+                assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
                 try (SqlTransaction fresh = JdbcUtil.beginTransaction(dataSourceA)) {
                     insertItem(dataSourceA, "left open");
                     fresh.commit();
@@ -1350,15 +1344,20 @@ class SpringTransactionParticipationTest extends TestBase {
         }
     }
 
-    // A has no library action synchronization if its only use was inside B. Its required tracker still identifies A's
-    // own afterCommit, so a scope begun there uses an independent connection and can roll its callback work back.
+    // Round 17 review, a documented limit (see JdbcUtil.beginTransaction): Spring exposes the synchronizations of the innermost
+    // transaction on the thread only, so a transaction this library used only inside another transaction manager's transaction
+    // begun in it has none of this library's: its afterCommit callbacks are not recognized as its completion, a transaction
+    // begun there joins it, and Spring's cleanup commits that work although it was rolled back. No Spring API reaches the
+    // suspended synchronizations of the enclosing transaction. Pinned, so that a change is noticed (and the docs updated).
+    // External review (owner tracking): with a SpringTransactionTracker registered with the transaction manager, the owner reports
+    // its completion itself, so a transaction begun there is one of its own, which rolls back.
     @ParameterizedTest(name = "tracked={0}")
-    @ValueSource(booleans = { true })
-    void aTransactionUsedOnlyInsideAnotherManagersTransaction_stillRecognizesItsOwnCompletion(final boolean tracked) {
+    @ValueSource(booleans = { false, true })
+    void aTransactionUsedOnlyInsideAnotherManagersTransaction_isNotRecognizedAsCompletingInItsAfterCommitCallbacks(final boolean tracked) {
         final Boolean[] participated = new Boolean[1];
 
         template(tracked).executeWithoutResult(outer -> {
-            new TransactionTemplate(SpringTestTransactions.manager(dataSourceB)).executeWithoutResult(inner -> {
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
                 final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA); // participates in the outer transaction
 
                 try {
@@ -1400,7 +1399,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // A callback registered in afterCommit ran after the old end marker and let an untracked scope report COMMITTED.
     // Completion observations are now permanent, so neither queries nor scope commits regain access in a later callback.
     @ParameterizedTest(name = "tracked={0}")
-    @ValueSource(booleans = { true })
+    @ValueSource(booleans = { false, true })
     void aLateCompletionCallbackCannotExecuteSqlOrCommitAParticipatingScope(final boolean tracked) throws SQLException {
         final PreparedQuery[] query = new PreparedQuery[1];
         final SqlTransaction[] leftOpen = new SqlTransaction[1];
@@ -1590,7 +1589,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // A prepared query must still reject a completed participating transaction while the application retains the scope.
     @Test
     void aQueryKeptAfterItsTransactionCompleted_isStillRefused() throws Exception {
-        final DataSourceTransactionManager manager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager manager = new DataSourceTransactionManager(dataSourceA);
         final PreparedQuery[] query = new PreparedQuery[1];
         new TransactionTemplate(manager).executeWithoutResult(status -> {
             try (SqlTransaction scope = JdbcUtil.beginTransaction(dataSourceA)) {
@@ -1748,7 +1747,7 @@ class SpringTransactionParticipationTest extends TestBase {
         final PreparedQuery[] query = new PreparedQuery[1];
 
         template(true).executeWithoutResult(outer -> {
-            new TransactionTemplate(SpringTestTransactions.manager(dataSourceB)).executeWithoutResult(inner -> {
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB)).executeWithoutResult(inner -> {
                 final SqlTransaction committed = JdbcUtil.beginTransaction(dataSourceA);
 
                 try {
@@ -1902,7 +1901,7 @@ class SpringTransactionParticipationTest extends TestBase {
             final SqlTransaction hidden = JdbcUtil.beginTransaction(dataSourceA);
 
             try {
-                final TransactionTemplate requiresNew = new TransactionTemplate(SpringTestTransactions.manager(dataSourceA));
+                final TransactionTemplate requiresNew = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
                 requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
                 requiresNew.executeWithoutResult(inner -> {
                     final SqlTransaction hiding = JdbcUtil.beginTransaction(dataSourceA); // participates in the inner transaction
@@ -1935,7 +1934,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // only P, completed, and H was never found again: later work in H's Spring transaction began a transaction of its own.
     @Test
     void aCallOutsideTransactionNestedInAnotherContextsOne_keepsTheTransactionsHiddenBelow() {
-        final TransactionTemplate requiresNew = new TransactionTemplate(SpringTestTransactions.manager(dataSourceA));
+        final TransactionTemplate requiresNew = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
         requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
 
         transactionTemplate().executeWithoutResult(outer -> {
@@ -2114,7 +2113,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 }
             });
 
-            new TransactionTemplate(SpringTestTransactions.manager(dataSourceB))
+            new TransactionTemplate(new DataSourceTransactionManager(dataSourceB))
                     .executeWithoutResult(inner -> JdbcUtil.runAfterCommit(dataSourceA, null, () -> events.add("action of the enclosing data source")));
         });
 
@@ -2240,7 +2239,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 throw new IllegalArgumentException(e);
             }
 
-            final TransactionTemplate inner = new TransactionTemplate(SpringTestTransactions.manager(dataSourceA));
+            final TransactionTemplate inner = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
             inner.setPropagationBehavior(propagation);
             inner.executeWithoutResult(innerStatus -> {
                 if (commit) {
@@ -2416,7 +2415,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 JdbcUtil.runOutsideTransaction(dataSourceA, () -> {
                     assertFalse(JdbcUtil.isInTransaction(dataSourceA));
 
-                    final TransactionTemplate requiresNew = new TransactionTemplate(SpringTestTransactions.manager(dataSourceA));
+                    final TransactionTemplate requiresNew = new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
                     requiresNew.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
                     requiresNew.executeWithoutResult(innerStatus -> {
                         assertTrue(JdbcUtil.isInTransaction(dataSourceA), "the Spring transaction begun inside is used");
@@ -2715,17 +2714,17 @@ class SpringTransactionParticipationTest extends TestBase {
         }
     }
 
-    // Scope-free Spring queries now reject asynchronous submission, too. Rejection must close only the query's resources,
-    // leaving the original transaction connection usable for subsequent owner-thread work.
+    // A query run by callAsync on a Spring-bound connection was closed on the executor thread, where Spring finds no binding:
+    // DataSourceUtils closed Spring's connection in the middle of its transaction.
     @Test
-    void callAsync_inSpringTransaction_isRejectedAndLeavesSpringsConnectionToTheTransaction() {
+    void callAsync_inSpringTransaction_leavesSpringsConnectionToTheTransaction() {
         transactionTemplate().executeWithoutResult(status -> {
             final Connection spring = DataSourceUtils.getConnection(dataSourceA);
 
             try {
                 insertItem(dataSourceA, "before");
                 final PreparedQuery query = JdbcUtil.prepareQuery(dataSourceA, "SELECT COUNT(*) FROM spring_item");
-                assertThrows(IllegalStateException.class, () -> query.callAsync(q -> q.queryForInt().orElseThrow()));
+                assertEquals(1, query.callAsync(q -> q.queryForInt().orElseThrow()).get());
                 assertFalse(spring.isClosed());
                 insertItem(dataSourceA, "after");
             } catch (final Exception e) {
@@ -2774,7 +2773,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // right when the nested transaction rolls back; the enclosing transaction's insert keeps its ID.
     @Test
     void nestedRollback_inSpringTransaction_putsBackOnlyTheIdsOfTheNestedInserts() {
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
         final Item outer = item(null, "outer");
         final Item nested = item(null, "nested");
         final Item nestedByQuery = item(null, "nq");
@@ -2816,7 +2815,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // enclosing transaction.
     @Test
     void nestedCommit_inSpringTransactionThatRollsBack_putsBackTheIdsOfBoth() {
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
         final Item outer = item(null, "outer");
         final Item nested = item(null, "nested");
 
@@ -2849,7 +2848,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // insert of the enclosing transaction, and a second nested transaction that commits, keep their IDs.
     @Test
     void nestedRollback_withTheSynchronizationRegisteredInsideTheNestedTransaction_putsBackItsIds() {
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
         final Item nested = item(null, "nested");
         final Item outer = item(null, "outer");
         final Item secondNested = item(null, "nested2");
@@ -2892,7 +2891,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // transaction and the enclosing one commit theirs.
     @Test
     void nestedRollback_insideANestedTransaction_putsBackOnlyTheInnerIds() {
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
         final Item outer = item(null, "outer");
         final Item nested = item(null, "nested");
         final Item inner = item(null, "inner");
@@ -2975,7 +2974,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // to the savepoint first); left unhandled, it rolls back the enclosing transaction too: no row remains and no ID is kept.
     @Test
     void participatingRollback_insideANestedTransaction_marksTheWholeSpringTransactionRollbackOnly() {
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
         final Item outer = item(null, "outer");
         final Item nested = item(null, "nested");
         final Item inside = item(null, "inside");
@@ -3026,7 +3025,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // enclosing transaction commits its own row and its insert keeps its ID; the nested inserts' IDs stay put back.
     @Test
     void participatingRollback_insideANestedTransaction_letsTheEnclosingTransactionCommitAfterTheNestedFailureIsHandled() {
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
         final Item outer = item(null, "outer");
         final Item nested = item(null, "nested");
         final Item inside = item(null, "inside");
@@ -3074,7 +3073,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // the transaction's outcome.
     @Test
     void participatingRollback_insideANestedTransaction_keepsTheIdOfTheEnclosingInsertThatCommits() {
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
         final Item outer = item(null, "outer");
         final Item inside = item(null, "inside");
 
@@ -3116,7 +3115,7 @@ class SpringTransactionParticipationTest extends TestBase {
         reported.set(null, false);
 
         try {
-            final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+            final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
             final Item outer = item(null, "outer");
             final Item inside = item(null, "inside");
 
@@ -3157,7 +3156,7 @@ class SpringTransactionParticipationTest extends TestBase {
     @ParameterizedTest(name = "enclosingHandlesTheFailure={0}")
     @ValueSource(booleans = { false, true })
     void participatingRollback_insideANestedTransactionOfANestedTransaction_putsTheIdsBackStageByStage(final boolean enclosingHandlesTheFailure) {
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
         final Item outer = item(null, "outer");
         final Item nested = item(null, "nested");
         final Item inner = item(null, "inner");
@@ -3255,7 +3254,7 @@ class SpringTransactionParticipationTest extends TestBase {
                 });
             }
         };
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(nullSavepoints);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(nullSavepoints);
         final ItemDao itemDao = JdbcUtil.createDao(ItemDao.class, nullSavepoints);
         final Item outer = item(null, "outer");
         final Item nested = item(null, "nested");
@@ -3385,7 +3384,7 @@ class SpringTransactionParticipationTest extends TestBase {
     // commits.
     @Test
     void rollbackInProgrammaticTransactionInsideDeclarativeOne_leavesTheDeclarativeTransactionAlone() {
-        final TransactionTemplate templateB = new TransactionTemplate(SpringTestTransactions.manager(dataSourceB));
+        final TransactionTemplate templateB = new TransactionTemplate(new DataSourceTransactionManager(dataSourceB));
         final Runnable declarativeWork = () -> {
             try {
                 insertItem(dataSourceA, "a");
@@ -3407,7 +3406,7 @@ class SpringTransactionParticipationTest extends TestBase {
         };
 
         final org.springframework.aop.framework.ProxyFactory proxyFactory = new org.springframework.aop.framework.ProxyFactory(declarativeWork);
-        proxyFactory.addAdvice(new org.springframework.transaction.interceptor.TransactionInterceptor(SpringTestTransactions.manager(dataSourceA),
+        proxyFactory.addAdvice(new org.springframework.transaction.interceptor.TransactionInterceptor(new DataSourceTransactionManager(dataSourceA),
                 new org.springframework.transaction.interceptor.MatchAlwaysTransactionAttributeSource()));
         ((Runnable) proxyFactory.getProxy()).run();
 
@@ -3420,10 +3419,10 @@ class SpringTransactionParticipationTest extends TestBase {
     // commit guard used to be registered with B, failing B's commit as well), and the ID is put back right away.
     @Test
     void rollbackOnEnclosingTransactionsDataSource_rollsBackTheEnclosingTransactionOnly() {
-        final TransactionTemplate templateB = new TransactionTemplate(SpringTestTransactions.manager(dataSourceB));
+        final TransactionTemplate templateB = new TransactionTemplate(new DataSourceTransactionManager(dataSourceB));
         final Item item = item(null, "a2");
 
-        assertThrows(UnexpectedRollbackException.class, () -> new TransactionTemplate(SpringTestTransactions.manager(dataSourceA)).executeWithoutResult(a -> {
+        assertThrows(UnexpectedRollbackException.class, () -> new TransactionTemplate(new DataSourceTransactionManager(dataSourceA)).executeWithoutResult(a -> {
             try {
                 insertItem(dataSourceA, "a1");
             } catch (final SQLException e) {
@@ -3525,7 +3524,7 @@ class SpringTransactionParticipationTest extends TestBase {
     @ParameterizedTest(name = "innerRollsBack={0}")
     @ValueSource(booleans = { true, false })
     void insertOnEnclosingTransactionsDataSource_followsTheInnerTransactionsOutcome(final boolean innerRollsBack) {
-        final TransactionTemplate templateB = new TransactionTemplate(SpringTestTransactions.manager(dataSourceB));
+        final TransactionTemplate templateB = new TransactionTemplate(new DataSourceTransactionManager(dataSourceB));
         final Item item = item(null, "x");
 
         transactionTemplate().executeWithoutResult(a -> {
@@ -3575,9 +3574,6 @@ class SpringTransactionParticipationTest extends TestBase {
                     throw new IllegalStateException("cannot mark");
                 }
             });
-
-            // The fixture replaced the manager's holder; publish that same transaction for the replacement binding.
-            SpringTransactionOwners.began(status, TransactionSynchronizationManager.getResource(dataSourceA), status::isCompleted, "replacement holder");
 
             try {
                 final SqlTransaction tran = JdbcUtil.beginTransaction(dataSourceA);
@@ -3646,10 +3642,6 @@ class SpringTransactionParticipationTest extends TestBase {
                         throw new IllegalStateException("cannot mark");
                     }
                 });
-            }
-
-            if (!markable) {
-                SpringTransactionOwners.began(status, TransactionSynchronizationManager.getResource(dataSourceA), status::isCompleted, "replacement holder");
             }
 
             try {
@@ -3792,7 +3784,7 @@ class SpringTransactionParticipationTest extends TestBase {
     }
 
     private TransactionTemplate unsynchronizedTemplate() {
-        final DataSourceTransactionManager transactionManager = SpringTestTransactions.manager(dataSourceA);
+        final DataSourceTransactionManager transactionManager = new DataSourceTransactionManager(dataSourceA);
         transactionManager.setTransactionSynchronization(org.springframework.transaction.support.AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
         return new TransactionTemplate(transactionManager);
     }
@@ -3823,11 +3815,11 @@ class SpringTransactionParticipationTest extends TestBase {
     }
 
     private TransactionTemplate transactionTemplate() {
-        return new TransactionTemplate(SpringTestTransactions.manager(dataSourceA));
+        return new TransactionTemplate(new DataSourceTransactionManager(dataSourceA));
     }
 
     private static TransactionTemplate supportsTemplate(final DataSource dataSource) {
-        final TransactionTemplate template = new TransactionTemplate(SpringTestTransactions.manager(dataSource));
+        final TransactionTemplate template = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
         template.setPropagationBehavior(TransactionDefinition.PROPAGATION_SUPPORTS);
         return template;
     }

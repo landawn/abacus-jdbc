@@ -53,16 +53,4 @@ public final class PreparedQuery extends AbstractQuery<PreparedStatement, Prepar
     PreparedQuery(final PreparedStatement stmt) throws IllegalArgumentException {
         super(stmt);
     }
-
-    private PreparedQuery(final PreparedStatement stmt, final boolean closeOnCaptureFailure) {
-        super(stmt, closeOnCaptureFailure);
-    }
-
-    /**
-     * Creates an import/copy binding adapter. Those methods never close the adapter, and failed owner capture must not
-     * close the caller's statement either. Query factories must use the owning constructor instead.
-     */
-    static PreparedQuery forParameterBinding(final PreparedStatement stmt) {
-        return new PreparedQuery(stmt, false);
-    }
 }

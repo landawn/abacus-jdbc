@@ -144,9 +144,17 @@ final class TransactionContext {
     private final Object _springResource; //NOSONAR
 
     /**
+     * For a participating transaction, this library's synchronization registered with the synchronizations Spring ran when the
+     * transaction began (see {@link JdbcUtil#participationSynchronization()}): it records that the Spring transaction runs its
+     * completion callbacks; {@code null} otherwise, or if Spring's transaction synchronization was not active. An
+     * {@code Object}: no member of this class names a Spring type.
+     */
+    private final Object _springSynchronization; //NOSONAR
+
+    /**
      * For a participating transaction, the Spring transaction it participates in as its transaction manager reports it to a
-     * {@link SpringTransactionTracker} (see {@link #hasParticipatedTransactionCompleted()}); {@code null} only for a
-     * non-participating transaction. Tracking must be registered before the Spring transaction begins.
+     * {@link SpringTransactionTracker} (see {@link #hasParticipatedTransactionCompleted()}); {@code null} otherwise, or if no
+     * tracker is registered with that transaction manager.
      */
     private final SpringTransactionOwners.Owner _springOwner; //NOSONAR
 
@@ -226,10 +234,12 @@ final class TransactionContext {
         _springParticipating = springParticipating;
         _acquiredThroughSpring = springParticipating || JdbcUtil.isSpringTransactionalUsed(ds);
         _springResource = springParticipating ? JdbcUtil.boundSpringResource(ds) : null;
-        _springOwner = springParticipating ? SpringTransactionOwners.require(_springResource) : null;
+        // Registered now, so that it sees the Spring transaction's afterCommit callbacks (see JdbcUtil.isSpringTransactionCompleting)
+        // and its completion (see hasParticipatedTransactionCompleted).
+        _springSynchronization = springParticipating ? JdbcUtil.participationSynchronization() : null;
+        _springOwner = springParticipating ? SpringTransactionOwners.of(_springResource) : null;
 
         if (springParticipating) {
-            JdbcUtil.participationSynchronization(); // Undo/cache actions still follow Spring's outcome, not scope completion.
             // Spring owns the connection's state: it set auto-commit and isolation for its transaction and restores them when
             // the transaction completes. Changing them here would alter Spring's transaction, so they are neither read nor set.
             _isolationLevel = IsolationLevel.DEFAULT;
@@ -355,8 +365,8 @@ final class TransactionContext {
             // connection Spring had released by then (or, in its completion callbacks, in a transaction of the connection that
             // Spring's cleanup committed whatever its outcome). Not read from the thread's binding: any thread checks here.
             if (hasParticipatedTransactionCompleted()) {
-                throw new IllegalStateException(
-                        "Transaction(id=" + _timedId + "): a query prepared in it can't run any more because " + springCompletionReason());
+                throw new IllegalStateException("Transaction(id=" + _timedId + "): a query prepared in it can't run any more because "
+                        + springCompletionReason());
             }
 
             return;
@@ -1020,7 +1030,7 @@ final class TransactionContext {
             Error actionError = null;
 
             try {
-                if (_springOwner.isDeciding()) {
+                if (_springOwner != null ? _springOwner.isDeciding() : JdbcUtil.hasSpringSynchronizationCompletionStarted(_springSynchronization)) {
                     // WHY: the rollback of a scope left open into the completion callbacks of the Spring transaction (where Spring
                     // still binds its connection) marked it, which had no effect any more, and reported ROLLED_BACK, also after
                     // Spring had committed the work. Once the callbacks have run, a completed transaction's holder is no longer
@@ -1396,19 +1406,35 @@ final class TransactionContext {
     }
 
     /**
-     * Checks the exact owner captured at participation, also from a deferred query's worker thread. Synchronization order
-     * cannot identify completion reliably: registration during beforeCompletion misses its snapshot, and a worker cannot
-     * read the owner's Spring thread-local phase. Mandatory tracking publishes the owner's decision before callbacks run.
+     * Returns whether the Spring-managed transaction this one participates in is known to have decided the outcome of its
+     * work. As its transaction manager reports it to a {@link SpringTransactionTracker}, if one is registered with it: the
+     * manager is committing or rolling it back, runs its completion callbacks, or has completed it. Otherwise: it runs its
+     * completion callbacks or has done so, as recorded permanently by the synchronization captured when this transaction began
+     * (see {@link JdbcUtil#hasSpringSynchronizationCompletionStarted(Object)}, the innermost transaction on the thread then),
+     * or it has completed, as recorded by its connection holder
+     * (see {@link JdbcUtil#hasSpringTransactionCompleted(Object)}: a {@code DataSourceTransactionManager} or
+     * {@code JdbcTransactionManager} transaction only). Readable on any thread.
      *
-     * @return whether the owning transaction is deciding its outcome or has completed
+     * <p>Without a tracker, completion of an inner transaction can therefore reject this scope even while its actual outer
+     * owner remains active. Resetting that observation based on callback ordering allowed a scope on a rolled-back owner to
+     * claim COMMITTED. Register a tracker to distinguish the owners rather than infer one from a synchronization.</p>
+     *
+     * @return {@code true} if completion was observed for the owner or, without tracking, the captured synchronization
      */
     private boolean hasParticipatedTransactionCompleted() {
-        return _springOwner.isDeciding();
+        if (_springOwner != null) {
+            return _springOwner.isDeciding();
+        }
+
+        return JdbcUtil.hasSpringSynchronizationCompletionStarted(_springSynchronization) || JdbcUtil.hasSpringTransactionCompleted(_springResource);
     }
 
-    /** Describes the captured owner's completion, independent of another manager's synchronization on this thread. */
+    /** Explains the conservative untracked case without asserting that the actual owner is necessarily the completed one. */
     private String springCompletionReason() {
-        return "the owning Spring-managed transaction has completed or runs its completion callbacks";
+        return _springOwner == null && JdbcUtil.hasSpringSynchronizationCompletionStarted(_springSynchronization)
+                ? "a captured Spring synchronization has completed or runs its completion callbacks; without SpringTransactionTracker the owning transaction"
+                        + " cannot be distinguished from an inner transaction. Register a tracker with every transaction manager"
+                : "the owning Spring-managed transaction has completed or runs its completion callbacks";
     }
 
     /**

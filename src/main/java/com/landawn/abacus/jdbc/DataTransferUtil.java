@@ -77,11 +77,6 @@ import com.landawn.abacus.util.Throwables;
  * the source transaction for the driver before a large export or copy; these methods do not change transaction
  * ownership or commit caller work. A DataSource's default connection settings also apply to connections obtained here.</p>
  *
- * <p>Caller-supplied prepared statements remain caller-owned when an import or copy cannot create its parameter-binding
- * adapter, including a missing Spring transaction tracker or a connection-identity lookup failure. Adapters still
- * enforce the Spring ownership checks described in {@link JdbcUtil}; preserving the statement does not allow execution
- * through an untracked or completing transaction.</p>
- *
  * <p><b>Generated SQL:</b> Table-copy operations generate unquoted table and column names under a fixed build policy.
  * Identifier quoting is disabled: explicit delimiters, non-simple names, common SQL reserved names and bare expressions
  * such as {@code ROWNUM} and {@code CURRENT_PATH} are rejected to avoid copying expression results instead of stored values.
@@ -1355,7 +1350,7 @@ public final class DataTransferUtil {
     private static int importDatasetRows(final Dataset dataset, final Predicate<? super Object[]> filter, final PreparedStatement stmt, final int batchSize,
             final long batchIntervalInMillis, final Throwables.BiConsumer<? super PreparedQuery, ? super Object[], SQLException> parameterSetter,
             final int[] selectedColumnIndices) throws SQLException {
-        final PreparedQuery stmtForSetter = PreparedQuery.forParameterBinding(stmt);
+        final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
 
         final int columnCount = selectedColumnIndices == null ? dataset.columnNames().size() : selectedColumnIndices.length;
         final Object[] row = new Object[columnCount];
@@ -1629,7 +1624,7 @@ public final class DataTransferUtil {
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
 
-        final PreparedQuery stmtForSetter = PreparedQuery.forParameterBinding(stmt);
+        final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
         long result = 0;
         boolean hasExecutedBatch = false;
         boolean hasPendingBatch = false;
@@ -2184,7 +2179,7 @@ public final class DataTransferUtil {
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
 
-        final PreparedQuery stmtForSetter = PreparedQuery.forParameterBinding(stmt);
+        final PreparedQuery stmtForSetter = new PreparedQuery(stmt);
         final Function<String, String[]> headerParser = CsvUtil.getCurrentHeaderParser();
         final BiConsumer<String, String[]> lineParser = CsvUtil.getCurrentLineParser();
         final boolean isBufferedReader = IOUtil.isBufferedReader(reader);
@@ -4201,7 +4196,7 @@ public final class DataTransferUtil {
                 batchSize, batchIntervalInMillis);
         N.checkArgNotNull(parameterSetter, cs.parameterSetter);
 
-        final PreparedQuery preparedQueryForInsert = PreparedQuery.forParameterBinding(insertStmt);
+        final PreparedQuery preparedQueryForInsert = new PreparedQuery(insertStmt);
 
         boolean hasPendingBatch = false;
 
