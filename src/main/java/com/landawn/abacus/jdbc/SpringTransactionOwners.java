@@ -182,7 +182,7 @@ final class SpringTransactionOwners {
 
         /**
          * Whether the warning about the unresolved outcome has been logged. Volatile, read first without the lock: see
-         * {@link #isCompleted()}.
+         * {@link #needsWarning()}.
          */
         private volatile boolean warned; //NOSONAR
 
@@ -216,8 +216,9 @@ final class SpringTransactionOwners {
         /**
          * Returns whether the outcome of the transaction is being decided or has been: its transaction manager is committing
          * or rolling it back, runs its completion callbacks, or has completed it (also when no report of it came: Spring has
-         * ended its execution). Work that joins it from then on is no part of the outcome (the cleanup after the transaction
-         * commits whatever runs on its connection meanwhile).
+         * ended its execution). This is the library's conservative boundary: a later execution listener's beforeCommit
+         * work could still join the physical commit, but is deliberately refused. Synchronization beforeCommit work runs
+         * before this boundary and remains allowed. Work after the actual outcome can instead be committed by cleanup.
          *
          * <p>WHY the end of the execution as well: with no report at all (here, a listener before the tracker failed from both
          * {@code beforeCommit} and {@code afterRollback}, with synchronization disabled), a {@code SqlTransaction} scope left
@@ -236,20 +237,19 @@ final class SpringTransactionOwners {
          * restoring auto-commit failed (see the class description for every signal that was tried and why it fails). The
          * weak execution reference is used only to detect a missing report, never to release a cache block.
          *
-         * <p>Called for every cache read of a table the transaction wrote, while it is pending: it takes no lock unless the
-         * one-time warning about an unresolved outcome is due. WHY: it called a synchronized method on every such read, under
-         * the lock of the pending writes' map, so that the readers of the table contended for the owner's monitor.</p>
+         * <p>A pure volatile read: the pending-writes map calls this while holding its monitor. In particular, do not log
+         * here: even logging outside this owner's monitor still held the caller's map monitor and stalled other cache
+         * readers and writers. The caller emits any warning after releasing that monitor.</p>
          *
          * @return {@code true} if so
          */
         boolean isCompleted() {
-            final boolean done = completed;
+            return completed;
+        }
 
-            if (!done && !warned && isUnresolved()) {
-                warnIfUnresolved();
-            }
-
-            return done;
+        /** Returns whether a warning may be due, without taking a lock or invoking the logger. */
+        boolean needsWarning() {
+            return !warned && isUnresolved();
         }
 
         /**
@@ -345,7 +345,7 @@ final class SpringTransactionOwners {
          * Logs, once, that the transaction's outcome is unresolved, with the tables whose caching it keeps disabled. The
          * decision is taken under the lock, the logging outside it.
          */
-        private void warnIfUnresolved() {
+        void warnIfUnresolved() {
             final List<String> tablesWritten;
             final String failureDescription;
 

@@ -52,6 +52,11 @@ import com.landawn.abacus.annotation.Beta;
  * application, or one whose propagation leaves the transaction: {@code REQUIRES_NEW}, {@code NOT_SUPPORTED} or
  * {@code NEVER}).</p>
  *
+ * <p>Writes from Spring completion callbacks need an independent transaction, for example {@code REQUIRES_NEW} or an
+ * explicit {@code JdbcUtil.beginTransaction} scope. SQL execution (including queries, which can write) refuses a Spring connection
+ * known to be completing; its original completion report cannot settle the callback's additional work. See
+ * {@link CacheResult} for tracking requirements.</p>
+ *
  * <p><b>Filter semantics (type-level only):</b> each {@link #filter()} entry matches when the
  * method name starts with that entry (case-insensitive), or when the entry matches the full method name
  * as a regular expression. The filter is ignored entirely for method-level usage. The default value

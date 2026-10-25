@@ -39,23 +39,33 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  * transaction object exposes its JDBC connection holder); it needs Spring 6.1 or later. One instance can be registered with
  * any number of transaction managers: it keeps no state of its own.
  *
- * <p>Without it, this library tells the completion of the Spring transaction it participates in from Spring's transaction
- * synchronization, which is that of the innermost transaction on the thread, and, after it, from the transaction-active flag
- * of the connection holder, which only {@code DataSourceTransactionManager} and {@code JdbcTransactionManager} keep. That
- * misjudges these cases, which the tracker gets right:</p>
+ * <p>Without it, participating scopes retain completion observations from the synchronization captured when they began,
+ * and can also detect JDBC holder cleanup. The captured synchronization belongs to the innermost transaction, which need
+ * not own the scope's connection. SQL execution separately uses the current thread's completion state. These fallbacks
+ * have user-visible limits, rather than merely delayed detection:</p>
  * <ul>
  *   <li>Work joining a transaction from inside another transaction manager's transaction begun in it: the completion of
- *       that inner transaction is taken for the enclosing one's while its callbacks run, and the enclosing one's
- *       {@code afterCommit} callbacks are not recognized if this library used it only inside the inner one (see
- *       {@link JdbcUtil#beginTransaction(javax.sql.DataSource)}).</li>
- *   <li>A synchronization registered from another one's completion callbacks, which runs after this library's, sees the
- *       completion as over (see {@link SqlTransaction}).</li>
- *   <li>A JPA transaction: its completion is not recognized once its callbacks have run (a {@code SqlTransaction} left
- *       open past it commits without failing), and a write in it keeps the DAO result caches out of a table only until
+ *       that inner transaction permanently prevents the captured scope's outermost commit/rollback and prepared queries,
+ *       even while the enclosing transaction remains active. Clearing the observation from an end marker instead allowed
+ *       a late callback to report COMMITTED after rollback. A tracker is required to distinguish these owners.</li>
+ *   <li>While one transaction completes, SQL on an untracked, otherwise active transaction on another data source can be
+ *       rejected. After those callbacks return, fresh SQL on the active transaction can run again; a scope that captured
+ *       the completed synchronization remains refused as above. A tracked active owner stays usable in both cases.</li>
+ *   <li>The enclosing transaction's {@code afterCommit} callbacks are not recognized if this library used it only inside
+ *       an inner transaction, or its first use is already in afterCommit. With synchronization disabled there is no callback
+ *       observation at all. JPA holders expose no completion flag, so an untracked scope left open past such a transaction
+ *       can report a successful commit despite rollback. Register a tracker for these cases.</li>
+ *   <li>A write in an untracked JPA transaction keeps the DAO result caches out of a table only until
  *       Spring's synchronization reports the innermost transaction's commit (see
  *       {@link com.landawn.abacus.jdbc.annotation.CacheResult}).</li>
  *   <li>Another thread may read the holder's flag without seeing it change: the caches then stay out of a table longer.</li>
  * </ul>
+ *
+ * <p><b>Execution-listener SQL.</b> The tracker marks the owner as deciding in its {@code beforeCommit}/{@code beforeRollback}
+ * listener. SQL on that owner's connection from a later execution listener is deliberately rejected, even before the
+ * physical commit/rollback starts. Use {@code TransactionSynchronization.beforeCommit} for work intended for the original
+ * transaction. This does not prohibit {@code afterBegin} SQL, SQL on another tracked active owner, or work on an independent
+ * transaction from a completion callback (for example, DAO {@code REQUIRES_NEW} or {@link JdbcUtil#beginTransaction(javax.sql.DataSource)}).</p>
  *
  * <p><b>Registration requirements.</b> Register it <i>first</i>, before the other execution listeners of a transaction
  * manager: Spring calls them in order, and one that throws from {@code afterCommit} or {@code afterRollback} keeps Spring

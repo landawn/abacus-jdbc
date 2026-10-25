@@ -3,6 +3,7 @@ package com.landawn.abacus.jdbc;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -440,13 +441,11 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         assertNotNull(item.getId());
     }
 
-    // External review (owner tracking): a JPA transaction's connection holder records nothing of its completion, so the commit
-    // of a participating scope left open past it returned normally, with COMMITTED, although JPA had decided the outcome of
-    // its work without it (a documented limit). With a SpringTransactionTracker registered with the JpaTransactionManager, the
-    // transaction manager reports the completion: the commit fails, FAILED_COMMIT.
+    // A JPA holder records no completion, but a captured synchronization now keeps its completion observation permanently.
+    // A scope left open past that completion must fail with or without an exact owner record.
     @ParameterizedTest(name = "tracked={0}")
     @ValueSource(booleans = { false, true })
-    void theCommitOfAScopeLeftOpenPastAJpaTransaction_failsWithATracker(final boolean tracked) throws SQLException {
+    void theCommitOfAScopeLeftOpenPastASynchronizedJpaTransactionFails(final boolean tracked) throws SQLException {
         final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
 
         if (tracked) {
@@ -468,14 +467,9 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         assertTrue(jpa.entityTransaction.committed);
         assertEquals(1, count());
 
-        if (tracked) {
-            final IllegalStateException thrown = assertThrows(IllegalStateException.class, leftOpen[0]::commit);
-            assertTrue(thrown.getMessage().contains("has completed"), thrown.getMessage());
-            assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
-        } else {
-            leftOpen[0].commit(); // the documented limit without a tracker
-            assertEquals(SqlTransaction.Status.COMMITTED, leftOpen[0].status());
-        }
+        final IllegalStateException thrown = assertThrows(IllegalStateException.class, leftOpen[0]::commit);
+        assertTrue(thrown.getMessage().contains("has completed"), thrown.getMessage());
+        assertEquals(SqlTransaction.Status.FAILED_COMMIT, leftOpen[0].status());
     }
 
     // External review (owner tracking): a write in a JPA transaction kept the DAO result caches out of its table only until
@@ -1035,6 +1029,77 @@ class SpringJpaTransactionParticipationTest extends TestBase {
         });
 
         assertEquals(1, count());
+    }
+
+    // JPA holders have no JDBC transaction-active flag. Reject callback writes from the owner's report rather than waiting
+    // for holder cleanup, including when synchronization is disabled; an explicitly independent transaction stays usable.
+    @ParameterizedTest(name = "rollback={0}, synchronization={1}")
+    @org.junit.jupiter.params.provider.CsvSource({ "false,false", "false,true", "true,false", "true,true" })
+    void callbackWritesOnAJpaConnectionRequireAnIndependentTransaction(final boolean rollback, final boolean synchronization) throws Exception {
+        final JpaTransaction jpa = new JpaTransaction(dataSource, false, true);
+        final CachedItemDao dao = JdbcUtil.createDao(CachedItemDao.class, dataSource,
+                JdbcUtil.DaoCreationOptions.builder().cache(Jdbc.DaoCache.createByMap()).build());
+        SpringTransactionTracker.register(jpa.transactionManager);
+        if (!synchronization) {
+            jpa.transactionManager.setTransactionSynchronization(AbstractPlatformTransactionManager.SYNCHRONIZATION_NEVER);
+        }
+        final java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        try (java.util.concurrent.ExecutorService reader = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            final Runnable callback = () -> {
+                try {
+                    assertThrows(IllegalStateException.class, () -> dao.addItem("late"));
+                    try (SqlTransaction independent = JdbcUtil.beginTransaction(dataSource)) {
+                        // The provider has already restored auto-commit, but its completed connection is still Spring's.
+                        assertNotSame(jpa.connection, independent.connection());
+                        dao.addItem("new");
+                        independent.commit();
+                    }
+                    assertEquals(rollback ? 1 : 2, reader.submit(dao::cachedCount).get(10, java.util.concurrent.TimeUnit.SECONDS));
+                } catch (final Throwable ex) {
+                    failure.compareAndSet(null, ex);
+                }
+            };
+            jpa.transactionManager.addListener(new org.springframework.transaction.TransactionExecutionListener() {
+                @Override
+                public void afterCommit(final org.springframework.transaction.TransactionExecution transaction, final Throwable commitFailure) {
+                    if (!synchronization) {
+                        callback.run();
+                    }
+                }
+
+                @Override
+                public void afterRollback(final org.springframework.transaction.TransactionExecution transaction, final Throwable rollbackFailure) {
+                    if (!synchronization) {
+                        callback.run();
+                    }
+                }
+            });
+            new TransactionTemplate(jpa.transactionManager).executeWithoutResult(status -> {
+                try {
+                    dao.addItem("original");
+                } catch (final SQLException ex) {
+                    throw new IllegalStateException(ex);
+                }
+                if (synchronization) {
+                    TransactionSynchronizationManager.registerSynchronization(new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCompletion(final int outcome) {
+                            callback.run();
+                        }
+                    });
+                }
+                if (rollback) {
+                    status.setRollbackOnly();
+                }
+            });
+            if (failure.get() != null) {
+                throw new AssertionError("JPA completion callback failed", failure.get());
+            }
+            assertEquals(rollback ? 1 : 2, count());
+            assertEquals(rollback ? 1 : 2, reader.submit(dao::cachedCount).get(10, java.util.concurrent.TimeUnit.SECONDS));
+        } finally {
+            jpa.connection.close();
+        }
     }
 
     private int count() {
