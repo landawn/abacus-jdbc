@@ -30,9 +30,10 @@ import com.landawn.abacus.TestBase;
 // The completion records SpringTransactionTracker reports to, and the tracker's reports.
 class SpringTransactionOwnersTest extends TestBase {
 
-    // External review (tests): a failed commit or rollback leaves the outcome uncertain until Spring's cleanup has finished,
-    // but a clean completion reported for the same transaction wins, whichever is reported first: a commit failure that the
-    // transaction manager then rolled back cleanly left nothing pending on the connection.
+    // External review (tests): a failed commit or rollback leaves the outcome uncertain, also after Spring's cleanup has
+    // finished, until a clean completion report or a confirmed settlement; a clean completion reported for the same
+    // transaction wins, whichever is reported first: a commit failure that the transaction manager then rolled back cleanly
+    // left nothing pending on the connection.
     @ParameterizedTest(name = "failureReportedFirst={0}")
     @ValueSource(booleans = { true, false })
     void aCleanCompletion_winsOverAFailureReportedForTheSameTransaction(final boolean failureReportedFirst) {
@@ -44,7 +45,7 @@ class SpringTransactionOwnersTest extends TestBase {
         if (failureReportedFirst) {
             owner.uncertain();
             assertTrue(owner.isDeciding(), "the transaction manager has decided");
-            assertFalse(owner.isCompleted(), "uncertain until the cleanup has finished");
+            assertFalse(owner.isCompleted(), "uncertain until a clean completion report or a confirmed settlement");
             owner.completed();
         } else {
             owner.completed();
