@@ -59,9 +59,15 @@ import com.landawn.abacus.util.RegExUtil;
  * returned safely. Such a batch INSERT may return {@code void} or {@code List<ID>}; raw lists and incompatible
  * element types are rejected. The ID type is the one declared by a {@code CrudDao}; for a DAO that declares none
  * it is the entity's id property type ({@link com.landawn.abacus.util.EntityId EntityId} for a composite id).
- * An INSERT whose statement argument cannot be the DAO entity (an INSERT into another table, e.g. an audit row
- * from a {@code String}) keeps any return type and returns that table's generated key converted to it (a batch
+ * An INSERT whose statement argument cannot be the DAO entity (e.g. scalar arguments for the entity's table or an audit
+ * table) keeps any return type and returns the generated key converted to it (a batch
  * INSERT returns the keys as a {@code List}); when it returns {@code void}, no generated keys are requested.
+ * Generated-key column selection follows the resolved INSERT destination, including SQL fragments: an INSERT into the
+ * DAO's target table requests its ID columns by name even with scalar arguments; another destination requests the
+ * driver's generated keys without the entity's column names. For an INSERT without an entity argument into another
+ * table, the first generated-key column is read independently of the DAO's ID type or custom ID extractor and converted
+ * to the declared return type (the element type for {@code Optional} or {@code List}); unset-key checks likewise use
+ * that returned value rather than the DAO's ID properties. Inserts into the DAO's own table retain its ID extraction.
  * On a DAO whose entity class has no id property, every INSERT method must return {@code void}. Each of
  * those return-type rules is enforced at DAO creation and a violation fails with
  * {@code UnsupportedOperationException}.</p>

@@ -3048,8 +3048,10 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if the INSERT SQL is null/empty, invalid, or cannot be converted, or if
      *         the database metadata reports a {@code null} or blank product name.
      *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
-     * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
-     *         database product info
+     * @throws UncheckedSQLException if acquiring a connection from {@code ds} outside the Spring acquisition path, or reading
+     *         its database product metadata, fails while resolving the database product info. On the Spring acquisition path,
+     *         such a failure propagates as Spring's unchecked {@code CannotGetJdbcConnectionException} (not declared, so this
+     *         class names no Spring type in a signature).
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql) throws IllegalArgumentException, UncheckedSQLException {
@@ -3105,8 +3107,10 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}, if the INSERT SQL is null/empty, invalid, or cannot be converted, or if
      *         the database metadata reports a {@code null} or blank product name.
      *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table/column names are rejected.
-     * @throws UncheckedSQLException if acquiring a connection from {@code ds}, or reading its database product metadata, fails while resolving the
-     *         database product info
+     * @throws UncheckedSQLException if acquiring a connection from {@code ds} outside the Spring acquisition path, or reading
+     *         its database product metadata, fails while resolving the database product info. On the Spring acquisition path,
+     *         such a failure propagates as Spring's unchecked {@code CannotGetJdbcConnectionException} (not declared, so this
+     *         class names no Spring type in a signature).
      */
     @Beta
     public static String convertInsertSqlToUpdateSql(final DataSource ds, final String insertSql, final String whereClause)

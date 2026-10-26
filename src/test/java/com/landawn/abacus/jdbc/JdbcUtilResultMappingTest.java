@@ -263,8 +263,8 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         final java.sql.Timestamp timestamp = java.sql.Timestamp.valueOf("2026-06-29 10:15:30");
 
         when(mockResultSet.getObject("created")).thenReturn(date);
-        when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
-        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("created");
+        // JDBC returns a 1-based index; Mockito's unstubbed zero would skip the date conversion.
+        when(mockResultSet.findColumn("created")).thenReturn(1);
         when(mockResultSetMetaData.getColumnClassName(1)).thenReturn("java.sql.Timestamp");
         when(mockResultSet.getTimestamp(1)).thenReturn(timestamp);
 
@@ -276,6 +276,8 @@ class JdbcUtilResultMappingTest extends JdbcUtilTestSupport {
         final java.sql.Date date = java.sql.Date.valueOf("2026-06-29");
 
         when(mockResultSet.getObject("created")).thenReturn(date);
+        // Exercise the metadata fallback instead of returning early on Mockito's default index of zero.
+        when(mockResultSet.findColumn("created")).thenThrow(new SQLException("Column not found: created"));
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
         when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("other");
 

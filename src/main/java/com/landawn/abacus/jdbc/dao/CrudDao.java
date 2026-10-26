@@ -157,6 +157,8 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * condition; otherwise copies the non-{@code null} non-id properties from {@code entity} into the existing record
      * (loaded via {@link #findOnlyOne(Condition)}) and updates it. A {@code null} property of {@code entity}
      * keeps the existing value, so an upsert cannot clear a column to {@code NULL}.
+     * ID properties are never assigned by this update. A complete ID addresses the loaded row using its declared
+     * database types; if an ID component is {@code null}, the update reuses {@code cond}, since nullable IDs need not be unique.
      * This allows for upsert logic based on any criteria, not just ID fields.
      *
      * <p>Inside a transaction on the DAO's data source, the lookup and the write run in one transaction scope: a nested scope of
@@ -227,7 +229,20 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                     Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
                 }
 
-                update(dbEntity);
+                if (N.anyMatch(idPropNameList, idName -> Beans.getPropValue(dbEntity, idName) == null)) {
+                    // A nullable ID is neither addressable with `= NULL` nor necessarily unique with IS NULL. Keep the
+                    // original lookup condition, which may distinguish rows sharing that ID, and never assign ID columns
+                    // (a generated identity cannot be assigned even its current value).
+                    @SuppressWarnings("deprecation")
+                    final Collection<String> propNamesToUpdate = JdbcUtil.getUpdatePropNames(targetEntityClass(), N.newHashSet(idPropNameList));
+
+                    if (N.notEmpty(propNamesToUpdate)) {
+                        update(dbEntity, propNamesToUpdate, cond);
+                    }
+                } else {
+                    // Preserve the by-id binder's property-specific types, e.g. an enum ID stored as an ordinal.
+                    update(dbEntity);
+                }
                 result = dbEntity;
             }
 
@@ -393,7 +408,9 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * supplied unique properties) and those that do not. New entities are inserted via
      * {@link #batchInsert(Collection, int)}; existing entities are updated by copying the non-{@code null}, non-id
      * (and non-unique-key) properties from the input entity into the loaded database entity and
-     * calling {@link #batchUpdate(Collection, int)}. The lookups and the writes run in one transaction scope inside a
+     * calling {@link #batchUpdate(Collection, int)} for rows whose ID components are all non-{@code null}.
+     * Rows with a {@code null} ID component are updated individually using the original match properties, excluding
+     * ID columns from the assignments; a nullable ID alone need not uniquely identify a row. The lookups and the writes run in one transaction scope inside a
      * transaction, as for {@link #upsert(Object, Condition)}, and, outside one, for more than one entity, as other DAO batch
      * operations do (they used to run apart: the lookups before it, each on a connection of its own, and the writes in a
      * transaction only when both inserts and updates were needed or either set was large); a single entity outside a
@@ -544,7 +561,44 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                         .map(it -> Beans.mergeInto(it, dbIdEntityMap.get(keysExtractor.apply(it)), false, ignoredPropNames))
                         .toList();
 
-                batchUpdate(dbEntitiesToUpdate, batchSize);
+                if (N.isEmpty(idPropNameList)) {
+                    batchUpdate(dbEntitiesToUpdate, batchSize);
+                } else {
+                    final List<T> idKeyedEntities = new ArrayList<>();
+                    final List<T> nullKeyedEntities = new ArrayList<>();
+
+                    for (final T dbEntity : dbEntitiesToUpdate) {
+                        boolean hasNullId = false;
+
+                        for (final String idName : idPropNameList) {
+                            if (entityInfo.getPropInfo(idName).getPropValue(dbEntity) == null) {
+                                hasNullId = true;
+                                break;
+                            }
+                        }
+
+                        (hasNullId ? nullKeyedEntities : idKeyedEntities).add(dbEntity);
+                    }
+
+                    if (N.notEmpty(idKeyedEntities)) {
+                        batchUpdate(idKeyedEntities, batchSize);
+                    }
+
+                    if (N.notEmpty(nullKeyedEntities)) {
+                        @SuppressWarnings("deprecation")
+                        final Collection<String> propNamesToUpdate = JdbcUtil.getUpdatePropNames(targetEntityClass(), N.newHashSet(idPropNameList));
+                        final List<String> resolvedMatchPropNames = N.map(uniquePropInfos, it -> it.name);
+
+                        // Nullable IDs need not be unique: reuse the original match properties, whose values were excluded
+                        // from the merge, so a match by e.g. email cannot overwrite a different row with the same NULL ID.
+                        // As for by-id updates, omit all ID columns and do nothing if no updatable properties remain.
+                        if (N.notEmpty(propNamesToUpdate)) {
+                            for (final T dbEntity : nullKeyedEntities) {
+                                update(dbEntity, propNamesToUpdate, Filters.allEqual(dbEntity, resolvedMatchPropNames));
+                            }
+                        }
+                    }
+                }
             }
 
             if (tran != null) {

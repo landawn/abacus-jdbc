@@ -92,7 +92,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * <p>The default implementation returns {@code null}, which selects the default extractor (the one registered with
      * {@link JdbcUtil#setIdExtractorForDao(Class, Jdbc.BiRowMapper)}, if any, otherwise the built-in one). A non-null
      * extractor returned here takes precedence over a registered one. This method is called the first time an insert
-     * needs an extractor, and its result is then reused for the life of the DAO instance.</p>
+     * needs an extractor, and its result is then reused for the life of the DAO instance. A custom {@code @Query}
+     * INSERT without an entity argument into another table reads that table's key independently of this extractor.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -236,8 +237,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         from the number of entities, a warning is logged, no key is written back and the entities' current IDs are returned,
      *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
      *         (a driver may return only the database-generated column)
-     * @throws IllegalArgumentException if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     * @throws IllegalArgumentException if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
      *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
@@ -275,8 +275,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
      *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
      *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
@@ -310,8 +309,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
      *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty,
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
      *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
@@ -350,8 +348,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
      *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty, or if {@code batchSize} is not positive,
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
      *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
@@ -389,8 +386,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if an element of {@code entities} has no property for a named parameter in
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
      *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
@@ -434,8 +430,7 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if an element of {@code entities} has no property for a named parameter in
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
      *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection

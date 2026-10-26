@@ -2751,6 +2751,47 @@ public final class JdbcUtil {
     }
 
     /**
+     * Returns the column index the driver resolves for a label, matching the column {@link ResultSet#getObject(String)}
+     * read. If the driver lookup fails, searches metadata labels first, then names only if no label matches,
+     * case-insensitively and in column order. Unlike {@link #getColumnIndex(ResultSetMetaData, String)}, this fallback
+     * never lets an earlier column's name shadow a later column's label. Name-only lookup remains supported for drivers
+     * that accept a column name in {@code getObject(String)} but not in {@code findColumn(String)}.
+     *
+     * @param rs the result set
+     * @param metaData its metadata, already read
+     * @param columnLabel the label the value was read by
+     * @return the 1-based column index, or {@code -1} when neither lookup finds the label
+     * @throws SQLException if reading the metadata fails
+     */
+    private static int getColumnIndexForLabel(final ResultSet rs, final ResultSetMetaData metaData, final String columnLabel) throws SQLException {
+        try {
+            return rs.findColumn(columnLabel);
+        } catch (final SQLException e) {
+            final int columnCount = metaData.getColumnCount();
+
+            // Keep metadata and conversion on the column read by label: a per-column label/name search can select
+            // another column when its name equals this alias, replacing the original value with that column's value.
+            for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
+                final String label = metaData.getColumnLabel(columnIndex);
+
+                if (label != null && label.equalsIgnoreCase(columnLabel)) {
+                    return columnIndex;
+                }
+            }
+
+            for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
+                final String name = metaData.getColumnName(columnIndex);
+
+                if (name != null && name.equalsIgnoreCase(columnLabel)) {
+                    return columnIndex;
+                }
+            }
+
+            return -1;
+        }
+    }
+
+    /**
      * Converts a column value read by 1-based column index.
      */
     @FunctionalInterface
@@ -2817,7 +2858,7 @@ public final class JdbcUtil {
                     }
                 }, (rs, columnLabel, val) -> {
                     final ResultSetMetaData metaData = rs.getMetaData();
-                    final int columnIndex = getColumnIndex(metaData, columnLabel);
+                    final int columnIndex = getColumnIndexForLabel(rs, metaData, columnLabel);
 
                     if (columnIndex < 1) {
                         return val;
@@ -2844,7 +2885,7 @@ public final class JdbcUtil {
                     return val;
                 }, (rs, columnLabel, val) -> {
                     final ResultSetMetaData metaData = rs.getMetaData();
-                    final int columnIndex = getColumnIndex(metaData, columnLabel);
+                    final int columnIndex = getColumnIndexForLabel(rs, metaData, columnLabel);
 
                     if (columnIndex < 1) {
                         return val;
@@ -2946,6 +2987,10 @@ public final class JdbcUtil {
      * Retrieves the value of a specified column in the current row of a {@link ResultSet} by its label.
      * This method is deprecated because looking up a column by its label/name on every row can be inefficient.
      * It is recommended to look up column indices once and then use {@link #getColumnValue(ResultSet, int)}.
+     *
+     * <p>Date conversions that need column metadata use {@link ResultSet#findColumn(String)} to resolve the label.
+     * If that lookup fails, metadata labels are searched before names, case-insensitively; the first matching label
+     * takes precedence over any name match. If neither matches, the original date value is retained.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7591,8 +7636,9 @@ public final class JdbcUtil {
      * Checks, before a batch runs anything, that every parameter set in {@code listOfParameters} can satisfy the parameters of
      * {@code parsedSql}, as {@link #setParameters(ParsedSql, PreparedStatement, Object[])} checks each one when it binds it: a
      * positional set (an {@code Object[]} or a {@code Collection}, or else a single value) supplies enough values, and an entity,
-     * {@code Map} or {@link EntityId} bound by name has a property, or an entry, for every named parameter. No value is read: a
-     * bean getter need not be idempotent, and a stream can be read only once (the values are read when the set is bound).
+     * {@code Map} or {@link EntityId} bound by name has a property, or an entry, for every named parameter. No bean property
+     * getter is invoked: a getter need not be idempotent, and a stream can be read only once (the values are bound when the set
+     * is bound; {@code Map} entries and {@code EntityId} values are read here with {@code get}, which is idempotent).
      *
      * @param parsedSql the parsed SQL of the batch
      * @param listOfParameters the parameter sets, one per batch entry
@@ -7867,7 +7913,7 @@ public final class JdbcUtil {
      *         {@link ResultSetMetaData} labels (or column names if no label is set), with duplicate or empty
      *         labels renamed as described above.
      * @throws IllegalArgumentException if {@code rs} is {@code null}.
-     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
+     * @throws SQLException if reading metadata, advancing or reading rows throws an SQL exception.
      * @see #extractData(ResultSet, boolean)
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
@@ -7890,7 +7936,7 @@ public final class JdbcUtil {
      * @param count The maximum number of rows to extract.
      * @return A {@link Dataset} containing the extracted data.
      * @throws IllegalArgumentException if {@code rs} is {@code null} or offset/count are negative.
-     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
+     * @throws SQLException if reading metadata, advancing or reading rows throws an SQL exception.
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count) throws IllegalArgumentException, SQLException {
         return extractData(rs, offset, count, false);
@@ -7923,7 +7969,7 @@ public final class JdbcUtil {
      *               Must not be {@code null}.
      * @return A {@link Dataset} containing the filtered data.
      * @throws IllegalArgumentException if {@code rs} or {@code filter} is {@code null}.
-     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking the supplied row filter throws an SQL exception.
      * @see RowFilter
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
@@ -7954,7 +8000,7 @@ public final class JdbcUtil {
      *                     of the row data before it's added to the Dataset. Must not be {@code null}.
      * @return A {@link Dataset} containing the extracted and transformed data.
      * @throws IllegalArgumentException if {@code rs} or {@code rowExtractor} is {@code null}.
-     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking the supplied row extractor throws an SQL exception.
      * @see RowExtractor
      * @see #extractData(ResultSet, RowFilter, RowExtractor)
      */
@@ -8028,7 +8074,7 @@ public final class JdbcUtil {
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted data.
      * @throws IllegalArgumentException if {@code rs} is {@code null}.
-     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
+     * @throws SQLException if reading metadata, advancing or reading rows throws an SQL exception.
      */
     public static Dataset extractData(final ResultSet rs, final boolean closeResultSet) throws IllegalArgumentException, SQLException {
         return extractData(rs, 0, Integer.MAX_VALUE, closeResultSet);
@@ -8055,7 +8101,7 @@ public final class JdbcUtil {
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted data.
      * @throws IllegalArgumentException if {@code rs} is {@code null} or offset/count are negative.
-     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
+     * @throws SQLException if reading metadata, advancing or reading rows throws an SQL exception.
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final boolean closeResultSet)
             throws IllegalArgumentException, SQLException {
@@ -10599,7 +10645,7 @@ public final class JdbcUtil {
      * @return The current schema, or {@code null} if the driver reports none (or an empty name), fails to report it, or does
      *         not implement {@link Connection#getSchema()} (JDBC 4.0 drivers).
      */
-    private static String getCurrentSchema(final Connection conn) {
+    static String getCurrentSchema(final Connection conn) {
         try {
             final String schema = conn.getSchema();
 
@@ -11341,8 +11387,7 @@ public final class JdbcUtil {
      *         undelimited part has been folded to it; {@code false} if the parts were left unchanged
      * @throws SQLException if the driver cannot report its identifier storage rules
      */
-    private static boolean normalizeMetadataIdentifierParts(final DatabaseMetaData metadata, final String[] parts, final boolean[] exactMatches)
-            throws SQLException {
+    static boolean normalizeMetadataIdentifierParts(final DatabaseMetaData metadata, final String[] parts, final boolean[] exactMatches) throws SQLException {
         final boolean upperCase = metadata.storesUpperCaseIdentifiers();
         final boolean lowerCase = !upperCase && metadata.storesLowerCaseIdentifiers();
 
@@ -13530,9 +13575,10 @@ public final class JdbcUtil {
      * @return The {@link SqlTransaction} handle of the scope this call opened (the outermost scope of a new transaction, or a nested scope of
      *         the current one), which must be committed or rolled back.
      * @throws IllegalArgumentException if {@code ds} is {@code null}.
-     * @throws IllegalStateException if the ownership of a
-     *         Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes
-     *         the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
+     * @throws IllegalStateException if no {@link SpringTransactionTracker} is registered with the transaction manager of the
+     *         Spring-managed transaction that owns {@code ds}, if the ownership of a Spring connection holder bound to {@code ds}
+     *         cannot be determined, or if that transaction exposes the connection through a handle of its own but no JPA
+     *         transaction owning it can be identified (a rollback could not reach it).
      * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
      * @see SqlTransaction
      * @see #beginTransaction(javax.sql.DataSource, IsolationLevel)
@@ -13573,9 +13619,10 @@ public final class JdbcUtil {
      * @return The {@link SqlTransaction} handle of the scope this call opened.
      * @throws IllegalArgumentException if {@code ds} or {@code isolationLevel} is {@code null}, or if
      *         {@code isolationLevel} is {@link IsolationLevel#NONE}, which is not a usable transaction isolation level.
-     * @throws IllegalStateException if the ownership of a
-     *         Spring connection holder bound to {@code ds} cannot be determined, or if the Spring-managed transaction that owns {@code ds} exposes
-     *         the connection through a handle of its own but no JPA transaction owning it can be identified (a rollback could not reach it).
+     * @throws IllegalStateException if no {@link SpringTransactionTracker} is registered with the transaction manager of the
+     *         Spring-managed transaction that owns {@code ds}, if the ownership of a Spring connection holder bound to {@code ds}
+     *         cannot be determined, or if that transaction exposes the connection through a handle of its own but no JPA
+     *         transaction owning it can be identified (a rollback could not reach it).
      * @throws UncheckedSQLException if acquiring a connection, reading its original state, disabling auto-commit, or applying the isolation level fails.
      * @see SqlTransaction
      */
@@ -13594,7 +13641,7 @@ public final class JdbcUtil {
             // Opening an outermost scope on the connection of a Spring-managed transaction would commit (or roll back) Spring's
             // connection when the scope completes: participate in the Spring transaction instead.
             final boolean springBound = isSpringTransactionalUsed(ds) && boundSpringTransactionHolder(ds) != null;
-            // Unless the completion of that transaction has started (see isOwnedBySpringTransaction): a transaction of its own
+            // Unless the completion of that transaction has started (the required owner's isDeciding() below): a transaction of its own
             // then, on a connection of its own.
             // A JPA provider may already have restored auto-commit while its completed holder remains bound. That connection
             // must still be left to Spring: a local transaction started on it would not be independent of Spring's connection
@@ -13613,7 +13660,7 @@ public final class JdbcUtil {
             }
 
             // WHY a connection of its own after the completion has started: Spring's connection belongs to the transaction Spring
-            // binds to ds, which need not be the one completing (see isSpringTransactionCompleting): committing it there committed
+            // binds to ds, which need not be the one completing (see the required owner's isDeciding() above): committing it there committed
             // that transaction's work, which it could still roll back. As PROPAGATION_REQUIRES_NEW, which Spring advises for
             // transactional work started from its completion callbacks, would.
             final boolean outsideSpring = afterSpringCompletion && suspendSpringTransactional(ds);

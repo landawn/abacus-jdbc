@@ -1028,12 +1028,86 @@ public class DaoImplIntegrationTest extends TestBase {
         List<Integer> logAll(List<String> msgs) throws SQLException;
     }
 
+    // upsert matches a key component holding NULL with IS NULL, but the write-back used the by-id UPDATE, which binds
+    // that component as `= NULL` and updates no row: the caller got the merged entity although the row was unchanged.
+    @Test
+    public void testUpsert_NullableCompositeKeyUpdatesTheMatchedRow() throws SQLException {
+        try (Connection connection = ds.getConnection();
+             Statement statement = connection.createStatement()) {
+            statement.executeUpdate("CREATE TABLE entity_id_record(tenant_id BIGINT, row_id BIGINT, name VARCHAR(64))");
+            try {
+                statement.executeUpdate("INSERT INTO entity_id_record VALUES(1, NULL, 'original')");
+                final JdbcUtil.DaoCreationOptions options = JdbcUtil.DaoCreationOptions.builder().targetTableName("entity_id_record").build();
+                final EntityIdRowDao entityDao = JdbcUtil.createDao(EntityIdRowDao.class, ds, options);
+                final UncheckedEntityIdRowDao uncheckedDao = JdbcUtil.createDao(UncheckedEntityIdRowDao.class, ds, options);
+
+                final CompositeKeyRow partial = new CompositeKeyRow();
+                partial.setTenantId(1L);
+                partial.setName("updated");
+
+                assertEquals("updated", entityDao.upsert(partial).getName());
+                assertEquals("updated", entityDao.list(Filters.expr("tenant_id = 1 AND row_id IS NULL")).get(0).getName());
+                assertEquals(1, entityDao.count(Filters.expr("1 = 1")));
+
+                final CompositeKeyRow uncheckedPartial = new CompositeKeyRow();
+                uncheckedPartial.setTenantId(1L);
+                uncheckedPartial.setName("unchecked updated");
+
+                assertEquals("unchecked updated", uncheckedDao.upsert(uncheckedPartial).getName());
+                assertEquals("unchecked updated", entityDao.list(Filters.expr("tenant_id = 1 AND row_id IS NULL")).get(0).getName());
+                assertEquals(1, entityDao.count(Filters.expr("1 = 1")));
+
+                final CompositeKeyRow batchPartial = new CompositeKeyRow();
+                batchPartial.setTenantId(1L);
+                batchPartial.setName("batch updated");
+
+                assertEquals("batch updated", entityDao.batchUpsert(List.of(batchPartial)).get(0).getName());
+                assertEquals("batch updated", entityDao.list(Filters.expr("tenant_id = 1 AND row_id IS NULL")).get(0).getName());
+                assertEquals(1, entityDao.count(Filters.expr("1 = 1")));
+            } finally {
+                statement.executeUpdate("DROP TABLE entity_id_record");
+            }
+        }
+    }
+
     @Test
     public void testCustomInsert_IntoAnotherTableReturnsItsKeyAsTheDeclaredType() throws SQLException {
         try (Connection conn = ds.getConnection();
              Statement st = conn.createStatement()) {
             st.execute("DROP TABLE IF EXISTS audit_log");
             st.execute("CREATE TABLE audit_log (id INT AUTO_INCREMENT PRIMARY KEY, msg VARCHAR(64))");
+        }
+
+        try {
+            final AuditLogDao auditDao = JdbcUtil.createDao(AuditLogDao.class, ds);
+
+            assertEquals(1, auditDao.log("a"));
+            assertEquals(Integer.valueOf(2), auditDao.logReturningOptional("b").get());
+            assertEquals(List.of(3, 4), auditDao.logAll(List.of("c", "d")));
+
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM audit_log")) {
+                assertTrue(rs.next());
+                assertEquals(4, rs.getInt(1));
+            }
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS audit_log");
+            }
+        }
+    }
+
+    // The generated-key request used the DAO entity's id column ("id") for every custom INSERT. A table whose key has
+    // another name made H2 reject the prepared statement ("Column \"id\" not found"); the keys must be requested by
+    // name only when the statement can insert the DAO entity.
+    @Test
+    public void testCustomInsert_IntoAnotherTableWithDifferentlyNamedKeyReturnsItsKey() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("DROP TABLE IF EXISTS audit_log");
+            st.execute("CREATE TABLE audit_log (log_id INT AUTO_INCREMENT PRIMARY KEY, msg VARCHAR(64))");
         }
 
         try {
@@ -3261,6 +3335,76 @@ public class DaoImplIntegrationTest extends TestBase {
         @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true)
         @Query("SELECT * FROM user_account WHERE last_name = :ln ORDER BY id")
         List<UserAccount> findCachedByLastName(@com.landawn.abacus.jdbc.annotation.Bind("ln") String ln) throws SQLException;
+
+        // A NonUpdateDao can execute a custom INSERT; @CacheResult is documented for query methods only and must not
+        // serve or store this write's result.
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true)
+        @Query("INSERT INTO cache_insert_probe (note) VALUES (:note)")
+        int addProbe(@com.landawn.abacus.jdbc.annotation.Bind("note") String note) throws SQLException;
+    }
+
+    @com.landawn.abacus.jdbc.annotation.Cache(capacity = 100, evictDelayMillis = 60000)
+    @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true, filter = { "execute", "updated" })
+    public interface NamedCachedReadDao extends NonUpdateCrudDao<UserAccount, Long, NamedCachedReadDao> {
+        @Query("SELECT COUNT(*) FROM user_account")
+        long executeReport() throws SQLException;
+
+        @com.landawn.abacus.jdbc.annotation.CacheResult(enabled = true)
+        @Query("SELECT COUNT(*) FROM user_account")
+        long updatedCount() throws SQLException;
+
+        @Query("INSERT INTO cache_insert_probe(note) VALUES (:note)")
+        long executeProbe(@com.landawn.abacus.jdbc.annotation.Bind("note") String note) throws SQLException;
+    }
+
+    @Test
+    public void testCacheResult_UsesTheCustomQueryOperationInsteadOfItsName() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE cache_insert_probe(id BIGINT GENERATED ALWAYS AS IDENTITY, note VARCHAR(64))");
+            try {
+                final NamedCachedReadDao readDao = JdbcUtil.createDao(NamedCachedReadDao.class, ds);
+                assertEquals(0L, readDao.executeReport());
+                assertEquals(0L, readDao.updatedCount());
+                st.execute("INSERT INTO user_account(first_name) VALUES('after cache')");
+
+                // Both type-level and method-level annotations cache SELECTs whose names look like writes.
+                assertEquals(0L, readDao.executeReport());
+                assertEquals(0L, readDao.updatedCount());
+                // The same type-level filter must never cache an actual write.
+                assertEquals(1L, readDao.executeProbe("same"));
+                assertEquals(2L, readDao.executeProbe("same"));
+            } finally {
+                st.execute("DROP TABLE cache_insert_probe");
+            }
+        }
+    }
+
+    @Test
+    public void testCacheResult_onCustomInsertIsNotServedFromTheCache() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE cache_insert_probe (id INT AUTO_INCREMENT PRIMARY KEY, note VARCHAR(64))");
+        }
+
+        try {
+            final CachedUserDao cachedDao = JdbcUtil.createDao(CachedUserDao.class, ds);
+
+            assertEquals(1, cachedDao.addProbe("a"));
+            assertEquals(2, cachedDao.addProbe("a"));
+
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement();
+                 java.sql.ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM cache_insert_probe")) {
+                assertTrue(rs.next());
+                assertEquals(2, rs.getInt(1));
+            }
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE cache_insert_probe");
+            }
+        }
     }
 
     @Test
@@ -3542,6 +3686,103 @@ public class DaoImplIntegrationTest extends TestBase {
         @Query(value = "SELECT id, first_name, last_name, age, active FROM user_account ORDER BY id", op = QueryOperation.findFirst)
         @com.landawn.abacus.jdbc.annotation.MergedById("id")
         Optional<UserAccount> queryForUniqueMergedFirst() throws SQLException;
+    }
+
+    @Table("mapped_base_row")
+    public static abstract class MappedBase {
+        @Id
+        private Long id;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+    }
+
+    public static class MappedBaseRow extends MappedBase {
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    public interface MappedBaseValueDao extends CrudDao<MappedBaseRow, Long, MappedBaseValueDao> {
+        @Query("SELECT id, name FROM mapped_base_row ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MappedByKey("id")
+        Map<Long, MappedBase> findAllMapped() throws SQLException;
+
+        @Query("SELECT id, name FROM mapped_base_row UNION ALL SELECT id, name FROM mapped_base_row ORDER BY id")
+        @com.landawn.abacus.jdbc.annotation.MergedById("id")
+        List<MappedBase> listMerged() throws SQLException;
+
+        @Query("SELECT id, name FROM mapped_base_row WHERE id = :id UNION ALL SELECT id, name FROM mapped_base_row WHERE id = :id")
+        @com.landawn.abacus.jdbc.annotation.MergedById("id")
+        Optional<MappedBase> findOnlyOneMerged(@com.landawn.abacus.jdbc.annotation.Bind("id") long id) throws SQLException;
+
+        @Query("SELECT id, name FROM mapped_base_row UNION ALL SELECT id, name FROM mapped_base_row")
+        @com.landawn.abacus.jdbc.annotation.MergedById("id")
+        Optional<MappedBase> findOnlyOneMerged() throws SQLException;
+    }
+
+    @Test
+    public void testMergedById_AbstractSupertypeListAndOptional() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE mapped_base_row(id BIGINT PRIMARY KEY, name VARCHAR(64))");
+            try {
+                final MappedBaseValueDao baseDao = JdbcUtil.createDao(MappedBaseValueDao.class, ds);
+                assertTrue(baseDao.listMerged().isEmpty());
+                assertFalse(baseDao.findOnlyOneMerged(1L).isPresent());
+                st.execute("INSERT INTO mapped_base_row VALUES(1,'a'),(2,'b')");
+
+                // Each ID occurs twice in the query, but both return shapes must contain concrete DAO entities.
+                final List<MappedBase> rows = baseDao.listMerged();
+                assertEquals(2, rows.size());
+                assertTrue(rows.get(0) instanceof MappedBaseRow);
+                assertEquals("a", ((MappedBaseRow) rows.get(0)).getName());
+                assertEquals("b", ((MappedBaseRow) rows.get(1)).getName());
+                final MappedBase found = baseDao.findOnlyOneMerged(1L).get();
+                assertTrue(found instanceof MappedBaseRow);
+                assertEquals("a", ((MappedBaseRow) found).getName());
+                assertThrows(DuplicateResultException.class, baseDao::findOnlyOneMerged);
+            } finally {
+                st.execute("DROP TABLE mapped_base_row");
+            }
+        }
+    }
+
+    // @MappedByKey documents that the map's value type may be a supertype of the entity. The rows were mapped into that
+    // declared supertype instead of the entity, so an abstract supertype failed the conversion on every call.
+    @Test
+    public void testMappedByKey_SupertypeValueTypeReturnsTheEntity() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE mapped_base_row (id BIGINT PRIMARY KEY, name VARCHAR(64))");
+            st.execute("INSERT INTO mapped_base_row VALUES (1, 'a'), (2, 'b')");
+        }
+
+        try {
+            final MappedBaseValueDao baseDao = JdbcUtil.createDao(MappedBaseValueDao.class, ds);
+            final Map<Long, MappedBase> map = baseDao.findAllMapped();
+
+            assertEquals(2, map.size());
+            assertTrue(map.get(1L) instanceof MappedBaseRow);
+            assertEquals("a", ((MappedBaseRow) map.get(1L)).getName());
+            assertEquals("b", ((MappedBaseRow) map.get(2L)).getName());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE mapped_base_row");
+            }
+        }
     }
 
     // @MappedByKey returns a Map keyed by the named column value.

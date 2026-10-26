@@ -102,7 +102,11 @@ import com.landawn.abacus.jdbc.JdbcUtil;
  * {@code UnsupportedOperationException} at DAO initialization time. Use {@link Cache @Cache} on the same
  * DAO interface to configure the shared cache pool (capacity, eviction sweep interval, and
  * implementation), and {@link RefreshCache @RefreshCache} on selected methods to invalidate cached
- * entries; {@code @CacheResult} only controls whether and how an individual result is cached.</p>
+ * entries; {@code @CacheResult} only controls whether and how an individual result is cached. A write method (an
+ * {@code UPDATE}/{@code DELETE}, or a custom {@code @Query} that executes as an update) is never served from or stored in
+ * the cache; annotate it with {@link RefreshCache @RefreshCache} to invalidate the cached reads it affects.</p>
+ * <p>For a custom {@code @Query}, the SQL execution operation determines whether it is a write. A SELECT whose method
+ * name starts with {@code execute} or {@code update} can still be cached.</p>
  *
  * <p><strong>Init-time validation:</strong> enabling caching (through a method-level annotation or a
  * type-level one whose {@link #filter()} matches the method) for a method whose return type is not

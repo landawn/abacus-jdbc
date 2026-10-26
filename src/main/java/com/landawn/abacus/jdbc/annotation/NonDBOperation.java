@@ -31,7 +31,8 @@ import java.lang.annotation.Target;
  * <ul>
  *   <li>No {@code Handler} interceptors will be applied</li>
  *   <li>No DAO-scoped SQL logging configuration or whole-method performance logging is added</li>
- *   <li>No {@code @Transactional} annotations will be processed</li>
+ *   <li>No {@code @Transactional} annotations will be processed: declaring one on the method is rejected at DAO
+ *       creation with {@link UnsupportedOperationException}, while one it would inherit from an overridden method is ignored</li>
  *   <li>No result-cache lookup or invalidation will be performed</li>
  * </ul>
  *

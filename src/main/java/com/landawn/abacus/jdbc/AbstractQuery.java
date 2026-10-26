@@ -11218,7 +11218,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * automatically closed when the action completes unless {@code closeAfterExecution(false)}
      * is configured. With automatic closing enabled, return a materialized value rather than
      * a JDBC-backed lazy {@link Stream}, which would depend on the closed query. If the task cannot
-     * be submitted, the query is likewise closed before the submission failure is rethrown.</p>
+     * be submitted, the query is likewise closed (unless {@code closeAfterExecution(false)} is configured) before the submission failure is rethrown.</p>
      *
      * <p>A query prepared from a data source while a {@code JdbcUtil} transaction is active for it (it runs on the
      * transaction's connection) is rejected before anything is submitted, and closed unless {@code closeAfterExecution(false)}
@@ -11287,7 +11287,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * The query is automatically closed when the action completes unless
      * {@code closeAfterExecution(false)} is configured. With automatic closing enabled, return
      * a materialized value rather than a JDBC-backed lazy {@link Stream}. If the task cannot be
-     * submitted, the query is likewise closed before the submission failure is rethrown.</p>
+     * submitted, the query is likewise closed (unless {@code closeAfterExecution(false)} is configured) before the submission failure is rethrown.</p>
      *
      * <p>A query prepared from a data source while a {@code JdbcUtil} transaction is active for it (it runs on the
      * transaction's connection) is rejected before anything is submitted, and closed unless {@code closeAfterExecution(false)}
@@ -11361,8 +11361,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Note:</b> Keep the connection open until {@code sqlAction} completes. The query is
      * automatically closed when the action completes unless {@code closeAfterExecution(false)}
-     * is configured. If the task cannot be submitted, the query is likewise closed before the
-     * submission failure is rethrown.</p>
+     * is configured. If the task cannot be submitted, the query is closed before the submission
+     * failure is rethrown unless {@code closeAfterExecution(false)} is configured.</p>
      *
      * <p>A query prepared from a data source while a {@code JdbcUtil} transaction is active for it (it runs on the
      * transaction's connection) is rejected before anything is submitted, and closed unless {@code closeAfterExecution(false)}
@@ -11435,7 +11435,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * executor determines where the action runs and may execute it on the calling thread.
      * The query is automatically closed when the action completes unless
      * {@code closeAfterExecution(false)} is configured. If the task cannot be submitted, the query
-     * is likewise closed before the submission failure is rethrown.</p>
+     * is closed before the submission failure is rethrown unless {@code closeAfterExecution(false)} is configured.</p>
      *
      * <p>A query prepared from a data source while a {@code JdbcUtil} transaction is active for it (it runs on the
      * transaction's connection) is rejected before anything is submitted, and closed unless {@code closeAfterExecution(false)}
@@ -11506,8 +11506,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Submits {@code action} for asynchronous execution on {@code executor}. The task closes this query
-     * after the action completes or fails (if automatic closing is enabled), and also when the returned
-     * future is cancelled before the action has started.
+     * after the action completes or fails, and also when the returned future is cancelled before the
+     * action has started (in both cases only if automatic closing is enabled).
      *
      * @param <R> the result type of the action
      * @param action the task to execute

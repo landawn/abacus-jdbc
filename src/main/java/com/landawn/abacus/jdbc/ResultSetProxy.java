@@ -882,7 +882,7 @@ final class ResultSetProxy implements ResultSet {
      *
      * @param columnLabel the label for the column specified with the SQL AS clause. If the SQL AS clause was not specified, then the label is the name of the column
      * @return the column value; if the value is SQL NULL, the value returned is {@code null}
-     * @throws SQLException if the {@code columnLabel} is {@code null} or is not valid; if reading this result set's metadata fails; if
+     * @throws SQLException if the {@code columnLabel} is not valid; if reading this result set's metadata fails; if
      *         converting an Oracle date/timestamp value or materializing a returned {@link Blob} or {@link Clob} fails, including when the LOB
      *         is longer than {@link Integer#MAX_VALUE}; if the driver fails while executing {@code getObject} on the wrapped result set or this
      *         method is called on a closed result set

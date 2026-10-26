@@ -36,7 +36,8 @@ import com.landawn.abacus.util.Throwables;
  * The state one database transaction shares among its nested scopes: the connection, the status, the rollback-only mark,
  * the rollback actions and the stack of open scopes. Every {@link JdbcUtil#beginTransaction(javax.sql.DataSource)} call
  * on the same thread and data source returns a new {@link SqlTransaction} handle (a scope) over one context; only the
- * outermost scope commits or rolls back the connection.
+ * outermost scope of a transaction of its own commits or rolls back the connection (a transaction participating in a
+ * Spring-managed transaction leaves the connection and its outcome to Spring).
  *
  * <p>Each scope records whether it has completed, so a scope's paired cleanup call ({@code rollbackIfNotCommitted()} or
  * {@code close()}) after its {@code commit()} is recognised by the scope itself. A scope that completes while scopes opened
@@ -346,8 +347,10 @@ final class TransactionContext {
      * before. Any thread passes, so such a stream must not be handed to another thread that consumes it while the owner thread
      * goes on using the connection.
      *
-     * @throws IllegalStateException if the transaction has completed, or the Spring-managed transaction it participates in is
-     *         known to have completed or to run its completion callbacks (see {@link #hasParticipatedTransactionCompleted()})
+     * @throws IllegalStateException if a transaction of its own has completed, or, for a transaction participating in a
+     *         Spring-managed transaction, that Spring transaction is known to have completed or to run its completion
+     *         callbacks (see {@link #hasParticipatedTransactionCompleted()}); the scope's own completion does not stop a query
+     *         from running on Spring's connection
      */
     void assertDeferredQueryCanRun() throws IllegalStateException {
         if (_springParticipating) {

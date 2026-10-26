@@ -12,6 +12,7 @@ import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.stream.Stream;
@@ -20,6 +21,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.landawn.abacus.TestBase;
 
@@ -79,6 +81,8 @@ class JdbcUtilColumnConversionTest extends TestBase {
     void getColumnValue_oracleDateByLabel_handlesMissingMetadata(final boolean knownLabel) throws SQLException {
         final oracle.sql.DATE value = new oracle.sql.DATE(TIMESTAMP);
         final ResultSet resultSet = resultSet(value, "java.sql.Date");
+        // Exercise the compatibility fallback when a driver accepts getObject(label) but not findColumn(label).
+        when(resultSet.findColumn("created")).thenThrow(new SQLException("Label lookup unsupported"));
         when(resultSet.getMetaData().getColumnLabel(1)).thenReturn(knownLabel ? "created" : "another_column");
 
         assertSame(knownLabel ? DATE : value, JdbcUtil.getColumnValue(resultSet, "created"));
@@ -94,6 +98,132 @@ class JdbcUtilColumnConversionTest extends TestBase {
                         .map(metadataClass -> Arguments.of(access, metadataClass)));
     }
 
+    @ParameterizedTest(name = "oracle={0}, fallback={1}, label={2}")
+    @MethodSource("labelResolutionScenarios")
+    void getColumnValue_byLabel_resolvesTheSameColumnAsTheLabel(final boolean oracleValue, final boolean useFallback, final String columnLabel)
+            throws SQLException {
+        final ResultSetMetaData metadata = (ResultSetMetaData) java.lang.reflect.Proxy.newProxyInstance(ResultSetMetaData.class.getClassLoader(),
+                new Class<?>[] { ResultSetMetaData.class }, (proxy, method, args) -> {
+                    switch (method.getName()) {
+                        case "getColumnCount":
+                            return 2;
+                        case "getColumnLabel":
+                            return ((Integer) args[0]) == 1 ? "c" : "created";
+                        case "getColumnName":
+                            return ((Integer) args[0]) == 1 ? "created" : "shipped";
+                        case "getColumnClassName":
+                            return ((Integer) args[0]) == 1 ? "java.sql.Timestamp" : "java.sql.Date";
+                        default:
+                            return defaultValue(method.getReturnType());
+                    }
+                });
+
+        final Object value = oracleValue ? new oracle.sql.DATE(TIMESTAMP) : DATE;
+        final ResultSet resultSet = (ResultSet) java.lang.reflect.Proxy.newProxyInstance(ResultSet.class.getClassLoader(), new Class<?>[] { ResultSet.class },
+                (proxy, method, args) -> {
+                    switch (method.getName()) {
+                        case "getMetaData":
+                            return metadata;
+                        case "getObject":
+                            return columnLabel.equals(args[0]) ? value : null;
+                        case "findColumn":
+                            if (useFallback) {
+                                throw new SQLFeatureNotSupportedException("Label lookup unsupported");
+                            }
+                            return 2;
+                        case "getDate":
+                            return ((Integer) args[0]) == 2 ? DATE : null;
+                        case "getTimestamp":
+                            return ((Integer) args[0]) == 1 ? TIMESTAMP : null;
+                        default:
+                            return defaultValue(method.getReturnType());
+                    }
+                });
+
+        // The value was read by label (column 2): its metadata class must be read from the same column, or the Date is
+        // converted as the Timestamp column 1 (whose *name* also matches) and the wrong value is returned. This must
+        // also hold when findColumn is unsupported; the public metadata lookup retains its separate name/label contract.
+        assertSame(DATE, JdbcUtil.getColumnValue(resultSet, columnLabel));
+        assertEquals(1, JdbcUtil.getColumnIndex(metadata, columnLabel));
+    }
+
+    private static Stream<Arguments> labelResolutionScenarios() {
+        return Stream.of(false, true)
+                .flatMap(oracle -> Stream.of(false, true)
+                        .flatMap(fallback -> Stream.of("created", "CrEaTeD").map(label -> Arguments.of(oracle, fallback, label))));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void getColumnValue_labelFallback_retainsNameOnlyLookup(final boolean oracleValue) throws SQLException {
+        final Object value = oracleValue ? new oracle.sql.DATE(TIMESTAMP) : DATE;
+        final ResultSet resultSet = resultSet(value, "java.sql.Timestamp");
+        final ResultSetMetaData metadata = resultSet.getMetaData();
+        when(resultSet.findColumn("created")).thenThrow(new SQLFeatureNotSupportedException("Label lookup unsupported"));
+        when(metadata.getColumnCount()).thenReturn(2);
+        when(metadata.getColumnLabel(1)).thenReturn(null);
+        when(metadata.getColumnName(1)).thenReturn("CrEaTeD");
+        when(metadata.getColumnLabel(2)).thenReturn("another_label");
+
+        assertSame(TIMESTAMP, JdbcUtil.getColumnValue(resultSet, "created"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void getColumnValue_labelFallback_usesFirstDuplicateLabel(final boolean oracleValue) throws SQLException {
+        final Object value = oracleValue ? new oracle.sql.DATE(TIMESTAMP) : DATE;
+        final ResultSet resultSet = resultSet(value, "java.sql.Timestamp");
+        final ResultSetMetaData metadata = resultSet.getMetaData();
+        when(resultSet.findColumn("created")).thenThrow(new SQLFeatureNotSupportedException("Label lookup unsupported"));
+        when(metadata.getColumnCount()).thenReturn(2);
+        when(metadata.getColumnLabel(1)).thenReturn("CREATED");
+        when(metadata.getColumnLabel(2)).thenReturn("created");
+        when(metadata.getColumnClassName(2)).thenReturn("java.sql.Date");
+        when(resultSet.getDate(2)).thenReturn(DATE);
+
+        assertSame(TIMESTAMP, JdbcUtil.getColumnValue(resultSet, "created"));
+        verify(metadata, never()).getColumnName(1);
+    }
+
+    @ParameterizedTest(name = "failure during name lookup = {0}")
+    @ValueSource(booleans = { false, true })
+    void getColumnValue_labelFallback_preservesMetadataFailure(final boolean nameLookup) throws SQLException {
+        final ResultSet resultSet = resultSet(DATE, "java.sql.Timestamp");
+        final ResultSetMetaData metadata = resultSet.getMetaData();
+        final SQLException failure = new SQLException("Metadata unavailable");
+        when(resultSet.findColumn("created")).thenThrow(new SQLFeatureNotSupportedException("Label lookup unsupported"));
+        if (nameLookup) {
+            when(metadata.getColumnLabel(1)).thenReturn("another_label");
+            when(metadata.getColumnName(1)).thenThrow(failure);
+        } else {
+            when(metadata.getColumnLabel(1)).thenThrow(failure);
+        }
+
+        assertSame(failure, assertThrows(SQLException.class, () -> JdbcUtil.getColumnValue(resultSet, "created")));
+    }
+
+    private static Object defaultValue(final Class<?> type) {
+        if (!type.isPrimitive()) {
+            return null;
+        } else if (type == boolean.class) {
+            return false;
+        } else if (type == char.class) {
+            return (char) 0;
+        } else if (type == byte.class) {
+            return (byte) 0;
+        } else if (type == short.class) {
+            return (short) 0;
+        } else if (type == int.class) {
+            return 0;
+        } else if (type == long.class) {
+            return 0L;
+        } else if (type == float.class) {
+            return 0F;
+        } else {
+            return 0D;
+        }
+    }
+
     private static Stream<Boolean> labelPresence() {
         return Stream.of(false, true);
     }
@@ -102,6 +232,7 @@ class JdbcUtilColumnConversionTest extends TestBase {
         final ResultSet resultSet = mock(ResultSet.class);
         final ResultSetMetaData metadata = mock(ResultSetMetaData.class);
         when(resultSet.getMetaData()).thenReturn(metadata);
+        when(resultSet.findColumn("created")).thenReturn(1);
         when(metadata.getColumnCount()).thenReturn(1);
         when(metadata.getColumnLabel(1)).thenReturn("created");
         when(metadata.getColumnClassName(1)).thenReturn(metadataClass);

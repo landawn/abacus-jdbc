@@ -588,7 +588,8 @@ public final class DBLock implements AutoCloseable {
      *         could not be acquired before {@code timeout} elapsed or before the internal attempt-count
      *         safeguard (derived from {@code timeout / retryInterval}) was exhausted, or if the calling
      *         thread was interrupted while waiting (in which case the thread's interrupt status is
-     *         preserved). A failure of an individual acquisition attempt is logged, not thrown.
+     *         preserved). An exception from an individual acquisition attempt is logged, not thrown; an {@link Error}
+     *         (for example a driver {@link LinkageError}) propagates.
      * @throws IllegalStateException if this {@code DBLock} instance has already been closed, or is closed
      *         concurrently with a successful acquisition: the row just inserted is then deleted again and
      *         no lock code is returned.
@@ -716,8 +717,8 @@ public final class DBLock implements AutoCloseable {
 
     /**
      * Deletes the expired or stale lock row for the given target, if one exists, so that the
-     * target can be locked again. Any failure is logged and suppressed so it never interferes
-     * with lock acquisition.
+     * target can be locked again. An exception is logged and suppressed so it does not abort the
+     * acquisition; an {@link Error} (for example a driver {@link LinkageError}) propagates.
      *
      * @param target the lock target whose expired lock should be removed.
      */

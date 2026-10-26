@@ -88,7 +88,8 @@ import com.landawn.abacus.util.N;
  * property, makes the name unresolvable. {@link #setParameters(Object)} and the bean rows of
  * {@link #addBatchParameters(Iterator)} read each distinct name's value once per bean, so a getter that is not
  * idempotent still binds the same value to every occurrence of the name; {@link #setParameters(Object, Collection)}
- * reads a value once per listed name, so a name listed twice is read twice.
+ * reads a value once per listed name, so a name listed twice is read twice (a stream or reader value only once, however
+ * often it is listed).
  *
  * <p>The backing {@code PreparedStatement} is closed by default
  * after materializing execution methods (such as {@code query}, {@code queryForInt}, {@code queryForLong},
@@ -2073,8 +2074,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the ZonedDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the {@code value} is outside the range supported
-     *         by {@link Timestamp}. The range check is performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 25
-     *         throws, while older runtimes such as JDK 21 silently overflow and bind an incorrect timestamp instead
+     *         by {@link Timestamp}. The range check is performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 23
+     *         and later throw, while earlier runtimes such as JDK 21 silently overflow and bind an incorrect timestamp instead
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
      *         is closed or the driver rejects the {@code value}
      */
@@ -2107,8 +2108,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the OffsetDateTime value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the {@code value} is outside the range supported
-     *         by {@link Timestamp}. The range check is performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 25
-     *         throws, while older runtimes such as JDK 21 silently overflow and bind an incorrect timestamp instead
+     *         by {@link Timestamp}. The range check is performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 23
+     *         and later throw, while earlier runtimes such as JDK 21 silently overflow and bind an incorrect timestamp instead
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
      *         is closed or the driver rejects the {@code value}
      */
@@ -2143,8 +2144,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * @param value the Instant value to set, or {@code null} to set SQL {@code NULL}
      * @return this NamedQuery instance for method chaining
      * @throws IllegalArgumentException if the parameter name is not found in the SQL query, or the {@code value} is outside the range supported
-     *         by {@link Timestamp}. The range check is performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 25
-     *         throws, while older runtimes such as JDK 21 silently overflow and bind an incorrect timestamp instead
+     *         by {@link Timestamp}. The range check is performed by {@link Timestamp#from(Instant)} and depends on the Java runtime: JDK 23
+     *         and later throw, while earlier runtimes such as JDK 21 silently overflow and bind an incorrect timestamp instead
      * @throws SQLException if binding the {@code value} at a position mapped to {@code parameterName} fails, for example because the statement
      *         is closed or the driver rejects the {@code value}
      */

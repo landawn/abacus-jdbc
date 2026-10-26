@@ -30,13 +30,15 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p><b>Bound to a thread and a data source</b></p>
  * <p>Instances are not created directly. {@code JdbcUtil.beginTransaction(ds)} acquires a connection through
- * {@link JdbcUtil#getConnection(javax.sql.DataSource)}, disables its auto-commit mode, applies the requested isolation level
- * (unless it is {@link IsolationLevel#DEFAULT} or already in effect), and registers the transaction under the pair
- * (data source, current thread). The transaction owns the connection for its lifetime and tracks
- * its status: when the transaction completes, the connection's original auto-commit mode and isolation level are restored
+ * {@link JdbcUtil#getConnection(javax.sql.DataSource)}, and, for a transaction of its own, disables its auto-commit mode,
+ * applies the requested isolation level (unless it is {@link IsolationLevel#DEFAULT} or already in effect), and registers the
+ * transaction under the pair (data source, current thread). A transaction of its own owns the connection for its lifetime and tracks
+ * its status: when that transaction completes, the connection's original auto-commit mode and isolation level are restored
  * and the connection is released back to the data source (after a failed rollback the connection is aborted and released
  * without restoring them: restoring auto-commit would commit the work the rollback failed to undo; a connection Spring bound
- * to the thread for synchronization is taken from Spring as well, so that later work in its scope gets a new one). Do not
+ * to the thread for synchronization is taken from Spring as well, so that later work in its scope gets a new one).
+ * A scope participating in a Spring-managed transaction leaves the connection's state, physical commit or rollback,
+ * and final release to Spring; completing the participating scope does not complete Spring's transaction. Do not
  * close the connection manually while the transaction is active.</p>
  *
  * <p><b>&#9888; Warning:</b> A transaction and its connection must be used only on the thread that
@@ -1070,7 +1072,7 @@ public final class SqlTransaction implements AutoCloseable {
      * <pre>{@code
      * try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource)) {
      *     dao.save(entity);
-     *     Config committed = tran.callOutsideTransaction(() -> configDao.gett(configKey)); // reads committed state
+     *     Config committed = tran.callOutsideTransaction(() -> configDao.getOrNull(configKey)); // reads committed state
      *     tran.commit();
      * }
      * }</pre>
@@ -1185,7 +1187,8 @@ public final class SqlTransaction implements AutoCloseable {
      * ACTIVE → MARKED_ROLLBACK (a nested scope rolled back or was never completed, or the enclosing scope's isolation level
      *                          could not be restored when a nested scope exited)
      * ACTIVE → COMMITTED (the outermost commit() succeeds)
-     * ACTIVE → FAILED_COMMIT → ROLLED_BACK / FAILED_ROLLBACK (the database commit fails, and is rolled back automatically)
+     * ACTIVE → FAILED_COMMIT → ROLLED_BACK / FAILED_ROLLBACK (a transaction of its own: the database commit fails, and is rolled back automatically)
+     * ACTIVE → FAILED_COMMIT (participating: the Spring-managed transaction had completed before the outermost commit; final, nothing is rolled back)
      * ACTIVE / MARKED_ROLLBACK → ROLLED_BACK / FAILED_ROLLBACK (the outermost scope rolls back, or its commit() finds the
      *                                                          transaction marked rollback-only)
      * </pre>

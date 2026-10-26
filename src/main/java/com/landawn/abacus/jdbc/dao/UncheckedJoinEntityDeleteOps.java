@@ -434,10 +434,12 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null}, or if any property name in
      *                                  {@code joinEntityPropNames} does not exist or is not annotated with {@code @JoinedBy},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if the call runs inside a transaction on the DAO's data source, where the deletes run as
-     *         {@link #deleteJoinEntities(Object, Collection)} does, in a Spring-managed transaction it cannot participate in
-     *         (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}); outside a transaction, each
-     *         delete task executes a single DELETE statement and no transaction is started
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership
+     *         of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its
+     *         connection through a handle of its own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}); inside a transaction on the DAO's data
+     *         source the deletes run as {@link #deleteJoinEntities(Object, Collection)} does, and outside a transaction each delete
+     *         task executes a single DELETE statement and starts no transaction
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a connection, or preparing, binding, or executing a DELETE statement, fails in a
@@ -815,10 +817,12 @@ sealed interface UncheckedJoinEntityDeleteOps<T, TD extends UncheckedDao<T, TD>>
      * @return the total number of deleted records
      * @throws IllegalArgumentException if {@code entity} or {@code executor} is {@code null},
      *                                  or a join being deleted has a disallowed null/default key
-     * @throws IllegalStateException if the call runs inside a transaction on the DAO's data source, where the deletes run as
-     *         {@link #deleteJoinEntities(Object, Collection)} does, in a Spring-managed transaction it cannot participate in
-     *         (see {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}); outside a transaction, each
-     *         delete task executes a single DELETE statement and no transaction is started
+     * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership
+     *         of the Spring connection holder bound to the data source cannot be determined, or that transaction exposes its
+     *         connection through a handle of its own while no JPA transaction owning it can be identified (see
+     *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)}); inside a transaction on the DAO's data
+     *         source the deletes run as {@link #deleteJoinEntities(Object, Collection)} does, and outside a transaction each delete
+     *         task executes a single DELETE statement and starts no transaction
      * @throws RejectedExecutionException if parallel execution is requested and the executor rejects a join task
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if acquiring a connection, or preparing, binding, or executing a DELETE statement, fails in a
