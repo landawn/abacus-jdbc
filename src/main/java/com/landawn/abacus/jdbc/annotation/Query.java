@@ -53,7 +53,9 @@ import com.landawn.abacus.util.RegExUtil;
  *
  * <p>An INSERT method whose sole statement argument (each element of the batch for {@link #batch()}) may be the
  * DAO entity, judged from the parameter's declared type, uses the generated-key path regardless of {@link #op()}
- * and returns the entity's id. Such a non-batch INSERT method may return {@code void}, the DAO ID type (or a
+ * and, when inserting into the DAO's own table, returns and writes back the entity's id. An entity used as parameters
+ * for another destination retains its original ID; that destination's key is converted to the declared return type.
+ * Such a non-batch INSERT method may return {@code void}, the DAO ID type (or a
  * supertype capable of holding that ID), or {@link com.landawn.abacus.util.u.Optional Optional&lt;ID&gt;}; a
  * return type narrower than the DAO ID type is rejected during DAO creation because a generated ID could not be
  * returned safely. Such a batch INSERT may return {@code void} or {@code List<ID>}; raw lists and incompatible
@@ -63,11 +65,20 @@ import com.landawn.abacus.util.RegExUtil;
  * table) keeps any return type and returns the generated key converted to it (a batch
  * INSERT returns the keys as a {@code List}); when it returns {@code void}, no generated keys are requested.
  * Generated-key column selection follows the resolved INSERT destination, including SQL fragments: an INSERT into the
- * DAO's target table requests its ID columns by name even with scalar arguments; another destination requests the
- * driver's generated keys without the entity's column names. For an INSERT without an entity argument into another
- * table, the first generated-key column is read independently of the DAO's ID type or custom ID extractor and converted
- * to the declared return type (the element type for {@code Optional} or {@code List}); unset-key checks likewise use
- * that returned value rather than the DAO's ID properties. Inserts into the DAO's own table retain its ID extraction.
+ * DAO's target table requests its ID columns by name even with scalar arguments. For another destination whose key is
+ * returned, a single primary-key column is selected only if JDBC reports it as auto-incremented or generated. Otherwise,
+ * complete column metadata must identify exactly one identity column, or (when there are no identities) exactly one
+ * generated column. Column metadata is looked up using the stored table identifiers returned by primary-key metadata,
+ * so case-insensitive SQL names can differ from the stored spelling without conflating distinct quoted tables.
+ * Defaults alone do not establish generation: the caller may have supplied that value. Unknown or
+ * ambiguous generation metadata for a known primary key, and composite primary keys, are rejected before execution.
+ * If primary-key metadata cannot identify a key, the driver's generated-key result
+ * must have exactly one column. Multiple returned columns cause {@code SQLException} rather than guessing which is the
+ * key. That fallback check happens after execution: an auto-committed single INSERT may already be stored, while a
+ * multi-row batch rolls back. Use {@link JdbcUtil#prepareQuery(java.sql.Connection, String, String[])} with explicit key
+ * columns when automatic selection is unsuitable. Other-table keys are read independently of the DAO's ID type or
+ * custom ID extractor, and converted to the declared return type (the element type for {@code Optional} or {@code List});
+ * unset-key checks likewise use that returned value. Inserts into the DAO's own table retain its ID extraction.
  * On a DAO whose entity class has no id property, every INSERT method must return {@code void}. Each of
  * those return-type rules is enforced at DAO creation and a violation fails with
  * {@code UnsupportedOperationException}.</p>

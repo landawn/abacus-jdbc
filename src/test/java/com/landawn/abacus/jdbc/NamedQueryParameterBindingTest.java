@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,15 +32,19 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.query.ParsedSql;
 import com.landawn.abacus.type.TypeFactory;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.ImmutableList;
+import com.landawn.abacus.util.N;
 
 class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
 
@@ -879,12 +884,6 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
 
     @Test
     void testSetParameters_Object_SingleValueTypedBeanWithMatchingPropertyStillBoundAsBean() throws SQLException {
-        TypeFactory.registerType(RegisteredMoney.class, m -> m.getAmount() + " " + m.getCurrency(), str -> {
-            final RegisteredMoney m = new RegisteredMoney();
-            m.setAmount(str.substring(0, str.indexOf(' ')));
-            m.setCurrency(str.substring(str.indexOf(' ') + 1));
-            return m;
-        });
         final RegisteredMoney money = new RegisteredMoney();
         money.setAmount("10");
         money.setCurrency("USD");
@@ -899,6 +898,132 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
         new NamedQuery(mockPreparedStatement, mockParsedSql).setParameters(money);
         verify(mockPreparedStatement).setString(1, "10 USD");
         verify(mockPreparedStatement, never()).close();
+    }
+
+    // Registering a scalar Type must not make a valid nested name bind the whole root for a single placeholder.
+    // A null intermediate still binds through the leaf's declared type, and classification must not call its getter.
+    @ParameterizedTest(name = "path={0}, null address={1}")
+    @CsvSource({ "address.street, false", "address.street, true", "address.zip, false", "address.zip, true" })
+    void customTypeBean_singleNestedPlaceholderBindsLeaf(final String path, final boolean nullAddress) throws SQLException {
+        final RegisteredMoney money = moneyWithAddress("10", nullAddress ? null : "Main");
+        final ParsedSql sql = ParsedSql.parse("SELECT :" + path);
+
+        new NamedQuery(mockPreparedStatement, sql).setParameters(money);
+        new NamedQuery(mockPreparedStatement, sql).addBatchParameters(List.of(money));
+
+        if (path.equals("address.street")) {
+            verify(mockPreparedStatement, times(2)).setString(1, nullAddress ? null : "Main");
+        } else if (nullAddress) {
+            verify(mockPreparedStatement, times(2)).setNull(1, Types.INTEGER);
+        } else {
+            verify(mockPreparedStatement, times(2)).setInt(1, 12345);
+        }
+        assertEquals(2, money.addressReads);
+        verify(mockPreparedStatement).addBatch();
+        verify(mockPreparedStatement, never()).setString(1, "10 USD");
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    @ParameterizedTest(name = "leading null row={0}")
+    @ValueSource(booleans = { false, true })
+    void customTypeBean_batchNestedPathsHandleMultipleAndNullRows(final boolean leadingNull) throws SQLException {
+        final RegisteredMoney first = moneyWithAddress("10", "Main");
+        final RegisteredMoney withoutAddress = moneyWithAddress("20", null);
+        final RegisteredMoney last = moneyWithAddress("30", "Second");
+        final List<RegisteredMoney> rows = new ArrayList<>(Arrays.asList(first, withoutAddress, null, last));
+        if (leadingNull) {
+            rows.add(0, null);
+        }
+
+        new NamedQuery(mockPreparedStatement, ParsedSql.parse("INSERT INTO streets(name) VALUES (:address.street)")).addBatchParameters(rows.iterator());
+
+        verify(mockPreparedStatement).setString(1, "Main");
+        verify(mockPreparedStatement).setString(1, null);
+        verify(mockPreparedStatement).setString(1, "Second");
+        verify(mockPreparedStatement, times(leadingNull ? 2 : 1)).setObject(1, null);
+        verify(mockPreparedStatement, times(rows.size())).addBatch();
+        assertEquals(1, first.addressReads);
+        assertEquals(1, withoutAddress.addressReads);
+        assertEquals(1, last.addressReads);
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "price", "address.country", "missing.street", "addresses.street" })
+    void customTypeBean_unresolvedNamesKeepWholeValueBinding(final String name) throws SQLException {
+        final RegisteredMoney money = moneyWithAddress("10", "Main");
+        final ParsedSql sql = ParsedSql.parse("SELECT :" + name);
+
+        new NamedQuery(mockPreparedStatement, sql).setParameters(money);
+        new NamedQuery(mockPreparedStatement, sql).addBatchParameters(List.of(money));
+
+        verify(mockPreparedStatement, times(2)).setString(1, "10 USD");
+        assertEquals(0, money.addressReads);
+        verify(mockPreparedStatement).addBatch();
+        verify(mockPreparedStatement, never()).close();
+    }
+
+    @Test
+    void customTypeBean_mappedPropertyPrecedesNestedPath() throws SQLException {
+        final RegisteredMoneyWithStreet money = new RegisteredMoneyWithStreet();
+        money.setAmount("10");
+        money.setCurrency("USD");
+        final NestedAddress address = new NestedAddress();
+        address.setStreet("Nested");
+        money.setAddress(address);
+        money.setDirectStreet("Direct");
+        final ParsedSql sql = ParsedSql.parse("SELECT :address.street");
+
+        new NamedQuery(mockPreparedStatement, sql).setParameters(money);
+        new NamedQuery(mockPreparedStatement, sql).addBatchParameters(List.of(money));
+
+        verify(mockPreparedStatement, times(2)).setString(1, "Direct");
+        assertEquals(0, ((RegisteredMoney) money).addressReads);
+        verify(mockPreparedStatement, never()).setString(1, "Nested");
+    }
+
+    @Test
+    void customTypeBean_explicitSetObjectKeepsWholeValueBinding() throws SQLException {
+        final RegisteredMoney money = moneyWithAddress("10", "Main");
+        final ParsedSql sql = ParsedSql.parse("SELECT :address.street");
+
+        new NamedQuery(mockPreparedStatement, sql).setObject(1, money);
+        new NamedQuery(mockPreparedStatement, sql).setObject("address.street", money);
+
+        verify(mockPreparedStatement, times(2)).setString(1, "10 USD");
+        assertEquals(0, money.addressReads);
+    }
+
+    @BeforeAll
+    static void registerMoneyTypes() {
+        TypeFactory.registerType(RegisteredMoney.class, m -> m.getAmount() + " " + m.getCurrency(), str -> {
+            final RegisteredMoney m = new RegisteredMoney();
+            m.setAmount(str.substring(0, str.indexOf(' ')));
+            m.setCurrency(str.substring(str.indexOf(' ') + 1));
+            return m;
+        });
+        assertFalse(N.typeOf(RegisteredMoney.class).isBean());
+        TypeFactory.registerType(RegisteredMoneyWithStreet.class, m -> m.getAmount() + " " + m.getCurrency(), str -> {
+            final RegisteredMoneyWithStreet m = new RegisteredMoneyWithStreet();
+            m.setAmount(str.substring(0, str.indexOf(' ')));
+            m.setCurrency(str.substring(str.indexOf(' ') + 1));
+            return m;
+        });
+        assertFalse(N.typeOf(RegisteredMoneyWithStreet.class).isBean());
+    }
+
+    private static RegisteredMoney moneyWithAddress(final String amount, final String street) {
+        final RegisteredMoney money = new RegisteredMoney();
+        money.setAmount(amount);
+        money.setCurrency("USD");
+        if (street != null) {
+            final NestedAddress address = new NestedAddress();
+            address.setStreet(street);
+            address.setZip(12345);
+            money.setAddress(address);
+            money.setAddresses(List.of(address));
+        }
+        return money;
     }
 
     @Test
@@ -1281,6 +1406,10 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
     public static class RegisteredMoney {
         private String amount;
         private String currency;
+        // No field named "address": reading that property must invoke its getter, so duplicate reads are observable.
+        private NestedAddress shippingAddress;
+        private List<NestedAddress> addresses;
+        private int addressReads;
 
         public String getAmount() {
             return amount;
@@ -1296,6 +1425,36 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
 
         public void setCurrency(final String currency) {
             this.currency = currency;
+        }
+
+        public NestedAddress getAddress() {
+            addressReads++;
+            return shippingAddress;
+        }
+
+        public void setAddress(final NestedAddress address) {
+            shippingAddress = address;
+        }
+
+        public List<NestedAddress> getAddresses() {
+            return addresses;
+        }
+
+        public void setAddresses(final List<NestedAddress> addresses) {
+            this.addresses = addresses;
+        }
+    }
+
+    public static class RegisteredMoneyWithStreet extends RegisteredMoney {
+        @Column("address.street")
+        private String directStreet;
+
+        public String getDirectStreet() {
+            return directStreet;
+        }
+
+        public void setDirectStreet(final String directStreet) {
+            this.directStreet = directStreet;
         }
     }
 

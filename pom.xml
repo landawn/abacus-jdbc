@@ -66,7 +66,7 @@
 		<dependency>
 			<groupId>com.landawn.abacus</groupId>
 			<artifactId>abacus-query</artifactId>
-			<version>4.9.5</version>
+			<version>4.9.6</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -392,6 +392,56 @@
 		</plugins>
 	</build>
 	<profiles>
+		<profile>
+			<id>samples</id>
+			<build>
+				<testResources>
+					<testResource>
+						<directory>src/test/resources</directory>
+					</testResource>
+					<testResource>
+						<directory>samples</directory>
+						<includes>
+							<include>schema.sql</include>
+						</includes>
+					</testResource>
+				</testResources>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>build-helper-maven-plugin</artifactId>
+						<version>3.6.1</version>
+						<executions>
+							<execution>
+								<id>compile-samples</id>
+								<phase>generate-test-sources</phase>
+								<goals>
+									<goal>add-test-source</goal>
+								</goals>
+								<configuration>
+									<sources>
+										<source>samples</source>
+									</sources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<configuration>
+							<includes combine.self="override">
+								<include>**/samples/*Test.java</include>
+							</includes>
+							<systemPropertyVariables>
+								<junit.jupiter.execution.parallel.enabled>false</junit.jupiter.execution.parallel.enabled>
+								<log4j2.configurationFile>${project.basedir}/samples/log4j2.xml</log4j2.configurationFile>
+							</systemPropertyVariables>
+						</configuration>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
 		<profile>
 			<id>mysql-tests</id>
 			<properties>

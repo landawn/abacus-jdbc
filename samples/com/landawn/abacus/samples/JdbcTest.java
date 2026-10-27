@@ -13,546 +13,146 @@
  */
 package com.landawn.abacus.samples;
 
-import static com.landawn.abacus.query.Dsl.NSC;
-import static com.landawn.abacus.query.Dsl.PSC;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.List;
-
-import javax.sql.DataSource;
 
 import org.junit.jupiter.api.Test;
 
-import com.landawn.abacus.exception.UncheckedSQLException;
-import com.landawn.abacus.jdbc.DataTransferUtil;
 import com.landawn.abacus.jdbc.IsolationLevel;
-import com.landawn.abacus.jdbc.Jdbc.BiResultExtractor;
-import com.landawn.abacus.jdbc.Jdbc.HandlerFactory;
-import com.landawn.abacus.jdbc.Jdbc.ResultExtractor;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
-import com.landawn.abacus.query.Filters;
-import com.landawn.abacus.samples.dao.AddressDao;
-import com.landawn.abacus.samples.dao.DeviceDao;
-import com.landawn.abacus.samples.dao.EmployeeDao;
-import com.landawn.abacus.samples.dao.EmployeeProjectDao;
-import com.landawn.abacus.samples.dao.EmployeeProjectDao2;
-import com.landawn.abacus.samples.dao.MyUserDaoA;
-import com.landawn.abacus.samples.dao.NonUpdateUserDao;
-import com.landawn.abacus.samples.dao.ProjectDao;
-import com.landawn.abacus.samples.dao.ReadOnlyUserDao;
-import com.landawn.abacus.samples.dao.UncheckedUserDao;
-import com.landawn.abacus.samples.dao.UserDao;
+import com.landawn.abacus.jdbc.dao.CrudDao;
 import com.landawn.abacus.samples.entity.User;
-import com.landawn.abacus.util.Dataset;
-import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Holder;
-import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Profiler;
-import com.landawn.abacus.util.Seq;
-import com.landawn.abacus.util.Strings;
-import com.landawn.abacus.util.Tuple.Tuple2;
-import com.landawn.abacus.util.stream.IntStream;
-import com.landawn.abacus.util.stream.Stream;
 
-public class JdbcTest {
-    static {
-        HandlerFactory.register("handler1", HandlerFactory.create(
-                (obj, args, methodSignature) -> N.println(">>>handler1.beforeInvoke: method: " + methodSignature._1.getName()),
-                (result, obj, args, methodSignature) -> N.println("<<<handler1.afterInvoke: method: " + methodSignature._1.getName() + ". result: " + result)));
-        HandlerFactory.register("handler2", HandlerFactory.create(
-                (obj, args, methodSignature) -> N.println(">>>handler2.beforeInvoke: method: " + methodSignature._1.getName()),
-                (result, obj, args, methodSignature) -> N.println("<<<handler2.afterInvoke: method: " + methodSignature._1.getName() + ". result: " + result)));
-
-        JdbcUtil.setIdExtractorForDao(EmployeeDao.class, rs -> rs.getInt(1));
-    }
-
-    static final DataSource dataSource = JdbcUtil.createHikariDataSource("jdbc:h2:~/test", "sa", "");
-    static final DataSource dataSource2 = JdbcUtil.createC3p0DataSource("jdbc:h2:~/test", "sa", "");
-    static final UserDao userDao = JdbcUtil.createDao(UserDao.class, dataSource);
-    static final UserDao userDao12 = JdbcUtil.createDao(UserDao.class, dataSource, JdbcUtil.DaoCreationOptions.builder().targetTableName("user2").build());
-    static final MyUserDaoA myUserDaoA = JdbcUtil.createDao(MyUserDaoA.class, dataSource);
-    static final UncheckedUserDao uncheckedUserDao = JdbcUtil.createDao(UncheckedUserDao.class, dataSource);
-    static final NonUpdateUserDao noUpdateUserDao = JdbcUtil.createDao(NonUpdateUserDao.class, dataSource);
-    static final ReadOnlyUserDao readOnlyUserDao = JdbcUtil.createDao(ReadOnlyUserDao.class, dataSource);
-
-    static final EmployeeDao employeeDao = JdbcUtil.createDao(EmployeeDao.class, dataSource);
-    static final ProjectDao projectDao = JdbcUtil.createDao(ProjectDao.class, dataSource);
-    static final EmployeeProjectDao employeeProjectDao = JdbcUtil.createDao(EmployeeProjectDao.class, dataSource);
-    static final EmployeeProjectDao2 employeeProjectDao2 = JdbcUtil.createDao(EmployeeProjectDao2.class, dataSource);
-
-    static final DeviceDao deviceDao = JdbcUtil.createDao(DeviceDao.class, dataSource);
-    static final AddressDao addressDao = JdbcUtil.createDao(AddressDao.class, dataSource);
-
-    // static final SqlExecutor sqlExecutor = new SqlExecutor(dataSource);
-
-    // initialize DB schema.
-    static {
-        try {
-            //    JdbcUtil.enableSqlLog();
-            //    JdbcUtil.setSqlPerfLogThresholdMillis(10);
-
-            final String sql_address_drop_table = "DROP TABLE IF EXISTS address";
-            final String sql_device_drop_table = "DROP TABLE IF EXISTS device";
-            final String sql_user_drop_table = "DROP TABLE IF EXISTS user1";
-
-            JdbcUtil.executeUpdate(dataSource, sql_address_drop_table);
-            JdbcUtil.executeUpdate(dataSource, sql_device_drop_table);
-            JdbcUtil.executeUpdate(dataSource, sql_user_drop_table);
-
-            final String sql_user_creat_table = """
-                    CREATE TABLE IF NOT EXISTS user1 (\
-                    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                    first_name varchar(32) NOT NULL, \
-                    last_name varchar(32) NOT NULL, \
-                    prop1 varchar(32), \
-                    email varchar(32), \
-                    create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)
-                    """;
-
-            JdbcUtil.executeUpdate(dataSource, sql_user_creat_table);
-
-            final String sql_user2_creat_table = """
-                    CREATE TABLE IF NOT EXISTS user2 (\
-                    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                    first_name varchar(32) NOT NULL, \
-                    last_name varchar(32) NOT NULL, \
-                    prop1 varchar(32), \
-                    email varchar(32), \
-                    create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)
-                    """;
-
-            JdbcUtil.executeUpdate(dataSource, sql_user2_creat_table);
-
-            final String sql_device_creat_table = """
-                    CREATE TABLE IF NOT EXISTS device (\
-                    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                    manufacture varchar(64) NOT NULL, \
-                    model varchar(32) NOT NULL, \
-                    user_id bigint, \
-                    FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)
-                    """;
-
-            JdbcUtil.executeUpdate(dataSource, sql_device_creat_table);
-
-            final String sql_address_creat_table = """
-                    CREATE TABLE IF NOT EXISTS address (\
-                    id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                    street varchar(64) NOT NULL, \
-                    city varchar(32) NOT NULL, \
-                    user_id bigint, \
-                    FOREIGN KEY (user_id) REFERENCES user1(id) ON DELETE CASCADE)
-                    """;
-
-            JdbcUtil.executeUpdate(dataSource, sql_address_creat_table);
-
-            // this code is copied from: https://www.baeldung.com/hibernate-many-to-many
-
-            final String sql_employee_drop_table = "DROP TABLE IF EXISTS employee";
-            final String sql_employee_creat_table = """
-                    CREATE TABLE IF NOT EXISTS employee (\
-                    employee_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                    first_name varchar(50) DEFAULT NULL, \
-                    last_name varchar(50) DEFAULT NULL)
-                    """;
-
-            JdbcUtil.executeUpdate(dataSource, sql_employee_drop_table);
-            JdbcUtil.executeUpdate(dataSource, sql_employee_creat_table);
-
-            final String sql_project_drop_table = "DROP TABLE IF EXISTS project";
-            final String sql_project_creat_table = """
-                    CREATE TABLE IF NOT EXISTS project (\
-                    project_id int NOT NULL AUTO_INCREMENT PRIMARY KEY, \
-                    title varchar(50) DEFAULT NULL, \
-                    start_date timestamp)
-                    """;
-
-            JdbcUtil.executeUpdate(dataSource, sql_project_drop_table);
-            JdbcUtil.executeUpdate(dataSource, sql_project_creat_table);
-
-            final String sql_employee_dept_relationship_drop_table = "DROP TABLE IF EXISTS employee_project";
-            final String sql_employee_dept_relationship_creat_table = """
-                    CREATE TABLE IF NOT EXISTS employee_project (\
-                    employee_id int NOT NULL, \
-                    project_id int NOT NULL, \
-                    create_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP)
-                    """;
-
-            JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_drop_table);
-            JdbcUtil.executeUpdate(dataSource, sql_employee_dept_relationship_creat_table);
-
-        } catch (final SQLException e) {
-            throw new UncheckedSQLException(e);
-        }
-    }
-
-    //    @Test
-    //    public void crud_by_Jdbc_00() throws SQLException {
-    //        NSC.selectFrom(User.class).where(Filters.gt("id", 1)).toNamedQuery(dataSource).list().forEach(Fn.println());
-    //    }
-
-    @Test
-    public void test_iterateAllResultSets() throws SQLException {
-        // JdbcUtil.setSqlPerfLogThresholdMillis(1);
-
-        final List<User> users = IntStream.range(1, 1000)
-                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
-                .toList();
-
-        final String sql = NSC.insertInto(User.class).build().query();
-        JdbcUtil.prepareNamedQuery(dataSource, sql).addBatchParameters(users).batchInsert();
-
-        //        try (Connection conn = dataSource.getConnection()) {
-        //            Statement stmt = conn.createStatement();
-        //            stmt.addBatch("select * from user1 where id < 10");
-        //            stmt.addBatch("select * from user1 where id > 990");
-        //            stmt.executeBatch();
-        //
-        //            JdbcUtil.extractAllResultSets(stmt).forEach(Dataset::println);
-        //
-        //        }
-
-        assertEquals(users.size(), userDao.batchUpdate(users));
-
-        final String query1 = NSC.selectFrom(User.class).where(Filters.lt("id", 0)).build().query();
-        final String query2 = NSC.selectFrom(User.class).where(Filters.gt("id", 200)).build().query();
-
-        final Tuple2<Dataset, Dataset> result = JdbcUtil.prepareNamedQuery(dataSource, Strings.concatNullToEmpty(query1, "; ", query2))
-                .setInt(1, 10)
-                .setInt(2, 300)
-                .query2ResultSets(BiResultExtractor.TO_DATASET, BiResultExtractor.TO_DATASET);
-
-        result._1.println();
-        // result._2.println();
-
-        N.println(result._1.size());
-        // N.println(result._2.size());
-
-        assertEquals(users.size(), userDao.batchDelete(users));
-
+/** Start here after Hello: the same data access task at three levels of abstraction. */
+public class JdbcTest extends SampleTestSupport {
+    /** A minimal DAO inherits CRUD operations without an implementation class. */
+    public interface BasicUserDao extends CrudDao<User, Long, BasicUserDao> {
     }
 
     @Test
-    public void test_perf_log() throws SQLException {
-        // JdbcUtil.setSqlPerfLogThresholdMillis(1);
-
-        final List<User> users = IntStream.range(1, 1000)
-                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
-                .toList();
-
-        final Connection conn = null;
-        final PreparedStatement stmt = null;
-
-        try {
-            final String sql = NSC.insertInto(User.class).build().query();
-            JdbcUtil.prepareNamedQuery(dataSource, sql).addBatchParameters(users).batchInsert();
-        } finally {
-            JdbcUtil.closeQuietly(stmt, conn);
+    public void insertAndReadWithPlainJdbc() throws SQLException {
+        // Plain JDBC owns each Connection, PreparedStatement, and ResultSet explicitly.
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement insert = connection.prepareStatement("INSERT INTO user1 (id, first_name, last_name, email) VALUES (?, ?, ?, ?)")) {
+            insert.setLong(1, 100);
+            insert.setString(2, "Ada");
+            insert.setString(3, "Lovelace");
+            insert.setString(4, "ada@example.com");
+            assertEquals(1, insert.executeUpdate());
         }
 
-        assertEquals(users.size(), userDao.batchUpdate(users));
-
-        assertEquals(users.size(), userDao.batchDelete(users));
-
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement select = connection.prepareStatement("SELECT first_name FROM user1 WHERE id = ?")) {
+            select.setLong(1, 100);
+            try (ResultSet rows = select.executeQuery()) {
+                assertTrue(rows.next());
+                assertEquals("Ada", rows.getString("first_name"));
+                assertFalse(rows.next());
+            }
+        }
     }
 
     @Test
-    public void crud_by_Jdbc() throws SQLException {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-
-        try {
-            final String sql = PSC.insertInto(User.class).build().query();
-            conn = dataSource.getConnection();
-            stmt = conn.prepareStatement(sql);
-            stmt.setLong(1, 100);
-            stmt.setString(2, "Forrest");
-            stmt.setString(3, "Gump");
-            stmt.setString(4, "Forrest");
-            stmt.setString(5, "123@email.com");
-            stmt.execute();
-        } finally {
-            JdbcUtil.closeQuietly(stmt, conn);
+    public void createReadUpdateDeleteWithPreparedQuery() throws SQLException {
+        // Parameter positions start at 1. Values are bound separately from SQL.
+        try (var insert = JdbcUtil.prepareQuery(dataSource, "INSERT INTO user1 (id, first_name, last_name, email) VALUES (?, ?, ?, ?)")) {
+            assertEquals(1, insert.setLong(1, 100).setString(2, "Ada").setString(3, "Lovelace").setString(4, "ada@example.com").update());
         }
 
-        User userFromDB = null;
+        try (var select = JdbcUtil.prepareQuery(dataSource, "SELECT * FROM user1 WHERE id = ?")) {
+            final User user = select.setLong(1, 100).findOnlyOne(User.class).get();
+            assertEquals("Ada", user.getFirstName());
+            assertNotNull(user.getCreateTime()); // @ReadOnly: the database supplies this value.
+        }
 
-        try {
-            final String sql = PSC.selectFrom(User.class).where("id = ?").build().query();
+        try (var update = JdbcUtil.prepareQuery(dataSource, "UPDATE user1 SET email = ? WHERE id = ?")) {
+            assertEquals(1, update.setString(1, "ada.lovelace@example.com").setLong(2, 100).update());
+        }
+        try (var select = JdbcUtil.prepareQuery(dataSource, "SELECT email FROM user1 WHERE id = ?")) {
+            assertEquals("ada.lovelace@example.com", select.setLong(1, 100).queryForString().get());
+        }
+        try (var delete = JdbcUtil.prepareQuery(dataSource, "DELETE FROM user1 WHERE id = ?")) {
+            assertEquals(1, delete.setLong(1, 100).update());
+        }
+        try (var select = JdbcUtil.prepareQuery(dataSource, "SELECT id FROM user1 WHERE id = ?")) {
+            assertFalse(select.setLong(1, 100).exists());
+        }
+    }
 
-            conn = dataSource.getConnection();
-            stmt = conn.prepareStatement(sql);
-            stmt.setLong(1, 100);
+    @Test
+    public void createReadUpdateDeleteWithDao() throws SQLException {
+        final BasicUserDao dao = JdbcUtil.createDao(BasicUserDao.class, dataSource);
+        final User user = User.builder().firstName("Ada").lastName("Lovelace").email("ada@example.com").build();
 
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    userFromDB = User.builder()
-                            .id(rs.getLong(1))
-                            .firstName(rs.getString(2))
-                            .lastName(rs.getString(3))
-                            .nickName(rs.getString(4))
-                            .email(rs.getString(5))
-                            .createTime(rs.getTimestamp(6))
-                            .build();
+        // Leave id unset for an identity column. insert returns the database-generated key.
+        final long id = dao.insert(user);
+        final User saved = dao.getOrNull(id);
+        assertNotNull(saved);
+        assertEquals("Ada", saved.getFirstName());
+
+        saved.setEmail("ada.lovelace@example.com");
+        assertEquals(1, dao.update(saved));
+        assertEquals("ada.lovelace@example.com", dao.getOrNull(id).getEmail());
+        assertEquals(1, dao.deleteById(id));
+        assertFalse(dao.exists(id));
+    }
+
+    @Test
+    public void selectWithExternalSqlMapper() throws SQLException {
+        final long id = userDao.insert(User.builder().firstName("Ada").lastName("Lovelace").build());
+
+        // UserDao's @Query id resolves to the statement in samples/userSqlMapper.xml.
+        assertEquals("Ada", userDao.selectUserById(id).get().getFirstName());
+        assertFalse(userDao.selectUserById(-1).isPresent());
+    }
+
+    @Test
+    public void commitOrRollBackAUnitOfWork() throws SQLException {
+        final BasicUserDao dao = JdbcUtil.createDao(BasicUserDao.class, dataSource);
+        final long id = dao.insert(User.builder().firstName("Ada").lastName("Lovelace").email("ada@example.com").build());
+
+        // Every operation must use the same DataSource on the transaction's thread.
+        // Closing without commit rolls back, including when an operation throws.
+        assertThrows(SQLException.class, () -> {
+            try (SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
+                try (var update = JdbcUtil.prepareQuery(dataSource, "UPDATE user1 SET email = ? WHERE id = ?")) {
+                    update.setString(1, "temporary@example.com").setLong(2, id).update();
                 }
+                // first_name is NOT NULL: this deliberately fails after the email update.
+                try (var invalidUpdate = JdbcUtil.prepareQuery(dataSource, "UPDATE user1 SET first_name = NULL WHERE id = ?")) {
+                    invalidUpdate.setLong(1, id).update();
+                }
+                transaction.commit();
             }
-        } finally {
-            JdbcUtil.closeQuietly(stmt, conn);
-        }
-
-        System.out.println(userFromDB);
-
-        try {
-            final String sql = PSC.update(User.class).set(N.asList("firstName", "lastName")).where("id = ?").build().query();
-
-            conn = dataSource.getConnection();
-            stmt = conn.prepareStatement(sql);
-            stmt.setString(1, "Tom");
-            stmt.setString(2, "Hanks");
-            stmt.setLong(3, 100);
-            stmt.execute();
-        } finally {
-            JdbcUtil.closeQuietly(stmt, conn);
-        }
-
-        try {
-            final String sql = PSC.deleteFrom(User.class).where("id = ?").build().query();
-
-            conn = dataSource.getConnection();
-            stmt = conn.prepareStatement(sql);
-            stmt.setLong(1, 100);
-            stmt.execute();
-        } finally {
-            JdbcUtil.closeQuietly(stmt, conn);
-        }
-
-        // As you see, here are the problems:
-        // 1, Manually create/open/close Connection/Statement/ResultSet.
-        // 2, Manually set parameters to Statement.
-        // 3, Manually read/map records from ResultSet.
-        // If you're working on small project, where 20 tables defined with average 20 columns.
-        // On average, if 20 (select/insert/update/delete) queries/methods created for each table,
-        // On average, each query/method requires 20 lines codes. 20 tables * 20 queries/table * 20 lines/query = 8000 lines.
-        // A lot of efforts will have to be paid to write the codes and maintain (add/update/delete/rename/... tables/columns).
-    }
-
-    // A bit(lot of?) improvements:
-    @Test
-    public void crud_by_PreparedQuery() throws SQLException {
-
-        String sql = PSC.insertInto(User.class).build().query();
-        JdbcUtil.prepareQuery(dataSource, sql) //
-                .setLong(1, 100)
-                .setString(2, "Forrest")
-                .setString(3, "Gump")
-                .setString(4, "Forrest")
-                .setString(5, "123@email.com")
-                .insert();
-
-        sql = PSC.selectFrom(User.class).where("id = ?").build().query();
-        JdbcUtil.prepareQuery(dataSource, sql) //
-                .setLong(1, 100)
-                .findOnlyOne(User.class) // or findFirst/list/stream/... a lot more we can do.
-                .ifPresent(System.out::println);
-
-        sql = PSC.update(User.class).set(N.asList("firstName", "lastName")).where("id = ?").build().query();
-        JdbcUtil.prepareQuery(dataSource, sql) //
-                .setString(1, "Tom")
-                .setString(2, "Hanks")
-                .setLong(3, 100)
-                .update();
-
-        sql = PSC.deleteFrom(User.class).where("id = ?").build().query();
-        JdbcUtil.prepareQuery(dataSource, sql) //
-                .setLong(1, 100)
-                .update();
-
-        // Improvements:
-        // 1, No need to manually create/open/close Connection/Statement/ResultSet.
-        // 2, No need to manually read/map records from ResultSet.
-        // 3, Flexible/fluent APIs
-        // But still need to manually set parameters to Statement.
-    }
-
-    @Test
-    public void crud_by_Dao() throws SQLException {
-        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao.insertWithId(user);
-
-        final User userFromDB = userDao.getOrNull(100L);
-        System.out.println(userFromDB);
-
-        // There are so much more can be done by findFirst/list/stream/
-        // userDao.stream(Filters.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyExtractor);
-
-        userDao.updateFirstAndLastName("Tom", "Hanks", 100);
-
-        userDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
-
-        userDao.deleteById(100L);
-
-        // How about transaction?
-        // See last sample.
-    }
-
-    @Test
-    public void crud_by_UsreDao12() throws SQLException {
-        userDao12.delete(Filters.alwaysTrue());
-
-        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao12.insert(user);
-
-        final List<User> entities = userDao12.prepareQuery("select * from user2").list(User.class);
-        assertEquals(user.getEmail(), entities.get(0).getEmail());
-
-        final User userFromDB = userDao12.getOrNull(100L);
-        System.out.println(userFromDB);
-
-        // There are so much more can be done by findFirst/list/stream/
-        // userDao.stream(Filters.eq("firstName", "Forrest")).filter(u -> u.getId() > 10).map(e -> e).groupBy(keyExtractor);
-
-        userDao12.updateFirstAndLastName("Tom", "Hanks", 100);
-
-        userDao12.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
-
-        userDao12.batchDelete(entities);
-
-        // How about transaction?
-        // See last sample.
-    }
-
-    @Test
-    public void test_transaction() throws SQLException {
-        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        userDao.insertWithId(user);
-
-        final User userFromDB = userDao.getOrNull(100L);
-        System.out.println(userFromDB);
-
-        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
-            userDao.updateFirstAndLastName("Tom", "Hanks", 100);
-
-            userDao.queryForBoolean("firstName", Filters.eq("id", 100)); // throw exception.
-            tran.commit();
-        } catch (final SQLException e) {
-            // ignore
-        }
-
-        assertEquals("Forrest", userDao.getOrNull(100L).getFirstName());
-
-        try (SqlTransaction tran = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
-            userDao.updateFirstAndLastName("Tom", "Hanks", 100);
-
-            tran.commit();
-        }
-
-        assertEquals("Tom", userDao.getOrNull(100L).getFirstName());
-
-        userDao.deleteById(100L);
-        assertNull(userDao.getOrNull(100L));
-
-        // In you're in Spring and want to use Spring transaction management,
-        // then don't need to call beginTransaction because Spring transaction is integrated and supported.
-    }
-
-    @Test
-    public void test_cycled() throws Exception {
-        Seq.of(1).cycled(1000).map(it -> "a").println();
-        Stream.of(1).cycled(10).map(it -> "a").println();
-
-    }
-
-    @Test
-    public void test_page() throws SQLException {
-
-        final List<User> users = IntStream.range(0, 31)
-                .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
-                .toList();
-
-        final List<Long> ids = userDao.batchInsertWithId(users);
-        assertEquals(users.size(), ids.size());
-
-        final long nextStartId = 0; //  0 => start id
-
-        final List<List<User>> list1 = JdbcUtil
-                .queryByPage(dataSource, "select * from user1 where id > ? order by id limit 10", 10,
-                        (stmt, ret) -> stmt.setLong(1, ret == null ? 0 : N.lastElement(ret).get().getId()), ResultExtractor.toList(User.class))
-                .toList();
-
-        final List<List<User>> list2 = Stream.of(Holder.of(nextStartId)).cycled().map(Fn.ff(it -> {
-            final List<User> page = JdbcUtil.prepareQuery(dataSource, "select * from user1 where id > ?  order by id limit 10")
-                    .setFetchDirectionToForward()
-                    .setFetchSize(10)
-                    .setLong(1, it.value())
-                    .list(User.class);
-            page.stream().mapToLong(User::getId).max().ifPresent(it::setValue);
-            return page;
-        })).takeWhile(N::notEmpty).toList();
-
-        list2.forEach(N::println);
-
-        assertEquals(list1, list2);
-
-        userDao.batchDelete(users);
-    }
-
-    @Test
-    public void test_copy() throws Exception {
-        {
-            JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
-            JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
-
-            final List<User> users = IntStream.range(1, 9999)
-                    .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
-                    .toList();
-
-            final List<Long> ids = userDao.batchInsertWithId(users);
-            assertEquals(users.size(), ids.size());
-
-            assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
-
-            DataTransferUtil.copy(dataSource, dataSource2, "user1", "user2");
-
-            assertEquals(JdbcUtil.prepareQuery(dataSource, "select * from user1").list(User.class),
-                    JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class));
-
-            JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
-            JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
-        }
-
-        {
-            JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
-            JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
-
-            final List<User> users = IntStream.range(1, 9999)
-                    .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
-                    .toList();
-
-            final List<Long> ids = userDao.batchInsertWithId(users);
-            assertEquals(users.size(), ids.size());
-
-            assertTrue(JdbcUtil.prepareQuery(dataSource, "select * from user2").list(User.class).size() == 0);
-
-            DataTransferUtil.copy(dataSource, dataSource2, "user1", "user2", N.asList("first_name", "last_name", "email", "create_time"));
-
-            JdbcUtil.prepareQuery(dataSource, "delete from user1").update();
-            JdbcUtil.prepareQuery(dataSource, "delete from user2").update();
-        }
-
-    }
-
-    @Test
-    public void perf_test_createDAO() {
-        Profiler.run(1, 1, 3, () -> {
-            for (int i = 0; i < 100; i++) {
-                JdbcUtil.createDao(AddressDao.class, dataSource);
+        });
+        assertEquals("ada@example.com", dao.getOrNull(id).getEmail());
+
+        try (SqlTransaction transaction = JdbcUtil.beginTransaction(dataSource, IsolationLevel.DEFAULT)) {
+            try (var update = JdbcUtil.prepareQuery(dataSource, "UPDATE user1 SET email = ? WHERE id = ?")) {
+                assertEquals(1, update.setString(1, "committed@example.com").setLong(2, id).update());
             }
-        }).printResult();
+            transaction.commit();
+        }
+        assertEquals("committed@example.com", dao.getOrNull(id).getEmail());
+    }
+
+    @Test
+    public void mapBuiltInDaoOperationsToAnotherTable() throws SQLException {
+        final BasicUserDao archiveDao = JdbcUtil.createDao(BasicUserDao.class, dataSource,
+                JdbcUtil.DaoCreationOptions.builder().targetTableName("user2").build());
+        final long id = archiveDao.insert(User.builder().firstName("Ada").lastName("Lovelace").build());
+
+        assertEquals("Ada", archiveDao.getOrNull(id).getFirstName());
+        assertFalse(userDao.exists(id));
+        // targetTableName changes generated CRUD SQL. Literal SQL in @Query stays as written.
     }
 }

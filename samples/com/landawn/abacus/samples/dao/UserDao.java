@@ -62,6 +62,10 @@ import com.landawn.abacus.util.stream.Stream;
 // @SqlLogEnabled(true)
 public interface UserDao extends CrudDao<User, Long, UserDao>, JoinEntityHelper<User, UserDao> {
 
+    /** Loads SQL from samples/userSqlMapper.xml; @Bind matches its named parameter. */
+    @Query(id = "selectUserById")
+    Optional<User> selectUserById(@Bind("id") long id) throws SQLException;
+
     @NonDBOperation
     @Override
     default Long generateId() {

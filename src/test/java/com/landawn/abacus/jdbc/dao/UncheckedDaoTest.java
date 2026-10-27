@@ -45,7 +45,7 @@ public class UncheckedDaoTest extends TestBase {
     private interface TestUncheckedDao extends UncheckedDao<TestEntity, TestUncheckedDao> {
     }
 
-    public static final class TestEntity {
+    public static class TestEntity {
         private String name;
         private String status;
 
@@ -88,6 +88,39 @@ public class UncheckedDaoTest extends TestBase {
     }
 
     private interface IdentifiedUncheckedDao extends UncheckedDao<IdentifiedEntity, IdentifiedUncheckedDao> {
+    }
+
+    public static class ExtraPropertyEntity extends TestEntity {
+        private String extra;
+
+        public String getExtra() {
+            return extra;
+        }
+
+        public void setExtra(final String extra) {
+            this.extra = extra;
+        }
+    }
+
+    @Test
+    void noIdUpsertIgnoresUnmappedSubtypePropertiesAndRetainsNullTargets() {
+        final TestUncheckedDao dao = Mockito.mock(TestUncheckedDao.class, Mockito.CALLS_REAL_METHODS);
+        doReturn(transactionDataSource()).when(dao).dataSource();
+        final Condition condition = Mockito.mock(Condition.class);
+        final ExtraPropertyEntity input = new ExtraPropertyEntity();
+        input.setName("new name");
+        input.setExtra("not stored");
+        final TestEntity stored = new TestEntity();
+        stored.setName("old name");
+        stored.setStatus("retained");
+        when(dao.targetEntityClass()).thenReturn(TestEntity.class);
+        when(dao.findOnlyOne(condition)).thenReturn(Optional.of(stored));
+        when(dao.update(same(stored), ArgumentMatchers.<Collection<String>> any(), same(condition))).thenReturn(1);
+
+        assertSame(stored, dao.upsert(input, condition));
+        assertEquals("new name", stored.getName());
+        assertEquals("retained", stored.getStatus());
+        verify(dao).update(same(stored), ArgumentMatchers.<Collection<String>> any(), same(condition));
     }
 
     /**

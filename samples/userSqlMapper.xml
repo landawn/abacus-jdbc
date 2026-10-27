@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sqlMapper>
-	<sql id="selectUserById">select * from user where id = ?</sql>
+    <!-- Referenced by @Query(id = "selectUserById") in UserDao. -->
+    <sql id="selectUserById">
+        SELECT id, first_name, last_name, prop1, email, create_time
+        FROM user1 WHERE id = :id
+    </sql>
 </sqlMapper>

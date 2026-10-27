@@ -51,7 +51,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     default int update(final String propName, final Object propValue, final Condition cond)
@@ -85,7 +86,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final Map<String, Object> updateProps, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -113,7 +115,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records
      * @return the number of records updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or if the entity class has no updatable property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     default int update(final T entity, final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -151,7 +154,8 @@ sealed interface UpdateOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty,
      *                                  if an element of {@code propNamesToUpdate} is {@code null} or blank, or, other than a raw
      *                                  {@code col = expr} SET expression, names no property of the entity, or if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final T entity, final Collection<String> propNamesToUpdate, final Condition cond)

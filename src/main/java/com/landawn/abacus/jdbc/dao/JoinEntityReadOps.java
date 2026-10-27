@@ -84,7 +84,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClass} or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property of the specified type exists in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -120,7 +121,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property exists for one of the specified types in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -157,7 +159,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @return an Optional containing the entity with join entities loaded, or empty if not found
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -193,7 +196,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClass} or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property of the specified type exists in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -231,7 +235,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property exists for one of the specified types in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -271,7 +276,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @return an {@code Optional} containing the only matching entity with join entities loaded, or empty if no match
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the condition
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -309,7 +315,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClass} or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property of the specified type exists in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -352,7 +359,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code joinEntityClasses} contains a {@code null} element, or {@code cond} is {@code null},
      *                                  or a matching entity is found and no join property exists for one of the specified types in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -400,7 +408,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @return a list of entities matching the condition with join entities loaded as specified
      * @throws IllegalArgumentException if {@code cond} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -583,7 +592,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -610,7 +620,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -649,7 +660,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -680,7 +692,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -720,7 +733,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code joinEntityPropName} is {@code null} or empty, or if the
      *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -764,7 +778,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code joinEntityPropName} is {@code null} or empty, or if the
      *                                  {@code joinEntityPropName} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -788,7 +803,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -839,7 +855,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -863,7 +880,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist or is not properly
      *                                  annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -985,7 +1003,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if any of the {@code joinEntityPropNames} does not exist or is not properly annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1105,7 +1124,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load all join entities
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1202,7 +1222,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                 If {@code null} or empty, this method returns immediately
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1309,7 +1330,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1337,7 +1359,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} or {@code joinEntityClass} is {@code null}, or if no join property of the
      *                                  specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1377,7 +1400,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1408,7 +1432,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or if {@code entities} is not empty and no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1449,7 +1474,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or does not exist in the entity class, or names a property that is currently {@code null}
      *                                  and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1477,7 +1503,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or does not exist in the entity class, or names a property that is currently {@code null}
      *                                  and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1517,7 +1544,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  and its entity class has no property named {@code joinEntityPropName},
      *                                  or that property is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1547,7 +1575,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  and its entity class has no property named {@code joinEntityPropName},
      *                                  or that property is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1601,7 +1630,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if any of the {@code joinEntityPropNames} does not exist, or names a property
      *                                  that is currently {@code null} and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1731,7 +1761,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                                  or names a property that is {@code null} on at least one entity and is not annotated with {@code @JoinedBy},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1850,7 +1881,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * @param entity the entity for which to load join entities
      * @throws IllegalArgumentException if {@code entity} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */
@@ -1946,7 +1978,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      *                 If {@code null} or empty, this method returns immediately
      * @throws IllegalArgumentException if a join being loaded has a disallowed null/default key or multiple rows for a map-valued property,
      *         or if a {@code null} entity is encountered while reading its join keys or properties
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if selecting or reading the requested joined rows fails
      * @throws UnsupportedOperationException if a join property being loaded is read-only
      */

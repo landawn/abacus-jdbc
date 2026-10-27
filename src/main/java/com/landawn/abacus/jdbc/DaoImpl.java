@@ -2422,6 +2422,124 @@ final class DaoImpl {
     }
 
     /**
+     * Selects another table's generated key before the INSERT executes. A primary key may be supplied by the caller,
+     * while a different column holds the generated identity. Verify generation metadata before requesting a column.
+     * When primary-key metadata is unavailable (including a non-conforming null result), the reader below requires
+     * an unambiguous single generated column.
+     */
+    private static String[] customInsertKeyColumnNames(final Connection conn, final String insertTable) throws SQLException {
+        if (Strings.isEmpty(insertTable)) {
+            return null;
+        }
+
+        final String[] parts;
+        try {
+            parts = JdbcUtil.splitQualifiedSqlIdentifier(insertTable, cs.tableName);
+        } catch (final IllegalArgumentException e) {
+            return null; // Dialect-specific targets can still use an unambiguous driver-generated key.
+        }
+
+        try {
+            final DatabaseMetaData metadata = conn.getMetaData();
+            JdbcUtil.normalizeMetadataIdentifierParts(metadata, parts, SqlIdentifierUtil.explicitlyDelimitedIdentifierParts(insertTable, parts.length));
+            final boolean hasSchemas = metadata.supportsSchemasInTableDefinitions();
+            final String[] qualified = qualifyTable(parts, hasSchemas, conn.getCatalog(), hasSchemas ? JdbcUtil.getCurrentSchema(conn) : null);
+            if (hasSchemas && qualified[1] == null) {
+                return null; // A null schema filter could select a different table outside the connection's search path.
+            }
+
+            String key = null;
+            // Unlike getColumns, getPrimaryKeys takes literal schema/table names, not search patterns.
+            try (ResultSet keys = metadata.getPrimaryKeys(qualified[0], qualified[1], qualified[2])) {
+                if (keys == null) {
+                    // JDBC specifies an empty ResultSet, but tolerate wrappers returning null for unavailable metadata.
+                    return null;
+                }
+                while (keys.next()) {
+                    final String column = keys.getString("COLUMN_NAME");
+                    if (Strings.isEmpty(column)) {
+                        return null;
+                    }
+                    if (key != null && !key.equals(column)) {
+                        throw new SQLException("A custom INSERT into another table cannot return a scalar key for a composite primary key: " + insertTable);
+                    }
+                    if (key == null) {
+                        // getPrimaryKeys can resolve case-insensitive SQL names while getColumns matches patterns against
+                        // their stored spelling. Carry that resolved namespace forward instead of broadening case matching,
+                        // which could conflate distinct quoted tables. Preserve a qualifier if the driver omits it.
+                        final String[] storedTable = { keys.getString("TABLE_CAT"), keys.getString("TABLE_SCHEM"), keys.getString("TABLE_NAME") };
+                        for (int i = 0; i < storedTable.length; i++) {
+                            if (storedTable[i] != null) {
+                                qualified[i] = storedTable[i];
+                            }
+                        }
+                    }
+                    key = column;
+                }
+            }
+            return key == null ? null : new String[] { customInsertGeneratedKeyColumn(metadata, qualified, key) };
+        } catch (final java.sql.SQLFeatureNotSupportedException | AbstractMethodError e) {
+            return null;
+        }
+    }
+
+    /** Verifies a known scalar primary key, or selects a unique generated alternative, without executing the INSERT. */
+    private static String customInsertGeneratedKeyColumn(final DatabaseMetaData metadata, final String[] table, final String primaryKey) throws SQLException {
+        final Set<String> identities = new HashSet<>();
+        final Set<String> generated = new HashSet<>();
+        boolean primaryKeyFound = false;
+        boolean complete = true;
+
+        try (ResultSet columns = metadata.getColumns(table[0], JdbcUtil.escapeMetadataPattern(metadata, table[1]),
+                JdbcUtil.escapeMetadataPattern(metadata, table[2]), null)) {
+            while (columns.next()) {
+                // getColumns takes patterns; also filter returned identifiers in case a driver cannot escape wildcards.
+                final String catalog = columns.getString("TABLE_CAT");
+                final String schema = columns.getString("TABLE_SCHEM");
+                if (!table[2].equals(columns.getString("TABLE_NAME")) || (table[0] != null && catalog != null && !table[0].equals(catalog))
+                        || (table[1] != null && !table[1].equals(schema))) {
+                    continue;
+                }
+
+                final String name = columns.getString("COLUMN_NAME");
+                final String autoIncrement = columns.getString("IS_AUTOINCREMENT");
+                final String generatedColumn = columns.getString("IS_GENERATEDCOLUMN");
+                final boolean identity = "YES".equalsIgnoreCase(autoIncrement);
+                final boolean computed = "YES".equalsIgnoreCase(generatedColumn);
+                primaryKeyFound |= primaryKey.equals(name);
+                complete &= (identity || "NO".equalsIgnoreCase(autoIncrement)) && (computed || "NO".equalsIgnoreCase(generatedColumn));
+
+                // A generated primary key remains the explicit key contract even when other computed columns exist.
+                // Defaults are not proof: a caller-supplied PK with a default still need not be the generated identity.
+                if (primaryKey.equals(name) && (identity || computed)) {
+                    return name;
+                }
+                if (identity) {
+                    identities.add(name);
+                }
+                if (identity || computed) {
+                    generated.add(name);
+                }
+            }
+        } catch (final SQLException | AbstractMethodError e) {
+            // Once a PK is known, losing its generation metadata must not silently fall back to returning that supplied PK.
+            throw new SQLException(
+                    "Cannot determine the generated key for custom INSERT into " + Arrays.toString(table) + "; use explicit generated-key columns", e);
+        }
+
+        if (primaryKeyFound && complete) {
+            if (identities.size() == 1) {
+                return identities.iterator().next();
+            }
+            if (identities.isEmpty() && generated.size() == 1) {
+                return generated.iterator().next();
+            }
+        }
+        throw new SQLException("Cannot determine an unambiguous generated key for custom INSERT into " + Arrays.toString(table) + " with primary key "
+                + primaryKey + "; use explicit generated-key columns");
+    }
+
+    /**
      * Creates and configures the {@link AbstractQuery} for one DAO method invocation: substitutes SQL-fragment
      * parameters into the SQL text, opens a parameterized, named, or callable query against the DAO's data source,
      * registers procedure out parameters, applies fetch direction/size and query timeout derived from the query
@@ -2512,7 +2630,8 @@ final class DaoImpl {
                     if (generatedKeys != null) {
                         generatedKeys.entityTable = entityTable;
                     }
-                    final String[] keyColumnNames = entityTable ? generatedKeyColumnNames : null;
+                    final String[] keyColumnNames = entityTable ? generatedKeyColumnNames
+                            : generatedKeys != null && !generatedKeys.discardOtherTableKeys ? customInsertKeyColumnNames(conn, insertTable) : null;
                     return keyColumnNames == null ? JdbcUtil.prepareStatement(conn, sql, true) : JdbcUtil.prepareStatement(conn, sql, keyColumnNames);
                 };
                 preparedQuery = queryInfo.isNamedQuery ? JdbcUtil.prepareNamedQuery(proxy.dataSource(), parsedSql, stmtCreator)
@@ -3923,7 +4042,7 @@ final class DaoImpl {
     }
 
     /**
-     * Returns the generated key of a custom INSERT without an entity argument as the method's declared type.
+     * Returns a custom INSERT's generated key as the method's declared type.
      * JDBC's key type (or the DAO's ID type for its own table) can differ from the declared return type.
      *
      * @param key the generated key as read; may be {@code null}
@@ -3935,7 +4054,7 @@ final class DaoImpl {
     }
 
     /**
-     * Reads keys for one custom INSERT invocation without entity arguments. The DAO's extractor and default-ID test
+     * Reads keys for one custom INSERT invocation. The DAO's extractor and default-ID test
      * apply only to its own table. Another table's scalar key must not be wrapped as the DAO's composite ID, read through
      * an unrelated property's database type, or passed to a predicate that expects the DAO's ID class.
      */
@@ -3943,18 +4062,32 @@ final class DaoImpl {
         private final Jdbc.BiRowMapper<Object> entityExtractor;
         private final Predicate<Object> entityDefaultIdTester;
         private final Class<?> declaredType;
+        private final boolean discardOtherTableKeys;
         private boolean entityTable = true;
 
-        CustomInsertKeys(final Jdbc.BiRowMapper<Object> entityExtractor, final Predicate<Object> entityDefaultIdTester, final Class<?> declaredType) {
+        CustomInsertKeys(final Jdbc.BiRowMapper<Object> entityExtractor, final Predicate<Object> entityDefaultIdTester, final Class<?> declaredType,
+                final boolean discardOtherTableKeys) {
             this.entityExtractor = entityExtractor;
             this.entityDefaultIdTester = entityDefaultIdTester;
             this.declaredType = declaredType == void.class ? null : declaredType;
+            this.discardOtherTableKeys = discardOtherTableKeys;
         }
 
         @Override
         public Object apply(final ResultSet rs, final List<String> columnLabels) throws SQLException {
             // Convert while reading the keys, before a multi-row batch's transaction commits.
-            return entityTable ? entityExtractor.apply(rs, columnLabels) : convertGeneratedKey(JdbcUtil.getColumnValue(rs, 1), declaredType);
+            if (entityTable) {
+                return entityExtractor.apply(rs, columnLabels);
+            } else if (discardOtherTableKeys) {
+                return null;
+            }
+            // Without a resolved primary key, RETURN_GENERATED_KEYS can expose several unrelated defaults. Converting
+            // the first one can silently turn a timestamp into an ID; require the caller to choose columns explicitly.
+            if (columnLabels.size() != 1) {
+                throw new SQLException("Ambiguous generated-key columns for a custom INSERT into another table: " + columnLabels
+                        + ". Use a query with explicit generated-key columns.");
+            }
+            return convertGeneratedKey(JdbcUtil.getColumnValue(rs, 1), declaredType);
         }
 
         boolean isDefault(final Object key) {
@@ -8767,10 +8900,12 @@ final class DaoImpl {
                                 }
 
                                 final Jdbc.BiRowMapper<Object> entityKeyExtractor = getIdExtractor(idExtractorHolder, idExtractor, proxy);
-                                final CustomInsertKeys generatedKeys = isEntity ? null
-                                        : new CustomInsertKeys(entityKeyExtractor, isDefaultIdTester, declaredIdReturnType);
-                                final Jdbc.BiRowMapper<Object> keyExtractor = generatedKeys == null ? entityKeyExtractor : generatedKeys;
-                                final Predicate<Object> defaultKeyTester = generatedKeys == null ? isDefaultIdTester : generatedKeys::isDefault;
+                                // The argument's class does not identify the INSERT destination. Entity arguments used
+                                // as audit/copy parameters must neither use the entity extractor nor receive the other ID.
+                                final CustomInsertKeys generatedKeys = new CustomInsertKeys(entityKeyExtractor, isDefaultIdTester, declaredIdReturnType,
+                                        returnType == void.class);
+                                final Jdbc.BiRowMapper<Object> keyExtractor = generatedKeys;
+                                final Predicate<Object> defaultKeyTester = generatedKeys::isDefault;
 
                                 // Puts back the ID written onto the entity below if a transaction this insert runs in is rolled back later.
                                 final EnclosingIdSnapshot enclosingIds = isEntity && !isNoId
@@ -8781,7 +8916,7 @@ final class DaoImpl {
                                         fragmentAnnos, fragmentMappers, returnGeneratedKeys, generatedKeyColumnNames, outParameterList, parametersSetter,
                                         isExistsQueryMethod, isSingleReturnTypeMethod, isListQueryMethod, generatedKeys).insert(keyExtractor, defaultKeyTester);
 
-                                if (isEntity && id.isPresent() && !holdsReturnedId(entity, id.get(), isOneId, idGetter)) {
+                                if (isEntity && generatedKeys.entityTable && id.isPresent() && !holdsReturnedId(entity, id.get(), isOneId, idGetter)) {
                                     EnclosingIdSnapshot.write(enclosingIds, () -> idSetter.accept(id.get(), entity));
 
                                     if (!isOneId) {
@@ -8790,7 +8925,7 @@ final class DaoImpl {
                                     }
                                 }
 
-                                return insertResultConverter.apply(id, entity, isEntity);
+                                return insertResultConverter.apply(id, entity, isEntity && generatedKeys.entityTable);
                             };
                         } else {
                             final boolean canReturnArrayList = List.class.isAssignableFrom(returnType) && returnType.isAssignableFrom(ArrayList.class);
@@ -8830,8 +8965,8 @@ final class DaoImpl {
                                 final boolean writesIdsBack = returnGeneratedKeys && !isNoId && isEntityBatch;
                                 final Jdbc.BiRowMapper<Object> entityKeyExtractor = returnGeneratedKeys ? getIdExtractor(idExtractorHolder, idExtractor, proxy)
                                         : null;
-                                final CustomInsertKeys generatedKeys = returnGeneratedKeys && !isEntityBatch
-                                        ? new CustomInsertKeys(entityKeyExtractor, isDefaultIdTester, declaredBatchIdType)
+                                final CustomInsertKeys generatedKeys = returnGeneratedKeys
+                                        ? new CustomInsertKeys(entityKeyExtractor, isDefaultIdTester, declaredBatchIdType, returnType == void.class)
                                         : null;
                                 final Jdbc.BiRowMapper<Object> keyExtractor = generatedKeys == null ? entityKeyExtractor : generatedKeys;
                                 final Predicate<Object> defaultKeyTester = generatedKeys == null ? isDefaultIdTester : generatedKeys::isDefault;
@@ -8918,8 +9053,8 @@ final class DaoImpl {
                                     }
                                 }
 
-                                // Only DAO entities carry the id property generated keys are written to (see isEntityBatch above).
-                                final boolean isEntity = isEntityBatch;
+                                // A DAO entity may only supply parameters for another table; its original ID must survive.
+                                final boolean isEntity = isEntityBatch && generatedKeys != null && generatedKeys.entityTable;
 
                                 if (JdbcUtil.isAllNullIds(ids, defaultKeyTester)) {
                                     ids = new ArrayList<>();

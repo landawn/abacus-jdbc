@@ -91,6 +91,11 @@ import com.landawn.abacus.util.N;
  * reads a value once per listed name, so a name listed twice is read twice (a stream or reader value only once, however
  * often it is listed).
  *
+ * <p>With exactly one placeholder, a bean with a registered single-value {@code Type} still supplies a matching
+ * property or resolvable nested path. A direct or mapped property takes precedence over a nested path; when neither
+ * resolves, the whole object is bound through its registered type. To bind the whole object regardless of the
+ * placeholder's name, use {@link #setObject(int, Object)} or {@link #setObject(String, Object)} explicitly.</p>
+ *
  * <p>The backing {@code PreparedStatement} is closed by default
  * after materializing execution methods (such as {@code query}, {@code queryForInt}, {@code queryForLong},
  * {@code findFirst}, {@code findOnlyOne}, {@code list}, {@code execute}, and similar),
@@ -4388,7 +4393,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * <li><b>Single value</b>: Used only if the query has exactly one parameter placeholder
      *     (a single named parameter appearing exactly once). With one placeholder, an object whose class looks like
      *     a bean but is bound as one value by the Abacus type system (such as a {@link java.util.Calendar}) and has no
-     *     property named after the placeholder is also bound as a single value</li>
+     *     property or resolvable nested property path matching the placeholder is also bound as a single value.
+     *     A matching property or nested path takes precedence even for a registered custom {@code Type}</li>
      * </ul>
      *
      * <p>If {@code parameters} is rejected or any binding fails, this query is closed because its parameters may
@@ -4757,6 +4763,8 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      * When the first element is {@code null}, each later non-null element is interpreted through
      * {@link #setParameters(Object)} rather than being forced to a scalar value.
      * Bean elements resolve names, including nested property paths, as described in the class documentation.
+     * With one placeholder, a bean whose {@code Type} binds it as a single value still supplies a matching property
+     * or nested path; otherwise the whole object is bound, as in {@link #setParameters(Object)}.
      * For bean elements, a named parameter without a matching property is only tolerated for the reserved
      * system date/time names ({@code now}, {@code sysTime}, {@code sysDate}) — such parameters keep whatever
      * value was previously bound (or stay unbound); any other missing property causes an
@@ -4976,16 +4984,19 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             return false;
         }
 
-        if (parameterCount != 1) {
+        if (parameterCount != 1 || N.typeOf(cls).isBean()) {
             return true;
         }
 
         // Some value classes pass Beans.isBeanClass only because they expose getter/setter pairs: classes the Abacus
         // type system binds as one value (GregorianCalendar, MutableBoolean, a class with a registered Type). With exactly
         // one placeholder, bind such a value directly, as the "single value" contract promises, instead of failing to find
-        // a property named after the parameter. A value class that does have that property keeps the bean binding it
-        // always had.
-        return N.typeOf(cls).isBean() || ParserUtil.getBeanInfo(cls).getPropInfo(parameterNames.get(0)) != null;
+        // a property named after the parameter. Matching direct/mapped properties and nested paths take precedence:
+        // otherwise the same path binds the whole object with one placeholder but its leaf with several placeholders.
+        // Resolve metadata only here; reading a getter during classification would evaluate it again during binding.
+        final BeanInfo beanInfo = ParserUtil.getBeanInfo(cls);
+        final String parameterName = parameterNames.get(0);
+        return beanInfo.getPropInfo(parameterName) != null || JdbcUtil.getNestedParameterPropPath(beanInfo, parameterName) != null;
     }
 
     /**

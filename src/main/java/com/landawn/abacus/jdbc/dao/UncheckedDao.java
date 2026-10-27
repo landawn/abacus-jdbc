@@ -308,7 +308,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
      *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
-     *                                  or an existing row is updated and {@code entity} has a property the loaded
+     *                                  or an existing row is updated, {@code entity} has ID properties and a non-ID property the loaded
      *                                  entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing the transaction scope (inside a
      *         transaction) fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
@@ -341,7 +341,8 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      *
      * <p>When a record is found, the non-{@code null} non-id properties of {@code entity} are copied into
      * the loaded record before it is updated; a {@code null} property keeps the existing value, so an
-     * upsert cannot clear a column to {@code NULL}.</p>
+     * upsert cannot clear a column to {@code NULL}. When the input has no ID properties, properties absent from the loaded
+     * entity are ignored. With ID properties, an unmatched non-ID property is rejected.</p>
      *
      * <p>Inside a transaction on the DAO's data source, the lookup and the write run in one transaction scope: a nested scope of
      * the transaction active on the thread (a failure, also one of the lookup, then marks that transaction rollback-only, so its
@@ -371,7 +372,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
      * @param cond the condition to verify if the record exists
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
-     *                                  and {@code entity} has a property the loaded entity does not
+     *                                  and {@code entity} has ID properties and a non-ID property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing the transaction scope (inside a transaction),
      *         or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails, or looking up
      *         an existing row or executing the required INSERT or UPDATE statement fails
@@ -407,6 +408,7 @@ public non-sealed interface UncheckedDao<T, TD extends UncheckedDao<T, TD>>
                 final List<String> idPropNameList = QueryUtil.idPropNames(cls);
 
                 if (N.isEmpty(idPropNameList)) {
+                    // Preserve the lenient no-ID merge: a subtype may carry properties not stored by this DAO.
                     Beans.mergeInto(entity, dbEntity);
                     update(dbEntity, cond);
                 } else {

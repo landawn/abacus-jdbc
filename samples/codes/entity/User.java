@@ -7,7 +7,6 @@ import com.landawn.abacus.annotation.JsonXmlConfig;
 import com.landawn.abacus.annotation.NonUpdatable;
 import com.landawn.abacus.annotation.ReadOnly;
 import com.landawn.abacus.annotation.Table;
-import com.landawn.abacus.annotation.Type;
 import com.landawn.abacus.util.EnumType;
 import com.landawn.abacus.util.NamingPolicy;
 
@@ -22,7 +21,8 @@ import lombok.experimental.Accessors;
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
-@JsonXmlConfig(namingPolicy = NamingPolicy.SCREAMING_SNAKE_CASE, ignoredFields = { "id", "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "PDT", numberFormat = "#.###", enumerated = EnumType.ORDINAL)
+@JsonXmlConfig(namingPolicy = NamingPolicy.SCREAMING_SNAKE_CASE, ignoredFields = { "id",
+        "create_time" }, dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'", timeZone = "UTC", numberFormat = "#.###", enumerated = EnumType.ORDINAL)
 @Table(name = "user1")
 public class User {
 
@@ -45,7 +45,6 @@ public class User {
 
     @NonUpdatable
     @Column(name = "CREATE_TIME")
-    @Type(name = "List<String>")
     private java.util.Date create_time;
 
     public User copy() {

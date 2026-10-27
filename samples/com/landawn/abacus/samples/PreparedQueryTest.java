@@ -15,10 +15,8 @@ package com.landawn.abacus.samples;
 
 import static com.landawn.abacus.query.Dsl.NSC;
 import static com.landawn.abacus.query.Dsl.PSC;
-import static com.landawn.abacus.samples.JdbcTest.dataSource;
-import static com.landawn.abacus.samples.JdbcTest.userDao;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -39,7 +37,8 @@ import com.landawn.abacus.util.IntFunctions;
 import com.landawn.abacus.util.N;
 import com.landawn.abacus.util.stream.IntStream;
 
-public class PreparedQueryTest {
+/** Result mapping recipes. Every method seeds its own data in a fresh database. */
+public class PreparedQueryTest extends SampleTestSupport {
 
     @Test
     public void test_builder() throws SQLException {
@@ -83,6 +82,7 @@ public class PreparedQueryTest {
                 .orElseNull();
 
         N.println(firstNameV);
+        assertEquals(List.of("a", "b", "c"), firstNameV);
 
         final String sql = PSC.deleteFrom(User.class).where("id >= ?").build().query();
         JdbcUtil.prepareQuery(dataSource, sql) //
@@ -110,7 +110,7 @@ public class PreparedQueryTest {
                 .println();
 
         JdbcUtil.prepareQuery(dataSource, sql) //
-                .list(Jdbc.BiRowMapper.to(User.class, null, it -> it.replaceFirst("acc.", "")))
+                .list(Jdbc.BiRowMapper.to(User.class, null, it -> it.startsWith("acc.") ? it.substring(4) : it))
                 .forEach(Fn.println());
 
         sql = PSC.deleteFrom(User.class).where("id >= ?").build().query();
@@ -138,15 +138,16 @@ public class PreparedQueryTest {
                 .query(Jdbc.ResultExtractor.toMap(rs -> rs.getLong(1), rs -> rs.getString(2)))
                 .forEach(Fn.println("="));
 
-        try {
-            JdbcUtil.prepareQuery(dataSource, sql) //
+        // A map needs unique keys. Every sample row has lastName = "Gump", so this fails.
+        final String selectSql = sql;
+        assertThrows(IllegalStateException.class, () -> {
+            JdbcUtil.prepareQuery(dataSource, selectSql) //
                     .setLong(1, minId)
                     .query(Jdbc.ResultExtractor.toMap(rs -> rs.getString(s.lastName), rs -> rs.getLong(1)))
                     .forEach(Fn.println("="));
-            fail("Should throw IllegalStateException");
-        } catch (final IllegalStateException e) {
-        }
+        });
 
+        // Supply a merge function when duplicate keys are intentional.
         JdbcUtil.prepareQuery(dataSource, sql) //
                 .setLong(1, minId)
                 .query(Jdbc.ResultExtractor.toMap(rs -> rs.getString(s.lastName), rs -> rs.getLong(1), Fn.replacingMerger()))

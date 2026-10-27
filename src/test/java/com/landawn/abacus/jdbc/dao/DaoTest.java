@@ -28,6 +28,8 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -648,9 +650,8 @@ public class DaoTest extends TestBase {
         verify(dao).save(entity);
     }
 
-    // Bean class without an id property — used to cover the
-    // `idPropNameList.isEmpty()` branch in upsert (Dao.java line 2342-2343).
-    static final class NoIdEntity {
+    // Bean class without an ID, exercising the lenient merge supported by the base Dao.
+    static class NoIdEntity {
         private String name;
 
         public String getName() {
@@ -663,6 +664,37 @@ public class DaoTest extends TestBase {
     }
 
     interface NoIdDao extends Dao<NoIdEntity, NoIdDao> {
+    }
+
+    static class NoIdSubtype extends NoIdEntity {
+        private String extra;
+
+        public String getExtra() {
+            return extra;
+        }
+
+        public void setExtra(final String extra) {
+            this.extra = extra;
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({ "false, false", "false, true", "true, false", "true, true" })
+    void noIdUpsertIgnoresUnmappedSubtypeProperties(final boolean matchByProperties, final boolean nullName) throws SQLException {
+        final NoIdDao dao = Mockito.mock(NoIdDao.class, Mockito.CALLS_REAL_METHODS);
+        Mockito.doReturn(transactionDataSource()).when(dao).dataSource();
+        final NoIdSubtype input = new NoIdSubtype();
+        input.setName(nullName ? null : "updated");
+        input.setExtra("not stored");
+        final NoIdEntity stored = new NoIdEntity();
+        stored.setName("retained");
+        when(dao.findOnlyOne(any(Condition.class))).thenReturn(Optional.of(stored));
+        when(dao.targetEntityClass()).thenReturn(NoIdEntity.class);
+        Mockito.doReturn(1).when(dao).update(ArgumentMatchers.same(stored), any(Condition.class));
+
+        assertSame(stored, matchByProperties ? dao.upsert(input, List.of("name")) : dao.upsert(input, Mockito.mock(Condition.class)));
+        assertEquals(nullName ? "retained" : "updated", stored.getName());
+        verify(dao).update(ArgumentMatchers.same(stored), any(Condition.class));
     }
 
     @Test

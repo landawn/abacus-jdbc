@@ -275,6 +275,8 @@ class UncheckedDaoPreparationTest extends TestBase {
 
     private static Stream<DaoOperation> daoOperations() {
         return Stream.of(new DaoOperation("list", dao -> dao.list(Filters.eq("name", "a")), true),
+                new DaoOperation("update property", dao -> dao.update("name", "b", Filters.eq("id", 1L)), true),
+                new DaoOperation("update by ID", dao -> dao.update("name", "b", 1L), true),
                 new DaoOperation("save", dao -> dao.save(acquisitionEntity(null)), true),
                 new DaoOperation("batchUpdate of one entity", dao -> dao.batchUpdate(List.of(acquisitionEntity(1L)), 10), true),
                 new DaoOperation("insert", dao -> dao.insert(acquisitionEntity(null)), false),
@@ -448,6 +450,42 @@ class UncheckedDaoPreparationTest extends TestBase {
     }
 
     public interface AcquisitionDao extends UncheckedCrudDao<AcquisitionEntity, Long, AcquisitionDao> {
+    }
+
+    public interface CheckedAcquisitionDao extends CrudDao<AcquisitionEntity, Long, CheckedAcquisitionDao> {
+    }
+
+    public interface CheckedParentDao extends CrudDao<JoinParent, Long, CheckedParentDao>, CrudJoinEntityHelper<JoinParent, Long, CheckedParentDao> {
+    }
+
+    @org.junit.jupiter.api.Test
+    void checkedDaoOperationsPropagateSpringAcquisitionFailures() throws Exception {
+        final DataSource ds = switchingDataSource();
+        final CheckedAcquisitionDao dao = JdbcUtil.createDao(CheckedAcquisitionDao.class, ds);
+        final CheckedParentDao parent = JdbcUtil.createDao(CheckedParentDao.class, ds);
+        try {
+            for (final int mode : new int[] { 1, 2 }) {
+                ACQUISITION_MODE.set(mode);
+                final Class<? extends Throwable> cause = mode == 1 ? SQLException.class : IllegalStateException.class;
+                assertInstanceOf(cause, assertThrows(CannotGetJdbcConnectionException.class, () -> dao.prepareQuery("SELECT 1")).getCause());
+                assertInstanceOf(cause, assertThrows(CannotGetJdbcConnectionException.class, () -> dao.insert(acquisitionEntity(null))).getCause());
+                assertInstanceOf(cause,
+                        assertThrows(CannotGetJdbcConnectionException.class, () -> dao.batchInsert(List.of(acquisitionEntity(null), acquisitionEntity(null))))
+                                .getCause());
+                assertInstanceOf(cause, assertThrows(CannotGetJdbcConnectionException.class, () -> dao.deleteById(1L)).getCause());
+                assertInstanceOf(cause, assertThrows(CannotGetJdbcConnectionException.class, () -> dao.upsert(acquisitionEntity(1L))).getCause());
+                assertInstanceOf(cause,
+                        assertThrows(CannotGetJdbcConnectionException.class, () -> dao.batchUpsert(List.of(acquisitionEntity(1L), acquisitionEntity(2L))))
+                                .getCause());
+                assertInstanceOf(cause, assertThrows(CannotGetJdbcConnectionException.class, () -> dao.update("name", "b", Filters.eq("id", 1L))).getCause());
+                assertInstanceOf(cause, assertThrows(CannotGetJdbcConnectionException.class, () -> dao.update("name", "b", 1L)).getCause());
+                assertInstanceOf(cause,
+                        assertThrows(CannotGetJdbcConnectionException.class, () -> parent.loadJoinEntities(joinParent(1L), "ownChildren")).getCause());
+                assertInstanceOf(cause, assertThrows(CannotGetJdbcConnectionException.class, () -> parent.get(1L, OwnChild.class)).getCause());
+            }
+        } finally {
+            ACQUISITION_MODE.set(0);
+        }
     }
 
     @Table("unchecked_acquisition_parent")

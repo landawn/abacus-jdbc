@@ -52,7 +52,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @return the number of rows updated (typically 1 if successful, 0 if not found); also 0, without executing any
      *         statement, if the entity class has no updatable non-ID property
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final T entity) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -78,7 +79,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code entity} is {@code null}, if {@code propNamesToUpdate} is {@code null} or empty, or if
      *         an element of it is {@code null} or names no property of the entity class (and is not a raw SET expression)
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final T entity, final Collection<String> propNamesToUpdate) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -98,7 +100,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code propName} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     default int update(final String propName, final Object propValue, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException {
@@ -134,7 +137,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      * @param id the ID of the entity to update
      * @return the number of rows updated
      * @throws IllegalArgumentException if {@code updateProps} is {@code null} or empty, or if {@code id} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      */
     int update(final Map<String, Object> updateProps, final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -158,7 +162,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      * @throws IllegalArgumentException if a batch row is {@code null} and the SQL has other than one parameter,
@@ -194,7 +199,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
@@ -226,7 +232,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
@@ -264,7 +271,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}, or starting or completing an internally required transaction fails
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */

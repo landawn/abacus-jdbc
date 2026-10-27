@@ -2534,10 +2534,11 @@ public class DaoImplTest extends TestBase {
     }
 
     public interface TenantRowBeanIdDao extends CrudDao<TenantRow, TenantRowKey, TenantRowBeanIdDao> {
-        @Query("INSERT INTO TenantRow (tenantId, name) VALUES (:tenantId, :name)")
+        // PSC derives tenant_row/tenant_id; these queries must target the entity table to exercise composite ID write-back.
+        @Query("INSERT INTO tenant_row (tenant_id, name) VALUES (:tenantId, :name)")
         TenantRowKey insertRow(TenantRow row) throws SQLException;
 
-        @Query(value = "INSERT INTO TenantRow (tenantId, name) VALUES (:tenantId, :name)", batch = true)
+        @Query(value = "INSERT INTO tenant_row (tenant_id, name) VALUES (:tenantId, :name)", batch = true)
         List<TenantRowKey> insertRows(List<TenantRow> rows) throws SQLException;
     }
 
@@ -2618,6 +2619,8 @@ public class DaoImplTest extends TestBase {
         final TenantRowKey queryId = dao.insertRow(queried);
         assertEquals(4L, queryId.getTenantId());
         assertEquals(10L, queryId.getRowId());
+        assertEquals(4L, queried.getTenantId());
+        assertEquals(10L, queried.getRowId());
 
         final TenantRow third = new TenantRow();
         third.setTenantId(3L);
@@ -2626,6 +2629,10 @@ public class DaoImplTest extends TestBase {
         final List<TenantRowKey> queryIds = dao.insertRows(List.of(third, fourth));
         assertEquals(List.of(11L, 12L), queryIds.stream().map(TenantRowKey::getRowId).toList());
         assertEquals(2L, queryIds.get(1).getTenantId());
+        assertEquals(3L, third.getTenantId());
+        assertEquals(11L, third.getRowId());
+        assertEquals(2L, fourth.getTenantId());
+        assertEquals(12L, fourth.getRowId());
     }
 
     @Test

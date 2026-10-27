@@ -14,7 +14,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-// Entity Object mapped to record in DB table.
+/** Maps user1 columns and declares related entities that are loaded explicitly by DAO helpers. */
 @Builder
 @Data
 @NoArgsConstructor
@@ -32,12 +32,13 @@ public class User {
     private String nickName;
     private String email;
     @ReadOnly
+    // Database default supplies this value; it is excluded from generated INSERT/UPDATE SQL.
     private Timestamp createTime;
 
     @JoinedBy("id=userId")
     private List<Device> devices;
 
-    // Supposed to be empty.
+    // Composite join: both the user's ID and first name must match the device.
     @JoinedBy("id=userId, firstName=model")
     private Device devices2;
 

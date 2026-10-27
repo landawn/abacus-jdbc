@@ -130,10 +130,11 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @param entity the entity to insert or update (must not be {@code null})
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or an existing row is updated and {@code entity}
-     *                                  has a property the loaded entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing the transaction scope
+     *                                  has a non-ID property the loaded entity does not
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing the transaction scope
      *         (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a
-     *         Spring-bound connection), fails
+     *         Spring-bound connection), fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
@@ -184,10 +185,11 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @return the saved entity: the inserted {@code entity} when no existing record was found,
      *         or the loaded database entity (with non-{@code null} non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
-     *                                  and {@code entity} has a property the loaded entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing the transaction scope
+     *                                  and {@code entity} has a non-ID property the loaded entity does not
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing the transaction scope
      *         (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a
-     *         Spring-bound connection), fails
+     *         Spring-bound connection), fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
@@ -287,8 +289,9 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or an existing row is updated
-     *                                  and an entity has a property the loaded entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     *                                  and an entity has a non-ID property the loaded entity does not
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
      *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
@@ -326,8 +329,9 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive,
-     *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     *                                  or an existing row is updated and an entity has a non-ID property the loaded entity does not
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
      *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
@@ -383,8 +387,9 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty
      *                                  and a name in {@code matchPropNames} is not a property of the entity class,
-     *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     *                                  or an existing row is updated and an entity has a non-ID property the loaded entity does not
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
      *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
@@ -446,8 +451,9 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
      *                                  or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class,
-     *                                  or an existing row is updated and an entity has a property the loaded entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     *                                  or an existing row is updated and an entity has a non-ID property the loaded entity does not
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
      *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection

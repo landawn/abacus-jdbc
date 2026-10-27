@@ -13,7 +13,9 @@
  */
 package com.landawn.abacus.samples;
 
-import java.util.Random;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
@@ -22,8 +24,8 @@ import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Dataset;
 import com.landawn.abacus.util.N;
 
+/** Combine tabular results in memory; no database connection is needed. */
 public class DatasetTest {
-    static final Random RAND = new Random();
 
     @Test
     public void test_join() {
@@ -34,10 +36,14 @@ public class DatasetTest {
         ds1.println();
 
         final Dataset ds2 = N.newDataset(N.asList("id", "userId", "street"), N.asList(address));
+        // Preserve both IDs by giving the address ID a distinct column name before joining.
         ds2.renameColumn("id", "addressId");
         ds2.println();
 
         final Dataset ds3 = ds1.innerJoin(ds2, N.asMap("id", "userId"));
+        assertEquals(1, ds3.size());
+        assertEquals(List.of("Tom"), ds3.getColumn("firstName"));
+        assertEquals(List.of(2001L), ds3.getColumn("addressId"));
         ds3.println();
     }
 

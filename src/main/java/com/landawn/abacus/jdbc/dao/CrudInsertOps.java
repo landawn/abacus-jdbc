@@ -93,7 +93,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      * {@link JdbcUtil#setIdExtractorForDao(Class, Jdbc.BiRowMapper)}, if any, otherwise the built-in one). A non-null
      * extractor returned here takes precedence over a registered one. This method is called the first time an insert
      * needs an extractor, and its result is then reused for the life of the DAO instance. A custom {@code @Query}
-     * INSERT without an entity argument into another table reads that table's key independently of this extractor.</p>
+     * INSERT into another table reads that table's key independently of this extractor, including when an entity supplies
+     * its parameters. Such an INSERT does not write that table's generated key onto the input entity.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -153,8 +154,9 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or if the auto-commit mode of the connection a
-     *         Spring-managed transaction bound to the data source cannot be read
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or if the auto-commit mode of the connection a
+     *         Spring-managed transaction bound to the data source cannot be read.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     ID insert(final T entity) throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException, SQLException;
@@ -179,8 +181,9 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         {@code propNamesToInsert} includes an ID property and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or if the auto-commit mode of the connection a
-     *         Spring-managed transaction bound to the data source cannot be read
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or if the auto-commit mode of the connection a
+     *         Spring-managed transaction bound to the data source cannot be read.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     ID insert(final T entity, final Collection<String> propNamesToInsert)
@@ -208,8 +211,9 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         enabled and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or if the auto-commit mode of the connection a
-     *         Spring-managed transaction bound to the data source cannot be read
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or if the auto-commit mode of the connection a
+     *         Spring-managed transaction bound to the data source cannot be read.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     ID insert(final String namedInsertSql, final T entity)
@@ -244,8 +248,9 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, starting or completing an internally required transaction
-     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, starting or completing an internally required transaction
+     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     default List<ID> batchInsert(final Collection<? extends T> entities)
@@ -282,8 +287,9 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, starting or completing an internally required transaction
-     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, starting or completing an internally required transaction
+     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize)
@@ -316,8 +322,9 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, starting or completing an internally required transaction
-     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, starting or completing an internally required transaction
+     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert)
@@ -355,8 +362,9 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, starting or completing an internally required transaction
-     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, starting or completing an internally required transaction
+     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
@@ -393,8 +401,9 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, starting or completing an internally required transaction
-     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, starting or completing an internally required transaction
+     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     @Beta
@@ -437,8 +446,9 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, starting or completing an internally required transaction
-     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, starting or completing an internally required transaction
+     *         fails, or if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing an INSERT statement, or reading its generated keys fails
      */
     @Beta

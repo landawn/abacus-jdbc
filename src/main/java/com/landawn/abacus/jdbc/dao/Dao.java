@@ -50,7 +50,8 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p>Synchronous statement execution propagates checked {@link SQLException}s to the caller.
  * Connection acquisition and transaction management can instead fail with
- * {@link UncheckedSQLException}. For a variant whose database methods translate
+ * {@link UncheckedSQLException}; connection acquisition through Spring instead propagates
+ * {@code CannotGetJdbcConnectionException}. For a variant whose database methods translate
  * checked SQL failures to the unchecked
  * {@link UncheckedSQLException}, see {@link UncheckedDao}. For variants
  * that forbid mutating operations, see {@link ReadOnlyDao} and {@link NonUpdateDao}.</p>
@@ -137,7 +138,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generateKeys {@code true} to return generated keys, {@code false} otherwise
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -154,7 +156,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnIndexes array of column indexes to return as generated keys
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -181,7 +184,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param generatedKeyColumnNames array of column names to return as generated keys
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -199,7 +203,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param stmtCreator function to create the PreparedStatement with custom options
      * @return a PreparedQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
@@ -221,7 +226,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -240,7 +246,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnIndexes} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -259,7 +266,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code generatedKeyColumnNames} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -277,7 +285,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null},
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -295,7 +304,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnIndexes} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -313,7 +323,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code generatedKeyColumnNames} is {@code null} or empty,
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -332,7 +343,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null} or empty, or if {@code stmtCreator} is {@code null},
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
@@ -353,7 +365,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return a NamedQuery instance
      * @throws IllegalArgumentException if {@code namedSql} is {@code null}, or if {@code stmtCreator} is {@code null},
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
@@ -383,7 +396,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param sql the stored procedure call string
      * @return a CallableQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -400,7 +414,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param stmtCreator function to create the CallableStatement
      * @return a CallableQuery instance
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty, or if {@code stmtCreator} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails, or a supplied JDBC callback throws {@link SQLException}
      */
     @Beta
@@ -437,11 +452,12 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
      *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
-     *                                  or an existing row is updated and {@code entity} has a property the loaded
+     *                                  or an existing row is updated, {@code entity} has ID properties and a non-ID property the loaded
      *                                  entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing the transaction scope
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing the transaction scope
      *         (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a
-     *         Spring-bound connection), fails
+     *         Spring-bound connection), fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
@@ -472,7 +488,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      *
      * <p>When a record is found, the non-{@code null} non-id properties of {@code entity} are copied into
      * the loaded record before it is updated; a {@code null} property keeps the existing value, so an
-     * upsert cannot clear a column to {@code NULL}.</p>
+     * upsert cannot clear a column to {@code NULL}. When the input has no ID properties, properties absent from the
+     * loaded entity are ignored. With ID properties, an unmatched non-ID property is rejected.</p>
      *
      * <p>Inside a transaction on the DAO's data source, the lookup and the write run in one transaction scope: a nested scope of
      * the transaction active on the thread (a failure, also one of the lookup, then marks that transaction rollback-only, so its
@@ -503,10 +520,11 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * @param cond condition to check for existence
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
-     *                                  and {@code entity} has a property the loaded entity does not
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing the transaction scope
+     *                                  and {@code entity} has ID properties and a non-ID property the loaded entity does not
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing the transaction scope
      *         (inside a transaction), or telling whether a transaction is active (from the auto-commit mode of a
-     *         Spring-bound connection), fails
+     *         Spring-bound connection), fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if looking up an existing row or executing the required INSERT or UPDATE statement fails
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
@@ -539,6 +557,7 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
                 final List<String> idPropNameList = QueryUtil.idPropNames(cls);
 
                 if (N.isEmpty(idPropNameList)) {
+                    // A no-ID subtype may carry properties not persisted by this DAO; preserve its lenient merge.
                     Beans.mergeInto(entity, dbEntity);
                     update(dbEntity, cond);
                 } else {

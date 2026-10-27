@@ -48,7 +48,8 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @param entity the entity to delete (must have its ID populated)
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      */
     int delete(final T entity) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -68,7 +69,8 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      * @param id the ID of the entity to delete
      * @return the number of rows deleted (typically 1 if successful, 0 if not found)
      * @throws IllegalArgumentException if {@code id} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      */
     int deleteById(final ID id) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -91,7 +93,8 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws IllegalArgumentException if a {@code null} entity is encountered while reading or binding its ID properties,
      *         or an entity lacks a property required by the generated DELETE statement
@@ -125,7 +128,8 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
@@ -150,7 +154,8 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws IllegalArgumentException if an ID is {@code null} and the entity uses a composite ID whose properties must be read
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
@@ -182,7 +187,8 @@ sealed interface CrudDeleteOps<T, ID, TD extends DaoBase<T, TD>> extends DeleteO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing an internally required transaction fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */

@@ -2,13 +2,23 @@ package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.spy;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.Map;
@@ -46,10 +56,14 @@ class DaoImplGeneratedKeyRegressionTest extends TestBase {
             // RETURN_GENERATED_KEYS returns CREATED before ID. Reading its first column as a Long fails after INSERT.
             stmt.execute(
                     "CREATE TABLE identity_row(created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
-            stmt.execute("CREATE TABLE other_row(log_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
+            // Other tables need the same protection: H2 returns CREATED before LOG_ID unless the key is requested by name.
+            stmt.execute(
+                    "CREATE TABLE other_row(created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, log_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
             stmt.execute("CREATE SCHEMA other_schema");
-            stmt.execute("CREATE TABLE other_schema.identity_row(log_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
-            stmt.execute("CREATE TABLE \"identity_row\"(log_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
+            stmt.execute(
+                    "CREATE TABLE other_schema.identity_row(created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, log_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
+            stmt.execute(
+                    "CREATE TABLE \"identity_row\"(created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, log_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
         }
         dao = JdbcUtil.createDao(KeyDao.class, ds);
     }
@@ -83,11 +97,40 @@ class DaoImplGeneratedKeyRegressionTest extends TestBase {
 
         @Query("INSERT INTO other_schema.identity_row(name) VALUES (?)")
         Long otherSchema(String name) throws SQLException;
+
+        @Query("INSERT INTO other_row(name) VALUES (:name)")
+        void copy(IdentityRow row) throws SQLException;
+
+        @Query("INSERT INTO {table}(name) VALUES (:name)")
+        Long copyTo(@SqlFragment("table") String table, IdentityRow row) throws SQLException;
+
+        @Query(value = "INSERT INTO {table}(name) VALUES (:name)", batch = true)
+        List<Long> copyBatch(@SqlFragment("table") String table, List<IdentityRow> rows, int batchSize) throws SQLException;
+
+        @Query(value = "INSERT INTO other_row(name) VALUES (:name)", batch = true)
+        void copyBatchVoid(List<IdentityRow> rows, int batchSize) throws SQLException;
     }
 
     public interface QualifiedDao extends CrudDao<IdentityRow, Long, QualifiedDao> {
         @Query("INSERT INTO \"PUBLIC\" . \"IDENTITY_ROW\"(name) VALUES (?)")
         Long insertName(String name) throws SQLException;
+    }
+
+    public interface GeneratedColumnDao extends CrudDao<IdentityRow, Long, GeneratedColumnDao> {
+        @Query("INSERT INTO {table}(code, name) VALUES (:code, :name)")
+        long number(@SqlFragment("table") String table, @Bind("code") String code, @Bind("name") String name) throws SQLException;
+
+        @Query("INSERT INTO {table}(code, name) VALUES (:code, :name)")
+        String text(@SqlFragment("table") String table, @Bind("code") String code, @Bind("name") String name) throws SQLException;
+
+        @Query("INSERT INTO {table}(code, name) VALUES (:code, :name)")
+        Optional<Long> optional(@SqlFragment("table") String table, @Bind("code") String code, @Bind("name") String name) throws SQLException;
+
+        @Query(value = "INSERT INTO {table}(code, name) VALUES (:code, :name)", batch = true)
+        List<Long> batch(@SqlFragment("table") String table, List<Map<String, Object>> rows, int batchSize) throws SQLException;
+
+        @Query("INSERT INTO generated_primary(name) VALUES (:name)")
+        String generatedPrimary(@Bind("name") String name) throws SQLException;
     }
 
     public interface AuditInserts {
@@ -135,6 +178,11 @@ class DaoImplGeneratedKeyRegressionTest extends TestBase {
     }
 
     public interface CompositeAuditDao extends CrudDao<NullableRow, EntityId, CompositeAuditDao>, AuditInserts {
+        @Query("INSERT INTO other_row(name) VALUES (:payload)")
+        void copy(NullableRow row) throws SQLException;
+
+        @Query(value = "INSERT INTO other_row(name) VALUES (:payload)", batch = true)
+        void copyBatch(List<NullableRow> rows) throws SQLException;
     }
 
     public record CompositeKey(Long tenantId, Long rowId) {
@@ -151,6 +199,9 @@ class DaoImplGeneratedKeyRegressionTest extends TestBase {
 
         @Query("INSERT INTO identity_row(name) VALUES (?)")
         Long ownTable(String name) throws SQLException;
+
+        @Query("INSERT INTO other_row(name) VALUES (:name)")
+        Long copy(IdentityRow row) throws SQLException;
     }
 
     private AuditInserts auditDao(final boolean recordId) {
@@ -169,6 +220,289 @@ class DaoImplGeneratedKeyRegressionTest extends TestBase {
             rows.next();
             return rows.getLong(1);
         }
+    }
+
+    // A case-insensitive database can preserve the stored spelling while getColumns still matches patterns exactly.
+    // Both a generated PK and a generated alternative to a supplied PK must use the identifiers resolved by getPrimaryKeys.
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = { "PUBLIC | AuditLog | auditlog | true", "PUBLIC | AuditLog | auditlog | false",
+            "PUBLIC | AuditLog | PUBLIC.auditlog | true", "PUBLIC | AuditLog | PUBLIC.auditlog | false", "MixedSchema | AuditLog | MixedSchema.auditlog | true",
+            "MixedSchema | AuditLog | MixedSchema.auditlog | false", "MixedSchema | Audit%_Log | MixedSchema.\"audit%_log\" | true",
+            "MixedSchema | Audit%_Log | MixedSchema.\"audit%_log\" | false" })
+    void generatedKeysUseStoredIdentifierSpelling(final String schema, final String storedTable, final String insertTable, final boolean generatedPrimaryKey)
+            throws SQLException {
+        final JdbcDataSource caseInsensitive = new JdbcDataSource();
+        caseInsensitive.setURL("jdbc:h2:mem:key_case_" + UUID.randomUUID() + ";DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE");
+        try (Connection conn = caseInsensitive.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE identity_row(id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
+            stmt.execute("CREATE SCHEMA IF NOT EXISTS \"" + schema + "\"");
+            final String qualifiedTable = "\"" + schema + "\".\"" + storedTable + "\"";
+            stmt.execute("CREATE TABLE " + qualifiedTable + "(code VARCHAR" + (generatedPrimaryKey ? "" : " PRIMARY KEY")
+                    + ", created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, log_id BIGINT GENERATED ALWAYS AS IDENTITY" + (generatedPrimaryKey ? " PRIMARY KEY" : "")
+                    + ", name VARCHAR)");
+            // A wildcard-like name must still resolve only this table after its stored spelling is recovered.
+            stmt.execute("CREATE TABLE \"" + schema + "\".\"AuditOtherLog\"(code VARCHAR PRIMARY KEY, wrong_id BIGINT GENERATED ALWAYS AS IDENTITY)");
+            final GeneratedColumnDao generated = JdbcUtil.createDao(GeneratedColumnDao.class, caseInsensitive);
+            assertEquals(1L, generated.number(insertTable, "a", "one"));
+            assertEquals("2", generated.text(insertTable, "b", "two"));
+            assertEquals(3L, generated.optional(insertTable, "c", "three").get());
+            assertEquals(List.of(4L), generated.batch(insertTable, List.of(Map.of("code", "d", "name", "four")), 1));
+            assertEquals(List.of(5L, 6L, 7L), generated.batch(insertTable,
+                    List.of(Map.of("code", "e", "name", "five"), Map.of("code", "f", "name", "six"), Map.of("code", "g", "name", "seven")), 2));
+            try (ResultSet rows = stmt.executeQuery("SELECT COUNT(*), MAX(log_id) FROM " + qualifiedTable)) {
+                assertTrue(rows.next());
+                assertEquals(7L, rows.getLong(1));
+                assertEquals(7L, rows.getLong(2));
+            }
+        }
+    }
+
+    @Test
+    void quotedTablesKeepTheirDistinctKeyMetadata() throws SQLException {
+        execute("CREATE TABLE \"AuditLog\"(code VARCHAR PRIMARY KEY, log_id BIGINT GENERATED ALWAYS AS IDENTITY(START WITH 10), name VARCHAR)");
+        execute("CREATE TABLE \"auditlog\"(code VARCHAR PRIMARY KEY, other_id BIGINT GENERATED ALWAYS AS IDENTITY(START WITH 100), name VARCHAR)");
+        final GeneratedColumnDao generated = JdbcUtil.createDao(GeneratedColumnDao.class, ds);
+        assertEquals(10L, generated.number("\"AuditLog\"", "a", "upper"));
+        assertEquals(100L, generated.number("\"auditlog\"", "b", "lower"));
+        assertEquals(1L, count("\"AuditLog\""));
+        assertEquals(1L, count("\"auditlog\""));
+    }
+
+    // A supplied PK (even one with a default) must not shadow an identity on another column. Return-type conversion
+    // previously either failed after committing the INSERT or silently returned the supplied string PK.
+    @ParameterizedTest
+    @ValueSource(strings = { "supplied_key", "other_schema.supplied_key", "\"Supplied%_Key\"" })
+    void suppliedPrimaryKeyDoesNotShadowGeneratedIdentity(final String table) throws SQLException {
+        execute("CREATE TABLE " + table + "(code VARCHAR(20) DEFAULT 'fallback' PRIMARY KEY, created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                + "\"Log_Id\" BIGINT GENERATED ALWAYS AS IDENTITY, name VARCHAR, computed_name VARCHAR GENERATED ALWAYS AS (name))");
+        // A pattern-similar table must not contribute generated-column candidates to the metadata lookup.
+        execute("CREATE TABLE suppliedXkey(code VARCHAR PRIMARY KEY, wrong_id BIGINT GENERATED ALWAYS AS IDENTITY)");
+        final GeneratedColumnDao generated = JdbcUtil.createDao(GeneratedColumnDao.class, ds);
+        assertEquals(1L, generated.number(table, "c", "one"));
+        assertEquals("2", generated.text(table, "d", "two"));
+        assertEquals(3L, generated.optional(table, "e", "three").get());
+        assertEquals(3L, count(table));
+        try (Statement stmt = keeper.createStatement();
+             ResultSet row = stmt.executeQuery("SELECT code, \"Log_Id\" FROM " + table + " WHERE name = 'one'")) {
+            assertTrue(row.next());
+            assertEquals("c", row.getString(1));
+            assertEquals(1L, row.getLong(2));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 1, 2, 10 })
+    void batchesReturnGeneratedIdentitiesInsteadOfSuppliedPrimaryKeys(final int batchSize) throws SQLException {
+        execute("CREATE TABLE supplied_key(code VARCHAR PRIMARY KEY, log_id BIGINT GENERATED ALWAYS AS IDENTITY, name VARCHAR)");
+        final GeneratedColumnDao generated = JdbcUtil.createDao(GeneratedColumnDao.class, ds);
+        assertEquals(List.of(1L), generated.batch("supplied_key", List.of(Map.of("code", "a", "name", "one")), batchSize));
+        assertEquals(List.of(2L, 3L, 4L), generated.batch("supplied_key",
+                List.of(Map.of("code", "b", "name", "two"), Map.of("code", "c", "name", "three"), Map.of("code", "d", "name", "four")), batchSize));
+        assertEquals(4L, count("supplied_key"));
+    }
+
+    @Test
+    void uniqueComputedColumnCanBeReturnedForASuppliedPrimaryKey() throws SQLException {
+        execute("CREATE TABLE supplied_key(code VARCHAR PRIMARY KEY, log_id VARCHAR GENERATED ALWAYS AS (name), name VARCHAR)");
+        final GeneratedColumnDao generated = JdbcUtil.createDao(GeneratedColumnDao.class, ds);
+        assertEquals("generated value", generated.text("supplied_key", "supplied", "generated value"));
+    }
+
+    @Test
+    void generatedPrimaryKeyStillWinsOverOtherGeneratedColumns() throws SQLException {
+        execute("CREATE TABLE generated_primary(log_id VARCHAR GENERATED ALWAYS AS (name) PRIMARY KEY, "
+                + "other_id BIGINT GENERATED ALWAYS AS IDENTITY, name VARCHAR)");
+        assertEquals("generated value", JdbcUtil.createDao(GeneratedColumnDao.class, ds).generatedPrimary("generated value"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "", ", first_id BIGINT GENERATED ALWAYS AS IDENTITY, second_id BIGINT GENERATED ALWAYS AS IDENTITY",
+            ", first_value VARCHAR GENERATED ALWAYS AS (name), second_value VARCHAR GENERATED ALWAYS AS (UPPER(name))" })
+    void unresolvedGeneratedColumnsWithASuppliedPrimaryKeyFailBeforeWriting(final String extraColumns) throws SQLException {
+        execute("CREATE TABLE supplied_key(code VARCHAR DEFAULT 'default key' PRIMARY KEY, name VARCHAR" + extraColumns + ")");
+        final GeneratedColumnDao generated = JdbcUtil.createDao(GeneratedColumnDao.class, ds);
+        final SQLException error = assertThrows(SQLException.class, () -> generated.number("supplied_key", "c", "one"));
+        assertTrue(error.getMessage().contains("generated key"));
+        assertThrows(SQLException.class, () -> generated.text("supplied_key", "c", "one"));
+        assertThrows(SQLException.class, () -> generated.optional("supplied_key", "c", "one"));
+        assertThrows(SQLException.class,
+                () -> generated.batch("supplied_key", List.of(Map.of("code", "a", "name", "one"), Map.of("code", "b", "name", "two")), 1));
+        assertEquals(0L, count("supplied_key"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "unknown", "unsupported" })
+    void missingGenerationMetadataForAKnownPrimaryKeyFailsBeforeWriting(final String mode) throws SQLException {
+        execute("CREATE TABLE supplied_key(code VARCHAR PRIMARY KEY, log_id BIGINT GENERATED ALWAYS AS IDENTITY, name VARCHAR)");
+        final JdbcDataSource wrapped = spy(ds);
+        doAnswer(call -> {
+            final Connection realConnection = ds.getConnection();
+            final Connection connection = spy(realConnection);
+            final DatabaseMetaData realMetadata = realConnection.getMetaData();
+            final DatabaseMetaData metadata = spy(realMetadata);
+            doReturn(metadata).when(connection).getMetaData();
+            doAnswer(columnsCall -> {
+                final ResultSet columns = spy(realMetadata.getColumns(columnsCall.getArgument(0), columnsCall.getArgument(1), columnsCall.getArgument(2),
+                        columnsCall.getArgument(3)));
+                if (mode.equals("unknown")) {
+                    doReturn("").when(columns).getString("IS_AUTOINCREMENT");
+                    doReturn("").when(columns).getString("IS_GENERATEDCOLUMN");
+                } else {
+                    doThrow(new SQLFeatureNotSupportedException("generation flags unavailable")).when(columns).getString("IS_GENERATEDCOLUMN");
+                }
+                return columns;
+            }).when(metadata).getColumns(any(), anyString(), anyString(), isNull());
+            return connection;
+        }).when(wrapped).getConnection();
+        final GeneratedColumnDao generated = JdbcUtil.createDao(GeneratedColumnDao.class, wrapped);
+        assertThrows(SQLException.class, () -> generated.number("supplied_key", "c", "one"));
+        assertEquals(0L, count("supplied_key"));
+    }
+
+    // Empty metadata is JDBC's unavailable result; also tolerate unsupported methods and non-conforming null results.
+    // The fallback still requires one returned column, and failed multi-row batches must roll back.
+    @ParameterizedTest
+    @ValueSource(strings = { "empty", "unsupported", "legacy", "null" })
+    void unavailablePrimaryKeyMetadataUsesOnlyUnambiguousDriverKeys(final String mode) throws SQLException {
+        execute("CREATE TABLE fallback_row(log_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
+        final JdbcDataSource wrapped = spy(ds);
+        doAnswer(call -> {
+            final Connection realConnection = ds.getConnection();
+            final Connection connection = spy(realConnection);
+            final DatabaseMetaData realMetadata = realConnection.getMetaData();
+            final DatabaseMetaData metadata = spy(realMetadata);
+            doReturn(metadata).when(connection).getMetaData();
+            doAnswer(keysCall -> switch (mode) {
+                case "empty" -> realMetadata.getPrimaryKeys(realConnection.getCatalog(), "PUBLIC", "MISSING_METADATA_TABLE");
+                case "unsupported" -> throw new SQLFeatureNotSupportedException("primary-key metadata unavailable");
+                case "legacy" -> throw new AbstractMethodError("primary-key metadata unavailable");
+                case "null" -> null;
+                default -> throw new AssertionError(mode);
+            }).when(metadata).getPrimaryKeys(any(), any(), any());
+            return connection;
+        }).when(wrapped).getConnection();
+        final KeyDao fallback = JdbcUtil.createDao(KeyDao.class, wrapped);
+        assertEquals(1L, fallback.dynamic("fallback_row", "one"));
+        final List<IdentityRow> rows = List.of(existingRow(998L), existingRow(999L));
+        assertEquals(List.of(2L), fallback.copyBatch("fallback_row", rows.subList(0, 1), 1));
+        assertEquals(List.of(3L, 4L), fallback.copyBatch("fallback_row", rows, 1));
+        assertEquals(4L, count("fallback_row"));
+
+        final SQLException error = assertThrows(SQLException.class, () -> fallback.dynamic("other_row", "ambiguous"));
+        assertTrue(error.getMessage().contains("generated-key columns"));
+        assertThrows(SQLException.class, () -> fallback.copyBatch("other_row", rows, 1));
+        // Only the autocommitted scalar INSERT remains; its ambiguous keys become available after execution.
+        assertEquals(1L, count("other_row"));
+        assertEquals(998L, rows.get(0).getId());
+        assertEquals(999L, rows.get(1).getId());
+    }
+
+    // getPrimaryKeys takes a literal schema, but getColumns takes a schema pattern. Escaping only the latter must
+    // select this schema's identity rather than the similarly named schema's key or a default in the target table.
+    @ParameterizedTest
+    @ValueSource(strings = { "S_1", "S%1" })
+    void schemaWildcardCharactersStayLiteralForPrimaryKeyLookup(final String schema) throws SQLException {
+        execute("CREATE SCHEMA \"" + schema + "\"");
+        execute("CREATE SCHEMA SX1");
+        final String table = "\"" + schema + "\".key_probe";
+        execute("CREATE TABLE " + table + "(code VARCHAR PRIMARY KEY, wrong_id BIGINT DEFAULT 999, "
+                + "right_id BIGINT GENERATED ALWAYS AS IDENTITY, name VARCHAR)");
+        execute("CREATE TABLE SX1.key_probe(wrong_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
+        final GeneratedColumnDao generated = JdbcUtil.createDao(GeneratedColumnDao.class, ds);
+        assertEquals(1L, generated.number(table, "a", "one"));
+        assertEquals("2", generated.text(table, "b", "two"));
+        assertEquals(List.of(3L, 4L), generated.batch(table, List.of(Map.of("code", "c", "name", "three"), Map.of("code", "d", "name", "four")), 1));
+        assertEquals(4L, count(table));
+        assertEquals(0L, count("SX1.key_probe"));
+    }
+
+    private static IdentityRow existingRow(final long id) {
+        final IdentityRow row = new IdentityRow();
+        row.setId(id);
+        row.setName("copy " + id);
+        return row;
+    }
+
+    @Test
+    void crossTableEntityArgumentsNeverReceiveTheDestinationId() throws SQLException {
+        final IdentityRow row = existingRow(999L);
+        dao.copy(row);
+        assertEquals(999L, row.getId());
+        assertEquals(2L, dao.copyTo("other_row", row));
+        assertEquals(999L, row.getId());
+        assertEquals(1L, dao.copyTo("identity_row", row));
+        assertEquals(1L, row.getId());
+        assertEquals(3L, dao.copyTo("PUBLIC.other_row", row));
+        assertEquals(1L, row.getId());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = { 1, 2, 10 })
+    void crossTableEntityBatchesKeepInputIds(final int batchSize) throws SQLException {
+        final List<IdentityRow> rows = List.of(existingRow(998L), existingRow(999L));
+        assertEquals(List.of(1L), dao.copyBatch("other_row", rows.subList(0, 1), batchSize));
+        assertEquals(List.of(2L, 3L), dao.copyBatch("other_row", rows, batchSize));
+        dao.copyBatchVoid(rows, batchSize);
+        assertEquals(998L, rows.get(0).getId());
+        assertEquals(999L, rows.get(1).getId());
+        assertEquals(List.of(1L, 2L), dao.copyBatch("identity_row", rows, batchSize));
+        assertEquals(1L, rows.get(0).getId());
+        assertEquals(2L, rows.get(1).getId());
+        assertEquals(5L, count("other_row"));
+    }
+
+    @Test
+    void crossTableCompositeKeysAreRejectedBeforeWriting() throws SQLException {
+        execute("CREATE TABLE composite_other(a BIGINT DEFAULT 7, b BIGINT GENERATED ALWAYS AS IDENTITY, name VARCHAR, PRIMARY KEY(a, b))");
+        final SQLException error = assertThrows(SQLException.class, () -> dao.dynamic("composite_other", "ambiguous"));
+        assertTrue(error.getMessage().contains("composite"));
+        assertEquals(0L, count("composite_other"));
+    }
+
+    @Test
+    void crossTableMultipleGeneratedValuesWithoutAKeyAreNotSilentlyConverted() throws SQLException {
+        execute("CREATE TABLE ambiguous_other(created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, sequence_value BIGINT GENERATED ALWAYS AS IDENTITY, name VARCHAR)");
+        final SQLException error = assertThrows(SQLException.class, () -> dao.dynamic("ambiguous_other", "ambiguous"));
+        assertTrue(error.getMessage().contains("generated-key columns"));
+        // JDBC only exposes these returned columns after execution; a multi-row batch must roll back on that failure.
+        final List<IdentityRow> rows = List.of(existingRow(998L), existingRow(999L));
+        assertThrows(SQLException.class, () -> dao.copyBatch("ambiguous_other", rows, 1));
+        assertEquals(1L, count("ambiguous_other"));
+        assertEquals(998L, rows.get(0).getId());
+        assertEquals(999L, rows.get(1).getId());
+    }
+
+    @Test
+    void crossTableEntityCopiesIgnoreCompositeAndCustomExtractors() throws SQLException {
+        final NullableRow composite = new NullableRow();
+        composite.setTenantId(7L);
+        composite.setRowId(999L);
+        composite.setPayload("copy");
+        final CompositeAuditDao compositeDao = JdbcUtil.createDao(CompositeAuditDao.class, ds);
+        compositeDao.copy(composite);
+        compositeDao.copyBatch(List.of(composite, composite));
+        assertEquals(7L, composite.getTenantId());
+        assertEquals(999L, composite.getRowId());
+
+        final IdentityRow custom = existingRow(998L);
+        assertEquals(4L, JdbcUtil.createDao(CustomKeyDao.class, ds).copy(custom));
+        assertEquals(998L, custom.getId());
+    }
+
+    @Test
+    void crossTableCopiesDoNotRegisterAnEntityIdRollback() throws SQLException {
+        final IdentityRow row = existingRow(999L);
+        final SqlTransaction transaction = JdbcUtil.beginTransaction(ds);
+        try {
+            assertEquals(1L, dao.copyTo("other_row", row));
+            assertEquals(999L, row.getId());
+            row.setId(1000L);
+        } finally {
+            transaction.rollback();
+        }
+        assertEquals(1000L, row.getId());
+        assertEquals(0L, count("other_row"));
     }
 
     // A composite DAO used to wrap LOG_ID in its own EntityId, then throw converting it after the row committed.

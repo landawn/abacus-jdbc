@@ -185,7 +185,7 @@ implementation 'com.landawn.abacus:abacus-jdbc:4.9.3'
 
 ## User guide
 
-* [Samples and answered questions](https://github.com/landawn/abacus-jdbc/tree/master/samples/com/landawn/abacus/samples)
+* [Executable user guide and samples](samples/README.md)
 * [API documentation (Javadoc)](https://www.javadoc.io/doc/com.landawn.abacus/abacus-jdbc/latest/index.html)
 * [Introduction to JDBC](https://www.javacodegeeks.com/2015/02/jdbc-tutorial.html) (background reading)
 

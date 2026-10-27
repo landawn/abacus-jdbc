@@ -113,7 +113,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
      *                                  if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -150,7 +151,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return an Optional containing the entity with join entities loaded as specified, or empty if not found
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -182,7 +184,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
      *                                  if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -217,7 +220,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, when a matching record is found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -250,7 +254,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return an Optional containing the entity with selected properties and join entities as specified, or empty if not found
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -281,7 +286,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
      *                                  if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -322,7 +328,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return the entity with join entities loaded as specified, or {@code null} if not found
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -363,7 +370,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
      *                                  if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -409,7 +417,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, when a matching record is found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -456,7 +465,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      * @return the entity with selected properties and join entities as specified, or {@code null} if not found
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -501,7 +511,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, when matching records are found, if no join property of the specified type is found in the
      *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -533,7 +544,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -569,7 +581,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, when matching records are found, if no join property of the specified type is found in the
      *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -605,7 +618,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, when matching records are found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for
      *                                  a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -640,7 +654,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -679,7 +694,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, when matching records are found, if no join property of the specified type is found in the
      *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -734,7 +750,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, when matching records are found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for
      *                                  a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -793,7 +810,8 @@ sealed interface CrudJoinEntityReadOps<T, ID, TD extends DaoBase<T, TD>> extends
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing or executing the SELECT statement, binding its parameters, or reading its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only

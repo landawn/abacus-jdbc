@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,9 +21,96 @@ import javax.tools.ToolProvider;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @Tag("integration")
 class JdbcCodeGenerationEntityIntegrationTest extends JdbcCodeGenerationUtilTestSupport {
+
+    // Built-in annotations are emitted by simple name, so their imports must win even over explicitly requested competitors.
+    @ParameterizedTest
+    @ValueSource(strings = { "com.landawn.abacus.annotation", "jakarta.persistence", "javax.persistence" })
+    void selectedBuiltInAnnotationsTakePrecedenceOverRequestedImports(final String annotationPackage, @TempDir final Path directory)
+            throws IOException, ClassNotFoundException {
+        final String competingPackage = annotationPackage.equals("com.landawn.abacus.annotation") ? "jakarta.persistence" : "com.landawn.abacus.annotation";
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .tableAnnotationClass(Class.forName(annotationPackage + ".Table").asSubclass(Annotation.class))
+                .columnAnnotationClass(Class.forName(annotationPackage + ".Column").asSubclass(Annotation.class))
+                .idAnnotationClass(Class.forName(annotationPackage + ".Id").asSubclass(Annotation.class))
+                .idFields(java.util.Set.of("id"))
+                .classNamesToImport(List.of(competingPackage + ".Table", competingPackage + ".Column", competingPackage + ".Id"))
+                .additionalClassBodySource("@" + competingPackage + ".Table(name = \"nested\")\npublic static class Nested {\n@" + competingPackage + ".Id\n@"
+                        + competingPackage + ".Column(name = \"nested_id\")\nprivate long nestedId;\n}")
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        for (final String annotation : List.of("Table", "Column", "Id")) {
+            assertTrue(code.contains("import " + annotationPackage + "." + annotation + ";"), code);
+            assertFalse(code.contains("import " + competingPackage + "." + annotation + ";"), code);
+        }
+        final Path source = directory.resolve("OrderHistory.java");
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
+    // Custom annotations are emitted fully qualified, so requested defaults used in the additional body do not clash.
+    @ParameterizedTest
+    @ValueSource(strings = { "com.landawn.abacus.annotation", "jakarta.persistence" })
+    void requestedDefaultAnnotationsSurviveCustomAnnotations(final String annotationPackage, @TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .tableAnnotationClass(JdbcCodeGenerationEntityTest.CustomTable.class)
+                .columnAnnotationClass(JdbcCodeGenerationEntityTest.CustomColumn.class)
+                .idAnnotationClass(JdbcCodeGenerationEntityTest.CustomId.class)
+                .idFields(java.util.Set.of("id"))
+                .classNamesToImport(List.of(annotationPackage + ".Table", annotationPackage + ".Column", annotationPackage + ".Id"))
+                .additionalClassBodySource(
+                        "@Table(name = \"nested\")\npublic static class Nested {\n@Id\n@Column(name = \"nested_id\")\nprivate long nestedId;\n}")
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        for (final String annotation : List.of("Table", "Column", "Id")) {
+            assertTrue(code.contains("import " + annotationPackage + "." + annotation + ";"), code);
+        }
+        final Path source = directory.resolve("OrderHistory.java");
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
+
+    // A selected built-in annotation keeps its simple-name import and removes the competing default import, even when
+    // that default is listed in classNamesToImport: importing both would give two types with the same simple name.
+    @Test
+    void selectedBuiltInAnnotationsRemoveConflictingRequestedDefaultImports(@TempDir final Path directory) throws IOException {
+        final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
+                .className("OrderHistory")
+                .tableAnnotationClass(jakarta.persistence.Table.class)
+                .columnAnnotationClass(jakarta.persistence.Column.class)
+                .idAnnotationClass(jakarta.persistence.Id.class)
+                .idFields(java.util.Set.of("id"))
+                .classNamesToImport(List.of("com.landawn.abacus.annotation.Table", "com.landawn.abacus.annotation.Column", "com.landawn.abacus.annotation.Id"))
+                .additionalClassBodySource(
+                        "@Table(name = \"nested\")\npublic static class Nested {\n@Id\n@Column(name = \"nested_id\")\nprivate long nestedId;\n}")
+                .build();
+        final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
+        for (final String annotation : List.of("Table", "Column", "Id")) {
+            assertTrue(code.contains("import jakarta.persistence." + annotation + ";"), code);
+            assertFalse(code.contains("import com.landawn.abacus.annotation." + annotation + ";"), code);
+        }
+        final Path source = directory.resolve("OrderHistory.java");
+        Files.writeString(source, code, StandardCharsets.UTF_8);
+        final ByteArrayOutputStream diagnostics = new ByteArrayOutputStream();
+        final int exitCode = ToolProvider.getSystemJavaCompiler()
+                .run(null, diagnostics, diagnostics, "-encoding", "UTF-8", "-classpath", System.getProperty("java.class.path"), "-processor",
+                        "lombok.launch.AnnotationProcessorHider$AnnotationProcessor", "-d", directory.toString(), source.toString());
+        assertEquals(0, exitCode, () -> diagnostics.toString(StandardCharsets.UTF_8) + "\n" + code);
+    }
 
     @Test
     public void testGenerateEntityClassPrimaryKeysFollowIdentifierCaseRules() throws SQLException {

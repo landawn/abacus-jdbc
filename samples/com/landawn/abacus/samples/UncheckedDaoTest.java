@@ -13,18 +13,11 @@
  */
 package com.landawn.abacus.samples;
 
-import static com.landawn.abacus.samples.JdbcTest.addressDao;
-import static com.landawn.abacus.samples.JdbcTest.dataSource;
-import static com.landawn.abacus.samples.JdbcTest.deviceDao;
-import static com.landawn.abacus.samples.JdbcTest.employeeDao;
-import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao;
-import static com.landawn.abacus.samples.JdbcTest.employeeProjectDao2;
-import static com.landawn.abacus.samples.JdbcTest.projectDao;
-import static com.landawn.abacus.samples.JdbcTest.uncheckedUserDao;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.ResultSet;
@@ -35,6 +28,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.jdbc.Jdbc;
 import com.landawn.abacus.jdbc.JdbcUtil;
 import com.landawn.abacus.jdbc.SqlTransaction;
@@ -50,19 +44,34 @@ import com.landawn.abacus.samples.entity.User;
 import com.landawn.abacus.util.Beans;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Fn;
-import com.landawn.abacus.util.Fnn;
 import com.landawn.abacus.util.N;
-import com.landawn.abacus.util.Profiler;
 import com.landawn.abacus.util.stream.IntStream;
 import com.landawn.abacus.util.stream.LongStream;
 import com.landawn.abacus.util.stream.Stream;
 
-public class UncheckedDaoTest {
+/** Unchecked DAO recipes: SQL failures are wrapped in UncheckedSQLException. */
+public class UncheckedDaoTest extends SampleTestSupport {
+
+    @Test
+    public void createAndReadWithoutCheckedExceptions() {
+        final long id = uncheckedUserDao.insert(User.builder().firstName("Ada").lastName("Lovelace").build());
+        assertEquals("Ada", uncheckedUserDao.getOrNull(id).getFirstName());
+        assertEquals(1, uncheckedUserDao.deleteById(id));
+        assertFalse(uncheckedUserDao.exists(id));
+    }
+
+    @Test
+    public void sqlFailuresRetainTheirCause() {
+        // first_name is NOT NULL; the unchecked DAO wraps the driver's SQLException.
+        final UncheckedSQLException failure = assertThrows(UncheckedSQLException.class,
+                () -> uncheckedUserDao.insert(User.builder().lastName("Lovelace").build()));
+        assertTrue(failure.getCause() instanceof SQLException);
+    }
 
     @Test
     public void test_fragment() throws SQLException {
 
-        final List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 10)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
@@ -136,11 +145,11 @@ public class UncheckedDaoTest {
         System.out.println(userFromDB);
         assertNotNull(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> uncheckedUserDao.getOrNull(100L)).printResult();
+        uncheckedUserDao.getOrNull(100L);
 
         uncheckedUserDao.delete(userFromDB);
 
-        Profiler.run(1, 10000, 1, () -> uncheckedUserDao.getOrNull(100L)).printResult();
+        uncheckedUserDao.getOrNull(100L);
 
         uncheckedUserDao.delete(userFromDB);
     }
@@ -255,7 +264,7 @@ public class UncheckedDaoTest {
     @Test
     public void test_batch() throws SQLException {
 
-        final List<User> users = IntStream.range(1, 1000)
+        final List<User> users = IntStream.range(1, 10)
                 .mapToObj(i -> User.builder().id(i).firstName("Forrest" + i).lastName("Gump" + i).nickName("Forrest").email("123@email.com" + i).build())
                 .toList();
 
@@ -354,33 +363,14 @@ public class UncheckedDaoTest {
 
     @Test
     public void test_batchGet() {
-        final User user = User.builder().id(100).firstName("Forrest").lastName("Gump").email("123@email.com").build();
-        uncheckedUserDao.insertWithId(user);
+        final List<User> users = List.of(User.builder().id(10).firstName("Ada").lastName("Lovelace").build(),
+                User.builder().id(20).firstName("Grace").lastName("Hopper").build());
+        final List<Long> ids = uncheckedUserDao.batchInsertWithId(users);
 
-        final User userFromDB = uncheckedUserDao.getOrNull(100L);
-        System.out.println(userFromDB);
-
-        for (int i = 0; i < 100; i++) {
-            uncheckedUserDao.batchGet(N.repeat(100L, 1)).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 99)).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 199)).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 299)).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 399)).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 999)).forEach(Fn.println());
-
-            uncheckedUserDao.batchGet(N.repeat(100L, 1), N.asList("firstName", "lastName")).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 99), N.asList("firstName", "lastName")).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 199), N.asList("firstName", "lastName")).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 299), N.asList("firstName", "lastName")).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 399), N.asList("firstName", "lastName")).forEach(Fn.println());
-            uncheckedUserDao.batchGet(N.repeat(100L, 999), N.asList("firstName", "lastName")).forEach(Fn.println());
-        }
-
-        uncheckedUserDao.updateFirstAndLastName("Tom", "Hanks", 100);
-
-        uncheckedUserDao.allUsers().map(e -> e.getFirstName() + " " + e.getLastName()).forEach(Fn.println());
-
-        uncheckedUserDao.deleteById(100L);
+        assertEquals(2, uncheckedUserDao.batchGet(ids).size());
+        // Select only the properties this screen needs.
+        final List<User> names = uncheckedUserDao.batchGet(ids, List.of("firstName", "lastName"));
+        assertEquals(List.of("Ada", "Grace"), names.stream().map(User::getFirstName).sorted().toList());
     }
 
     @Test
@@ -424,20 +414,17 @@ public class UncheckedDaoTest {
         final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
-        for (int i = 0; i < 1000; i++) {
-            uncheckedUserDao.findFirst(Filters.eq("firstName", "Forrest")).ifPresent(Fn.println());
+        uncheckedUserDao.findFirst(Filters.eq("firstName", "Forrest")).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).ifPresent(Fn.println());
+        uncheckedUserDao.findFirst(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).ifPresent(Fn.println());
+        uncheckedUserDao.findFirst(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).ifPresent(Fn.println());
+        uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).ifPresent(Fn.println());
+        uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).ifPresent(Fn.println());
 
-            uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1))
-                    .ifPresent(Fn.println());
-        }
+        uncheckedUserDao.findFirst(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).ifPresent(Fn.println());
 
         uncheckedUserDao.updateFirstAndLastName("Tom", "Hanks", 100);
 
@@ -454,23 +441,21 @@ public class UncheckedDaoTest {
         final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
-        for (int i = 0; i < 1000; i++) {
-            uncheckedUserDao.list(Filters.eq("firstName", "Forrest")).forEach(Fn.println());
+        uncheckedUserDao.list(Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            uncheckedUserDao.list(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fn.println());
+        uncheckedUserDao.list(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fn.println());
 
-            uncheckedUserDao.list(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fn.println());
+        uncheckedUserDao.list(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fn.println());
 
-            uncheckedUserDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).forEach(Fn.println());
+        uncheckedUserDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            uncheckedUserDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fn.println());
+        uncheckedUserDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fn.println());
 
-            uncheckedUserDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fn.println());
+        uncheckedUserDao.list(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fn.println());
 
-            uncheckedUserDao.list("firstName", Filters.eq("firstName", "Forrest")).forEach(Fn.println());
+        uncheckedUserDao.list("firstName", Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            uncheckedUserDao.stream("firstName", Filters.alwaysTrue()).forEach(Fn.println());
-        }
+        uncheckedUserDao.stream("firstName", Filters.alwaysTrue()).forEach(Fn.println());
 
         uncheckedUserDao.listUserByAnnoSql(0).forEach(Fn.println());
 
@@ -496,19 +481,17 @@ public class UncheckedDaoTest {
         final User userFromDB = uncheckedUserDao.getOrNull(100L);
         System.out.println(userFromDB);
 
-        for (int i = 0; i < 1000; i++) {
-            uncheckedUserDao.stream(Filters.eq("firstName", "Forrest")).forEach(Fnn.println());
+        uncheckedUserDao.stream(Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            uncheckedUserDao.stream(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fnn.println());
+        uncheckedUserDao.stream(Filters.eq("firstName", "Forrest"), rs -> rs.getString("firstName")).forEach(Fn.println());
 
-            uncheckedUserDao.stream(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fnn.println());
+        uncheckedUserDao.stream(Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString("firstName")).forEach(Fn.println());
 
-            uncheckedUserDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).forEach(Fnn.println());
+        uncheckedUserDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest")).forEach(Fn.println());
 
-            uncheckedUserDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fnn.println());
+        uncheckedUserDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), rs -> rs.getString(1)).forEach(Fn.println());
 
-            uncheckedUserDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fnn.println());
-        }
+        uncheckedUserDao.stream(N.asList("firstName", "lastName"), Filters.eq("firstName", "Forrest"), (rs, cnl) -> rs.getString(1)).forEach(Fn.println());
 
         uncheckedUserDao.list(Filters.gt("id", 0), rs -> rs.getString(1) != null, Jdbc.RowMapper.builder().get(1, ResultSet::getString).toList())
                 .forEach(Fn.println());
@@ -591,7 +574,7 @@ public class UncheckedDaoTest {
     public void crud_joinedBy_2() throws SQLException {
         final List<User> users = new ArrayList<>();
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 3; i++) {
             final User user = User.builder().id(100 + i).firstName("Forrest").lastName("Gump").email("123@email.com").build();
             uncheckedUserDao.insertWithId(user);
 

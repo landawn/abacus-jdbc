@@ -2538,7 +2538,7 @@ public final class JdbcUtil {
      * @return the escaped pattern, preserving {@code null}
      * @throws SQLException if the driver's escape sequence cannot be obtained
      */
-    private static String escapeMetadataPattern(final DatabaseMetaData metadata, final String identifier) throws SQLException {
+    static String escapeMetadataPattern(final DatabaseMetaData metadata, final String identifier) throws SQLException {
         if (identifier == null) {
             return null;
         }

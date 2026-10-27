@@ -98,7 +98,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
      *                                  if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -128,7 +129,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return an Optional containing the entity with join entities loaded as specified, or empty if not found
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -163,7 +165,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
      *                                  if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -200,7 +203,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, when a matching record is found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -236,7 +240,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return an Optional containing the entity with selected properties and join entities as specified, or empty if not found
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -268,7 +273,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
      *                                  if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -310,7 +316,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return the entity with join entities loaded as specified, or {@code null} if not found
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -353,7 +360,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @throws IllegalArgumentException if {@code id} or {@code joinEntityClass} is {@code null}, or, when a matching record is found,
      *                                  if no join property of the specified type is found in the entity class,
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -399,7 +407,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, when a matching record is found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -446,7 +455,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      * @return the entity with selected properties and join entities as specified, or {@code null} if not found
      * @throws IllegalArgumentException if {@code id} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if more than one record matches the given {@code id}
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -491,7 +501,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, when matching records are found, if no join property of the specified type is found in the
      *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -526,7 +537,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -565,7 +577,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, when matching records are found, if no join property of the specified type is found in the
      *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -604,7 +617,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, when matching records are found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for
      *                                  a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -642,7 +656,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -684,7 +699,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, when matching records are found, if no join property of the specified type is found in the
      *                                  entity class, or a join being loaded has a disallowed null/default key or multiple rows for a
      *                                  map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -742,7 +758,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, when matching records are found, if no join property is found for one of the specified types
      *                                  in the entity class, or a join being loaded has a disallowed null/default key or multiple rows for
      *                                  a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only
@@ -804,7 +821,8 @@ sealed interface UncheckedCrudJoinEntityReadOps<T, ID, TD extends UncheckedDaoBa
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
      *                                  if {@code Map} and entity elements are mixed, or if every element of {@code ids} is {@code null},
      *                                  or a join being loaded has a disallowed null/default key or multiple rows for a map-valued property
-     * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading
+     * @throws UncheckedSQLException if acquiring a connection fails with a translated SQL cause (untranslated Spring failures
+     *         propagate as {@code CannotGetJdbcConnectionException}, as described in {@link UncheckedJoinEntityReadOps}), or preparing or executing the SELECT statement, binding its parameters, or reading
      *         its result fails
      * @throws DuplicateResultException if a query batch returns more rows than its number of distinct IDs
      * @throws UnsupportedOperationException if a join property being loaded is read-only

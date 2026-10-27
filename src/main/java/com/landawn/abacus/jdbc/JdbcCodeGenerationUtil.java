@@ -1022,8 +1022,8 @@ public final class JdbcCodeGenerationUtil {
 
             headPart += LINE_SEPARATOR + lombokImports + LINE_SEPARATOR + eccClassAnnos;
 
-            // An import requested through classNamesToImport is never pruned as unused (see removeUnrequestedImport). Only an
-            // import whose simple name clashes with the configured Table/Column/Id annotation in use is still removed.
+            // Explicit imports can be used by the additional body even when another annotation is configured. Custom
+            // annotations are emitted fully qualified; only the built-in annotations imported by simple name can clash.
             final Set<String> requestedImports = new HashSet<>(N.nullToEmpty(configToUse.getClassNamesToImport()));
 
             if (fieldNameList.isEmpty() && hasOnlyFieldsExcludedFromAllArgsConstructor(configToUse.getAdditionalClassBodySource())) {
@@ -1034,10 +1034,11 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
                 headPart = headPart.replace("jakarta.persistence.Table", tableAnnotationClassName);
             } else {
-                headPart = headPart.replace("import jakarta.persistence.Table;\n", "");
+                headPart = isAbacusTable ? headPart.replace("import jakarta.persistence.Table;\n", "")
+                        : removeUnrequestedImport(headPart, "jakarta.persistence.Table", requestedImports);
 
                 if (!isAbacusTable) {
-                    headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
+                    headPart = removeUnrequestedImport(headPart, "com.landawn.abacus.annotation.Table", requestedImports);
                 }
             }
 
@@ -1045,10 +1046,11 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
                 headPart = headPart.replace("jakarta.persistence.Column", columnAnnotationClassName);
             } else {
-                headPart = headPart.replace("import jakarta.persistence.Column;\n", "");
+                headPart = isAbacusColumn ? headPart.replace("import jakarta.persistence.Column;\n", "")
+                        : removeUnrequestedImport(headPart, "jakarta.persistence.Column", requestedImports);
 
                 if (!isAbacusColumn) {
-                    headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
+                    headPart = removeUnrequestedImport(headPart, "com.landawn.abacus.annotation.Column", requestedImports);
                 }
             }
 
@@ -1062,10 +1064,11 @@ public final class JdbcCodeGenerationUtil {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
                 headPart = headPart.replace("jakarta.persistence.Id", idAnnotationClassName);
             } else {
-                headPart = headPart.replace("import jakarta.persistence.Id;\n", "");
+                headPart = isAbacusId ? headPart.replace("import jakarta.persistence.Id;\n", "")
+                        : removeUnrequestedImport(headPart, "jakarta.persistence.Id", requestedImports);
 
                 if (!isAbacusId) {
-                    headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
+                    headPart = removeUnrequestedImport(headPart, "com.landawn.abacus.annotation.Id", requestedImports);
                 }
             }
 
@@ -4837,12 +4840,19 @@ public final class JdbcCodeGenerationUtil {
          * <p>Imports are auto-added only for generic {@code java.util} types used by these fields
          * (e.g. {@code List}, {@code Map}); any other type (such as {@code java.time.LocalDate} or a
          * custom class) must be listed in {@link #classNamesToImport} or referenced by its fully
-         * qualified name, otherwise the generated source will not compile.</p>
+         * qualified name, otherwise the generated source will not compile. This also applies to annotations used only
+         * in the additional body: for {@code @Id}, include {@code com.landawn.abacus.annotation.Id} in
+         * {@code classNamesToImport}, even if that import appears in the default template.</p>
          */
         private String additionalClassBodySource;
 
         /**
          * List of fully qualified class names to add as import statements in the generated entity class.
+         * Requested imports are retained when custom annotations are emitted fully qualified. A default annotation
+         * import conflicting with an emitted built-in annotation's simple name is removed; use a fully qualified name
+         * in the additional body in that case. Do not request two imports with the same simple name (for example both
+         * {@code com.landawn.abacus.annotation.Table} and {@code jakarta.persistence.Table}): the generator does not
+         * reconcile them, and the generated source would not compile.
          * Example: {@code Arrays.asList("java.time.LocalDate", "com.example.MyType")}
          */
         private List<String> classNamesToImport;

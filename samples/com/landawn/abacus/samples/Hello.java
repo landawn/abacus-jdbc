@@ -13,5 +13,26 @@
  */
 package com.landawn.abacus.samples;
 
+import com.landawn.abacus.jdbc.JdbcUtil;
+
+/** Smallest runnable example; run main in your IDE or run HelloTest through Maven. */
 public class Hello {
+    public static void main(String[] args) throws Exception {
+        System.out.println(greeting());
+    }
+
+    static String greeting() throws Exception {
+        try (SampleDatabase database = new SampleDatabase()) {
+            // The helper creates schema.sql and owns the connection pool.
+            final var dataSource = database.dataSource();
+            try (var insert = JdbcUtil.prepareQuery(dataSource, "INSERT INTO user1 (first_name, last_name) VALUES (?, ?)")) {
+                insert.setString(1, "Ada").setString(2, "Lovelace").update();
+            }
+
+            try (var query = JdbcUtil.prepareNamedQuery(dataSource, "SELECT first_name FROM user1 WHERE last_name = :lastName")) {
+                final String firstName = query.setString("lastName", "Lovelace").queryForString().get();
+                return "Hello, " + firstName + "!";
+            }
+        }
+    }
 }
