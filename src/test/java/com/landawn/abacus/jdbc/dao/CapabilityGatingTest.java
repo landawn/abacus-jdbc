@@ -1,6 +1,7 @@
 package com.landawn.abacus.jdbc.dao;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -63,6 +64,9 @@ public class CapabilityGatingTest extends TestBase {
     }
 
     interface NuCrudDao extends NonUpdateCrudDao<Account, Long, NuCrudDao> {
+    }
+
+    interface UncheckedNuCrudDao extends UncheckedNonUpdateCrudDao<Account, Long, UncheckedNuCrudDao> {
     }
 
     @CacheResult
@@ -179,6 +183,48 @@ public class CapabilityGatingTest extends TestBase {
         assertNotNull(dao.prepareQuery("INSERT INTO account(id) VALUES (?)"));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("UPDATE account SET name = 'x'"));
         assertThrows(UnsupportedOperationException.class, () -> dao.prepareQuery("DELETE FROM account"));
+    }
+
+    // insert/batchInsert with a named SQL prepare it through JdbcUtil, not the proxy's gated prepareNamedQuery: a non-update
+    // CRUD DAO (checked and Unchecked) executed an UPDATE or DELETE passed to them.
+    @Test
+    public void testNonUpdateCrudDao_InsertWithSqlGate() throws SQLException {
+        final org.h2.jdbcx.JdbcDataSource ds = new org.h2.jdbcx.JdbcDataSource();
+        ds.setURL("jdbc:h2:mem:capability_gating_insert_sql_" + System.nanoTime() + ";DB_CLOSE_DELAY=-1");
+        JdbcUtil.executeUpdate(ds, "CREATE TABLE account (id BIGINT PRIMARY KEY, name VARCHAR(32))");
+        JdbcUtil.executeUpdate(ds, "INSERT INTO account (id, name) VALUES (1, 'a')");
+
+        final NuCrudDao dao = JdbcUtil.createDao(NuCrudDao.class, ds);
+        final UncheckedNuCrudDao uncheckedDao = JdbcUtil.createDao(UncheckedNuCrudDao.class, ds);
+        final Account account = new Account();
+        account.setId(1);
+        account.setName("changed");
+
+        final String deleteSql = "DELETE FROM account WHERE id = :id";
+        final String updateSql = "UPDATE account SET name = :name WHERE id = :id";
+
+        assertThrows(UnsupportedOperationException.class, () -> dao.insert(deleteSql, account));
+        assertThrows(UnsupportedOperationException.class, () -> dao.insert(updateSql, account));
+        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert(deleteSql, List.of(account), 1));
+        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert(updateSql, List.of(account, account), 1));
+        // Validated like an argument, before the early return for no entities.
+        assertThrows(UnsupportedOperationException.class, () -> dao.batchInsert(deleteSql, List.of(), 1));
+        assertThrows(UnsupportedOperationException.class, () -> uncheckedDao.insert(deleteSql, account));
+        assertThrows(UnsupportedOperationException.class, () -> uncheckedDao.batchInsert(updateSql, List.of(account), 1));
+
+        assertEquals("a", dao.queryForString("name", 1L).orElseNull());
+
+        // INSERT statements still run.
+        final Account second = new Account();
+        second.setId(2);
+        second.setName("b");
+        final Account third = new Account();
+        third.setId(3);
+        third.setName("c");
+
+        assertEquals(2L, dao.insert("INSERT INTO account (id, name) VALUES (:id, :name)", second));
+        assertEquals(List.of(3L), uncheckedDao.batchInsert("INSERT INTO account (id, name) VALUES (:id, :name)", List.of(third), 1));
+        assertEquals(3, dao.count(com.landawn.abacus.query.Filters.alwaysTrue()));
     }
 
     @Test

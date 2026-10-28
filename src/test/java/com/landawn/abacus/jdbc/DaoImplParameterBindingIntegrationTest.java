@@ -2,6 +2,7 @@ package com.landawn.abacus.jdbc;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -28,6 +29,9 @@ import com.landawn.abacus.jdbc.annotation.BindList;
 import com.landawn.abacus.jdbc.annotation.Query;
 import com.landawn.abacus.jdbc.annotation.SqlFragment;
 import com.landawn.abacus.jdbc.dao.CrudDao;
+import com.landawn.abacus.jdbc.dao.Dao;
+import com.landawn.abacus.jdbc.dao.UncheckedCrudDao;
+import com.landawn.abacus.jdbc.dao.UncheckedDao;
 import com.landawn.abacus.util.EntityId;
 import com.landawn.abacus.util.Seid;
 import com.landawn.abacus.util.Throwables;
@@ -166,6 +170,78 @@ class DaoImplParameterBindingIntegrationTest extends TestBase {
     interface CompositeOrdinalRowDao extends CrudDao<CompositeOrdinalRow, EntityId, CompositeOrdinalRowDao> {
     }
 
+    interface UncheckedOrdinalRowDao extends UncheckedCrudDao<OrdinalRow, Level, UncheckedOrdinalRowDao> {
+    }
+
+    interface UncheckedCompositeOrdinalRowDao extends UncheckedCrudDao<CompositeOrdinalRow, EntityId, UncheckedCompositeOrdinalRowDao> {
+    }
+
+    interface PlainOrdinalRowDao extends Dao<OrdinalRow, PlainOrdinalRowDao> {
+    }
+
+    interface UncheckedPlainOrdinalRowDao extends UncheckedDao<OrdinalRow, UncheckedPlainOrdinalRowDao> {
+    }
+
+    // A nullable @Id (as of a view or legacy table) and a match property stored as an ordinal.
+    @Table("nullable_id_ordinal_row")
+    public static class NullableIdOrdinalRow {
+        @Id
+        private Long rowId;
+        @com.landawn.abacus.annotation.Type(enumerated = com.landawn.abacus.util.EnumType.ORDINAL)
+        private Level grade;
+        private String name;
+
+        public Long getRowId() {
+            return rowId;
+        }
+
+        public void setRowId(final Long rowId) {
+            this.rowId = rowId;
+        }
+
+        public Level getGrade() {
+            return grade;
+        }
+
+        public void setGrade(final Level grade) {
+            this.grade = grade;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
+    }
+
+    interface NullableIdOrdinalRowDao extends CrudDao<NullableIdOrdinalRow, Long, NullableIdOrdinalRowDao> {
+    }
+
+    private static OrdinalRow ordinalRow(final Level level, final Level grade, final String name) {
+        final OrdinalRow row = new OrdinalRow();
+        row.setLevel(level);
+        row.setGrade(grade);
+        row.setName(name);
+        return row;
+    }
+
+    private static CompositeOrdinalRow compositeOrdinalRow(final Long tenantId, final Level level, final String name) {
+        final CompositeOrdinalRow row = new CompositeOrdinalRow();
+        row.setTenantId(tenantId);
+        row.setLevel(level);
+        row.setName(name);
+        return row;
+    }
+
+    private static long rowCount(final Statement statement, final String tableName) throws SQLException {
+        try (java.sql.ResultSet rs = statement.executeQuery("SELECT COUNT(*) FROM " + tableName)) {
+            rs.next();
+            return rs.getLong(1);
+        }
+    }
+
     // Composite id classes without @Id annotations: their properties are matched to the entity's id properties by name and
     // bound with the id class's own property types (see idParamSetter/id2CondFunc in DaoImpl).
     public static class CompositeOrdinalId {
@@ -243,6 +319,173 @@ class DaoImplParameterBindingIntegrationTest extends TestBase {
             assertEquals(1, compositeDao.update(Map.of("name", "high2"), id));
             assertEquals("high2", compositeDao.getOrNull(id).getName());
             assertEquals("mid", compositeDao.getOrNull(EntityId.of("tenantId", 1L, "level", Level.MID)).getName());
+        }
+    }
+
+    // batchGet/count(ids)/batchRefresh and the composite refresh compared the ids with values bound by their runtime class (the
+    // enum's name), not the id property's @Type (its ordinal), and failed with a data conversion error, while getOrNull/exists
+    // and the single-id refresh found the same rows.
+    @Test
+    void idBatchReads_bindIdsWithPropertyTypes() throws SQLException {
+        final JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:dao_typed_id_batch_" + UUID.randomUUID());
+
+        try (Connection conn = dataSource.getConnection();
+             Statement statement = conn.createStatement()) {
+            statement.execute("CREATE TABLE ordinal_row (level INT PRIMARY KEY, grade INT, name VARCHAR(32))");
+            statement.execute("CREATE TABLE composite_ordinal_row (tenant_id BIGINT, level INT, name VARCHAR(32), PRIMARY KEY (tenant_id, level))");
+            statement.executeUpdate("INSERT INTO ordinal_row VALUES (0, 0, 'low'), (1, 0, 'mid'), (2, 1, 'high')");
+            statement.executeUpdate("INSERT INTO composite_ordinal_row VALUES (1, 1, 'mid'), (1, 2, 'high'), (2, 2, 'other')");
+
+            final OrdinalRowDao ordinalDao = JdbcUtil.createDao(OrdinalRowDao.class, dataSource);
+
+            assertEquals(List.of("high", "mid"), ordinalDao.batchGet(List.of(Level.MID, Level.HIGH)).stream().map(OrdinalRow::getName).sorted().toList());
+            assertEquals(2, ordinalDao.count(List.of(Level.LOW, Level.HIGH)));
+
+            final OrdinalRow staleMid = new OrdinalRow();
+            staleMid.setLevel(Level.MID);
+            staleMid.setName("stale");
+            assertEquals(1, ordinalDao.batchRefresh(List.of(staleMid)));
+            assertEquals("mid", staleMid.getName());
+
+            final CompositeOrdinalRowDao compositeDao = JdbcUtil.createDao(CompositeOrdinalRowDao.class, dataSource);
+
+            assertEquals(List.of("high"),
+                    compositeDao.batchGet(List.of(EntityId.of("tenantId", 1L, "level", Level.HIGH))).stream().map(CompositeOrdinalRow::getName).toList());
+            assertEquals(2, compositeDao.count(List.of(EntityId.of("tenantId", 1L, "level", Level.MID), EntityId.of("tenantId", 2L, "level", Level.HIGH))));
+
+            final CompositeOrdinalRow staleHigh = new CompositeOrdinalRow();
+            staleHigh.setTenantId(1L);
+            staleHigh.setLevel(Level.HIGH);
+            staleHigh.setName("stale");
+            assertTrue(compositeDao.refresh(staleHigh));
+            assertEquals("high", staleHigh.getName());
+        }
+    }
+
+    // The upsert family built its lookups (Filters.allEqual, and Filters.idToCond for batchUpsert's composite keys) and the ID
+    // predicate of its update from values bound by their runtime class: an ID or match property with a custom @Type (an enum
+    // stored as its ordinal) failed with a data conversion error ("MID" bound against an INT column).
+    @Test
+    void upsertFamily_bindsMatchAndIdValuesWithPropertyTypes() throws SQLException {
+        final JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:dao_typed_upsert_" + UUID.randomUUID());
+
+        try (Connection conn = dataSource.getConnection();
+             Statement statement = conn.createStatement()) {
+            statement.execute("CREATE TABLE ordinal_row (level INT PRIMARY KEY, grade INT, name VARCHAR(32))");
+            statement.execute("CREATE TABLE composite_ordinal_row (tenant_id BIGINT, level INT, name VARCHAR(32), PRIMARY KEY (tenant_id, level))");
+            statement.executeUpdate("INSERT INTO ordinal_row VALUES (0, 0, 'low'), (1, 0, 'mid')");
+            statement.executeUpdate("INSERT INTO composite_ordinal_row VALUES (1, 1, 'mid'), (1, 2, 'high')");
+
+            final OrdinalRowDao crudDao = JdbcUtil.createDao(OrdinalRowDao.class, dataSource);
+            crudDao.upsert(ordinalRow(Level.MID, Level.HIGH, "mid1"));
+            assertEquals("mid1", crudDao.getOrNull(Level.MID).getName());
+            assertEquals(Level.HIGH, crudDao.getOrNull(Level.MID).getGrade());
+            crudDao.upsert(ordinalRow(Level.HIGH, Level.LOW, "high1")); // no row matches: inserted
+            assertEquals("high1", crudDao.getOrNull(Level.HIGH).getName());
+
+            final UncheckedOrdinalRowDao uncheckedCrudDao = JdbcUtil.createDao(UncheckedOrdinalRowDao.class, dataSource);
+            uncheckedCrudDao.upsert(ordinalRow(Level.LOW, Level.LOW, "low1"));
+            assertEquals("low1", crudDao.getOrNull(Level.LOW).getName());
+
+            final PlainOrdinalRowDao plainDao = JdbcUtil.createDao(PlainOrdinalRowDao.class, dataSource);
+            plainDao.upsert(ordinalRow(Level.MID, Level.LOW, "mid2"), List.of("level"));
+            assertEquals("mid2", crudDao.getOrNull(Level.MID).getName());
+            // The lookup condition binds a String; the update then addresses the row by its typed ID.
+            plainDao.upsert(ordinalRow(Level.LOW, Level.LOW, "low2"), com.landawn.abacus.query.Filters.eq("name", "low1"));
+            assertEquals("low2", crudDao.getOrNull(Level.LOW).getName());
+
+            final UncheckedPlainOrdinalRowDao uncheckedPlainDao = JdbcUtil.createDao(UncheckedPlainOrdinalRowDao.class, dataSource);
+            uncheckedPlainDao.upsert(ordinalRow(Level.MID, Level.LOW, "mid3"), List.of("level"));
+            uncheckedPlainDao.upsert(ordinalRow(Level.HIGH, Level.LOW, "high2"), com.landawn.abacus.query.Filters.eq("name", "high1"));
+            assertEquals("mid3", crudDao.getOrNull(Level.MID).getName());
+            assertEquals("high2", crudDao.getOrNull(Level.HIGH).getName());
+            assertEquals(3, rowCount(statement, "ordinal_row"));
+
+            final CompositeOrdinalRowDao compositeDao = JdbcUtil.createDao(CompositeOrdinalRowDao.class, dataSource);
+            compositeDao.upsert(compositeOrdinalRow(1L, Level.HIGH, "high1"));
+            assertEquals("high1", compositeDao.getOrNull(EntityId.of("tenantId", 1L, "level", Level.HIGH)).getName());
+            compositeDao.batchUpsert(List.of(compositeOrdinalRow(1L, Level.MID, "mid1"), compositeOrdinalRow(2L, Level.LOW, "low")));
+            assertEquals("mid1", compositeDao.getOrNull(EntityId.of("tenantId", 1L, "level", Level.MID)).getName());
+            assertEquals("low", compositeDao.getOrNull(EntityId.of("tenantId", 2L, "level", Level.LOW)).getName());
+
+            final UncheckedCompositeOrdinalRowDao uncheckedCompositeDao = JdbcUtil.createDao(UncheckedCompositeOrdinalRowDao.class, dataSource);
+            uncheckedCompositeDao.batchUpsert(List.of(compositeOrdinalRow(1L, Level.HIGH, "high2")));
+            assertEquals("high2", compositeDao.getOrNull(EntityId.of("tenantId", 1L, "level", Level.HIGH)).getName());
+            assertEquals(3, rowCount(statement, "composite_ordinal_row"));
+        }
+    }
+
+    // With the match values bound with their property types, a null match value still renders IS NULL, the documented upsert
+    // match of a null key (a typed null would bind "= NULL" and match nothing). And batchUpsert updates a row whose nullable ID
+    // is NULL through its match properties, also bound with their types.
+    @Test
+    void upsertFamily_typedMatchKeepsIsNullForNullValues() throws SQLException {
+        final JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:dao_typed_upsert_null_" + UUID.randomUUID());
+
+        try (Connection conn = dataSource.getConnection();
+             Statement statement = conn.createStatement()) {
+            statement.execute("CREATE TABLE ordinal_row (level INT PRIMARY KEY, grade INT, name VARCHAR(32))");
+            statement.execute("CREATE TABLE nullable_id_ordinal_row (row_id BIGINT, grade INT, name VARCHAR(32))");
+            statement.executeUpdate("INSERT INTO ordinal_row VALUES (0, 0, 'low'), (2, NULL, 'x')");
+            statement.executeUpdate("INSERT INTO nullable_id_ordinal_row VALUES (NULL, 1, 'a'), (NULL, 2, 'b')");
+
+            final PlainOrdinalRowDao plainDao = JdbcUtil.createDao(PlainOrdinalRowDao.class, dataSource);
+            plainDao.upsert(ordinalRow(Level.HIGH, null, "x2"), List.of("grade", "level"));
+            assertEquals("x2", JdbcUtil.createDao(OrdinalRowDao.class, dataSource).getOrNull(Level.HIGH).getName());
+            assertEquals(2, rowCount(statement, "ordinal_row"));
+
+            final NullableIdOrdinalRowDao nullableIdDao = JdbcUtil.createDao(NullableIdOrdinalRowDao.class, dataSource);
+            final NullableIdOrdinalRow midRow = new NullableIdOrdinalRow();
+            midRow.setGrade(Level.MID);
+            midRow.setName("a2");
+            nullableIdDao.batchUpsert(List.of(midRow), List.of("grade"));
+
+            assertEquals(2, rowCount(statement, "nullable_id_ordinal_row"));
+
+            try (java.sql.ResultSet rs = statement.executeQuery("SELECT grade, name FROM nullable_id_ordinal_row ORDER BY grade")) {
+                assertTrue(rs.next());
+                assertEquals("a2", rs.getString("name"));
+                assertTrue(rs.next());
+                assertEquals("b", rs.getString("name"));
+            }
+        }
+    }
+
+    // With an ID property among the names to update, the named UPDATE read "... WHERE tenant_id = :tenantId AND level = :level_2"
+    // (the builder indexes a repeated parameter name), and binding ":level_2" by property name failed every call. The WHERE ID
+    // parameters are bound from the ID properties with their types, so the enum stored as its ordinal still matches.
+    @Test
+    void updateSelectedProperties_includingACompositeIdPart_bindsTheWhereIdWithPropertyTypes() throws SQLException {
+        final JdbcDataSource dataSource = new JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:dao_typed_update_selected_id_" + UUID.randomUUID());
+
+        try (Connection conn = dataSource.getConnection();
+             Statement statement = conn.createStatement()) {
+            statement.execute("CREATE TABLE composite_ordinal_row (tenant_id BIGINT, level INT, name VARCHAR(32), PRIMARY KEY (tenant_id, level))");
+            statement.executeUpdate("INSERT INTO composite_ordinal_row VALUES (1, 1, 'mid'), (1, 2, 'high'), (2, 2, 'other')");
+
+            final CompositeOrdinalRowDao compositeDao = JdbcUtil.createDao(CompositeOrdinalRowDao.class, dataSource);
+            final CompositeOrdinalRow high = new CompositeOrdinalRow();
+            high.setTenantId(1L);
+            high.setLevel(Level.HIGH);
+            high.setName("high2");
+
+            assertEquals(1, compositeDao.update(high, List.of("level", "name")));
+            assertEquals("high2", compositeDao.getOrNull(EntityId.of("tenantId", 1L, "level", Level.HIGH)).getName());
+
+            final CompositeOrdinalRow mid = new CompositeOrdinalRow();
+            mid.setTenantId(1L);
+            mid.setLevel(Level.MID);
+            mid.setName("mid2");
+            high.setName("high3");
+
+            assertEquals(2, compositeDao.batchUpdate(List.of(mid, high), List.of("name", "tenantId", "level"), 1));
+            assertEquals("mid2", compositeDao.getOrNull(EntityId.of("tenantId", 1L, "level", Level.MID)).getName());
+            assertEquals("high3", compositeDao.getOrNull(EntityId.of("tenantId", 1L, "level", Level.HIGH)).getName());
+            assertEquals("other", compositeDao.getOrNull(EntityId.of("tenantId", 2L, "level", Level.HIGH)).getName());
         }
     }
 

@@ -4535,13 +4535,15 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
             initParamNameIndexMap();
         }
 
-        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
         final List<String> names = new ArrayList<>(parameterNamesToSet);
         final PropInfo[] propInfos = new PropInfo[names.size()];
         final IntList[] parameterIndexes = new IntList[names.size()];
         List<PropInfo>[] propPaths = null;
 
         try {
+            // Inside the try: invalid bean metadata (e.g. a blank-padded @Column name) fails here and must close the query too.
+            final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
+
             for (int i = 0; i < names.size(); i++) {
                 final String parameterName = names.get(i);
                 propInfos[i] = entityInfo.getPropInfo(parameterName);
@@ -4721,7 +4723,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         {@code PreparedStatement}, or adding a row to its batch, fails
      * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId},
      *         and a later non-null row is not of the same kind; or if the first row is a bean and a later
-     *         non-null row is not an instance of the first row's class
+     *         non-null row is not an instance of the classes that declare the properties read from the first row
+     *         (for example, a map, an array, or an unrelated bean with the same property names; a row of another
+     *         subclass of those declaring classes is accepted)
      * @see #setParameters(Object)
      * @see #addBatch()
      */
@@ -4812,7 +4816,9 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
      *         {@code PreparedStatement}, or adding a row to its batch, fails
      * @throws ClassCastException if the first row is a map, collection, reference array, or {@code EntityId},
      *         and a later non-null row is not of the same kind; or if the first row is a bean and a later
-     *         non-null row is not an instance of the first row's class
+     *         non-null row is not an instance of the classes that declare the properties read from the first row
+     *         (for example, a map, an array, or an unrelated bean with the same property names; a row of another
+     *         subclass of those declaring classes is accepted)
      * @see #setParameters(Object)
      * @see #addBatchParameters(Collection)
      * @see #addBatch()
@@ -4867,6 +4873,11 @@ public final class NamedQuery extends AbstractQuery<PreparedStatement, NamedQuer
                         if (params == null) {
                             addNullBatchParameter();
                             continue;
+                        } else if (params instanceof Object[]) {
+                            // A property of a record or other immutable bean reads an Object[] as the bean's internal value
+                            // array (by component order), so such a row would be bound silently instead of being rejected.
+                            throw new ClassCastException(
+                                    "Cannot cast " + ClassUtil.getCanonicalClassName(params.getClass()) + " to " + ClassUtil.getCanonicalClassName(cls));
                         }
 
                         setBeanParameters(params, propInfos, propPaths, firstIndexes, values);

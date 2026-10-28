@@ -1024,7 +1024,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
 
     /**
      * Loads multiple join entities for a collection of entities with optional parallel execution.
-     * When parallel execution is enabled, different join entity types are loaded concurrently.
+     * When parallel execution is enabled, the join properties are loaded concurrently, one task per property name.
      * Inside a transaction on the DAO's data source, the loads run on the calling thread, in the transaction.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1239,7 +1239,7 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
 
     /**
      * Loads all join entities for a collection of entities with optional parallel execution.
-     * When parallel execution is enabled, different join entity types are loaded concurrently.
+     * When parallel execution is enabled, the join properties are loaded concurrently, one task per property name.
      * Inside a transaction on the DAO's data source, the loads run on the calling thread, in the transaction.
      *
      * <p><b>Usage Examples:</b></p>
@@ -2069,12 +2069,12 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
     }
 
     /**
-     * Returns the executor that the parallel join tasks of {@code dao} run with: {@code executor}, or the calling thread itself
-     * while it runs a transaction on the DAO's data source (see
+     * Returns the executor that the parallel join load tasks of {@code dao} run with: {@code executor}, or the calling thread
+     * itself while it runs a transaction on the DAO's data source (see
      * {@link com.landawn.abacus.jdbc.JdbcUtil#isInTransaction(javax.sql.DataSource)}; also when that can't be determined). A
      * task on another thread ran outside the transaction, on a connection of its own: it missed the transaction's uncommitted
-     * writes, a join it deleted was not rolled back with the transaction, and it could wait on the transaction's locks, or for
-     * a connection of an exhausted pool, while the calling thread waited for it.
+     * writes, and it could wait on the transaction's locks, or for a connection of an exhausted pool, while the calling thread
+     * waited for it. (The parallel join deletes don't use it: in such a transaction they run as their sequential overloads do.)
      *
      * @param dao the DAO the join tasks run on
      * @param executor the executor requested for the join tasks
@@ -2087,7 +2087,8 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
     /**
      * Returns whether the calling thread runs in a transaction on the data source of {@code dao} (see
      * {@link JdbcUtil#isInTransaction(javax.sql.DataSource)}), the join tasks of a parallel load or delete then running on
-     * it, in the transaction (see {@link #joinTaskExecutor(JoinEntityBase, Executor)}).
+     * it, in the transaction (see {@link #joinTaskExecutor(JoinEntityBase, Executor)} for the loads; the deletes then run as
+     * their sequential overloads do).
      *
      * @param dao the DAO the join tasks run on
      * @return {@code true} if it does, or if that can't be determined (the calling thread is always a safe choice)

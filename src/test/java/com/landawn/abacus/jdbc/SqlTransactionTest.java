@@ -1462,6 +1462,41 @@ public class SqlTransactionTest extends TestBase {
         assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
     }
 
+    // Review 2026-10-26: the failure reporting the transaction that the command of runOutsideTransaction left open said "it
+    // has been rolled back" whatever became of that rollback, also when it failed (the connection aborted, its work not undone
+    // by a ROLLBACK). It is worded after the outcome, as the failure of a commit that exits a leaked scope is.
+    @Test
+    public void testRunOutsideTransactionDoesNotClaimTheRollbackOfTheTransactionItsCmdLeftOpenWhenThatRollbackFails() throws Exception {
+        clearThreadTransactionMap();
+
+        final Connection connection2 = Mockito.mock(Connection.class);
+        when(connection2.getAutoCommit()).thenReturn(true);
+        when(connection2.getTransactionIsolation()).thenReturn(Connection.TRANSACTION_READ_COMMITTED);
+        doThrow(new SQLException("simulated rollback failure")).when(connection2).rollback();
+        when(dataSource.getConnection()).thenReturn(connection, connection2);
+
+        final SqlTransaction outerTx = JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED);
+        final AtomicReference<SqlTransaction> opened = new AtomicReference<>();
+
+        try {
+            final IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                    () -> outerTx.runOutsideTransaction(() -> opened.set(JdbcUtil.beginTransaction(dataSource, IsolationLevel.READ_COMMITTED))));
+
+            assertEquals(SqlTransaction.Status.FAILED_ROLLBACK, opened.get().status());
+            assertTrue(thrown.getMessage().contains("Another transaction is opened but not closed"), thrown.getMessage());
+            assertTrue(thrown.getMessage().endsWith("it could not be rolled back"), thrown.getMessage());
+            assertEquals(1, thrown.getSuppressed().length);
+            assertTrue(thrown.getSuppressed()[0] instanceof UncheckedSQLException, String.valueOf(thrown.getSuppressed()[0]));
+
+            assertEquals(SqlTransaction.Status.ACTIVE, outerTx.status());
+            assertSame(outerTx.context(), TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+        } finally {
+            outerTx.rollbackIfNotCommitted();
+        }
+
+        assertNull(TransactionContext.getTransaction(dataSource, SqlTransaction.CreatedBy.JDBC_UTIL));
+    }
+
     // runOutsideTransaction(): cmd throws AND another transaction is opened inside → addSuppressed (line 763)
     @Test
     public void testRunOutsideTransaction_WhenCmdThrowsAndAnotherTransactionOpened_AddSuppressesISE() throws Exception {

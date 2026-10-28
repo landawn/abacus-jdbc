@@ -14,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.function.Supplier;
@@ -321,6 +322,42 @@ class DaoCacheJsonOuterContainersTest {
         assertSame(reversed.comparator(), listElement.comparator());
         assertEquals(List.of(2L, 1L), new ArrayList<>(listElement.keySet()));
         assertEquals("original", ((Map<String, Map<String, Object>>) listCopy.get(1)).get("2").get("name"));
+    }
+
+    @Test
+    void untypedRootsRebuildUniformContainersTheParserCannotConstructFromTheirRuntimeShape() {
+        // Collections.emptyList()/emptyMap()/emptySet() have a no-argument constructor, but a private one of java.base that the
+        // parser cannot call; an anonymous container class it rejects. Naming such a class as the inferred element type failed
+        // the copy, and so the call, after the method had returned its result.
+        results.put("emptyLists", new ArrayList<>(List.of(java.util.Collections.emptyList(), java.util.Collections.emptyList())));
+        assertEquals(List.of(List.of(), List.of()), dao.getUntypedList("emptyLists"));
+        results.put("emptyLists", new ArrayList<>());
+        assertEquals(List.of(List.of(), List.of()), dao.getUntypedList("emptyLists"), "served from the cache");
+
+        results.put("emptyMaps", new ArrayList<>(List.of(java.util.Collections.emptyMap(), java.util.Collections.emptyMap())));
+        assertEquals(List.of(Map.of(), Map.of()), dao.getUntypedList("emptyMaps"));
+        assertEquals(List.of(Map.of(), Map.of()), dao.getUntypedList("emptyMaps"));
+
+        // A plain ImmutableMap root is copied as a tree, which infers its value type from the values the same way.
+        // The first call returns the method's own result (empty sets); the cached copy reads them back as untyped lists.
+        results.put("emptySets", ImmutableMap.of("a", java.util.Collections.emptySet(), "b", java.util.Collections.emptySet()));
+        assertEquals(Map.of("a", Set.of(), "b", Set.of()), new LinkedHashMap<>(dao.getObjects("emptySets")));
+        assertEquals(Map.of("a", List.of(), "b", List.of()), new LinkedHashMap<>(dao.getObjects("emptySets")));
+
+        // The cached copy reads the untyped numbers back as JSON's default Integer.
+        results.put("anonymousLists", new ArrayList<>(List.of(anonymousList(), anonymousList())));
+        assertEquals(List.of(List.of(1L), List.of(1L)), dao.getUntypedList("anonymousLists"));
+        assertEquals(List.of(List.of(1), List.of(1)), dao.getUntypedList("anonymousLists"));
+    }
+
+    @SuppressWarnings("serial")
+    private static List<Long> anonymousList() {
+        // Declared in a static context: the anonymous class has a no-argument constructor.
+        return new ArrayList<>() {
+            {
+                add(1L);
+            }
+        };
     }
 
     @Test

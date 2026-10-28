@@ -454,12 +454,14 @@ public final class JoinInfo {
                                 .toList());
             }
 
+            // Render the canonical property names, as the direct join does: the lookups above also accept other spellings
+            // (e.g. "ROLEID" for roleId), which the SQL builders would turn into a column that does not exist ("roleid").
             final List<Integer> placeholderList = N.asList(1, 2, 3);
-            final Condition cond = Filters.in(right[1], placeholderList); //
+            final Condition cond = Filters.in(referencedPropInfos[0].name, placeholderList); //
             final String inCondToReplace = Strings.repeat("?", placeholderList.size(), ", ");
 
-            final List<String> middleSelectPropNames = N.asList(rightMiddlePropName);
-            final Condition middleEntityCond = Filters.eq(leftMiddlePropName);
+            final List<String> middleSelectPropNames = N.asList(rightMiddlePropInfo.name);
+            final Condition middleEntityCond = Filters.eq(leftMiddlePropInfo.name);
 
             final Jdbc.BiParametersSetter<PreparedStatement, Object> paramSetter = (stmt, entity) -> srcPropInfos[0].dbType.set(stmt, 1,
                     getJoinPropValue(srcPropInfos[0], entity));

@@ -258,6 +258,34 @@ class DaoImplGeneratedKeyRegressionTest extends TestBase {
         }
     }
 
+    // A case-insensitive database that keeps mixed-case spellings (e.g. SQL Server) resolves another spelling of the
+    // DAO's table to that table: the INSERT must keep the entity ID strategy and write the key back. It was treated as
+    // another table, leaving the entity ID unset and failing a composite DAO after its row had been inserted.
+    @Test
+    void caseInsensitiveSpellingsOfTheDaoTableKeepTheEntityIdStrategy() throws SQLException {
+        final JdbcDataSource caseInsensitive = new JdbcDataSource();
+        caseInsensitive.setURL("jdbc:h2:mem:key_case_" + UUID.randomUUID() + ";DATABASE_TO_UPPER=FALSE;CASE_INSENSITIVE_IDENTIFIERS=TRUE");
+        try (Connection conn = caseInsensitive.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute(
+                    "CREATE TABLE identity_row(created TIMESTAMP DEFAULT CURRENT_TIMESTAMP, id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
+            stmt.execute(
+                    "CREATE TABLE nullable_row(tenant_id BIGINT DEFAULT 7, row_id BIGINT GENERATED ALWAYS AS IDENTITY, match_key VARCHAR, payload VARCHAR, name VARCHAR)");
+            final KeyDao keyDao = JdbcUtil.createDao(KeyDao.class, caseInsensitive);
+            final IdentityRow row = existingRow(999L);
+            assertEquals(1L, keyDao.copyTo("IDENTITY_ROW", row));
+            assertEquals(1L, row.getId());
+            final List<IdentityRow> rows = List.of(existingRow(998L), existingRow(999L));
+            assertEquals(List.of(2L, 3L), keyDao.copyBatch("PUBLIC.Identity_Row", rows, 1));
+            assertEquals(2L, rows.get(0).getId());
+            assertEquals(3L, rows.get(1).getId());
+
+            final Object compositeId = JdbcUtil.createDao(CompositeAuditDao.class, caseInsensitive).dynamic("NULLABLE_ROW", "own table");
+            assertEquals(7L, ((EntityId) compositeId).<Long> get("tenantId"));
+            assertEquals(1L, ((EntityId) compositeId).<Long> get("rowId"));
+        }
+    }
+
     @Test
     void quotedTablesKeepTheirDistinctKeyMetadata() throws SQLException {
         execute("CREATE TABLE \"AuditLog\"(code VARCHAR PRIMARY KEY, log_id BIGINT GENERATED ALWAYS AS IDENTITY(START WITH 10), name VARCHAR)");
@@ -332,7 +360,7 @@ class DaoImplGeneratedKeyRegressionTest extends TestBase {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "unknown", "unsupported" })
+    @ValueSource(strings = { "unknown", "unsupported", "null" })
     void missingGenerationMetadataForAKnownPrimaryKeyFailsBeforeWriting(final String mode) throws SQLException {
         execute("CREATE TABLE supplied_key(code VARCHAR PRIMARY KEY, log_id BIGINT GENERATED ALWAYS AS IDENTITY, name VARCHAR)");
         final JdbcDataSource wrapped = spy(ds);
@@ -343,6 +371,10 @@ class DaoImplGeneratedKeyRegressionTest extends TestBase {
             final DatabaseMetaData metadata = spy(realMetadata);
             doReturn(metadata).when(connection).getMetaData();
             doAnswer(columnsCall -> {
+                if (mode.equals("null")) {
+                    // JDBC specifies a ResultSet, but tolerate non-conforming wrappers as for getPrimaryKeys.
+                    return null;
+                }
                 final ResultSet columns = spy(realMetadata.getColumns(columnsCall.getArgument(0), columnsCall.getArgument(1), columnsCall.getArgument(2),
                         columnsCall.getArgument(3)));
                 if (mode.equals("unknown")) {

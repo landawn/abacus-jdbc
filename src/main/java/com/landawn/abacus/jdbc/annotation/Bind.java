@@ -67,8 +67,10 @@ import java.lang.annotation.Target;
  * }</pre>
  *
  * <p>When the method has a single bean/record/Map parameter, named placeholders are bound directly
- * to its properties without {@code @Bind}. When there are multiple parameters in a named query,
- * each parameter must carry an {@code @Bind} (or another binding annotation):</p>
+ * to its properties without {@code @Bind}. When there are multiple statement parameters in a named query,
+ * each must carry an {@code @Bind} (a {@link SqlFragment @SqlFragment} or {@link SqlFragmentList @SqlFragmentList}
+ * parameter supplies SQL text, not a statement parameter, and needs none; {@link BindList @BindList} is not
+ * supported on a named query):</p>
  * <pre>{@code
  * // Single bean parameter: properties auto-bound, no @Bind required
  * @Query("INSERT INTO users (name, email, age) VALUES (:name, :email, :age)")
@@ -102,8 +104,8 @@ public @interface Bind {
      * should be bound to in the SQL.
      *
      * <p>An explicit value is normally required: when a named-query method has more than one
-     * statement parameter, every such parameter must carry an {@code @Bind} (or another binding
-     * annotation) with a non-empty {@code value} that matches a named parameter in the SQL verbatim.
+     * statement parameter, every such parameter must carry an {@code @Bind} with a non-empty
+     * {@code value} that matches a named parameter in the SQL verbatim.
      * (A single bean/record/Map parameter is auto-bound by property names without any {@code @Bind}.)</p>
      *
      * <p>The parameter is referenced in SQL using colon notation: {@code :paramName}</p>
@@ -119,9 +121,10 @@ public @interface Bind {
      * List<Order> findOrders(@Bind("customerId") Long customerId, @Bind("orderStatus") String status) throws SQLException;
      * }</pre>
      *
-     * <p><b>Empty value:</b> an empty {@code value} (the default) is effectively invalid and always fails
-     * DAO initialization, but the exception type depends on which check the method reaches first. An empty
-     * name matches no named parameter, so a named query whose {@code @Bind} names are verified against the
+     * <p><b>Empty value:</b> an empty {@code value} (the default) is effectively invalid and fails
+     * DAO initialization (batch methods aside, see below), but the exception type depends on which check the
+     * method reaches first. An empty name matches no named parameter, so a named query whose {@code @Bind}
+     * names are verified against the
      * static SQL reports {@code IllegalArgumentException}; the binding setup that rejects an empty
      * {@code @Bind} name outright reports {@code UnsupportedOperationException}, and is the only check left
      * for a positional stored-procedure call or when {@link Query#fragmentsContainNamedParameters()} defers
@@ -138,7 +141,14 @@ public @interface Bind {
      * initialization with {@code IllegalArgumentException}, while two parameters bound to the same name, or
      * a named parameter of the SQL left unbound (the reserved system-time parameters excepted when
      * {@link Query#injectCurrentTimeParameters()} is enabled), fail with
-     * {@code UnsupportedOperationException}.</p>
+     * {@code UnsupportedOperationException}. A stored-procedure call skips those last two checks: its
+     * unbound named parameters may be {@code OUT} parameters registered by name through
+     * {@link OutParameter @OutParameter}.</p>
+     *
+     * <p><b>Batch methods:</b> the elements of the {@code Collection} parameter of a
+     * {@link Query#batch() batch} method supply the statement parameters, so an {@code @Bind} on it is not
+     * used for binding. It is still checked against the static SQL of a named query and still rejected on a
+     * non-procedure positional query, but the binding-setup checks above do not run.</p>
      *
      * @return the named-parameter token to bind to (without the leading colon); empty by default
      */

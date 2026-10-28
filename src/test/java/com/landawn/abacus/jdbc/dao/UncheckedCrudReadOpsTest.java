@@ -69,11 +69,22 @@ public class UncheckedCrudReadOpsTest extends TestBase {
         return dao;
     }
 
+    // The parameters of a chunk condition, unwrapped: its id values are bound with their property types (DaoUtil.TypedParameter).
+    private static List<Object> idParams(final Condition cond) {
+        final List<Object> result = new ArrayList<>();
+
+        for (final Object param : cond.parameters()) {
+            result.add(param instanceof final DaoUtil.TypedParameter typedParameter ? typedParameter.value() : param);
+        }
+
+        return result;
+    }
+
     private static void stubListByChunkIds(final IdAnnotatedUncheckedCrudDao dao) {
         Mockito.doAnswer(inv -> {
             final Condition cond = inv.getArgument(1);
             final List<IdAnnotatedEntity> result = new ArrayList<>();
-            for (final Object id : cond.parameters()) {
+            for (final Object id : idParams(cond)) {
                 result.add(new IdAnnotatedEntity((Long) id));
             }
             return result;
@@ -149,9 +160,9 @@ public class UncheckedCrudReadOpsTest extends TestBase {
         final ArgumentCaptor<Condition> condCaptor = ArgumentCaptor.forClass(Condition.class);
         verify(dao, Mockito.times(3)).list(ArgumentMatchers.eq(List.of("id")), condCaptor.capture());
         final List<Condition> chunks = condCaptor.getAllValues();
-        assertEquals(List.of(1L, 2L), chunks.get(0).parameters());
-        assertEquals(List.of(3L, 4L), chunks.get(1).parameters());
-        assertEquals(List.of(5L), chunks.get(2).parameters());
+        assertEquals(List.of(1L, 2L), idParams(chunks.get(0)));
+        assertEquals(List.of(3L, 4L), idParams(chunks.get(1)));
+        assertEquals(List.of(5L), idParams(chunks.get(2)));
     }
 
     @Test
@@ -163,7 +174,7 @@ public class UncheckedCrudReadOpsTest extends TestBase {
 
         final ArgumentCaptor<Condition> condCaptor = ArgumentCaptor.forClass(Condition.class);
         verify(dao, Mockito.times(1)).list(ArgumentMatchers.<Collection<String>> isNull(), condCaptor.capture());
-        assertEquals(List.of(1L, 2L), condCaptor.getValue().parameters());
+        assertEquals(List.of(1L, 2L), idParams(condCaptor.getValue()));
     }
 
     @Test
@@ -205,7 +216,7 @@ public class UncheckedCrudReadOpsTest extends TestBase {
         }
         ids.add(0L); // duplicate: must not create a third chunk or be counted twice
 
-        Mockito.doAnswer(inv -> ((Condition) inv.getArgument(0)).parameters().size()).when(dao).count(ArgumentMatchers.any(Condition.class));
+        Mockito.doAnswer(inv -> idParams((Condition) inv.getArgument(0)).size()).when(dao).count(ArgumentMatchers.any(Condition.class));
 
         assertEquals(JdbcUtil.DEFAULT_BATCH_SIZE + 1, dao.count(ids));
         verify(dao, Mockito.times(2)).count(ArgumentMatchers.any(Condition.class));

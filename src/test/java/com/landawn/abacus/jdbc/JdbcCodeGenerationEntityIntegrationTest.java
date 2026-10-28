@@ -22,17 +22,21 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 @Tag("integration")
 class JdbcCodeGenerationEntityIntegrationTest extends JdbcCodeGenerationUtilTestSupport {
 
-    // Built-in annotations are emitted by simple name, so their imports must win even over explicitly requested competitors.
+    // Built-in annotations are emitted by simple name, so their imports must win even over explicitly requested competitors,
+    // whichever of the three built-in families is selected and requested (a requested javax.persistence import used to survive
+    // an Abacus or Jakarta selection: "reference to Table is ambiguous").
     @ParameterizedTest
-    @ValueSource(strings = { "com.landawn.abacus.annotation", "jakarta.persistence", "javax.persistence" })
-    void selectedBuiltInAnnotationsTakePrecedenceOverRequestedImports(final String annotationPackage, @TempDir final Path directory)
-            throws IOException, ClassNotFoundException {
-        final String competingPackage = annotationPackage.equals("com.landawn.abacus.annotation") ? "jakarta.persistence" : "com.landawn.abacus.annotation";
+    @CsvSource({ "com.landawn.abacus.annotation, jakarta.persistence", "com.landawn.abacus.annotation, javax.persistence",
+            "jakarta.persistence, com.landawn.abacus.annotation", "jakarta.persistence, javax.persistence", "javax.persistence, com.landawn.abacus.annotation",
+            "javax.persistence, jakarta.persistence" })
+    void selectedBuiltInAnnotationsTakePrecedenceOverRequestedImports(final String annotationPackage, final String competingPackage,
+            @TempDir final Path directory) throws IOException, ClassNotFoundException {
         final JdbcCodeGenerationUtil.EntityCodeConfig config = JdbcCodeGenerationUtil.EntityCodeConfig.builder()
                 .className("OrderHistory")
                 .tableAnnotationClass(Class.forName(annotationPackage + ".Table").asSubclass(Annotation.class))
@@ -45,7 +49,9 @@ class JdbcCodeGenerationEntityIntegrationTest extends JdbcCodeGenerationUtilTest
                 .build();
         final String code = JdbcCodeGenerationUtil.generateEntityClass("order_history", resultSet, config);
         for (final String annotation : List.of("Table", "Column", "Id")) {
-            assertTrue(code.contains("import " + annotationPackage + "." + annotation + ";"), code);
+            final String selectedImport = "import " + annotationPackage + "." + annotation + ";";
+            assertTrue(code.contains(selectedImport), code);
+            assertEquals(code.indexOf(selectedImport), code.lastIndexOf(selectedImport), code); // imported once
             assertFalse(code.contains("import " + competingPackage + "." + annotation + ";"), code);
         }
         final Path source = directory.resolve("OrderHistory.java");

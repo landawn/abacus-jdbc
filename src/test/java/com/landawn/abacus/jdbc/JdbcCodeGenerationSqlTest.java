@@ -31,6 +31,26 @@ class JdbcCodeGenerationSqlTest extends JdbcCodeGenerationUtilTestSupport {
         assertEquals("SELECT id, status FROM order_history WHERE status = 'OPEN'", sql);
     }
 
+    // The documented camelCase form of column pos_x_y is "posXY", but camelCase conversion is not idempotent
+    // (toCamelCase("posXY") is "posXy"), so excluding "posXY" used to leave the column in every generated statement.
+    @Test
+    public void testExcludedColumnsMatchCamelCaseFormThatIsNotStableUnderConversion() throws SQLException {
+        when(resultSetMetaData.getColumnLabel(2)).thenReturn("pos_x_y");
+        final List<String> excluded = List.of("posXY");
+
+        assertEquals("SELECT id, status FROM order_history", JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", excluded, null));
+        assertEquals("INSERT INTO order_history(id, status) VALUES (?, ?)", JdbcCodeGenerationUtil.generateInsertSql(connection, "order_history", excluded));
+        assertEquals("INSERT INTO order_history(id, status) VALUES (:id, :status)",
+                JdbcCodeGenerationUtil.generateNamedInsertSql(connection, "order_history", excluded));
+        assertEquals("UPDATE order_history SET status = ? WHERE id = ?",
+                JdbcCodeGenerationUtil.generateUpdateSql(connection, "order_history", excluded, List.of("id"), null));
+        assertEquals("UPDATE order_history SET status = :status WHERE id = :id",
+                JdbcCodeGenerationUtil.generateNamedUpdateSql(connection, "order_history", excluded, List.of("id"), null));
+
+        // The raw column name keeps working.
+        assertEquals("SELECT id, status FROM order_history", JdbcCodeGenerationUtil.generateSelectSql(connection, "order_history", List.of("pos_x_y"), null));
+    }
+
     // Test generateSelectSql with DataSource (basic overload)
     @Test
     public void testGenerateSelectSql_WithDataSource() throws SQLException {

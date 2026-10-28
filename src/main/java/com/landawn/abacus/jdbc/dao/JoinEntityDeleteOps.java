@@ -77,7 +77,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
+     *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
@@ -151,7 +153,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
+     *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
@@ -242,7 +246,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *                                  or a join being deleted has a disallowed null/default key
      * @throws IllegalStateException not thrown by the current implementation, which executes a single DELETE statement
      *         and starts no transaction of its own
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes;
+     *         untranslated Spring acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing the DELETE statement fails
      * @throws ArithmeticException not thrown by the current implementation, which returns the update count of its single
      *         DELETE statement
@@ -301,7 +306,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
+     *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
@@ -329,7 +336,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
+     *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
@@ -406,7 +415,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if {@code inParallel} is {@code false}, or the call runs inside a transaction (where the deletes run
      *         as with {@code inParallel} {@code false}), and acquiring a required database connection, or starting or completing an
-     *         internally required transaction, fails
+     *         internally required transaction, fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a delete task
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -517,7 +527,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
+     *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
@@ -591,7 +603,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if {@code inParallel} is {@code false}, or the call runs inside a transaction (where the deletes run
      *         as with {@code inParallel} {@code false}), and acquiring a required database connection, or starting or completing an
-     *         internally required transaction, fails
+     *         internally required transaction, fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection or starting or completing an internally required transaction fails in a delete task
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -702,7 +715,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
+     *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
@@ -739,7 +754,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if {@code inParallel} is {@code false}, or the call runs inside a transaction (where the deletes run
      *         as with {@code inParallel} {@code false}), and acquiring a required database connection, or starting or completing an
-     *         internally required transaction, fails
+     *         internally required transaction, fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection fails in a delete task
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
@@ -830,7 +846,9 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection fails outside Spring or through an unchecked DAO that translates SQL causes,
+     *         or starting or completing an internally required transaction fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}
      */
@@ -869,7 +887,8 @@ sealed interface JoinEntityDeleteOps<T, TD extends Dao<T, TD>> extends JoinEntit
      * @throws UncheckedInterruptedException if the calling thread is interrupted while waiting for the parallel delete tasks to finish
      * @throws UncheckedSQLException if {@code inParallel} is {@code false}, or the call runs inside a transaction (where the deletes run
      *         as with {@code inParallel} {@code false}), and acquiring a required database connection, or starting or completing an
-     *         internally required transaction, fails
+     *         internally required transaction, fails; untranslated Spring acquisition failures propagate as
+     *         {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails, or, when {@code inParallel} is {@code true},
      *         acquiring a database connection or starting or completing an internally required transaction fails in a delete task
      * @throws ArithmeticException if the total deleted-row count overflows an {@code int}

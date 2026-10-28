@@ -88,8 +88,9 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
-     * @throws UncheckedSQLException if acquiring a connection fails, if the auto-commit mode of the connection a Spring-managed transaction bound to
-     *         the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a connection fails, if the auto-commit mode of the connection a Spring-managed
+     *         transaction bound to the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys
+     *         fails. A Spring acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedCrudDao}).
      */
     @Override
     ID insert(final T entity) throws IllegalArgumentException, UnsupportedOperationException, IllegalStateException, UncheckedSQLException;
@@ -116,8 +117,9 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         {@code propNamesToInsert} includes an ID property and the entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
-     * @throws UncheckedSQLException if acquiring a connection fails, if the auto-commit mode of the connection a Spring-managed transaction bound to
-     *         the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a connection fails, if the auto-commit mode of the connection a Spring-managed
+     *         transaction bound to the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys
+     *         fails. A Spring acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedCrudDao}).
      */
     @Override
     ID insert(final T entity, final Collection<String> propNamesToInsert)
@@ -143,11 +145,13 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *                                  or if {@code entity} has no property for a named parameter in {@code namedInsertSql}
      *                                  other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
-     *         enabled and the entity's ID is not set, but {@link #generateId()} has not been overridden
+     *         enabled and the entity's ID is not set, but {@link #generateId()} has not been overridden; or if this is a non-update DAO (such as a
+     *         {@link UncheckedNonUpdateCrudDao}) and {@code namedInsertSql} is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
-     * @throws UncheckedSQLException if acquiring a connection fails, if the auto-commit mode of the connection a Spring-managed transaction bound to
-     *         the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a connection fails, if the auto-commit mode of the connection a Spring-managed
+     *         transaction bound to the data source cannot be read, or preparing, binding, or executing an INSERT statement, or reading its generated keys
+     *         fails. A Spring acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedCrudDao}).
      */
     @Override
     ID insert(final String namedInsertSql, final T entity)
@@ -177,17 +181,17 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         from the number of entities, a warning is logged, no key is written back and the entities' current IDs are returned,
      *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
      *         (a driver may return only the database-generated column)
-     * @throws IllegalArgumentException if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     * @throws IllegalArgumentException if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
      *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
-     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
-     *         INSERT statement, or reading its generated keys fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a connection fails, starting or completing an internally required transaction
+     *         fails, if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails. A Spring acquisition failure is not translated: it propagates as
+     *         {@code CannotGetJdbcConnectionException} (see {@link UncheckedCrudDao}).
      */
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities)
@@ -217,17 +221,17 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
      *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code batchSize} is not positive,
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled
      *         and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
-     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
-     *         INSERT statement, or reading its generated keys fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a connection fails, starting or completing an internally required transaction
+     *         fails, if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails. A Spring acquisition failure is not translated: it propagates as
+     *         {@code CannotGetJdbcConnectionException} (see {@link UncheckedCrudDao}).
      */
     @Override
     List<ID> batchInsert(final Collection<? extends T> entities, final int batchSize)
@@ -253,17 +257,17 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
      *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty,
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
      *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
-     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
-     *         INSERT statement, or reading its generated keys fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a connection fails, starting or completing an internally required transaction
+     *         fails, if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails. A Spring acquisition failure is not translated: it propagates as
+     *         {@code CannotGetJdbcConnectionException} (see {@link UncheckedCrudDao}).
      */
     @Override
     default List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert)
@@ -287,17 +291,17 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         in input order. For a composite ID, the entities' full IDs are returned after the generated keys are written back
      *         (a driver may return only the database-generated column)
      * @throws IllegalArgumentException if {@code propNamesToInsert} is {@code null} or empty, or if {@code batchSize} is not positive,
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertIfIdNotSet()} is enabled,
      *         {@code propNamesToInsert} includes an ID property and an entity's ID is not set, but {@link #generateId()} has not been overridden
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
-     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
-     *         INSERT statement, or reading its generated keys fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a connection fails, starting or completing an internally required transaction
+     *         fails, if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails. A Spring acquisition failure is not translated: it propagates as
+     *         {@code CannotGetJdbcConnectionException} (see {@link UncheckedCrudDao}).
      */
     @Override
     List<ID> batchInsert(final Collection<? extends T> entities, final Collection<String> propNamesToInsert, final int batchSize)
@@ -327,17 +331,18 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if an element of {@code entities} has no property for a named parameter in
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
-     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden; or if this is a non-update DAO (such as a
+     *         {@link UncheckedNonUpdateCrudDao}) and {@code namedInsertSql} is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
-     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
-     *         INSERT statement, or reading its generated keys fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a connection fails, starting or completing an internally required transaction
+     *         fails, if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails. A Spring acquisition failure is not translated: it propagates as
+     *         {@code CannotGetJdbcConnectionException} (see {@link UncheckedCrudDao}).
      */
     @Beta
     @Override
@@ -365,17 +370,18 @@ sealed interface UncheckedCrudInsertOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if an element of {@code entities} has no property for a named parameter in
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
-     *         if an element of {@code entities} is {@code null},
-     *         or a batch entity lacks a property required by the named SQL parameters
+     *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
-     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden; or if this is a non-update DAO (such as a
+     *         {@link UncheckedNonUpdateCrudDao}) and {@code namedInsertSql} is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, if the auto-commit
-     *         mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding, or executing an
-     *         INSERT statement, or reading its generated keys fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a connection fails, starting or completing an internally required transaction
+     *         fails, if the auto-commit mode of the connection a Spring-managed transaction bound to the data source cannot be read, or preparing, binding,
+     *         or executing an INSERT statement, or reading its generated keys fails. A Spring acquisition failure is not translated: it propagates as
+     *         {@code CannotGetJdbcConnectionException} (see {@link UncheckedCrudDao}).
      */
     @Beta
     @Override

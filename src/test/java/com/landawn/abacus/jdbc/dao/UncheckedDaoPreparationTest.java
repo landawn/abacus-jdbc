@@ -278,12 +278,24 @@ class UncheckedDaoPreparationTest extends TestBase {
                 new DaoOperation("update property", dao -> dao.update("name", "b", Filters.eq("id", 1L)), true),
                 new DaoOperation("update by ID", dao -> dao.update("name", "b", 1L), true),
                 new DaoOperation("save", dao -> dao.save(acquisitionEntity(null)), true),
+                // The multi-element batchSave/batchDelete/batchDeleteByIds @throws documentation names these untranslated cases.
+                new DaoOperation("batchSave of one entity", dao -> dao.batchSave(List.of(acquisitionEntity(null)), 10), true),
+                new DaoOperation(
+                        "batchSave of two entities in one batch", dao -> dao.batchSave(List.of(acquisitionEntity(null), acquisitionEntity(null)), 10), false),
+                new DaoOperation("batchDelete of one entity", dao -> dao.batchDelete(List.of(acquisitionEntity(1L)), 10), true),
+                new DaoOperation("batchDelete of two entities in one batch", dao -> dao.batchDelete(List.of(acquisitionEntity(1L), acquisitionEntity(2L)), 10),
+                        false),
+                new DaoOperation("batchDeleteByIds of two IDs in one batch", dao -> dao.batchDeleteByIds(List.of(1L, 2L), 10), false),
                 new DaoOperation("batchUpdate of one entity", dao -> dao.batchUpdate(List.of(acquisitionEntity(1L)), 10), true),
                 new DaoOperation("insert", dao -> dao.insert(acquisitionEntity(null)), false),
                 new DaoOperation("batchInsert in one batch", dao -> dao.batchInsert(List.of(acquisitionEntity(null)), 10), false),
                 new DaoOperation("batchUpdate of two entities in one batch", dao -> dao.batchUpdate(List.of(acquisitionEntity(1L), acquisitionEntity(2L)), 10),
                         false),
-                new DaoOperation("batchUpdate across batches", dao -> dao.batchUpdate(List.of(acquisitionEntity(1L), acquisitionEntity(2L)), 1), false));
+                new DaoOperation("batchUpdate across batches", dao -> dao.batchUpdate(List.of(acquisitionEntity(1L), acquisitionEntity(2L)), 1), false),
+                // The lookup acquires first, through the unchecked prepare* methods; several entities open a transaction first.
+                new DaoOperation("upsert", dao -> dao.upsert(acquisitionEntity(1L)), true),
+                new DaoOperation("batchUpsert of one entity", dao -> dao.batchUpsert(List.of(acquisitionEntity(1L))), true),
+                new DaoOperation("batchUpsert of two entities", dao -> dao.batchUpsert(List.of(acquisitionEntity(1L), acquisitionEntity(2L))), false));
     }
 
     private static Stream<Preparation> preparations() {

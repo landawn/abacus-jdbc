@@ -650,6 +650,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
@@ -677,6 +678,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
@@ -707,6 +709,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
@@ -744,6 +747,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return a list of found entities with selected properties (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
@@ -832,6 +836,7 @@ sealed interface UncheckedCrudReadOps<T, ID, TD extends UncheckedDaoBase<T, TD>>
      * @return the number of records in the database whose IDs are contained in {@code ids}
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null}
      * @throws UncheckedSQLException if acquiring a connection fails, or preparing or executing the SELECT statement, binding its parameters, or reading

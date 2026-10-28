@@ -237,6 +237,27 @@ public class DaoImplBatchOperationsIntegrationTest extends TestBase {
         assertEquals(25, dao.get(11L).get().getScore());
     }
 
+    // The named UPDATE built for the selected properties names a second occurrence of a parameter ":id_2": with the ID property
+    // selected, "SET id = :id, ... WHERE id = :id_2" bound ":id_2" by the entity's property name and failed for every call.
+    @Test
+    void updateById_selectedPropertiesIncludingTheId_bindsTheIdOfTheWhereClause() throws SQLException {
+        dao.batchSave(records(true, false), 10);
+
+        assertEquals(1, dao.update(new Record(11L, "renamed", 50), List.of("id", "name")));
+        assertEquals("renamed", dao.get(11L).get().getName());
+        assertEquals(20, dao.get(11L).get().getScore());
+
+        assertEquals(2, dao.batchUpdate(List.of(new Record(10L, "first", 1), new Record(12L, "third", 3)), List.of("name", "id", "score"), 1));
+        assertEquals(1, dao.batchUpdate(List.of(new Record(11L, "ignored", 2)), List.of("id", "score = score + 5")));
+        assertEquals(List.of("first", "renamed", "third"), dao.list("name", Filters.expr("1 = 1 ORDER BY id")));
+        assertEquals(List.of(1, 25, 3), dao.list("score", Filters.expr("1 = 1 ORDER BY id")));
+
+        // Only the ID selected: the row is still matched and counted.
+        assertEquals(1, dao.update(new Record(12L, "ignored", 0), List.of("id")));
+        assertEquals(0, dao.update(new Record(99L, "ignored", 0), List.of("id", "name")));
+        assertEquals("third", dao.get(12L).get().getName());
+    }
+
     @ParameterizedTest(name = "{0}, large={1}, batchSize={2}")
     @MethodSource("annotatedUpdateModes")
     void annotatedBatchUpdate_bindingAndCountWidth_preserveRows(final UpdateBinding binding, final boolean large, final int batchSize) throws SQLException {

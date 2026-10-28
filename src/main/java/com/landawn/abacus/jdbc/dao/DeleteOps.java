@@ -42,7 +42,8 @@ sealed interface DeleteOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param cond the condition to match records for deletion
      * @return the number of records deleted, or {@code 0} if none match
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing a DELETE statement fails
      */
     int delete(final Condition cond) throws IllegalArgumentException, UncheckedSQLException, SQLException;

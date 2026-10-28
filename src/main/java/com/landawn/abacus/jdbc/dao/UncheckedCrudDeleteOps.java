@@ -95,7 +95,8 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing a DELETE statement fails
+     *         or executing a DELETE statement fails. With more than one element, the transaction is begun first and a Spring acquisition
+     *         failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      * @throws IllegalArgumentException if a {@code null} entity is encountered while reading or binding its ID properties,
      *         or an entity lacks a property required by the generated DELETE statement
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
@@ -130,7 +131,8 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing a DELETE statement fails
+     *         or executing a DELETE statement fails. With more than one element, the transaction is begun first and a Spring acquisition
+     *         failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override
@@ -155,7 +157,8 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing a DELETE statement fails
+     *         or executing a DELETE statement fails. With more than one element, the transaction is begun first and a Spring acquisition
+     *         failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      * @throws IllegalArgumentException if an ID is {@code null} and the entity uses a composite ID whose properties must be read
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
@@ -188,7 +191,8 @@ sealed interface UncheckedCrudDeleteOps<T, ID, TD extends UncheckedDaoBase<T, TD
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing, binding,
-     *         or executing a DELETE statement fails
+     *         or executing a DELETE statement fails. With more than one element, the transaction is begun first and a Spring acquisition
+     *         failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
     @Override

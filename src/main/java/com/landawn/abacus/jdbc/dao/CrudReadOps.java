@@ -622,6 +622,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
@@ -652,6 +653,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
@@ -680,6 +682,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
@@ -718,6 +721,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return a list of found entities (order is not guaranteed to match the input IDs; duplicate ids are treated as one)
      * @throws IllegalArgumentException if {@code batchSize} is not positive, or if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null},
      *                                  or selected result columns cannot be mapped to the entity type
@@ -760,10 +764,12 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         }
 
         final List<T> resultList = new ArrayList<>(idList.size());
+        // The id values are bound with the id property types (an enum id stored as its ordinal, for example).
+        final BeanInfo entityInfo = entityClass == null ? null : ParserUtil.getBeanInfo(entityClass);
 
         for (int i = 0, size = idList.size(); i < size; i += batchSize) {
             final List<ID> batch = idList.subList(i, Math.min(i + batchSize, size));
-            final Condition idsCond = DaoUtil.idsToCondition(batch, idPropNameList, isEntityId, isMap);
+            final Condition idsCond = DaoUtil.idsToCondition(batch, idPropNameList, isEntityId, isMap, entityInfo);
 
             if (idsCond == null) {
                 // No composite id of this chunk can match a row (see DaoUtil.idsToCondition): nothing to query.
@@ -847,6 +853,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
      * @return the number of records in the database whose IDs are contained in {@code ids}
      * @throws IllegalArgumentException if {@code ids} are {@code EntityId}s/{@code Map}s or entities for a single-id entity,
      *                                  or, for a composite-id entity, if an {@code EntityId} element is {@code null} or has no keys,
+     *                                  if a non-null element is not an {@code EntityId}, a {@code Map}, a bean or a record,
      *                                  if {@code EntityId}, {@code Map} and entity elements are mixed, if an id bean/record does not expose a declared id property,
      *                                  or if every element of {@code ids} is {@code null}
      * @throws UncheckedSQLException if acquiring a required database connection fails
@@ -882,11 +889,12 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
         }
 
         final int batchSize = JdbcUtil.DEFAULT_BATCH_SIZE;
+        final BeanInfo entityInfo = entityClass == null ? null : ParserUtil.getBeanInfo(entityClass); // binds ids with their property types
         long result = 0;
 
         for (int i = 0, size = idList.size(); i < size; i += batchSize) {
             final List<ID> batch = idList.subList(i, Math.min(i + batchSize, size));
-            final Condition idsCond = DaoUtil.idsToCondition(batch, idPropNameList, isEntityId, isMap);
+            final Condition idsCond = DaoUtil.idsToCondition(batch, idPropNameList, isEntityId, isMap, entityInfo);
 
             // null: no composite id of this chunk can match a row (see DaoUtil.idsToCondition), so it counts nothing.
             if (idsCond != null) {
@@ -1038,7 +1046,7 @@ sealed interface CrudReadOps<T, ID, TD extends DaoBase<T, TD>> extends ReadOps<T
             // matched every row holding NULL in a nullable key column (several of them: DuplicateResultException) while
             // getOrNull binds NULL and matches none. Matched on every declared id property now: a null component matches
             // no row, so nothing is queried.
-            final Condition idCond = DaoUtil.entityIdToCondition((EntityId) id, idPropNameList);
+            final Condition idCond = DaoUtil.entityIdToCondition((EntityId) id, idPropNameList, entityInfo);
 
             dbEntity = idCond == null ? null : findOnlyOne(selectPropNames, idCond).orElseNull();
         }

@@ -965,7 +965,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
 
     /**
      * Loads multiple join entities for a collection of entities with optional parallel execution.
-     * When parallel execution is enabled, different join entity types are loaded concurrently.
+     * When parallel execution is enabled, the join properties are loaded concurrently, one task per property name.
      * Inside a transaction on the DAO's data source, the loads run on the calling thread, in the transaction.
      *
      * <p><b>Usage Examples:</b></p>
@@ -1188,7 +1188,7 @@ sealed interface UncheckedJoinEntityReadOps<T, TD extends UncheckedDaoBase<T, TD
 
     /**
      * Loads all join entities for a collection of entities with optional parallel execution.
-     * When parallel execution is enabled, different join entity types are loaded concurrently.
+     * When parallel execution is enabled, the join properties are loaded concurrently, one task per property name.
      * Inside a transaction on the DAO's data source, the loads run on the calling thread, in the transaction.
      *
      * <p><b>Usage Examples:</b></p>

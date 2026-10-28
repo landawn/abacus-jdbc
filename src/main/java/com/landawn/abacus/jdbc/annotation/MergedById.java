@@ -118,8 +118,9 @@ public @interface MergedById {
      * For a composite key, provide a comma-separated list of property names.
      *
      * <p>This is optional when merging by the entity's declared id: left empty, the framework falls
-     * back to the property names annotated with {@code @Id} on the target entity (or, when combined
-     * with {@link MappedByKey}, to that annotation's key). Specify it explicitly to merge by
+     * back to {@link MappedByKey}'s key when the two are combined, and otherwise to the target entity's id
+     * property names (those annotated with {@code @Id}, or, when none is, a conventional property named
+     * {@code id}). Specify it explicitly to merge by
      * properties that are not the entity's id — e.g. {@code @MergedById("ID, firstName")}. On a DAO whose
      * entity class has no id property there is nothing to fall back to, so an empty {@code value} fails
      * DAO initialization with {@code IllegalArgumentException}; so does any resolved name that is not a

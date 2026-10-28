@@ -451,7 +451,8 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      *            (a spelling the entity's property lookup accepts, such as the column name, is resolved to the property name)
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
-     *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
+     *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class
+     *                                  (a nested property path such as {@code "address.street"} is not accepted),
      *                                  or an existing row is updated, {@code entity} has ID properties and a non-ID property the loaded
      *                                  entity does not
      * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or starting or completing the transaction scope
@@ -470,13 +471,14 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
-        // Filters.allEqual reads values through the lenient bean-info lookup but renders the raw name into SQL, so a spelling
+        // The bean-info lookup that reads the values is lenient but the name is rendered into SQL as given, so a spelling
         // such as "FIRSTNAME" would read the right value yet reference a non-existent column.
         // WHY: a null match value renders IS NULL on purpose, the rule batchUpsert documents as well. An upsert matches by
         // values and must be repeatable; the by-id rule (DaoUtil.entityIdToCondition: a null component matches no row) would
         // insert a duplicate on every upsert of an entity holding null for a nullable key column, as most databases allow
-        // several NULLs in a unique column. For NOT NULL key columns both rules match no row.
-        final Condition cond = Filters.allEqual(entity, DaoUtil.toCanonicalPropNames(entity, matchPropNames));
+        // several NULLs in a unique column. For NOT NULL key columns both rules match no row. The other values are bound with
+        // their property types (see DaoUtil.typedAllEqual).
+        final Condition cond = DaoUtil.typedAllEqual(entity, DaoUtil.toCanonicalPropNames(entity, matchPropNames));
 
         return upsert(entity, cond);
     }
@@ -489,7 +491,9 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
      * <p>When a record is found, the non-{@code null} non-id properties of {@code entity} are copied into
      * the loaded record before it is updated; a {@code null} property keeps the existing value, so an
      * upsert cannot clear a column to {@code NULL}. When the input has no ID properties, properties absent from the
-     * loaded entity are ignored. With ID properties, an unmatched non-ID property is rejected.</p>
+     * loaded entity are ignored, and the update addresses the row by {@code cond}. With ID properties, an unmatched non-ID
+     * property is rejected, and the update never assigns the ID columns: it addresses the row by its loaded ID values, or, if
+     * one of them is {@code null}, by {@code cond}, since a nullable ID need not be unique.</p>
      *
      * <p>Inside a transaction on the DAO's data source, the lookup and the write run in one transaction scope: a nested scope of
      * the transaction active on the thread (a failure, also one of the lookup, then marks that transaction rollback-only, so its
@@ -562,8 +566,18 @@ public non-sealed interface Dao<T, TD extends Dao<T, TD>> extends ReadOps<T, TD>
                     update(dbEntity, cond);
                 } else {
                     Beans.mergeInto(entity, dbEntity, false, N.newHashSet(idPropNameList));
-                    final Condition idCond = Filters.allEqual(dbEntity, idPropNameList);
-                    update(dbEntity, idCond);
+
+                    // As in CrudDao.upsert: ID columns are never assigned (a generated identity cannot be assigned even its
+                    // current value), and a null ID component is neither addressable with `= NULL` nor necessarily unique with
+                    // IS NULL (which updated every row sharing it), so then the lookup condition, which matched this row alone,
+                    // addresses it.
+                    @SuppressWarnings("deprecation")
+                    final Collection<String> propNamesToUpdate = JdbcUtil.getUpdatePropNames(targetEntityClass(), N.newHashSet(idPropNameList));
+
+                    if (N.notEmpty(propNamesToUpdate)) {
+                        final boolean hasNullId = N.anyMatch(idPropNameList, idName -> Beans.getPropValue(dbEntity, idName) == null);
+                        update(dbEntity, propNamesToUpdate, hasNullId ? cond : DaoUtil.typedAllEqual(dbEntity, idPropNameList));
+                    }
                 }
 
                 result = dbEntity;

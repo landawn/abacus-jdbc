@@ -109,8 +109,8 @@ import lombok.ToString;
  *       ({@link RowMapper}, {@link BiRowMapper}).</li>
  *   <li>Row consumers and filters ({@link RowConsumer}, {@link BiRowConsumer},
  *       {@link RowFilter}, {@link BiRowFilter}).</li>
- *   <li>Type-safe column getters for retrieving values from a {@code ResultSet}
- *       ({@link ColumnGetter}, {@link Columns.ColumnOne}).</li>
+ *   <li>Type-safe column getters for retrieving a value from a {@code ResultSet} column ({@link ColumnGetter}),
+ *       and predefined first-column row mappers and first-parameter setters ({@link Columns.ColumnOne}).</li>
  *   <li>Fluent builders for creating complex row mappers with customized column handling
  *       ({@link RowMapper.RowMapperBuilder}, {@link BiRowMapper.BiRowMapperBuilder},
  *       {@link RowExtractor.RowExtractorBuilder}).</li>
@@ -386,8 +386,9 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> The returned setter is stateful because it caches type information
-         * upon first execution. It should not be cached, shared, or used in parallel streams.
-         * A new instance should be created for each use.
+         * upon first execution, without synchronization, so it must not be shared between threads or used in parallel
+         * streams. The cached types depend only on {@code fieldNameList} and {@code entityClass}, so the setter can be
+         * reused sequentially, also with other statements.
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -404,7 +405,7 @@ public final class Jdbc {
          * @param fieldNameList the list of property names from the {@code entityClass}. The order
          * must match the order of values in the input array and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
-         * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
+         * @return a stateful {@code BiParametersSetter}. Do not share it between threads or use it in parallel streams.
          * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is {@code null} or not a valid bean class.
          */
         @Beta
@@ -472,8 +473,9 @@ public final class Jdbc {
          *
          * <p>
          * <b>Warning:</b> The returned setter is stateful because it caches type information
-         * upon first execution. It should not be cached, shared, or used in parallel streams.
-         * A new instance should be created for each use.
+         * upon first execution, without synchronization, so it must not be shared between threads or used in parallel
+         * streams. The cached types depend only on {@code fieldNameList} and {@code entityClass}, so the setter can be
+         * reused sequentially, also with other statements.
          * </p>
          *
          * <p><b>Usage Examples:</b></p>
@@ -490,7 +492,7 @@ public final class Jdbc {
          * @param fieldNameList the list of property names from the {@code entityClass}. The order
          * must match the order of values in the input list and the '?' placeholders in the SQL statement.
          * @param entityClass the entity class used to infer the data type for each parameter.
-         * @return a stateful {@code BiParametersSetter}. Do not cache, reuse, or use it in parallel streams.
+         * @return a stateful {@code BiParametersSetter}. Do not share it between threads or use it in parallel streams.
          * @throws IllegalArgumentException if {@code fieldNameList} is {@code null} or empty, or if {@code entityClass} is {@code null} or not a valid bean class.
          */
         @Beta
@@ -4707,6 +4709,10 @@ public final class Jdbc {
          * mapper's {@code apply} method throws an {@link IllegalArgumentException} if a configured column name is not
          * among the result columns.</p>
          *
+         * <p>A bean target matches each column label only to a property of the bean class itself (by property name or
+         * declared column name). Unlike {@link BiRowMapper#to(Class)}, a dot-qualified label such as {@code "user.id"} is
+         * not resolved to a nested property, so it counts as an unmatched column.</p>
+         *
          * <p>The primitive getters ({@code getBoolean}, {@code getByte}, {@code getShort}, {@code getInt}, {@code getLong},
          * {@code getFloat}, {@code getDouble}) read through the matching {@code ResultSet.getXxx} method, so SQL {@code NULL}
          * becomes {@code false}/{@code 0} even for a wrapper-typed property. To keep {@code null}, leave the column
@@ -5013,7 +5019,9 @@ public final class Jdbc {
              * {@link ColumnGetter#GET_OBJECT} (the default of {@link BiRowMapper#builder()}, or configured explicitly) is
              * instead read with the getter for the array component type (reference-array targets), the matched
              * property's type (bean targets) or {@code targetClass} (single-column scalar targets); any other getter is
-             * used as is. {@code List} and {@code Map} targets use the resolved getters unchanged.</p>
+             * used as is. {@code List} and {@code Map} targets use the resolved getters unchanged. For a reference-array
+             * target, a getter used as is must return instances of the component type: {@code getInt("id")} with
+             * {@code String[].class}, for example, makes {@code apply} throw {@link ArrayStoreException}.</p>
              *
              * <p>Note: when {@code targetClass} is a bean class, the returned mapper's {@code apply} method throws
              * an {@link IllegalArgumentException} whenever initialization finds a result column that cannot be mapped to
@@ -6474,7 +6482,8 @@ public final class Jdbc {
              * @return this builder instance for fluent chaining.
              * @throws IllegalArgumentException if {@code columnIndex} is not positive.
              * @deprecated A builder created by {@link RowExtractor#builder()} already uses {@link ColumnGetter#GET_OBJECT} for any column
-             *             without a specific {@code ColumnGetter}.
+             *             without a specific {@code ColumnGetter}. To override a different default getter (see
+             *             {@link RowExtractor#builder(ColumnGetter)}), use {@code get(columnIndex, ColumnGetter.GET_OBJECT)}.
              */
             @Deprecated
             public RowExtractorBuilder getObject(final int columnIndex) throws IllegalArgumentException {
@@ -6741,7 +6750,9 @@ public final class Jdbc {
         ColumnGetter<Clob> GET_CLOB = ResultSet::getClob;
 
         /**
-         * Predefined getter for {@code Object} values, using {@code JdbcUtil.getColumnValue} for generic type handling.
+         * Predefined getter for {@code Object} values, read by {@link JdbcUtil#getColumnValue(ResultSet, int)}: unlike
+         * {@link #GET_BLOB} and {@link #GET_CLOB}, it materializes a {@code Blob} as {@code byte[]} and a {@code Clob} as
+         * {@code String}, and it converts database-specific date/time values to standard Java types.
          */
         @SuppressWarnings("rawtypes")
         ColumnGetter GET_OBJECT = JdbcUtil::getColumnValue;
@@ -6960,9 +6971,10 @@ public final class Jdbc {
 
             /**
              * A {@code RowMapper} for getting a value from the first column as a generic {@code Object},
-             * with the runtime type chosen by {@link JdbcUtil#getColumnValue(ResultSet, int)}
-             * (which adapts driver-specific types such as {@code java.sql.Date}, {@code Timestamp},
-             * {@code BigDecimal}, etc.).
+             * read by {@link JdbcUtil#getColumnValue(ResultSet, int)}: a {@code Blob} is materialized as
+             * {@code byte[]}, a {@code Clob} as {@code String}, and database-specific date/time values
+             * (e.g., Oracle's {@code TIMESTAMP}) are converted to standard Java types; other values, such as
+             * a {@code String}, {@code Number} or {@code Timestamp}, are returned as the driver reads them.
              */
             public static final RowMapper<Object> GET_OBJECT = rs -> JdbcUtil.getColumnValue(rs, 1);
 
@@ -7193,8 +7205,9 @@ public final class Jdbc {
              * <p>Deserialization happens when the returned mapper is applied, not when this method is called:
              * the mapper propagates a {@code ParsingException} if the first column's text is not valid JSON for
              * {@code targetType}, and an {@code UncheckedIOException} if a delegated value reader reports an
-             * I/O failure while materializing a value. A SQL {@code NULL} column yields {@code null} (the default
-             * value for a primitive {@code targetType}).</p>
+             * I/O failure while materializing a value. A SQL {@code NULL} column yields the default value of
+             * {@code targetType}: {@code null}, except {@code 0}/{@code false} for a primitive type and an empty
+             * instance for an optional or holder type.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -7221,8 +7234,9 @@ public final class Jdbc {
              * <p>Deserialization happens when the returned mapper is applied, not when this method is called:
              * the mapper propagates a {@code ParsingException} if the first column's text is not valid XML for
              * {@code targetType}, and an {@code UncheckedIOException} if a delegated value reader reports an
-             * I/O failure while materializing a value. A SQL {@code NULL} column yields {@code null} (the default
-             * value for a primitive {@code targetType}).</p>
+             * I/O failure while materializing a value. A SQL {@code NULL} or empty column yields the default value
+             * of {@code targetType}: {@code null}, except {@code 0}/{@code false} for a primitive type and an empty
+             * instance for an optional or holder type.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -7320,8 +7334,8 @@ public final class Jdbc {
      * OutParam count = OutParam.of(2, Types.INTEGER);
      * stmt.registerOutParameter(count.parameterIndex(), count.sqlType());
      *
-     * OutParam status = OutParam.of("status", Types.VARCHAR);
-     * stmt.registerOutParameter(status.parameterName(), status.sqlType());
+     * OutParam status = OutParam.of(3, Types.VARCHAR);
+     * stmt.registerOutParameter(status.parameterIndex(), status.sqlType());
      *
      * stmt.execute();
      * // Consume all results before reading output parameters.
@@ -7331,10 +7345,16 @@ public final class Jdbc {
      *
      * OutParamResult values = JdbcUtil.getOutParameters(stmt, List.of(count, status));
      * Integer rowCount = values.getOutParamValue(2);
-     * String resultStatus = values.getOutParamValue("status");
+     * String resultStatus = values.getOutParamValue(3);
      *
-     * // Descriptor matching registerOutParameter(3, Types.DECIMAL, 2)
-     * OutParam amount = new OutParam(3, null, Types.DECIMAL, null, 2);
+     * // Name-based descriptor, for a statement whose parameters are all addressed by name
+     * // (JDBC does not allow mixing parameter names and indexes in one statement):
+     * OutParam namedStatus = OutParam.of("status", Types.VARCHAR);
+     * // ... namedStmt.registerOutParameter(namedStatus.parameterName(), namedStatus.sqlType());
+     * // ... JdbcUtil.getOutParameters(namedStmt, List.of(namedStatus)).getOutParamValue("status");
+     *
+     * // Descriptor matching registerOutParameter(4, Types.DECIMAL, 2)
+     * OutParam amount = new OutParam(4, null, Types.DECIMAL, null, 2);
      * }</pre>
      *
      * @param parameterIndex the 1-based parameter index for index-based access; non-positive for name-based access
@@ -7570,7 +7590,9 @@ public final class Jdbc {
     public interface Handler<P> {
         /**
          * This method is invoked before the actual DAO method is called. It can be used for
-         * logging, argument validation, security checks, or transaction management.
+         * logging, argument validation, or security checks. It is not suited to starting a transaction:
+         * {@link #afterInvoke} is not told whether the DAO method failed, so it cannot choose between
+         * commit and rollback.
          *
          * @param proxy the proxy instance on which the method was invoked.
          * @param args the arguments passed to the method.

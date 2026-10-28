@@ -1798,9 +1798,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * The appropriate database type is automatically determined based on the property type. If any
      * binding fails, this query is closed because its parameters may have been only partially set.</p>
      *
-     * <p>A duplicate selection of a property using a built-in stream or reader type is bound once per call,
-     * so already-consumed input is not rebound. The caller retains ownership of the stream or reader.
-     * Scalar values and properties using a custom {@code Type} are still read and bound for each selection.</p>
+     * <p>A name listed more than once whose property value uses a built-in stream or reader type is read and
+     * bound only for its first occurrence in each call, so already-consumed input is not rebound. Duplicates are
+     * detected by the listed name, so two different spellings that resolve to the same property (for example
+     * {@code "userName"} and {@code "user_name"}) are distinct procedure parameters and are each bound.
+     * The caller retains ownership of the stream or reader. Scalar values and properties using a custom
+     * {@code Type} are still read and bound for each occurrence.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3728,7 +3731,8 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      *           <li>Second element: {@code Jdbc.OutParamResult} containing all OUT parameters</li>
      *         </ul>
      * @throws IllegalStateException if this query has already been closed
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}; also if a returned row has an unmapped bean column or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} is {@code null} or a bean class with invalid property metadata (this query is then
+     *         closed); also if a returned row has an unmapped bean column or a scalar target has other than one column
      * @throws SQLException if executing the stored procedure, draining its remaining results, or reading an OUT parameter fails, or the mapping
      *         throws {@code SQLException}; also if closing a consumed result set fails
      * @see #listAndGetOutParameters(RowMapper)
@@ -3739,7 +3743,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
 
-        return listAndGetOutParameters(Jdbc.BiRowMapper.to(targetType));
+        return listAndGetOutParameters(rowMapperOrClose(targetType));
     }
 
     /**

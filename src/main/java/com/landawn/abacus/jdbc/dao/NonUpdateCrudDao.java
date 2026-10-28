@@ -35,7 +35,8 @@ import com.landawn.abacus.annotation.Beta;
  * — calling them is a compile error rather than a runtime {@link UnsupportedOperationException}. Read operations
  * (find, exists, query) and insert operations remain functional. (The inherited raw-SQL
  * {@code prepareQuery}/{@code prepareNamedQuery} overloads accept only {@code SELECT} and {@code INSERT}
- * statements at runtime, enforced centrally by the DAO proxy.)</p>
+ * statements at runtime, enforced centrally by the DAO proxy, and so do {@code insert(namedInsertSql, entity)} and
+ * {@code batchInsert(namedInsertSql, ...)}, which throw {@link UnsupportedOperationException} for any other SQL.)</p>
  *
  * <p><b>Supported Operations:</b></p>
  * <ul>

@@ -783,6 +783,39 @@ public class DaoImplTest extends TestBase {
         }
     }
 
+    // A nested interface that the DAO also extends: its fields are reached both as fields of one of the DAO's interfaces and
+    // as fields of a class nested in one of them.
+    interface SharedDefinitions {
+        interface Nested {
+            @SqlScript(id = "nestedSelectOne")
+            String NESTED_SELECT_ONE = "SELECT 1";
+
+            CountingHandler NESTED_HANDLER = new CountingHandler();
+        }
+    }
+
+    interface NestedDefinitionsDao extends Dao<TestEntity, NestedDefinitionsDao>, SharedDefinitions, SharedDefinitions.Nested {
+        @Query(id = "nestedSelectOne")
+        @NonDBOperation
+        default String firstSql(final String... sqls) {
+            return sqls[0];
+        }
+
+        @com.landawn.abacus.jdbc.annotation.Handler(qualifier = "NESTED_HANDLER")
+        default String handled() {
+            return "handled";
+        }
+    }
+
+    static final class CountingHandler implements Jdbc.Handler<Object> {
+        final java.util.concurrent.atomic.AtomicInteger beforeInvokeCount = new java.util.concurrent.atomic.AtomicInteger();
+
+        @Override
+        public void beforeInvoke(final Object proxy, final Object[] args, final Tuple3<Method, ImmutableList<Class<?>>, Class<?>> methodSignature) {
+            beforeInvokeCount.incrementAndGet();
+        }
+    }
+
     interface MissingSqlIdDefaultMethodDao extends Dao<TestEntity, MissingSqlIdDefaultMethodDao> {
         @Query(id = "missingSql")
         @NonDBOperation
@@ -2234,6 +2267,19 @@ public class DaoImplTest extends TestBase {
         final SqlIdDefaultMethodDao dao = DaoImpl.createDao(SqlIdDefaultMethodDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
 
         assertEquals("SELECT 1", dao.firstSql());
+    }
+
+    // The @SqlScript and Handler fields of a nested interface that the DAO also extends were collected twice and rejected
+    // as two fields with the same id (or name).
+    @Test
+    public void testCreateDao_NestedInterfaceAlsoExtendedKeepsItsSqlScriptAndHandlerFields() throws Exception {
+        final NestedDefinitionsDao dao = DaoImpl.createDao(NestedDefinitionsDao.class, null, mockDataSourceForDaoCreation(), PSC, null, null, null);
+
+        assertEquals("SELECT 1", dao.firstSql());
+
+        final int beforeInvokeCount = SharedDefinitions.Nested.NESTED_HANDLER.beforeInvokeCount.get();
+        assertEquals("handled", dao.handled());
+        assertEquals(beforeInvokeCount + 1, SharedDefinitions.Nested.NESTED_HANDLER.beforeInvokeCount.get());
     }
 
     @Test

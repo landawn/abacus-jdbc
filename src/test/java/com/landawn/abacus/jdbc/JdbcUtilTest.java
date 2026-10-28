@@ -97,6 +97,32 @@ class JdbcUtilTest extends JdbcUtilTestSupport {
         assertFalse(hasResultSet);
     }
 
+    // SQL or parameters that can't be bound are rejected before a connection is acquired (or a statement prepared): checked
+    // only when binding, a data source that couldn't hand out a connection reported its own failure instead.
+    @Test
+    public void testExecuteFamilyRejectsUnbindableArgumentsBeforeAcquiringConnection() throws SQLException {
+        when(mockDataSource.getConnection()).thenThrow(new SQLException("pool exhausted"));
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.executeQuery(mockDataSource, "   "));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.executeQuery(mockDataSource, "SELECT * FROM users WHERE id = :id", Map.of("name", "x")));
+        assertTrue(assertThrows(IllegalArgumentException.class, () -> JdbcUtil.executeUpdate(mockDataSource, "UPDATE users SET name = ? WHERE id = ?", "John"))
+                .getMessage()
+                .contains("but only 1 specified"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.executeUpdate(mockDataSource, "UPDATE users SET name = ? WHERE id = ?"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.execute(mockDataSource, "UPDATE users SET name = :name WHERE id = ?", "John", 1));
+        org.mockito.Mockito.verify(mockDataSource, org.mockito.Mockito.never()).getConnection();
+
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.executeQuery(mockConnection, "SELECT * FROM users WHERE id = ?"));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.executeUpdate(mockConnection, "UPDATE users SET name = ? WHERE id = ?", List.of("John")));
+        assertThrows(IllegalArgumentException.class, () -> JdbcUtil.execute(mockConnection, "SELECT * FROM users WHERE id = :id", Map.of()));
+        org.mockito.Mockito.verify(mockConnection, org.mockito.Mockito.never()).prepareStatement(org.mockito.ArgumentMatchers.anyString());
+
+        // Arguments that can be bound still reach the statement: a single array or collection supplies the values.
+        when(mockPreparedStatement.executeUpdate()).thenReturn(1);
+        assertEquals(1, JdbcUtil.executeUpdate(mockConnection, "UPDATE users SET name = ? WHERE id = ?", List.of("John", 1L)));
+        assertEquals(1, JdbcUtil.executeUpdate(mockConnection, "UPDATE users SET name = :name WHERE id = :id", Map.of("name", "John", "id", 1L)));
+    }
+
     // isNotEmptyResult: null and every empty/non-empty container branch.
     @Test
     public void testIsNotEmptyResult_NullAndCollections() {

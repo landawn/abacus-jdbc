@@ -208,7 +208,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *                                  or if {@code entity} has no property for a named parameter in {@code namedInsertSql}
      *                                  other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
-     *         enabled and the entity's ID is not set, but {@link #generateId()} has not been overridden
+     *         enabled and the entity's ID is not set, but {@link #generateId()} has not been overridden; or if this is a non-update DAO (such as a
+     *         {@link NonUpdateCrudDao}) and {@code namedInsertSql} is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the ownership of a Spring connection holder bound to the data source cannot be determined (the
      *         insert registers the put-back of the entity's ID with a transaction enclosing it)
      * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails, or if the auto-commit mode of the connection a
@@ -396,7 +397,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
      *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
-     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden; or if this is a non-update DAO (such as a
+     *         {@link NonUpdateCrudDao}) and {@code namedInsertSql} is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
@@ -441,7 +443,8 @@ sealed interface CrudInsertOps<T, ID, TD extends DaoBase<T, TD>> extends InsertO
      *                                  {@code namedInsertSql} other than the reserved {@code now}, {@code sysTime} and {@code sysDate},
      *         if an element of {@code entities} is {@code null}
      * @throws UnsupportedOperationException if {@link com.landawn.abacus.jdbc.annotation.DaoConfig#callGenerateIdForInsertWithSqlIfIdNotSet()} is
-     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden
+     *         enabled and an entity's ID is not set, but {@link #generateId()} has not been overridden; or if this is a non-update DAO (such as a
+     *         {@link NonUpdateCrudDao}) and {@code namedInsertSql} is not a {@code SELECT} or {@code INSERT} statement
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see

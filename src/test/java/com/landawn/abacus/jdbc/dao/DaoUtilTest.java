@@ -309,15 +309,15 @@ public class DaoUtilTest extends TestBase {
 
     @Test
     public void testSinglePropValuesToCondition_PreservesSqlNullSemantics() {
-        assertTrue(DaoUtil.singlePropValuesToCondition("name", List.of("Alice")) instanceof In);
-        assertTrue(DaoUtil.singlePropValuesToCondition("name", Arrays.asList((Object) null)) instanceof IsNull);
+        assertTrue(DaoUtil.singlePropValuesToCondition("name", List.of("Alice"), null) instanceof In);
+        assertTrue(DaoUtil.singlePropValuesToCondition("name", Arrays.asList((Object) null), null) instanceof IsNull);
 
         final List<String> mixedValues = Arrays.asList("Alice", null);
-        assertTrue(DaoUtil.singlePropValuesToCondition("name", mixedValues) instanceof Or);
+        assertTrue(DaoUtil.singlePropValuesToCondition("name", mixedValues, null) instanceof Or);
         assertEquals(Arrays.asList("Alice", null), mixedValues, "building the predicate must not mutate the caller's collection");
 
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.singlePropValuesToCondition("", List.of("Alice")));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.singlePropValuesToCondition("name", List.of()));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.singlePropValuesToCondition("", List.of("Alice"), null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.singlePropValuesToCondition("name", List.of(), null));
     }
 
     // Filters.idToCond(EntityId) rendered one equality per key the id CONTAINS, so an EntityId lacking a declared id property
@@ -332,7 +332,7 @@ public class DaoUtilTest extends TestBase {
         final EntityId nullRowId = EntityId.of("tenantId", 1L, "rowId", null);
         final EntityId extraKey = EntityId.of("tenantId", 3L, "rowId", 4L, "name", "ignored");
 
-        final Condition cond = DaoUtil.idsToCondition(List.of(complete, lackingRowId, nullRowId, extraKey), idPropNames, true, false);
+        final Condition cond = DaoUtil.idsToCondition(List.of(complete, lackingRowId, nullRowId, extraKey), idPropNames, true, false, null);
         assertTrue(cond instanceof Or);
         final List<Condition> branches = ((Or) cond).conditions();
         assertEquals(2, branches.size(), "the ids that can match a row, one AND branch each");
@@ -342,13 +342,13 @@ public class DaoUtilTest extends TestBase {
         assertEquals(List.of(3L, 4L), branches.get(1).parameters());
 
         // Only ids that can match no row: null (the callers skip the batch without a query), nothing is rendered as IS NULL.
-        assertNull(DaoUtil.idsToCondition(List.of(lackingRowId, nullRowId), idPropNames, true, false));
+        assertNull(DaoUtil.idsToCondition(List.of(lackingRowId, nullRowId), idPropNames, true, false, null));
 
         // The documented rejections are kept: an empty batch, a null element, an EntityId with no keys, no declared id property.
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), idPropNames, true, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(Arrays.asList(complete, null), idPropNames, true, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(Seid.of("Row")), idPropNames, true, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(complete), List.of(), true, false));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), idPropNames, true, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(Arrays.asList(complete, null), idPropNames, true, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(Seid.of("Row")), idPropNames, true, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(complete), List.of(), true, false, null));
     }
 
     @SuppressWarnings("deprecation")
@@ -356,19 +356,19 @@ public class DaoUtilTest extends TestBase {
     public void testEntityIdToCondition_LackingOrNullComponentMatchesNoRow() {
         final List<String> idPropNames = List.of("tenantId", "rowId");
 
-        final Condition cond = DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L, "rowId", 2L, "name", "ignored"), idPropNames);
+        final Condition cond = DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L, "rowId", 2L, "name", "ignored"), idPropNames, null);
         assertEquals(idPropNames, equalPropNames(cond));
         assertEquals(List.of(1L, 2L), cond.parameters());
 
-        assertNull(DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L), idPropNames));
-        assertNull(DaoUtil.entityIdToCondition(EntityId.of("rowId", 2L), idPropNames));
-        assertNull(DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L, "rowId", null), idPropNames));
-        assertNull(DaoUtil.entityIdToCondition(EntityId.of("tenantId", null, "rowId", 2L), idPropNames));
+        assertNull(DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L), idPropNames, null));
+        assertNull(DaoUtil.entityIdToCondition(EntityId.of("rowId", 2L), idPropNames, null));
+        assertNull(DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L, "rowId", null), idPropNames, null));
+        assertNull(DaoUtil.entityIdToCondition(EntityId.of("tenantId", null, "rowId", 2L), idPropNames, null));
 
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(null, idPropNames));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(Seid.of("Row"), idPropNames));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L), null));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L), List.of()));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(null, idPropNames, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(Seid.of("Row"), idPropNames, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L), null, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.entityIdToCondition(EntityId.of("tenantId", 1L), List.of(), null));
     }
 
     public static class RowKey {
@@ -445,8 +445,8 @@ public class DaoUtilTest extends TestBase {
         final Map<String, Object> nullRowIdMap = mapId("tenantId", 1L, "rowId", null);
         final Map<String, Object> extraKeyMap = mapId("tenantId", 3L, "rowId", 4L, "name", "ignored");
 
-        final Condition mapCond = DaoUtil.idsToCondition(Arrays.asList(completeMap, null, lackingRowIdMap, nullRowIdMap, extraKeyMap), idPropNames, false,
-                true);
+        final Condition mapCond = DaoUtil.idsToCondition(Arrays.asList(completeMap, null, lackingRowIdMap, nullRowIdMap, extraKeyMap), idPropNames, false, true,
+                null);
         assertTrue(mapCond instanceof Or);
         List<Condition> branches = ((Or) mapCond).conditions();
         assertEquals(2, branches.size(), "the ids that can match a row, one AND branch each; the null id is skipped");
@@ -455,7 +455,7 @@ public class DaoUtilTest extends TestBase {
         assertEquals(idPropNames, equalPropNames(branches.get(1)));
         assertEquals(List.of(3L, 4L), branches.get(1).parameters());
 
-        assertNull(DaoUtil.idsToCondition(List.of(lackingRowIdMap, nullRowIdMap), idPropNames, false, true));
+        assertNull(DaoUtil.idsToCondition(List.of(lackingRowIdMap, nullRowIdMap), idPropNames, false, true, null));
 
         final RowKey completeKey = new RowKey(1L, 2L);
         final RowKey nullRowIdKey = new RowKey(1L, null);
@@ -463,7 +463,7 @@ public class DaoUtilTest extends TestBase {
         final RowKeyRecord extraPropRecord = new RowKeyRecord(3L, 4L, "ignored");
 
         final Condition beanCond = DaoUtil.idsToCondition(Arrays.asList(completeKey, null, nullRowIdKey, nullTenantIdRecord, extraPropRecord), idPropNames,
-                false, false);
+                false, false, null);
         assertTrue(beanCond instanceof Or);
         branches = ((Or) beanCond).conditions();
         assertEquals(2, branches.size());
@@ -472,50 +472,118 @@ public class DaoUtilTest extends TestBase {
         assertEquals(idPropNames, equalPropNames(branches.get(1)));
         assertEquals(List.of(3L, 4L), branches.get(1).parameters());
 
-        assertNull(DaoUtil.idsToCondition(List.of(nullRowIdKey, nullTenantIdRecord), idPropNames, false, false));
+        assertNull(DaoUtil.idsToCondition(List.of(nullRowIdKey, nullTenantIdRecord), idPropNames, false, false, null));
 
         // The documented rejections are kept: an empty batch, every element null, Maps and beans mixed, a bean lacking a
         // declared id property, a non-bean id, no declared id property.
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), idPropNames, false, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), idPropNames, false, true));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), List.of("id"), false, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(Arrays.asList(null, null), idPropNames, false, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(Arrays.asList(null, null), idPropNames, false, true));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeKey, completeMap), idPropNames, false, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeMap, completeKey), idPropNames, false, true));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(new TenantOnlyKey(1L)), idPropNames, false, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of("1-2"), idPropNames, false, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeKey), List.of(), false, false));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeMap), List.of(), false, true));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), idPropNames, false, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), idPropNames, false, true, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(), List.of("id"), false, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(Arrays.asList(null, null), idPropNames, false, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(Arrays.asList(null, null), idPropNames, false, true, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeKey, completeMap), idPropNames, false, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeMap, completeKey), idPropNames, false, true, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(new TenantOnlyKey(1L)), idPropNames, false, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of("1-2"), idPropNames, false, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeKey), List.of(), false, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(completeMap), List.of(), false, true, null));
+    }
+
+    @Test
+    public void testIdsToCondition_NullIdPropNameListRejectedBeforeSingleIdShortcut() {
+        // idPropNameList is validated before the single-id shortcut reads its size: an IAE, not an NPE.
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(1L, 2L), null, false, false, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(mapId("id", 1L)), null, false, true, null));
+    }
+
+    // The upsert match rejects a nested property path: Filters.allEqual read "inner.street" through the nested bean but rendered
+    // it as a qualified column, so Dao.upsert(entity, List.of("inner.street")) failed in the database ("Column INNER.STREET not
+    // found"). Direct properties are matched with their values bound with the property types.
+    @Test
+    public void testTypedAllEqual_RejectsNestedPropertyPath() throws SQLException {
+        final NestedHolder holder = new NestedHolder();
+        holder.setId(5L);
+        holder.setInner(new NestedInner());
+        holder.getInner().setStreet("Main");
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> DaoUtil.typedAllEqual(holder, List.of("id", "inner.street")));
+        assertTrue(failure.getMessage().contains("inner.street"), failure.getMessage());
+
+        final Condition cond = DaoUtil.typedAllEqual(holder, List.of("id"));
+        assertEquals(List.of("id"), equalPropNames(cond));
+        assertTrue(cond.parameters().get(0) instanceof DaoUtil.TypedParameter);
+        assertEquals(5L, ((DaoUtil.TypedParameter) cond.parameters().get(0)).value());
+
+        // The public entry point fails before any query is run.
+        final NestedHolderDao dao = Mockito.mock(NestedHolderDao.class, Mockito.CALLS_REAL_METHODS);
+        assertThrows(IllegalArgumentException.class, () -> dao.upsert(holder, List.of("inner.street")));
+        Mockito.verify(dao, Mockito.never()).findOnlyOne(Mockito.any(Condition.class));
+    }
+
+    interface NestedHolderDao extends Dao<NestedHolder, NestedHolderDao> {
+    }
+
+    public static class NestedHolder {
+        private Long id;
+        private NestedInner inner;
+
+        public Long getId() {
+            return id;
+        }
+
+        public void setId(final Long id) {
+            this.id = id;
+        }
+
+        public NestedInner getInner() {
+            return inner;
+        }
+
+        public void setInner(final NestedInner inner) {
+            this.inner = inner;
+        }
+    }
+
+    public static class NestedInner {
+        private String street;
+
+        public String getStreet() {
+            return street;
+        }
+
+        public void setStreet(final String street) {
+            this.street = street;
+        }
     }
 
     @Test
     public void testCompositeIdToCondition_LackingOrNullComponentMatchesNoRow() {
         final List<String> idPropNames = List.of("tenantId", "rowId");
 
-        Condition cond = DaoUtil.compositeIdToCondition(mapId("tenantId", 1L, "rowId", 2L, "name", "ignored"), idPropNames);
+        Condition cond = DaoUtil.compositeIdToCondition(mapId("tenantId", 1L, "rowId", 2L, "name", "ignored"), idPropNames, null);
         assertEquals(idPropNames, equalPropNames(cond));
         assertEquals(List.of(1L, 2L), cond.parameters());
-        cond = DaoUtil.compositeIdToCondition(new RowKey(3L, 4L), idPropNames);
+        cond = DaoUtil.compositeIdToCondition(new RowKey(3L, 4L), idPropNames, null);
         assertEquals(idPropNames, equalPropNames(cond));
         assertEquals(List.of(3L, 4L), cond.parameters());
-        cond = DaoUtil.compositeIdToCondition(new RowKeyRecord(5L, 6L, "ignored"), idPropNames);
+        cond = DaoUtil.compositeIdToCondition(new RowKeyRecord(5L, 6L, "ignored"), idPropNames, null);
         assertEquals(idPropNames, equalPropNames(cond));
         assertEquals(List.of(5L, 6L), cond.parameters());
 
-        assertNull(DaoUtil.compositeIdToCondition(mapId("tenantId", 1L), idPropNames));
-        assertNull(DaoUtil.compositeIdToCondition(mapId("rowId", 2L), idPropNames));
-        assertNull(DaoUtil.compositeIdToCondition(mapId("tenantId", 1L, "rowId", null), idPropNames));
-        assertNull(DaoUtil.compositeIdToCondition(mapId(), idPropNames));
-        assertNull(DaoUtil.compositeIdToCondition(new RowKey(1L, null), idPropNames));
-        assertNull(DaoUtil.compositeIdToCondition(new RowKey(null, 2L), idPropNames));
-        assertNull(DaoUtil.compositeIdToCondition(new RowKeyRecord(null, 2L, "ignored"), idPropNames));
+        assertNull(DaoUtil.compositeIdToCondition(mapId("tenantId", 1L), idPropNames, null));
+        assertNull(DaoUtil.compositeIdToCondition(mapId("rowId", 2L), idPropNames, null));
+        assertNull(DaoUtil.compositeIdToCondition(mapId("tenantId", 1L, "rowId", null), idPropNames, null));
+        assertNull(DaoUtil.compositeIdToCondition(mapId(), idPropNames, null));
+        assertNull(DaoUtil.compositeIdToCondition(new RowKey(1L, null), idPropNames, null));
+        assertNull(DaoUtil.compositeIdToCondition(new RowKey(null, 2L), idPropNames, null));
+        assertNull(DaoUtil.compositeIdToCondition(new RowKeyRecord(null, 2L, "ignored"), idPropNames, null));
 
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(null, idPropNames));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition("1-2", idPropNames));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(new TenantOnlyKey(1L), idPropNames));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(new RowKey(1L, 2L), null));
-        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(new RowKey(1L, 2L), List.of()));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(null, idPropNames, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition("1-2", idPropNames, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(new TenantOnlyKey(1L), idPropNames, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(new RowKey(1L, 2L), null, null));
+        assertThrows(IllegalArgumentException.class, () -> DaoUtil.compositeIdToCondition(new RowKey(1L, 2L), List.of(), null));
     }
 
     // checkCompositeIds validates every id BEFORE batchGet/count de-duplicate them. An invalid id (an empty EntityId, a bean
@@ -583,11 +651,11 @@ public class DaoUtilTest extends TestBase {
 
             assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(entityId, other), idPropNames, true, false));
             assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(Arrays.asList(null, entityId, other), idPropNames, true, false));
-            assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(entityId, other), idPropNames, true, false));
+            assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(entityId, other), idPropNames, true, false, null));
 
             // Map/bean first: an IllegalArgumentException already, and still one.
             assertThrows(IllegalArgumentException.class, () -> DaoUtil.checkCompositeIds(List.of(other, entityId), idPropNames, false, isMap));
-            assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(other, entityId), idPropNames, false, isMap));
+            assertThrows(IllegalArgumentException.class, () -> DaoUtil.idsToCondition(List.of(other, entityId), idPropNames, false, isMap, null));
         }
 
         // The messages name the element of 'ids' ('id'), not a parameter 'entityId' that neither helper has.

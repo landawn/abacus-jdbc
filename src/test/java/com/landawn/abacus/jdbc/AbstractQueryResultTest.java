@@ -638,6 +638,29 @@ class AbstractQueryResultTest extends AbstractQueryTestSupport {
         verify(preparedStatement).close();
     }
 
+    // Regression: list(Class) and list(Class, int) built the bean row mapper before execution and outside any cleanup, so a bean
+    // class with invalid property metadata threw and left the query (and a DataSource query's connection) open.
+    @Test
+    @SuppressWarnings("deprecation")
+    public void testList_InvalidBeanTargetType_ClosesQuery() throws SQLException {
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> query.list(AbstractQueryStreamTest.BlankPaddedColumnBean.class));
+
+        assertTrue(failure.getMessage().contains("whitespace"));
+        assertTrue(query.isClosed);
+        verify(preparedStatement, never()).executeQuery();
+        verify(preparedStatement).close();
+
+        final PreparedStatement limitedStatement = Mockito.mock(PreparedStatement.class);
+        final TestQuery limitedQuery = new TestQuery(limitedStatement).closeAfterExecution(false);
+
+        assertThrows(IllegalArgumentException.class, () -> limitedQuery.list(AbstractQueryStreamTest.BlankPaddedColumnBean.class, 10));
+
+        assertTrue(limitedQuery.isClosed);
+        verify(limitedStatement, never()).executeQuery();
+        verify(limitedStatement).close();
+    }
+
     @Test
     @Tag("2025")
     @SuppressWarnings("deprecation")

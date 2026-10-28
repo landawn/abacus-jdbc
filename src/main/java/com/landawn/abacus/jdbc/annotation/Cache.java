@@ -165,8 +165,10 @@ public @interface Cache {
      * <p>By default, {@link Jdbc.DefaultDaoCache} is used, which is backed by a
      * keyed object pool with TTL and idle-time-based eviction. You can provide
      * a custom implementation for specialized caching requirements. If the implementation also
-     * implements {@link AutoCloseable}, an instance created for a DAO proxy that is then discarded,
-     * because another thread registered an equivalent proxy first, is closed.</p>
+     * implements {@link AutoCloseable}, an instance created for a DAO proxy is closed when that proxy
+     * is discarded because another thread registered an equivalent proxy first, or once the proxy,
+     * evicted from the bounded DAO proxy pool, has become unreachable. A cache supplied through
+     * {@link JdbcUtil.DaoCreationOptions} is not closed by the DAO proxy; its owner closes it.</p>
      *
      * <p>Example custom cache implementation:</p>
      * <pre>{@code

@@ -535,15 +535,16 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
             final List<T> dbEntities = uniquePropNameList.size() == 1
                     ? Seq.of(N.distinct(N.map(entities, singleKeyExtractor)), SQLException.class)
                             .split(batchSize)
-                            .flatmap(it -> list(DaoUtil.singlePropValuesToCondition(uniquePropInfo.name, it)))
+                            .flatmap(it -> list(DaoUtil.singlePropValuesToCondition(uniquePropInfo.name, it, entityInfo)))
                             .toList()
                     : Seq.of(N.distinct(N.map(entities, entityIdExtractor)), SQLException.class) //
                             .split(batchSize)
                             // Each key holds EVERY match property (entityIdExtractor sets them all, null included), so unlike a
                             // caller-supplied EntityId (see DaoUtil.entityIdToCondition) it cannot be incomplete and pair an
                             // entity with a row that agrees on only some of them. A null component renders IS NULL: the
-                            // documented match of a null key, which a NOT NULL (e.g. primary key) column never satisfies.
-                            .flatmap(it -> list(Filters.idToCond(it)))
+                            // documented match of a null key, which a NOT NULL (e.g. primary key) column never satisfies. The
+                            // other values are bound with their property types (Filters.idToCond bound them by their runtime class).
+                            .flatmap(it -> list(DaoUtil.typedAnyOfAllEqual(it, entityInfo)))
                             .toList();
 
             dbIdEntityMap = Stream.of(dbEntities).toMap(keysExtractor, Fn.identity(), Fn.throwingMerger());
@@ -600,7 +601,7 @@ public non-sealed interface CrudDao<T, ID, TD extends CrudDao<T, ID, TD>>
                         // As for by-id updates, omit all ID columns and do nothing if no updatable properties remain.
                         if (N.notEmpty(propNamesToUpdate)) {
                             for (final T dbEntity : nullKeyedEntities) {
-                                update(dbEntity, propNamesToUpdate, Filters.allEqual(dbEntity, resolvedMatchPropNames));
+                                update(dbEntity, propNamesToUpdate, DaoUtil.typedAllEqual(dbEntity, resolvedMatchPropNames));
                             }
                         }
                     }

@@ -122,6 +122,21 @@ public class NamedQueryReviewFixTest extends TestBase {
         verify(stmt).close();
     }
 
+    // Regression: setParameters(entity, names) resolved the bean metadata before its cleanup block, so an entity class with
+    // invalid property metadata threw without closing the query.
+    @Test
+    void selectiveBeanBindingClosesQueryWhenBeanMetadataIsInvalid() throws Exception {
+        final PreparedStatement stmt = mock(PreparedStatement.class);
+        final NamedQuery query = new NamedQuery(stmt, ParsedSql.parse("SELECT * FROM t WHERE x = :name"));
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> query.setParameters(new AbstractQueryStreamTest.BlankPaddedColumnBean(), List.of("name")));
+
+        assertTrue(failure.getMessage().contains("whitespace"));
+        assertTrue(query.isClosed);
+        verify(stmt).close();
+    }
+
     @Test
     void emptyBatchParametersAreANoOp() throws Exception {
         final PreparedStatement stmt = mock(PreparedStatement.class);

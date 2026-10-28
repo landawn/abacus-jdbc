@@ -105,6 +105,7 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
     public void testStreamWithColumnName() throws SQLException {
         when(mockResultSet.next()).thenReturn(true, false);
         when(mockResultSet.getObject(1)).thenReturn("value");
+        when(mockResultSet.findColumn("name")).thenReturn(1);
         when(mockResultSetMetaData.getColumnCount()).thenReturn(1);
         when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("name");
 
@@ -112,6 +113,38 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
         List<String> list = stream.toList();
 
         assertEquals(1, list.size());
+    }
+
+    @Test
+    public void testStreamWithColumnLabel_EarlierColumnNameDoesNotShadowTheLabel() throws SQLException {
+        // Column 1's underlying name equals column 2's alias: the stream must read the column that getObject(label) reads.
+        try (Connection conn = JdbcUtil.createConnection("jdbc:h2:mem:streamLabelShadow" + System.nanoTime(), "sa", "")) {
+            JdbcUtil.execute(conn, "CREATE TABLE person (first_name VARCHAR(20), last_name VARCHAR(20))");
+            JdbcUtil.executeUpdate(conn, "INSERT INTO person VALUES ('Ann', 'Lee')");
+
+            try (Statement stmt = conn.createStatement();
+                 ResultSet rs = stmt.executeQuery("SELECT first_name AS given, last_name AS first_name FROM person");
+                 Stream<String> values = JdbcUtil.stream(rs, "first_name")) {
+                assertEquals(List.of("Lee"), values.toList());
+            }
+        }
+    }
+
+    @Test
+    public void testStreamWithColumnLabel_FindColumnUnsupported_MatchesLabelsBeforeNames() throws SQLException {
+        when(mockResultSet.next()).thenReturn(true, false);
+        when(mockResultSet.findColumn("first_name")).thenThrow(new SQLException("findColumn unsupported"));
+        when(mockResultSet.getObject(1)).thenReturn("Ann");
+        when(mockResultSet.getObject(2)).thenReturn("Lee");
+        when(mockResultSetMetaData.getColumnCount()).thenReturn(2);
+        when(mockResultSetMetaData.getColumnLabel(1)).thenReturn("given");
+        when(mockResultSetMetaData.getColumnName(1)).thenReturn("first_name");
+        when(mockResultSetMetaData.getColumnLabel(2)).thenReturn("first_name");
+        when(mockResultSetMetaData.getColumnName(2)).thenReturn("last_name");
+
+        try (Stream<String> values = JdbcUtil.stream(mockResultSet, "first_name")) {
+            assertEquals(List.of("Lee"), values.toList());
+        }
     }
 
     @Test

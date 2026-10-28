@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+import com.landawn.abacus.annotation.Column;
 import com.landawn.abacus.exception.UncheckedSQLException;
 import com.landawn.abacus.util.stream.Stream;
 
@@ -93,6 +94,36 @@ class AbstractQueryStreamTest extends AbstractQueryTestSupport {
     public void testStream_NullTargetType_ThrowsIllegalArgumentException() {
         final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> query.stream((Class<?>) null));
         assertTrue(iae.getMessage().contains("targetType"));
+    }
+
+    // Regression: stream(Class) built its bean mapper eagerly, outside any cleanup, so a bean class with invalid property
+    // metadata threw from stream(Class) and left the query (and a DataSource query's connection) open with no stream to close.
+    @Test
+    public void testStream_InvalidBeanTargetType_ClosesQuery() throws SQLException {
+        for (final boolean closeAfterExecution : new boolean[] { true, false }) {
+            final PreparedStatement statement = Mockito.mock(PreparedStatement.class);
+            final TestQuery streamQuery = new TestQuery(statement).closeAfterExecution(closeAfterExecution);
+
+            final IllegalArgumentException iae = assertThrows(IllegalArgumentException.class, () -> streamQuery.stream(BlankPaddedColumnBean.class));
+
+            assertTrue(iae.getMessage().contains("whitespace"));
+            assertTrue(streamQuery.isClosed);
+            verify(statement).close();
+            verify(statement, never()).executeQuery();
+        }
+    }
+
+    public static class BlankPaddedColumnBean {
+        @Column(" name ")
+        private String name;
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(final String name) {
+            this.name = name;
+        }
     }
 
     // createQuerySupplier lambda: executeQuery() throws SQLException → wrapped in UncheckedSQLException (L7706-7707)

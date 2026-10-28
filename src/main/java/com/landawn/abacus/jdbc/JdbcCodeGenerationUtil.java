@@ -72,7 +72,6 @@ import com.landawn.abacus.util.Tuple.Tuple2;
 import com.landawn.abacus.util.Tuple.Tuple3;
 import com.landawn.abacus.util.function.QuadFunction;
 import com.landawn.abacus.util.function.TriFunction;
-import com.landawn.abacus.util.stream.Collectors;
 import com.landawn.abacus.util.stream.Stream;
 
 import lombok.AllArgsConstructor;
@@ -288,8 +287,8 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code tableName} is {@code null}, blank, or malformed, or the derived class or
      *         field names are invalid or collide.
      *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
-     * @throws UncheckedSQLException if opening the connection, reading database product or column metadata, querying the table, or closing JDBC
-     *         resources fails
+     * @throws UncheckedSQLException if opening the connection, reading database, column or primary-key metadata, querying the table, or closing
+     *         JDBC resources fails
      */
     public static String generateEntityClass(final DataSource ds, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         return generateEntityClass(ds, tableName, (EntityCodeConfig) null);
@@ -317,8 +316,8 @@ public final class JdbcCodeGenerationUtil {
      *         configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and
      *         non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element.
      *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
-     * @throws UncheckedSQLException if opening the connection, reading database product or column metadata, querying the table, or closing JDBC
-     *         resources fails
+     * @throws UncheckedSQLException if opening the connection, reading database, column or primary-key metadata, querying the table, or closing
+     *         JDBC resources fails
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClass(final DataSource ds, final String tableName, final EntityCodeConfig config)
@@ -353,7 +352,8 @@ public final class JdbcCodeGenerationUtil {
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code tableName} is {@code null}, blank, or malformed, or the derived class
      *         or field names are invalid or collide.
      *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
-     * @throws UncheckedSQLException if reading database product or column metadata, querying the table, or closing the query's JDBC resources fails
+     * @throws UncheckedSQLException if reading database, column or primary-key metadata, querying the table, or closing the query's JDBC resources
+     *         fails
      */
     public static String generateEntityClass(final Connection conn, final String tableName) throws IllegalArgumentException, UncheckedSQLException {
         return generateEntityClass(conn, tableName, (EntityCodeConfig) null);
@@ -379,7 +379,8 @@ public final class JdbcCodeGenerationUtil {
      *         configuration cannot produce valid Java source (for example, names collide, an annotation is unusable, or a field is both read-only and
      *         non-updatable), or {@code config.customFieldMappings} or {@code config.fieldTypeAnnotationArguments} contains a {@code null} element.
      *         Identifier quoting is disabled: explicitly delimited, non-simple or common reserved table-name parts are rejected.
-     * @throws UncheckedSQLException if reading database product or column metadata, querying the table, or closing the query's JDBC resources fails
+     * @throws UncheckedSQLException if reading database, column or primary-key metadata, querying the table, or closing the query's JDBC resources
+     *         fails
      * @throws UncheckedIOException if {@code config.srcDir} is set and writing the generated source file fails
      */
     public static String generateEntityClass(final Connection conn, final String tableName, final EntityCodeConfig config)
@@ -712,7 +713,8 @@ public final class JdbcCodeGenerationUtil {
      * A two-part name is looked up as {@code schema.table}, or as {@code catalog.table} on databases that support catalogs but not
      * schemas in table definitions (for example MySQL).
      *
-     * @param entityName the name of the entity class to generate; also used to look up primary key metadata when no id fields are configured
+     * @param entityName the entity or table name: emitted as the {@code @Table} name, the source of the class name unless
+     *        {@code config.className} is set, and the name primary keys are looked up under when no configured id field matches a generated field
      * @param rs the result set whose column metadata defines the generated fields
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
@@ -732,7 +734,8 @@ public final class JdbcCodeGenerationUtil {
      * Generates an entity class from column metadata obtained either from an executed result set or from a prepared
      * statement that was described without being executed.
      *
-     * @param entityName the name of the entity class to generate; also used to look up primary key metadata when no id fields are configured
+     * @param entityName the entity or table name: emitted as the {@code @Table} name, the source of the class name unless
+     *        {@code config.className} is set, and the name primary keys are looked up under when no configured id field matches a generated field
      * @param rs the executed result set, or {@code null} when {@code preparedMetadata} is supplied
      * @param preparedMetadata the column metadata of a described prepared statement, or {@code null} to read it from {@code rs}
      * @param sourceConnection the connection used for the primary-key lookup, or {@code null} to use the connection of
@@ -1033,8 +1036,9 @@ public final class JdbcCodeGenerationUtil {
             if (isJavaPersistenceTable) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Table;\n", "");
                 headPart = headPart.replace("jakarta.persistence.Table", tableAnnotationClassName);
+                headPart = removeCompetingBuiltInImports(headPart, tableAnnotationClassName);
             } else {
-                headPart = isAbacusTable ? headPart.replace("import jakarta.persistence.Table;\n", "")
+                headPart = isAbacusTable ? removeCompetingBuiltInImports(headPart, tableAnnotationClassName)
                         : removeUnrequestedImport(headPart, "jakarta.persistence.Table", requestedImports);
 
                 if (!isAbacusTable) {
@@ -1045,8 +1049,9 @@ public final class JdbcCodeGenerationUtil {
             if (isJavaPersistenceColumn) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Column;\n", "");
                 headPart = headPart.replace("jakarta.persistence.Column", columnAnnotationClassName);
+                headPart = removeCompetingBuiltInImports(headPart, columnAnnotationClassName);
             } else {
-                headPart = isAbacusColumn ? headPart.replace("import jakarta.persistence.Column;\n", "")
+                headPart = isAbacusColumn ? removeCompetingBuiltInImports(headPart, columnAnnotationClassName)
                         : removeUnrequestedImport(headPart, "jakarta.persistence.Column", requestedImports);
 
                 if (!isAbacusColumn) {
@@ -1063,8 +1068,9 @@ public final class JdbcCodeGenerationUtil {
             } else if (isJavaPersistenceId) {
                 headPart = headPart.replace("import com.landawn.abacus.annotation.Id;\n", "");
                 headPart = headPart.replace("jakarta.persistence.Id", idAnnotationClassName);
+                headPart = removeCompetingBuiltInImports(headPart, idAnnotationClassName);
             } else {
-                headPart = isAbacusId ? headPart.replace("import jakarta.persistence.Id;\n", "")
+                headPart = isAbacusId ? removeCompetingBuiltInImports(headPart, idAnnotationClassName)
                         : removeUnrequestedImport(headPart, "jakarta.persistence.Id", requestedImports);
 
                 if (!isAbacusId) {
@@ -1328,6 +1334,31 @@ public final class JdbcCodeGenerationUtil {
             logger.warn(e, "Failed to write generated entity class(entityName={}, className={}, srcDir={})", entityName, finalClassName, srcDir);
             throw new UncheckedIOException(e);
         }
+    }
+
+    /**
+     * Removes the imports of the other built-in annotations ({@code com.landawn.abacus.annotation}, {@code jakarta.persistence},
+     * {@code javax.persistence}) with the simple name of the selected one, also when {@code classNamesToImport} requested them:
+     * the selected annotation is emitted by its simple name, so a competing import made it ambiguous ("reference to Table is
+     * ambiguous"). A body that needs a competitor uses its fully qualified name.
+     *
+     * @param source the generated source
+     * @param selectedClassName the fully qualified name of the selected built-in annotation
+     * @return the source without the competing imports
+     */
+    private static String removeCompetingBuiltInImports(final String source, final String selectedClassName) {
+        final String simpleName = selectedClassName.substring(selectedClassName.lastIndexOf('.') + 1);
+        String result = source;
+
+        for (final String annotationPackage : List.of("com.landawn.abacus.annotation", "jakarta.persistence", "javax.persistence")) {
+            final String className = annotationPackage + "." + simpleName;
+
+            if (!className.equals(selectedClassName)) {
+                result = result.replace("import " + className + ";" + LINE_SEPARATOR, "");
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -1971,7 +2002,7 @@ public final class JdbcCodeGenerationUtil {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
+            final Set<String> excludedColumnNameSet = toExcludedColumnNameSet(excludedColumnNames);
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
@@ -2150,7 +2181,7 @@ public final class JdbcCodeGenerationUtil {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
+            final Set<String> excludedColumnNameSet = toExcludedColumnNameSet(excludedColumnNames);
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
@@ -2334,7 +2365,7 @@ public final class JdbcCodeGenerationUtil {
 
             final int unquotedIdentifierCase = SqlIdentifierUtil.isIdentifierQuotingEnabled() ? 0 : getUnquotedIdentifierCase(conn);
 
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
+            final Set<String> excludedColumnNameSet = toExcludedColumnNameSet(excludedColumnNames);
 
             final List<String> columnLabelList = Stream.of(JdbcUtil.getColumnLabels(rs))
                     .filter(columnLabel -> !(excludedColumnNameSet.contains(columnLabel) || excludedColumnNameSet.contains(Strings.toCamelCase(columnLabel))))
@@ -2647,7 +2678,7 @@ public final class JdbcCodeGenerationUtil {
             // Key columns are already resolved to actual labels, so drop exactly those from the SET clause (as the
             // single-key overload does); only the caller's excludedColumnNames are matched after camelCase
             // normalization, which would otherwise also drop a distinct column such as "userId" for key "user_id".
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
+            final Set<String> excludedColumnNameSet = toExcludedColumnNameSet(excludedColumnNames);
 
             final List<String> columnLabelList = Stream.of(allColumnLabels)
                     .filter(columnLabel -> !(resolvedKeyColumnNames.contains(columnLabel) || excludedColumnNameSet.contains(columnLabel)
@@ -2991,7 +3022,7 @@ public final class JdbcCodeGenerationUtil {
             // Key columns are already resolved to actual labels, so drop exactly those from the SET clause (as the
             // single-key overload does); only the caller's excludedColumnNames are matched after camelCase
             // normalization, which would otherwise also drop a distinct column such as "userId" for key "user_id".
-            final Set<String> excludedColumnNameSet = Stream.of(excludedColumnNames).map(Strings::toCamelCase).collect(Collectors.toSet());
+            final Set<String> excludedColumnNameSet = toExcludedColumnNameSet(excludedColumnNames);
 
             final List<String> columnLabelList = Stream.of(allColumnLabels)
                     .filter(columnLabel -> !(resolvedKeyColumnNames.contains(columnLabel) || excludedColumnNameSet.contains(columnLabel)
@@ -4383,6 +4414,28 @@ public final class JdbcCodeGenerationUtil {
     }
 
     /**
+     * Returns the names a column label or its camelCase form is matched against to exclude the column: each supplied
+     * name as given and in camelCase.
+     *
+     * @param excludedColumnNames the caller's excluded column names; may be {@code null}
+     * @return the names that exclude a column
+     */
+    private static Set<String> toExcludedColumnNameSet(final Collection<String> excludedColumnNames) {
+        final Set<String> result = new HashSet<>();
+
+        if (excludedColumnNames != null) {
+            for (final String excludedColumnName : excludedColumnNames) {
+                // Keep the name as given: camelCase conversion is not idempotent, so the camelCase form "posXY" of the
+                // column pos_x_y converts again to "posXy" and would no longer match that column.
+                result.add(excludedColumnName);
+                result.add(Strings.toCamelCase(excludedColumnName));
+            }
+        }
+
+        return result;
+    }
+
+    /**
      * Ensures at least one column is available for the {@code SET} clause of a generated UPDATE statement.
      *
      * @param columnLabelList the columns to be updated
@@ -4848,9 +4901,11 @@ public final class JdbcCodeGenerationUtil {
 
         /**
          * List of fully qualified class names to add as import statements in the generated entity class.
-         * Requested imports are retained when custom annotations are emitted fully qualified. A default annotation
-         * import conflicting with an emitted built-in annotation's simple name is removed; use a fully qualified name
-         * in the additional body in that case. Do not request two imports with the same simple name (for example both
+         * Requested imports are retained when custom annotations are emitted fully qualified. A requested import of a
+         * {@code Table}, {@code Column} or {@code Id} annotation of another built-in family (Abacus, {@code jakarta.persistence}
+         * or {@code javax.persistence}) than the selected built-in annotation is removed, since the selected one is emitted by
+         * the same simple name; use a fully qualified name in the additional body in that case. Do not request two imports
+         * with the same simple name (for example both
          * {@code com.landawn.abacus.annotation.Table} and {@code jakarta.persistence.Table}): the generator does not
          * reconcile them, and the generated source would not compile.
          * Example: {@code Arrays.asList("java.time.LocalDate", "com.example.MyType")}

@@ -2723,7 +2723,7 @@ public final class JdbcUtil {
      * @param columnLabel The label (or name) of the column to find.
      * @return The 1-based index of the column, or -1 if not found.
      * @throws IllegalArgumentException if {@code rsmd} is {@code null}.
-     * @throws SQLException if obtaining metadata or reading column labels and names fails.
+     * @throws SQLException if reading the column count, labels, or names fails.
      * @see #getColumnIndex(ResultSet, String)
      */
     public static int getColumnIndex(final ResultSetMetaData rsmd, final String columnLabel) throws IllegalArgumentException, SQLException {
@@ -2752,10 +2752,11 @@ public final class JdbcUtil {
 
     /**
      * Returns the column index the driver resolves for a label, matching the column {@link ResultSet#getObject(String)}
-     * read. If the driver lookup fails, searches metadata labels first, then names only if no label matches,
-     * case-insensitively and in column order. Unlike {@link #getColumnIndex(ResultSetMetaData, String)}, this fallback
-     * never lets an earlier column's name shadow a later column's label. Name-only lookup remains supported for drivers
-     * that accept a column name in {@code getObject(String)} but not in {@code findColumn(String)}.
+     * read. If the driver lookup fails (or reports no valid 1-based index), searches metadata labels first, then names
+     * only if no label matches, case-insensitively and in column order. Unlike
+     * {@link #getColumnIndex(ResultSetMetaData, String)}, this fallback never lets an earlier column's name shadow a later
+     * column's label. Name-only lookup remains supported for drivers that accept a column name in
+     * {@code getObject(String)} but not in {@code findColumn(String)}.
      *
      * @param rs the result set
      * @param metaData its metadata, already read
@@ -2765,30 +2766,36 @@ public final class JdbcUtil {
      */
     private static int getColumnIndexForLabel(final ResultSet rs, final ResultSetMetaData metaData, final String columnLabel) throws SQLException {
         try {
-            return rs.findColumn(columnLabel);
+            final int columnIndex = rs.findColumn(columnLabel);
+
+            if (columnIndex > 0) {
+                return columnIndex;
+            }
         } catch (final SQLException e) {
-            final int columnCount = metaData.getColumnCount();
-
-            // Keep metadata and conversion on the column read by label: a per-column label/name search can select
-            // another column when its name equals this alias, replacing the original value with that column's value.
-            for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
-                final String label = metaData.getColumnLabel(columnIndex);
-
-                if (label != null && label.equalsIgnoreCase(columnLabel)) {
-                    return columnIndex;
-                }
-            }
-
-            for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
-                final String name = metaData.getColumnName(columnIndex);
-
-                if (name != null && name.equalsIgnoreCase(columnLabel)) {
-                    return columnIndex;
-                }
-            }
-
-            return -1;
+            // Not resolved by the driver: search the metadata below.
         }
+
+        final int columnCount = metaData.getColumnCount();
+
+        // Keep metadata and conversion on the column read by label: a per-column label/name search can select
+        // another column when its name equals this alias, replacing the original value with that column's value.
+        for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
+            final String label = metaData.getColumnLabel(columnIndex);
+
+            if (label != null && label.equalsIgnoreCase(columnLabel)) {
+                return columnIndex;
+            }
+        }
+
+        for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
+            final String name = metaData.getColumnName(columnIndex);
+
+            if (name != null && name.equalsIgnoreCase(columnLabel)) {
+                return columnIndex;
+            }
+        }
+
+        return -1;
     }
 
     /**
@@ -3198,6 +3205,11 @@ public final class JdbcUtil {
      * extracts the value for each row, and collects them into a {@link List}. The {@code ResultSet}
      * will be fully consumed after this method is called.
      *
+     * <p>The label is resolved to the column that {@link ResultSet#getObject(String)} reads, through
+     * {@link ResultSet#findColumn(String)}. If the driver cannot resolve it, column labels are searched before column
+     * names, case-insensitively, so an earlier column's name never shadows a later column's label (unlike
+     * {@link #getColumnIndex(ResultSet, String)}).</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Get a list of all user names from the 'users' table using a column label
@@ -3217,7 +3229,11 @@ public final class JdbcUtil {
      * @throws SQLException if resolving column metadata, advancing the result set, or reading or converting a column value fails.
      */
     public static <T> List<T> getAllColumnValues(final ResultSet rs, final String columnLabel) throws IllegalArgumentException, SQLException {
-        final int columnIndex = JdbcUtil.getColumnIndex(rs, columnLabel);
+        N.checkArgNotNull(rs, cs.rs);
+
+        // Resolve the column getObject(columnLabel) reads: getColumnIndex lets an earlier column's name shadow a later
+        // column's label ("SELECT b AS x, a AS b" read column x for "b").
+        final int columnIndex = getColumnIndexForLabel(rs, rs.getMetaData(), columnLabel);
 
         if (columnIndex < 1) {
             throw new IllegalArgumentException("No column found with name: " + columnLabel + " in result set: " + JdbcUtil.getColumnLabels(rs));
@@ -5633,7 +5649,22 @@ public final class JdbcUtil {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
 
-        final ParsedSql parsedSql = ParsedSql.parse(sql);
+        return prepareStmt(conn, ParsedSql.parse(sql), parameters);
+    }
+
+    /**
+     * Prepares a PreparedStatement for the given parsed SQL and sets the provided parameters, as
+     * {@link #prepareStmt(Connection, String, Object...)} does.
+     *
+     * @param conn The database connection to use.
+     * @param parsedSql The parsed SQL statement.
+     * @param parameters The parameter values to set on the prepared statement.
+     * @return A PreparedStatement with parameters set, ready for execution.
+     * @throws IllegalArgumentException if a supplied parameter set cannot satisfy the SQL's required positional or named parameters.
+     * @throws SQLException if the connection is closed or the driver cannot prepare the SQL or bind a supplied parameter.
+     */
+    private static PreparedStatement prepareStmt(final Connection conn, final ParsedSql parsedSql, final Object[] parameters)
+            throws IllegalArgumentException, SQLException {
         final PreparedStatement stmt = prepareStatement(conn, parsedSql);
 
         try {
@@ -5803,6 +5834,45 @@ public final class JdbcUtil {
     }
 
     /**
+     * Parses {@code sql} and checks that {@code parameters} can satisfy its parameters, as
+     * {@link #setParameters(ParsedSql, PreparedStatement, Object[])} checks them when it binds them. Used by the
+     * {@code executeQuery}/{@code executeUpdate}/{@code execute} methods so that SQL or parameters that can't be bound are
+     * rejected before a connection is acquired or a statement is prepared: found only when binding, the failure of a data
+     * source that could not hand out a connection (or of a closed connection) was reported instead. As
+     * {@link #checkBatchParameters(ParsedSql, List)}, no bean property getter is invoked.
+     *
+     * @param sql the SQL; not {@code null} or empty
+     * @param parameters the parameters of the statement, as passed to the calling method
+     * @return the parsed SQL
+     * @throws IllegalArgumentException if {@code sql} is blank, mixes parameter styles, or contains a malformed parameter placeholder,
+     *         or if {@code parameters} cannot satisfy the SQL's required positional or named parameters
+     */
+    private static ParsedSql parseSqlAndCheckParameters(final String sql, final Object[] parameters) throws IllegalArgumentException {
+        final ParsedSql parsedSql = ParsedSql.parse(sql);
+        final int parameterCount = parsedSql.parameterCount();
+
+        if (parameterCount == 0) {
+            return parsedSql;
+        } else if (N.isEmpty(parameters)) {
+            throw new IllegalArgumentException("SQL requires " + parameterCount + " parameter(s), but the specified parameters are null or empty");
+        }
+
+        if (isEntityOrMapParameter(parsedSql, parameters)) {
+            checkNamedParameterSource(parsedSql.namedParameters(), parameters[0], -1);
+        } else if (parameters.length < parameterCount) {
+            // As getParameterValues: a single array or collection supplies its elements if it has enough of them.
+            final Object parameter = parameters.length == 1 ? parameters[0] : null;
+            final int supplied = parameter instanceof final Object[] a ? a.length : parameter instanceof final Collection<?> c ? c.size() : 0;
+
+            if (supplied < parameterCount) {
+                throw new IllegalArgumentException("SQL requires " + parameterCount + " parameter(s), but only " + parameters.length + " specified");
+            }
+        }
+
+        return parsedSql;
+    }
+
+    /**
      * Executes a SQL query immediately with the provided parameters and returns all results as a {@link Dataset}.
      * This is a convenience method for one-time query execution where the result set is loaded entirely into memory.
      * For reusable queries or streaming large result sets, consider using {@link #prepareQuery(javax.sql.DataSource, String)} instead.
@@ -5875,16 +5945,17 @@ public final class JdbcUtil {
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
+        final ParsedSql parsedSql = parseSqlAndCheckParameters(sql, parameters);
 
         final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return executeQuery(tran.connection(), sql, parameters);
+            return runQuery(tran.connection(), parsedSql, parameters);
         } else {
             final Connection conn = JdbcUtil.getConnection(ds);
 
             try {
-                return executeQuery(conn, sql, parameters);
+                return runQuery(conn, parsedSql, parameters);
             } finally {
                 JdbcUtil.releaseConnection(conn, ds);
             }
@@ -5932,11 +6003,18 @@ public final class JdbcUtil {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
 
+        return runQuery(conn, parseSqlAndCheckParameters(sql, parameters), parameters);
+    }
+
+    /**
+     * Runs the query of {@link #executeQuery(Connection, String, Object...)} once its arguments have been checked.
+     */
+    private static Dataset runQuery(final Connection conn, final ParsedSql parsedSql, final Object[] parameters) throws SQLException {
         PreparedStatement stmt = null;
         ResultSet rs = null;
 
         try {
-            stmt = prepareStmt(conn, sql, parameters);
+            stmt = prepareStmt(conn, parsedSql, parameters);
 
             stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
 
@@ -6029,16 +6107,17 @@ public final class JdbcUtil {
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
+        final ParsedSql parsedSql = parseSqlAndCheckParameters(sql, parameters);
 
         final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return executeUpdate(tran.connection(), sql, parameters);
+            return runUpdate(tran.connection(), parsedSql, parameters);
         } else {
             final Connection conn = JdbcUtil.getConnection(ds);
 
             try {
-                return executeUpdate(conn, sql, parameters);
+                return runUpdate(conn, parsedSql, parameters);
             } finally {
                 JdbcUtil.releaseConnection(conn, ds);
             }
@@ -6084,10 +6163,17 @@ public final class JdbcUtil {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
 
+        return runUpdate(conn, parseSqlAndCheckParameters(sql, parameters), parameters);
+    }
+
+    /**
+     * Runs the update of {@link #executeUpdate(Connection, String, Object...)} once its arguments have been checked.
+     */
+    private static int runUpdate(final Connection conn, final ParsedSql parsedSql, final Object[] parameters) throws SQLException {
         PreparedStatement stmt = null;
 
         try {
-            stmt = prepareStmt(conn, sql, parameters);
+            stmt = prepareStmt(conn, parsedSql, parameters);
 
             return executeUpdate(stmt);
         } finally {
@@ -6916,16 +7002,17 @@ public final class JdbcUtil {
             throws IllegalArgumentException, UncheckedSQLException, SQLException {
         N.checkArgNotNull(ds, cs.ds);
         N.checkArgNotEmpty(sql, cs.sql);
+        final ParsedSql parsedSql = parseSqlAndCheckParameters(sql, parameters);
 
         final TransactionContext tran = TransactionContext.getTransaction(ds, CreatedBy.JDBC_UTIL);
 
         if (tran != null) {
-            return execute(tran.connection(), sql, parameters);
+            return runExecute(tran.connection(), parsedSql, parameters);
         } else {
             final Connection conn = JdbcUtil.getConnection(ds);
 
             try {
-                return execute(conn, sql, parameters);
+                return runExecute(conn, parsedSql, parameters);
             } finally {
                 JdbcUtil.releaseConnection(conn, ds);
             }
@@ -7018,10 +7105,17 @@ public final class JdbcUtil {
         N.checkArgNotNull(conn, cs.conn);
         N.checkArgNotEmpty(sql, cs.sql);
 
+        return runExecute(conn, parseSqlAndCheckParameters(sql, parameters), parameters);
+    }
+
+    /**
+     * Runs the statement of {@link #execute(Connection, String, Object...)} once its arguments have been checked.
+     */
+    private static boolean runExecute(final Connection conn, final ParsedSql parsedSql, final Object[] parameters) throws SQLException {
         PreparedStatement stmt = null;
 
         try {
-            stmt = prepareStmt(conn, sql, parameters);
+            stmt = prepareStmt(conn, parsedSql, parameters);
 
             return JdbcUtil.execute(stmt);
         } finally {
@@ -7663,32 +7757,12 @@ public final class JdbcUtil {
             if (isEntityOrMapParameter(parsedSql, parameters)) {
                 final Class<?> cls = parameter.getClass();
 
-                if (Beans.isBeanClass(cls) || Beans.isRecordClass(cls)) {
-                    if (cls != checkedBeanClass) {
-                        final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
+                // Only a bean class is ever recorded as checked, so every Map and EntityId set is checked.
+                if (cls != checkedBeanClass) {
+                    checkNamedParameterSource(namedParameters, parameter, index);
 
-                        for (final String name : namedParameters) {
-                            if (entityInfo.getPropInfo(name) == null && getNestedParameterPropPath(entityInfo, name) == null) {
-                                throw new IllegalArgumentException("No property found with name: " + name + " in class: " + ClassUtil.getCanonicalClassName(cls)
-                                        + " (the parameter set at index " + index + ")");
-                            }
-                        }
-
+                    if (Beans.isBeanClass(cls) || Beans.isRecordClass(cls)) {
                         checkedBeanClass = cls;
-                    }
-                } else if (parameter instanceof final Map<?, ?> m) {
-                    for (final String name : namedParameters) {
-                        if (m.get(name) == null && !m.containsKey(name)) {
-                            throw new IllegalArgumentException("Missing parameter for property: '" + name + "' (the parameter set at index " + index + ")");
-                        }
-                    }
-                } else {
-                    final EntityId entityId = (EntityId) parameter;
-
-                    for (final String name : namedParameters) {
-                        if (entityId.get(name) == null && !entityId.containsKey(name)) {
-                            throw new IllegalArgumentException("Missing parameter for property: '" + name + "' (the parameter set at index " + index + ")");
-                        }
                     }
                 }
             } else if (parameterCount > 1) {
@@ -7704,6 +7778,50 @@ public final class JdbcUtil {
 
             index++;
         }
+    }
+
+    /**
+     * Checks that an entity, {@code Map} or {@link EntityId} bound by name has a property, or an entry, for every named
+     * parameter, as {@link #setParameters(ParsedSql, PreparedStatement, Object[])} requires when it binds it, without invoking
+     * a bean property getter.
+     *
+     * @param namedParameters the named parameters of the SQL
+     * @param parameter the entity, {@code Map} or {@code EntityId}
+     * @param setIndex the index of the parameter set in a batch, named in the failure message; negative for a single statement
+     * @throws IllegalArgumentException if a named parameter has no matching property or entry
+     */
+    private static void checkNamedParameterSource(final List<String> namedParameters, final Object parameter, final int setIndex)
+            throws IllegalArgumentException {
+        final Class<?> cls = parameter.getClass();
+
+        if (Beans.isBeanClass(cls) || Beans.isRecordClass(cls)) {
+            final BeanInfo entityInfo = ParserUtil.getBeanInfo(cls);
+
+            for (final String name : namedParameters) {
+                if (entityInfo.getPropInfo(name) == null && getNestedParameterPropPath(entityInfo, name) == null) {
+                    throw new IllegalArgumentException(
+                            "No property found with name: " + name + " in class: " + ClassUtil.getCanonicalClassName(cls) + parameterSetLocation(setIndex));
+                }
+            }
+        } else if (parameter instanceof final Map<?, ?> m) {
+            for (final String name : namedParameters) {
+                if (m.get(name) == null && !m.containsKey(name)) {
+                    throw new IllegalArgumentException("Missing parameter for property: '" + name + "'" + parameterSetLocation(setIndex));
+                }
+            }
+        } else {
+            final EntityId entityId = (EntityId) parameter;
+
+            for (final String name : namedParameters) {
+                if (entityId.get(name) == null && !entityId.containsKey(name)) {
+                    throw new IllegalArgumentException("Missing parameter for property: '" + name + "'" + parameterSetLocation(setIndex));
+                }
+            }
+        }
+    }
+
+    private static String parameterSetLocation(final int setIndex) {
+        return setIndex < 0 ? "" : " (the parameter set at index " + setIndex + ")";
     }
 
     /**
@@ -7734,8 +7852,8 @@ public final class JdbcUtil {
      * @param parsedSql The parsed SQL statement containing parameter information.
      * @param parameters The parameters provided.
      * @return {@code true} if the SQL has named parameters and exactly one non-null entity, {@code Map}, or {@code EntityId} parameter is provided;
-     *         {@code false} for a value whose class is not a bean in the Abacus type system and has no property named after the SQL's only
-     *         placeholder, which is then bound directly.
+     *         {@code false} for a value whose class is not a bean in the Abacus type system and has neither a property nor a nested
+     *         property path named after the SQL's only placeholder, which is then bound directly.
      */
     static boolean isEntityOrMapParameter(final ParsedSql parsedSql, final Object... parameters) {
         if (N.isEmpty(parsedSql.namedParameters()) || N.isEmpty(parameters) || (parameters.length != 1) || (parameters[0] == null)) {
@@ -7747,9 +7865,17 @@ public final class JdbcUtil {
         if (Beans.isBeanClass(cls) || Beans.isRecordClass(cls)) {
             // Some value classes pass Beans.isBeanClass only because they expose getter/setter pairs (GregorianCalendar,
             // MutableBoolean, a class with a registered Type). With exactly one named placeholder, bind such a value directly,
-            // as '?' SQL and NamedQuery do, instead of failing to find a property named after the parameter.
-            return parsedSql.parameterCount() != 1 || N.typeOf(cls).isBean()
-                    || ParserUtil.getBeanInfo(cls).getPropInfo(parsedSql.namedParameters().get(0)) != null;
+            // as '?' SQL and NamedQuery do, instead of failing to find a property named after the parameter. A placeholder
+            // naming a direct property or a nested property path binds that property, as in NamedQuery: a nested path such as
+            // "address.street" used to bind the whole bean.
+            if (parsedSql.parameterCount() != 1 || N.typeOf(cls).isBean()) {
+                return true;
+            }
+
+            final BeanInfo beanInfo = ParserUtil.getBeanInfo(cls);
+            final String parameterName = parsedSql.namedParameters().get(0);
+
+            return beanInfo.getPropInfo(parameterName) != null || getNestedParameterPropPath(beanInfo, parameterName) != null;
         }
 
         return Map.class.isAssignableFrom(cls) || EntityId.class.isAssignableFrom(cls);
@@ -8133,7 +8259,7 @@ public final class JdbcUtil {
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted data.
      * @throws IllegalArgumentException if {@code rs} is {@code null}, {@code offset} or {@code count} is negative, or {@code filter} is {@code null}.
-     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking the supplied row filter throws an SQL exception.
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowFilter filter, final boolean closeResultSet)
@@ -8165,7 +8291,7 @@ public final class JdbcUtil {
      * @param closeResultSet Whether to close the ResultSet after extraction.
      * @return A {@link Dataset} containing the extracted and transformed data.
      * @throws IllegalArgumentException if {@code rs} is {@code null}, {@code offset} or {@code count} is negative, or {@code rowExtractor} is {@code null}.
-     * @throws SQLException if reading metadata, advancing or reading rows, or invoking a supplied row filter or extractor throws an SQL exception.
+     * @throws SQLException if reading metadata, advancing or reading rows, or invoking the supplied row extractor throws an SQL exception.
      * @see #extractData(ResultSet, int, int, RowFilter, RowExtractor, boolean)
      */
     public static Dataset extractData(final ResultSet rs, final int offset, final int count, final RowExtractor rowExtractor, final boolean closeResultSet)
@@ -8669,7 +8795,7 @@ public final class JdbcUtil {
     /**
      * Creates a stream from the provided ResultSet using the specified RowFilter and RowMapper.
      * Only rows that pass the filter will be included in the stream.
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * It's the user's responsibility to close the input {@code rs} after the stream is finished.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8794,7 +8920,7 @@ public final class JdbcUtil {
     /**
      * Creates a stream from the provided ResultSet using the specified BiRowMapper.
      * BiRowMapper receives both the ResultSet and column labels, allowing for more flexible mapping.
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * It's the user's responsibility to close the input {@code rs} after the stream is finished.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -8971,7 +9097,7 @@ public final class JdbcUtil {
     /**
      * Creates a stream from the provided ResultSet using the specified BiRowFilter and BiRowMapper.
      * Both the filter and mapper receive the ResultSet and column labels for maximum flexibility.
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * It's the user's responsibility to close the input {@code rs} after the stream is finished.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9097,7 +9223,7 @@ public final class JdbcUtil {
     /**
      * Creates a stream from the provided ResultSet using the specified column index.
      * This is useful when you only need values from a single column.
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * It's the user's responsibility to close the input {@code rs} after the stream is finished.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9143,9 +9269,9 @@ public final class JdbcUtil {
     }
 
     /**
-     * Creates a stream from the provided ResultSet using the specified column name.
-     * This is useful when you only need values from a single column identified by name.
-     * It's the user's responsibility to close the input {@code resultSet} after the stream is finished.
+     * Creates a stream from the provided ResultSet using the specified column label.
+     * This is useful when you only need values from a single column identified by label (or name).
+     * It's the user's responsibility to close the input {@code rs} after the stream is finished.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9157,8 +9283,11 @@ public final class JdbcUtil {
      * }
      * }</pre>
      *
-     * <p>If the result set has rows but does not contain {@code columnLabel}, traversal throws
-     * {@link IllegalArgumentException}.</p>
+     * <p>The column is the one {@link ResultSet#getObject(String)} reads for {@code columnLabel}, as resolved by
+     * {@link ResultSet#findColumn(String)}. If the driver cannot resolve it, column labels are searched before
+     * column names (case-insensitively), so an earlier column whose name equals {@code columnLabel} never shadows
+     * a later column labeled {@code columnLabel}. If the result set has rows but does not contain
+     * {@code columnLabel}, traversal throws {@link IllegalArgumentException}.</p>
      *
      * <p>Database access errors encountered while traversing the returned stream are propagated as
      * {@link UncheckedSQLException}.</p>
@@ -9186,7 +9315,9 @@ public final class JdbcUtil {
             @Override
             public T apply(final ResultSet resultSet) throws SQLException, IllegalArgumentException {
                 if (columnIndex == 0) {
-                    columnIndex = getColumnIndex(resultSet, columnLabel);
+                    // Read the column getObject(columnLabel) reads. getColumnIndex compares each column's label and then its
+                    // name, so an earlier column whose name equals this label (SELECT a AS x, b AS a) would shadow it.
+                    columnIndex = getColumnIndexForLabel(resultSet, resultSet.getMetaData(), columnLabel);
 
                     if (columnIndex < 1) {
                         throw new IllegalArgumentException("Column not found: '" + columnLabel + "'");
@@ -9237,8 +9368,8 @@ public final class JdbcUtil {
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * Each ResultSet is processed by the provided ResultExtractor.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
-     * Closing the returned stream closes any result set that the iterator advanced to but did not
-     * deliver because traversal stopped early; it does not close {@code stmt}.
+     * Closing the returned stream closes the statement's current result set if the stream has not delivered it to
+     * the extractor (traversal stopped early, or never started); it does not close {@code stmt}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9285,8 +9416,8 @@ public final class JdbcUtil {
      * Extracts all ResultSets from the provided Statement and returns them as a Stream.
      * Each ResultSet is processed by the provided BiResultExtractor which also receives column labels.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
-     * Closing the returned stream closes any result set that the iterator advanced to but did not
-     * deliver because traversal stopped early; it does not close {@code stmt}.
+     * Closing the returned stream closes the statement's current result set if the stream has not delivered it to
+     * the extractor (traversal stopped early, or never started); it does not close {@code stmt}.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9541,7 +9672,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
+     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified {@code sql}.
      * The query must be ordered by at least one key/id and have a result size limitation (e.g., LIMIT pageSize).
      * This method is useful for processing large result sets in manageable chunks.
      *
@@ -9586,7 +9717,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
+     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified {@code sql}.
      * The query must be ordered by at least one key/id and have a result size limitation.
      * Each page is processed by the provided ResultExtractor.
      *
@@ -9671,7 +9802,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
+     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified {@code sql}.
      * The query must be ordered by at least one key/id and have a result size limitation.
      * Each page is processed by the provided BiResultExtractor.
      *
@@ -9754,7 +9885,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
+     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified {@code sql}.
      * Similar to the DataSource version but uses an existing Connection.
      * The query must be ordered by at least one key/id and have a result size limitation.
      *
@@ -9798,7 +9929,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
+     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified {@code sql}.
      * Similar to the DataSource version but uses an existing Connection.
      * Each page is processed by the provided ResultExtractor.
      *
@@ -9883,7 +10014,7 @@ public final class JdbcUtil {
     }
 
     /**
-     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified SQL {@code query}.
+     * Runs a {@code Stream} with each element (page) loaded from the database table by running the specified {@code sql}.
      * Similar to the DataSource version but uses an existing Connection.
      * Each page is processed by the provided BiResultExtractor.
      *
@@ -13385,7 +13516,9 @@ public final class JdbcUtil {
      *       Spring transaction participation is neither disabled on this thread (see
      *       {@link #runIgnoringSpringTransaction(Throwables.Runnable)}) nor suspended for {@code ds} (see
      *       {@link #callOutsideTransaction(javax.sql.DataSource, Throwables.Callable)}), unless the transaction has started to
-     *       complete, as far as that can be recognized (see {@link #beginTransaction(javax.sql.DataSource)}).</li>
+     *       complete: as its transaction manager reports it to a {@link SpringTransactionTracker} registered with it (see
+     *       {@link #beginTransaction(javax.sql.DataSource)}), or, without a tracker, only as far as the transaction
+     *       synchronization of the innermost Spring transaction on the thread shows it.</li>
      * </ul>
      *
      * <p>A Spring-managed transaction owns the connection bound to {@code ds} on this thread when the bound connection has
@@ -14434,12 +14567,12 @@ public final class JdbcUtil {
         }
 
         /**
-         * Returns whether the transaction whose connection holder is {@code resource} has completed: see
-         * {@link JdbcUtil#hasSpringTransactionCompleted(Object)}.
+         * Returns the connection holder bound to {@code dataSourceKey} if the transaction that owns it records its completion
+         * on it: see {@link JdbcUtil#springResourceRecordingCompletion(javax.sql.DataSource)}.
          *
-         * @param resource the connection holder of the transaction participated in
-         * @return {@code true} if it is the holder of a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}
-         *         transaction that is no longer transaction-active
+         * @param dataSourceKey the (unwrapped) data source the connection holder is bound to
+         * @return the transaction-active holder of a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}
+         *         transaction (one with Spring's own connection handle), or {@code null}
          * @throws IllegalStateException if the holder's transaction-active flag is not accessible
          */
         static Object resourceRecordingCompletion(final Object dataSourceKey) throws IllegalStateException {
@@ -14450,6 +14583,15 @@ public final class JdbcUtil {
                     && SpringConnectionHolderAccess.isOwnedByTransaction(holder) ? holder : null;
         }
 
+        /**
+         * Returns whether the transaction whose connection holder is {@code resource} has completed: see
+         * {@link JdbcUtil#hasSpringTransactionCompleted(Object)}.
+         *
+         * @param resource the connection holder of the transaction participated in
+         * @return {@code true} if it is the holder of a {@code DataSourceTransactionManager} or {@code JdbcTransactionManager}
+         *         transaction that is no longer transaction-active
+         * @throws IllegalStateException if the holder's transaction-active flag is not accessible
+         */
         static boolean hasCompleted(final Object resource) throws IllegalStateException {
             return resource instanceof final org.springframework.jdbc.datasource.ConnectionHolder holder
                     && holder.getConnectionHandle() instanceof org.springframework.jdbc.datasource.SimpleConnectionHandle
@@ -15065,7 +15207,9 @@ public final class JdbcUtil {
      * @param cmd The callable to execute within the transaction, must not be {@code null}.
      * @return The result returned by {@code cmd}.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
-     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it
+     * @throws IllegalStateException if {@link #beginTransaction(javax.sql.DataSource)} refuses to begin the transaction (for example, no
+     *         {@link SpringTransactionTracker} is registered for the Spring-managed transaction that owns {@code ds}); if {@code cmd}
+     *         completes or invalidates the shared transaction before this method commits it
      *         (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the
      *         outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the
      *         transaction has been rolled back.
@@ -15144,7 +15288,9 @@ public final class JdbcUtil {
      *            the connection must not be closed by the caller.
      * @return The result returned by {@code cmd}.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
-     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it
+     * @throws IllegalStateException if {@link #beginTransaction(javax.sql.DataSource)} refuses to begin the transaction (for example, no
+     *         {@link SpringTransactionTracker} is registered for the Spring-managed transaction that owns {@code ds}); if {@code cmd}
+     *         completes or invalidates the shared transaction before this method commits it
      *         (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the
      *         outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the
      *         transaction has been rolled back.
@@ -15225,7 +15371,9 @@ public final class JdbcUtil {
      * @param ds The {@link javax.sql.DataSource} for the transaction, must not be {@code null}.
      * @param cmd The runnable to execute within the transaction, must not be {@code null}.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
-     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it
+     * @throws IllegalStateException if {@link #beginTransaction(javax.sql.DataSource)} refuses to begin the transaction (for example, no
+     *         {@link SpringTransactionTracker} is registered for the Spring-managed transaction that owns {@code ds}); if {@code cmd}
+     *         completes or invalidates the shared transaction before this method commits it
      *         (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the
      *         outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the
      *         transaction has been rolled back.
@@ -15298,7 +15446,9 @@ public final class JdbcUtil {
      * @param cmd The consumer to execute with the transaction's {@link Connection}, must not be {@code null};
      *            the connection must not be closed by the caller.
      * @throws IllegalArgumentException if {@code ds} or {@code cmd} is {@code null}.
-     * @throws IllegalStateException if {@code cmd} completes or invalidates the shared transaction before this method commits it
+     * @throws IllegalStateException if {@link #beginTransaction(javax.sql.DataSource)} refuses to begin the transaction (for example, no
+     *         {@link SpringTransactionTracker} is registered for the Spring-managed transaction that owns {@code ds}); if {@code cmd}
+     *         completes or invalidates the shared transaction before this method commits it
      *         (for example, it completes an enclosing scope, which exits this method's scope); {@link RollbackOnlyException} if this method's scope is the
      *         outermost one and the transaction was marked rollback-only, typically by a nested transactional failure that {@code cmd} caught: the
      *         transaction has been rolled back.

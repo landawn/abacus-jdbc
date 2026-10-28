@@ -52,7 +52,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *
      * @param entity the entity to insert
      * @throws IllegalArgumentException if {@code entity} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     void save(final T entity) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -71,7 +72,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      * @param entity the entity to insert
      * @param propNamesToSave the property names to include in the INSERT (must not be {@code null} or empty)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or if {@code propNamesToSave} is {@code null} or empty
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     void save(final T entity, final Collection<String> propNamesToSave) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -92,7 +94,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *                                  or if {@code namedInsertSql} contains positional (unnamed) parameters,
      *                                  or if {@code entity} has no property for a named parameter in {@code namedInsertSql}
      *                                  other than the reserved {@code now}, {@code sysTime} and {@code sysDate}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
+     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     void save(final String namedInsertSql, final T entity) throws IllegalArgumentException, UncheckedSQLException, SQLException;
@@ -114,7 +117,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      * @see #batchSave(Collection, int)
      * @throws IllegalArgumentException if a batch row is {@code null} and the SQL has other than one parameter,
@@ -147,7 +151,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     void batchSave(final Collection<? extends T> entities, final int batchSize)
@@ -167,7 +172,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave)
@@ -192,7 +198,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize)
@@ -215,7 +222,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     @Beta
@@ -244,7 +252,8 @@ sealed interface InsertOps<T, TD extends DaoBase<T, TD>> extends DaoBase<T, TD> 
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection fails, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an INSERT statement fails
      */
     @Beta

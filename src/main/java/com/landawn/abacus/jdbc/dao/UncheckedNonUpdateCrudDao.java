@@ -40,7 +40,8 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  *
  * <p>The inherited raw-SQL {@code prepareQuery}/{@code prepareNamedQuery} overloads accept only
  * {@code SELECT} and {@code INSERT} statements at runtime (any other SQL kind fails with
- * {@link UnsupportedOperationException}), enforced centrally by the DAO proxy.</p>
+ * {@link UnsupportedOperationException}), enforced centrally by the DAO proxy; so do {@code insert(namedInsertSql, entity)}
+ * and {@code batchInsert(namedInsertSql, ...)}.</p>
  *
  * <p>This interface is marked as {@link Beta @Beta}, indicating it may be subject to
  * incompatible changes, or even removal, in a future release.</p>

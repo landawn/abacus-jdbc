@@ -1106,6 +1106,8 @@ public final class SqlTransaction implements AutoCloseable {
      *         rollback of a participating transaction cannot mark the Spring transaction rollback-only (see
      *         {@link #rollbackIfNotCommitted()})
      * @throws UncheckedSQLException if an SQL error occurs during the outermost rollback
+     * @throws RuntimeException if marking the Spring transaction rollback-only fails with another exception (an {@link Error}
+     *         from the mark propagates as well); the status is then {@link Status#FAILED_ROLLBACK}
      * @see #rollbackIfNotCommitted()
      */
     @Override

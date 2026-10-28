@@ -100,7 +100,8 @@ import com.landawn.abacus.util.Throwables;
  *   <tr>
  *     <td>CSV Import</td>
  *     <td>{@code importCsv()}</td>
- *     <td>CSV File or Reader to database via DataSource, Connection, or PreparedStatement</td>
+ *     <td>CSV File or Reader to database via DataSource, Connection, or PreparedStatement
+ *         (the positional Connection overload reads a File only; use {@code importCsvFrom(reader).to(conn, insertSql)} for a Reader)</td>
  *   </tr>
  *   <tr>
  *     <td>CSV Export</td>
@@ -328,7 +329,8 @@ public final class DataTransferUtil {
      * transaction's connection on every acquisition, so only the target connections tell whether two of them are one.
      *
      * @param conn the connection; must only be called when Spring JDBC is on the class path
-     * @return the innermost target connection, or {@code conn} if it is not such a proxy or its target cannot be obtained
+     * @return the innermost target connection: {@code conn} itself if it is not such a proxy, otherwise the last connection
+     *         reached, which is a proxy if its own target cannot be obtained
      */
     private static Connection unwrapSpringConnectionProxy(final Connection conn) {
         Connection result = conn;
@@ -3250,8 +3252,9 @@ public final class DataTransferUtil {
      *         product name.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
      *         metadata labels whose exact case would be folded are rejected.
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
-     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails, or, when {@code columnNames} is
+     *         {@code null} or empty, if reading the source table's columns fails (for example because {@code sourceTableName} does not exist);
+     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails or any
      *         specified column doesn't exist
      * @deprecated use {@link #copyTable(javax.sql.DataSource, String)} instead: {@code copyTable(sourceDataSource, sourceTableName).columns(columnNames).to(targetDataSource, targetTableName)}.
@@ -3290,8 +3293,9 @@ public final class DataTransferUtil {
      *         reports a {@code null} or blank product name.
      *         Identifier quoting is disabled: explicit delimiters, non-simple names, common reserved names, and
      *         metadata labels whose exact case would be folded are rejected.
-     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails; connection acquisition follows
-     *         {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
+     * @throws UncheckedSQLException if connection acquisition fails, or if reading database metadata fails, or, when {@code columnNames} is
+     *         {@code null} or empty, if reading the source table's columns fails (for example because {@code sourceTableName} does not exist);
+     *         connection acquisition follows {@link JdbcUtil#getConnection(javax.sql.DataSource)}.
      * @throws SQLException if preparing or executing the SELECT or INSERT, reading or binding a row, or closing owned JDBC resources fails
      * @deprecated use {@link #copyTable(javax.sql.DataSource, String)} instead: {@code copyTable(sourceDataSource, sourceTableName).columns(columnNames).batchSize(batchSize).to(targetDataSource, targetTableName)}.
      */
@@ -4375,7 +4379,7 @@ public final class DataTransferUtil {
      *     DataTransferUtil.newResultSetParameterSetter(getter);
      *
      * // Use in copy operation
-     * long copied = DataTransferUtil.copy(sourceConn, selectSql, targetConn, insertSql, setter);
+     * long copied = DataTransferUtil.copyFrom(sourceConn, selectSql).parameterSetter(setter).to(targetConn, insertSql);
      * }</pre>
      *
      * <p>The returned setter propagates {@link SQLException} from result-set metadata, the column getter,
@@ -4387,7 +4391,7 @@ public final class DataTransferUtil {
      * @param columnGetter the ColumnGetter to apply to each column index in every row
      * @return a stateful BiConsumer that maps ResultSet columns to PreparedQuery parameter positions
      * @throws IllegalArgumentException if {@code columnGetter} is {@code null}
-     * @see #copy(Connection, String, Connection, String, Throwables.BiConsumer)
+     * @see #copyFrom(Connection, String)
      */
     @Beta
     @SequentialOnly

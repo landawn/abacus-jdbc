@@ -1261,6 +1261,41 @@ public class JdbcUtilIntegrationTest extends TestBase {
         }
     }
 
+    // BUG FIX: getAllColumnValues(rs, label) resolved the label with getColumnIndex, whose per-column label-then-name search
+    // let column 1's NAME "b" shadow column 2's LABEL "b", so it returned the values of column x instead of those that
+    // rs.getObject("b") / getColumnValue(rs, "b") read.
+    @Test
+    public void testGetAllColumnValues_ByLabel_ReadsTheColumnGetObjectReads() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS alias_shadow (a INT, b INT)");
+            st.execute("DELETE FROM alias_shadow");
+            st.execute("INSERT INTO alias_shadow (a, b) VALUES (1, 2)");
+
+            try (ResultSet rs = st.executeQuery("SELECT b AS x, a AS b FROM alias_shadow")) {
+                // Preconditions of the scenario: column 1 is NAMED b, column 2 is LABELED b, and the driver reads column 2.
+                assertTrue("b".equalsIgnoreCase(rs.getMetaData().getColumnName(1)));
+                assertEquals(2, rs.findColumn("b"));
+                assertEquals(1, JdbcUtil.getColumnIndex(rs, "b")); // the public getColumnIndex search order is unchanged
+
+                assertEquals(List.of(1), JdbcUtil.getAllColumnValues(rs, "b"));
+            }
+
+            try (ResultSet rs = st.executeQuery("SELECT b AS x, a AS b FROM alias_shadow")) {
+                assertEquals(List.of(2), JdbcUtil.getAllColumnValues(rs, "x"));
+            }
+
+            try (ResultSet rs = st.executeQuery("SELECT b AS x, a AS b FROM alias_shadow")) {
+                assertThrows(IllegalArgumentException.class, () -> JdbcUtil.getAllColumnValues(rs, "no_such_column"));
+            }
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS alias_shadow");
+            }
+        }
+    }
+
     // tableExists / createTableIfNotExists / dropTableIfExists (Connection overloads).
     @Test
     public void testTableExists_CreateAndDrop() throws SQLException {

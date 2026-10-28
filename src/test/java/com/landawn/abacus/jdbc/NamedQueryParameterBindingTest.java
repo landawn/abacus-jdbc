@@ -868,6 +868,42 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
         assertThrows(IllegalArgumentException.class, () -> namedQuery.addBatchParameters(Arrays.asList(bean).iterator()));
     }
 
+    // A record property reads an Object[] as the record's internal value array (by component order), so an array row
+    // after a record row used to be queued silently instead of being rejected like rows of any other kind.
+    @Test
+    void addBatchParameters_arrayRowAfterRecordRowIsRejected() throws SQLException {
+        final List<Object> rows = Arrays.asList(new TwoParamRecord("r1", 1), new Object[] { "o1", 2 });
+
+        final ClassCastException failure = assertThrows(ClassCastException.class, () -> namedQuery.addBatchParameters(rows));
+
+        assertTrue(failure.getMessage().contains(TwoParamRecord.class.getSimpleName()), failure.getMessage());
+        verify(mockPreparedStatement).setString(1, "r1");
+        verify(mockPreparedStatement).setInt(2, 1);
+        verify(mockPreparedStatement, times(1)).addBatch();
+        verify(mockPreparedStatement, never()).setString(1, "o1");
+        verify(mockPreparedStatement).close();
+    }
+
+    // Bean rows of sibling subclasses read the properties through the superclass that declares them.
+    @Test
+    void addBatchParameters_beanRowsOfSiblingSubclassesAreAccepted() throws SQLException {
+        final TestEntity first = new TestEntityVariantA();
+        first.setParam1("a");
+        first.setParam2(1);
+        final TestEntity second = new TestEntityVariantB();
+        second.setParam1("b");
+        second.setParam2(2);
+
+        namedQuery.addBatchParameters(Arrays.asList(first, second));
+
+        verify(mockPreparedStatement).setString(1, "a");
+        verify(mockPreparedStatement).setInt(2, 1);
+        verify(mockPreparedStatement).setString(1, "b");
+        verify(mockPreparedStatement).setInt(2, 2);
+        verify(mockPreparedStatement, times(2)).addBatch();
+        verify(mockPreparedStatement, never()).close();
+    }
+
     @Test
     void testSetParameters_Object_SingleParameterBeanAndRecordStillBindProperty() throws SQLException {
         when(mockParsedSql.namedParameters()).thenReturn(ImmutableList.of("param1"));
@@ -1400,7 +1436,16 @@ class NamedQueryParameterBindingTest extends NamedQueryBindingTestSupport {
         }
     }
 
+    private static class TestEntityVariantA extends TestEntity {
+    }
+
+    private static class TestEntityVariantB extends TestEntity {
+    }
+
     public record SingleParamRecord(String param1) {
+    }
+
+    public record TwoParamRecord(String param1, int param2) {
     }
 
     public static class RegisteredMoney {

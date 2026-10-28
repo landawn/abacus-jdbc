@@ -93,6 +93,148 @@ public final class DaoUtil {
     }
 
     /**
+     * A value to be bound with a given type (that of the entity property it is written to or compared with) instead of the
+     * type of its runtime class, e.g. an enum id stored as its ordinal. It is passed to the query builder as an ordinary
+     * value, so that it keeps its position among the built statement's parameters, and the DAO implementation binds it with
+     * that type. Deliberately not a bean or record: the builder must not read it as one.
+     */
+    @Internal
+    public static final class TypedParameter {
+        private final Object value;
+        // transient: a DAO cache key serialized with Kryo holds a condition's values, not the types they are bound with.
+        private final transient com.landawn.abacus.type.Type<Object> type;
+
+        private TypedParameter(final Object value, final com.landawn.abacus.type.Type<Object> type) {
+            this.value = value;
+            this.type = type;
+        }
+
+        /**
+         * Returns the value wrapped to be bound with the property's type, or the value itself (bound by its runtime class) when
+         * it is not an instance of the property's class: the property type would reject it, e.g. a {@code Long} given for an
+         * {@code int} property.
+         *
+         * @param value the value
+         * @param propInfo the property the value is written to or compared with
+         * @return the wrapped value, or {@code value}
+         */
+        public static Object of(final Object value, final PropInfo propInfo) {
+            return value == null || ClassUtil.wrap(propInfo.clazz).isInstance(value) ? new TypedParameter(value, propInfo.dbType) : value;
+        }
+
+        /**
+         * Returns the wrapped value (not named as a getter: this must not read as a bean property).
+         *
+         * @return the value
+         */
+        Object value() {
+            return value;
+        }
+
+        /**
+         * Binds the value to the statement parameter with the property's type.
+         *
+         * @param stmt the statement
+         * @param parameterIndex the 1-based parameter index
+         * @throws SQLException if the driver fails to bind the value
+         */
+        public void setTo(final PreparedStatement stmt, final int parameterIndex) throws SQLException {
+            type.set(stmt, parameterIndex, value);
+        }
+
+        @Override
+        public String toString() {
+            return String.valueOf(value);
+        }
+    }
+
+    /**
+     * Returns the value an id property is compared with: wrapped to be bound with the property's type (see
+     * {@link TypedParameter}) when {@code entityInfo} is given and declares the property, otherwise the value itself.
+     */
+    private static Object idValue(final Object value, final String idPropName, final BeanInfo entityInfo) {
+        final PropInfo propInfo = entityInfo == null ? null : entityInfo.getPropInfo(idPropName);
+
+        return propInfo == null ? value : TypedParameter.of(value, propInfo);
+    }
+
+    /**
+     * Builds the condition the upsert family matches a row with: {@code name = ?} for each of {@code matchPropNames}, with the
+     * entity's value bound with the property's type (see {@link TypedParameter}), and {@code name IS NULL} for a {@code null}
+     * value, the documented upsert match of a null key. Each name must be a property of the entity's class: a nested property
+     * path (such as {@code "address.street"}) is rejected, since it is not a column of the entity's table and would be rendered
+     * into the SQL as a qualified name.
+     *
+     * <p>WHY: {@code Filters.allEqual} binds each value by its runtime class, so an ID or match property with a custom
+     * {@code @Type} (an enum stored as its ordinal) failed to convert, or on a lenient database compared with another value.</p>
+     *
+     * @param entity the entity holding the values to match
+     * @param matchPropNames the properties to match, as the SQL builder renders them (canonical names)
+     * @return the condition
+     * @throws IllegalArgumentException if {@code entity} is {@code null}, {@code matchPropNames} is {@code null} or empty, or a
+     *                                  name is not a property of the entity's class (including a nested property path)
+     */
+    static Condition typedAllEqual(final Object entity, final Collection<String> matchPropNames) throws IllegalArgumentException {
+        N.checkArgNotNull(entity, cs.entity);
+        N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
+
+        final BeanInfo entityInfo = ParserUtil.getBeanInfo(entity.getClass());
+        final List<Condition> conditions = new ArrayList<>(matchPropNames.size());
+
+        for (final String propName : matchPropNames) {
+            final PropInfo propInfo = entityInfo.getPropInfo(propName);
+
+            // WHY no nested paths: Filters.allEqual read "address.street" through the nested bean but rendered it as a
+            // qualified column, so the lookup failed in the database ("Column ADDRESS.STREET not found").
+            N.checkArgument(propInfo != null, "No property found with name: %s in class: %s", propName, ClassUtil.getCanonicalClassName(entity.getClass()));
+
+            conditions.add(typedEqual(propName, propInfo.getPropValue(entity), propInfo));
+        }
+
+        return Filters.and(conditions);
+    }
+
+    /**
+     * Builds the condition {@code batchUpsert} looks up the rows of a chunk of composite match keys with: an {@code OR} over the
+     * keys of {@code AND}ed equalities, typed and {@code null}-rendered as by {@link #typedAllEqual(Object, Collection)}. Every
+     * key carries every match property, so unlike {@link #entityIdToCondition(EntityId, List, BeanInfo)} a key is never
+     * incomplete.
+     *
+     * @param ids the match keys, each holding every match property (by canonical name) and its value
+     * @param entityInfo the bean info of the entity, whose property types the values are bound with
+     * @return the condition
+     * @throws IllegalArgumentException if {@code ids} is {@code null} or empty, or holds a {@code null} or empty key
+     */
+    static Condition typedAnyOfAllEqual(final Collection<? extends EntityId> ids, final BeanInfo entityInfo) throws IllegalArgumentException {
+        N.checkArgNotEmpty(ids, cs.ids);
+
+        final List<Condition> keyConditions = new ArrayList<>(ids.size());
+
+        for (final EntityId id : ids) {
+            N.checkArgument(id != null && !id.isEmpty(), "An element of 'ids' is null or has no keys");
+
+            final List<Condition> conditions = new ArrayList<>(id.size());
+
+            for (final Map.Entry<String, Object> entry : id.entrySet()) {
+                conditions.add(typedEqual(entry.getKey(), entry.getValue(), entityInfo == null ? null : entityInfo.getPropInfo(entry.getKey())));
+            }
+
+            keyConditions.add(Filters.and(conditions));
+        }
+
+        return Filters.or(keyConditions);
+    }
+
+    /**
+     * Returns {@code name = ?} with the value bound with the property's type, or {@code name IS NULL} for a {@code null} value:
+     * a {@code null} is left unwrapped, since a wrapped one would render {@code = ?} and bind SQL {@code NULL}, which matches no
+     * row.
+     */
+    private static Condition typedEqual(final String propName, final Object value, final PropInfo propInfo) {
+        return Filters.eq(propName, value == null || propInfo == null ? value : TypedParameter.of(value, propInfo));
+    }
+
+    /**
      * Returns whether the specified DAO interface supports DAO result caching.
      *
      * @param daoInterface the DAO interface to inspect.
@@ -399,8 +541,8 @@ public final class DaoUtil {
      * Builds the {@code WHERE} condition selecting the rows whose IDs are contained in the given (sub-)collection,
      * dispatching on the shape of the IDs: a single-column id (rendered as an {@code IN} clause with an {@code IS NULL}
      * branch when needed), or composite ids given as {@link EntityId}s, {@link Map}s or id beans/records (each matched
-     * on every declared id property, see {@link #entityIdToCondition(EntityId, List)} and
-     * {@link #compositeIdToCondition(Object, List)}). Shared by
+     * on every declared id property, see {@link #entityIdToCondition(EntityId, List, BeanInfo)} and
+     * {@link #compositeIdToCondition(Object, List, BeanInfo)}). Shared by
      * {@link CrudReadOps#batchGet(Collection, Collection, int)} and
      * {@link CrudReadOps#count(Collection)}.
      *
@@ -408,22 +550,26 @@ public final class DaoUtil {
      * @param idPropNameList the id property names of the entity
      * @param isEntityId whether the IDs are {@link EntityId} instances
      * @param isMap whether the IDs are {@link Map} instances
+     * @param entityInfo the bean info of the entity, whose id property types the id values are bound with (WHY: bound by
+     *        their runtime class, an id with a custom {@code @Type}, e.g. an enum stored as its ordinal, matched no row or
+     *        failed to convert); {@code null} to bind them by their runtime class
      * @return a condition matching any row whose id is in {@code ids}, or {@code null} if no row can match because, for
      *         composite ids, no element holds a non-null value for every name of {@code idPropNameList} (the callers skip
      *         such a batch without querying)
-     * @throws IllegalArgumentException if {@code ids} or {@code idPropNameList} is empty; if {@code isEntityId} and an element
+     * @throws IllegalArgumentException if {@code ids} or {@code idPropNameList} is {@code null} or empty; if {@code isEntityId} and an element
      *                                  is {@code null}, is not an {@link EntityId} or is an {@link EntityId} with no keys; if
      *                                  {@code isMap} and a non-null element is not a {@link Map}; if {@code idPropNameList}
      *                                  holds more than one name and a non-null element is a {@link Map} while {@code isMap} is
      *                                  {@code false}, is not a bean or record, or lacks a declared id property, or every
      *                                  element of {@code ids} is {@code null}
      */
-    static Condition idsToCondition(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap)
-            throws IllegalArgumentException {
+    static Condition idsToCondition(final Collection<?> ids, final List<String> idPropNameList, final boolean isEntityId, final boolean isMap,
+            final BeanInfo entityInfo) throws IllegalArgumentException {
         N.checkArgNotEmpty(ids, cs.ids);
+        N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
 
         if (!isEntityId && !isMap && idPropNameList.size() == 1) {
-            return singlePropValuesToCondition(idPropNameList.get(0), ids);
+            return singlePropValuesToCondition(idPropNameList.get(0), ids, entityInfo);
         }
 
         // WHY: Filters.idToCond(Collection) matched each EntityId on the keys it CONTAINS, so an id lacking a declared id
@@ -433,8 +579,6 @@ public final class DaoUtil {
         // NULL for it and match none. Each id is now matched on every declared id property; one that can match no row is
         // left out, and a batch of only such ids yields null, which the callers skip without a query (Filters.alwaysFalse()
         // is deprecated in abacus-query).
-        N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
-
         final List<Condition> conditions = new ArrayList<>(ids.size());
         boolean hasNonNullId = isEntityId; // a null EntityId element is rejected by entityIdToCondition, not skipped.
 
@@ -447,7 +591,7 @@ public final class DaoUtil {
                 N.checkArgNotNull(id, cs.id);
                 N.checkArgument(id instanceof EntityId, "All elements of 'ids' must be EntityIds when the first non-null one is, but found: %s", id.getClass());
 
-                idCond = entityIdToCondition((EntityId) id, idPropNameList);
+                idCond = entityIdToCondition((EntityId) id, idPropNameList, entityInfo);
             } else if (id == null) {
                 // batchGet/count drop null Map/bean ids before chunking (Filters.anyOfAllEqual skipped them as well).
                 continue;
@@ -457,7 +601,7 @@ public final class DaoUtil {
                                 : "All non-null elements of 'ids' must be beans or records when the first non-null one is, but found: %s",
                         id.getClass());
 
-                idCond = compositeIdToCondition(id, idPropNameList);
+                idCond = compositeIdToCondition(id, idPropNameList, entityInfo);
                 hasNonNullId = true;
             }
 
@@ -473,7 +617,7 @@ public final class DaoUtil {
 
     /**
      * Validates composite ids before {@link CrudReadOps#batchGet(Collection, Collection, int)} and
-     * {@link CrudReadOps#count(Collection)} de-duplicate them, with the rules {@link #idsToCondition(Collection, List, boolean, boolean)}
+     * {@link CrudReadOps#count(Collection)} de-duplicate them, with the rules {@link #idsToCondition(Collection, List, boolean, boolean, BeanInfo)}
      * applies per chunk. WHY: an invalid id (an empty {@link EntityId}, a bean whose class lacks a declared id property) can
      * share its de-duplication key with a valid one and was then dropped silently, so whether it was rejected depended on
      * the order of {@code ids}.
@@ -536,7 +680,7 @@ public final class DaoUtil {
 
     /**
      * Builds the condition matching the row a composite id given as a {@link Map} (keyed by id property name) or as an id
-     * bean/record identifies, under the rule of {@link #entityIdToCondition(EntityId, List)}: every DECLARED id property
+     * bean/record identifies, under the rule of {@link #entityIdToCondition(EntityId, List, BeanInfo)}: every DECLARED id property
      * is compared ({@code name = ?}), an id that holds {@code null} for one, or a {@code Map} that lacks one, matches no
      * row ({@code null} is returned), and {@code Map} keys or bean properties beyond the declared id properties are
      * ignored, as the single-id lookups ignore them.
@@ -548,12 +692,14 @@ public final class DaoUtil {
      *
      * @param id the composite id: a {@link Map} or a bean/record exposing the declared id properties
      * @param idPropNameList the declared id property names of the entity
+     * @param entityInfo the bean info of the entity, whose id property types the id values are bound with; {@code null} to
+     *        bind them by their runtime class
      * @return the condition, or {@code null} if {@code id} matches no row
      * @throws IllegalArgumentException if {@code id} is {@code null}, or is neither a {@link Map} nor a bean or record, or
      *                                  is a bean or record that does not expose a declared id property; or if
      *                                  {@code idPropNameList} is {@code null} or empty
      */
-    static Condition compositeIdToCondition(final Object id, final List<String> idPropNameList) throws IllegalArgumentException {
+    static Condition compositeIdToCondition(final Object id, final List<String> idPropNameList, final BeanInfo entityInfo) throws IllegalArgumentException {
         N.checkArgNotNull(id, cs.id);
         N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
 
@@ -567,7 +713,7 @@ public final class DaoUtil {
                     return null;
                 }
 
-                conditions.add(Filters.eq(idPropName, idPropValue));
+                conditions.add(Filters.eq(idPropName, idValue(idPropValue, idPropName, entityInfo)));
             }
         } else {
             final Class<?> idClass = id.getClass();
@@ -584,7 +730,7 @@ public final class DaoUtil {
                     return null;
                 }
 
-                conditions.add(Filters.eq(idPropName, idPropValue));
+                conditions.add(Filters.eq(idPropName, idValue(idPropValue, idPropName, entityInfo)));
             }
         }
 
@@ -606,11 +752,14 @@ public final class DaoUtil {
      *
      * @param entityId the composite id
      * @param idPropNameList the declared id property names of the entity
+     * @param entityInfo the bean info of the entity, whose id property types the id values are bound with; {@code null} to
+     *        bind them by their runtime class
      * @return the condition, or {@code null} if {@code entityId} matches no row
      * @throws IllegalArgumentException if {@code entityId} is {@code null} or has no keys, or {@code idPropNameList} is
      *                                  {@code null} or empty
      */
-    static Condition entityIdToCondition(final EntityId entityId, final List<String> idPropNameList) throws IllegalArgumentException {
+    static Condition entityIdToCondition(final EntityId entityId, final List<String> idPropNameList, final BeanInfo entityInfo)
+            throws IllegalArgumentException {
         N.checkArgNotNull(entityId, cs.entityId);
         N.checkArgument(!entityId.isEmpty(), "The specified 'entityId' has no keys");
         N.checkArgNotEmpty(idPropNameList, cs.idPropNameList);
@@ -624,7 +773,7 @@ public final class DaoUtil {
                 return null;
             }
 
-            conditions.add(Filters.eq(idPropName, idPropValue));
+            conditions.add(Filters.eq(idPropName, idValue(idPropValue, idPropName, entityInfo)));
         }
 
         return Filters.and(conditions);
@@ -637,15 +786,25 @@ public final class DaoUtil {
      *
      * @param propName the property to match
      * @param values the non-empty values to match
+     * @param entityInfo the bean info of the entity, whose property type the values are bound with; {@code null} to bind them
+     *        by their runtime class
      * @return an {@code IN}, {@code IS NULL}, or combined {@code OR} condition as appropriate
      * @throws IllegalArgumentException if {@code propName} or {@code values} is {@code null} or empty.
      */
-    static Condition singlePropValuesToCondition(final String propName, final Collection<?> values) throws IllegalArgumentException {
+    static Condition singlePropValuesToCondition(final String propName, final Collection<?> values, final BeanInfo entityInfo) throws IllegalArgumentException {
         N.checkArgNotEmpty(propName, cs.propName);
         N.checkArgNotEmpty(values, cs.values);
 
-        final List<Object> nonNullValues = new ArrayList<>(values);
-        final boolean containsNull = nonNullValues.removeIf(value -> value == null);
+        final List<Object> nonNullValues = new ArrayList<>(values.size());
+        boolean containsNull = false;
+
+        for (final Object value : values) {
+            if (value == null) {
+                containsNull = true;
+            } else {
+                nonNullValues.add(idValue(value, propName, entityInfo));
+            }
+        }
 
         if (!containsNull) {
             return Filters.in(propName, nonNullValues);
@@ -928,7 +1087,8 @@ public final class DaoUtil {
      * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
      *         names added; {@code null} or empty selections are returned unchanged because they select all default properties.
      * @throws NullPointerException if {@code dao} is {@code null} and {@code sourceSelectPropNames} is not empty
-     * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid, or a requested join entity class is {@code null}
+     * @throws IllegalArgumentException if {@code sourceSelectPropNames} is not empty and the join metadata it needs is invalid or
+     *                                  {@code joinEntityClass} is {@code null}
      */
     @SuppressWarnings("deprecation")
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
@@ -965,9 +1125,10 @@ public final class DaoUtil {
      * @return {@code sourceSelectPropNames} (possibly unchanged) with the required source join property
      *         names added; returned unchanged if the selection is {@code null} or empty (all default properties),
      *         or {@code joinEntityClasses} is empty.
-     * @throws NullPointerException if {@code dao} is {@code null}, {@code sourceSelectPropNames} is not empty and {@code joinEntityClasses}
-     *                              is not empty
-     * @throws IllegalArgumentException if metadata needed for a nonempty source selection is invalid, or a requested join entity class is {@code null}
+     * @throws NullPointerException if {@code dao} is {@code null} while both {@code sourceSelectPropNames} and {@code joinEntityClasses}
+     *                              are not empty
+     * @throws IllegalArgumentException if both {@code sourceSelectPropNames} and {@code joinEntityClasses} are not empty and the join
+     *                                  metadata they need is invalid or {@code joinEntityClasses} contains a {@code null} element
      */
     static Collection<String> includeSourceJoinPropNames(final JoinEntityBase<?, ?> dao, final Collection<String> sourceSelectPropNames,
             final Collection<Class<?>> joinEntityClasses) throws NullPointerException, IllegalArgumentException {

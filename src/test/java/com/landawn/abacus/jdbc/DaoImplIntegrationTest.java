@@ -1015,6 +1015,48 @@ public class DaoImplIntegrationTest extends TestBase {
         assertNotNull(JdbcUtil.createDao(CompositeRefreshDao.class, ds));
     }
 
+    @Table("field_only_account")
+    public static class FieldOnlyAccount {
+        @Id
+        public long id;
+        public String name;
+    }
+
+    public interface FieldOnlyAccountDao extends CrudDao<FieldOnlyAccount, Long, FieldOnlyAccountDao> {
+    }
+
+    public interface MismatchedFieldOnlyIdDao extends CrudDao<FieldOnlyAccount, String, MismatchedFieldOnlyIdDao> {
+    }
+
+    // An entity whose id property is a public field without a getter (a bean property for Beans.isBeanClass) failed CrudDao
+    // creation with a NullPointerException while the declared 'ID' type was checked against the id property's type.
+    @Test
+    public void testCreateDao_FieldOnlyIdPropertyIsCheckedAndUsable() throws SQLException {
+        try (Connection conn = ds.getConnection();
+             Statement st = conn.createStatement()) {
+            st.execute("CREATE TABLE IF NOT EXISTS field_only_account (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(64))");
+        }
+
+        try {
+            final FieldOnlyAccountDao fieldOnlyDao = JdbcUtil.createDao(FieldOnlyAccountDao.class, ds);
+            final FieldOnlyAccount account = new FieldOnlyAccount();
+            account.name = "field";
+
+            final Long id = fieldOnlyDao.insert(account);
+            assertEquals(id.longValue(), account.id);
+            assertEquals("field", fieldOnlyDao.getOrNull(id).name);
+
+            // The declared 'ID' type is still checked against the field's type.
+            final IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> JdbcUtil.createDao(MismatchedFieldOnlyIdDao.class, ds));
+            assertTrue(e.getMessage().contains("is not assignable from the id property type: long"), e.getMessage());
+        } finally {
+            try (Connection conn = ds.getConnection();
+                 Statement st = conn.createStatement()) {
+                st.execute("DROP TABLE IF EXISTS field_only_account");
+            }
+        }
+    }
+
     // An INSERT into another table from a DAO whose entity has a long id was rejected at creation for an int return type;
     // its int key, read with the entity's id type (Long), is returned as the declared type.
     public interface AuditLogDao extends Dao<UserAccount, AuditLogDao> {

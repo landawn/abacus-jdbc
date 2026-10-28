@@ -47,7 +47,8 @@ import com.landawn.abacus.util.Throwables;
  *
  * <p>Statement creation and configuration expose checked {@link SQLException}s. Acquiring a connection
  * from the data source can fail with {@link UncheckedSQLException} before
- * a statement is created. The unchecked hierarchy translates the checked failures as well.</p>
+ * a statement is created; connection acquisition through Spring instead propagates {@code CannotGetJdbcConnectionException}.
+ * The unchecked hierarchy translates the checked failures as well.</p>
  *
  * <p>Asynchronous DAO actions are exposed through {@link #callAsync(Throwables.Function)} and
  * {@link #runAsync(Throwables.Consumer)}. Their returned futures should be observed so execution
@@ -150,7 +151,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -174,7 +176,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      * @see Filters
      */
@@ -202,7 +205,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -219,7 +223,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      * @throws IllegalArgumentException if {@code sql} is {@code null} or empty
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
@@ -238,7 +243,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery configured for large results
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      * @see JdbcUtil#prepareQueryForLargeResult(javax.sql.DataSource, String)
      */
@@ -257,7 +263,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a PreparedQuery configured for large results
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -287,7 +294,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -307,7 +315,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -325,7 +334,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -343,7 +353,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery instance for the SELECT statement
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -361,7 +372,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -380,7 +392,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *                                  or if {@code namedSql} contains positional (unnamed) parameters
      * @throws UnsupportedOperationException if invoked on a read-only DAO with non-SELECT SQL,
      *                                       or on a non-update DAO with SQL other than SELECT/INSERT
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -398,7 +411,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery configured for large results
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta
@@ -416,7 +430,8 @@ public sealed interface DaoBase<T, TD extends DaoBase<T, TD>> permits ReadOps, I
      *             (may include {@code WHERE}, {@code ORDER BY}, {@code LIMIT}, etc.)
      * @return a NamedQuery configured for large results
      * @throws IllegalArgumentException if {@code cond} is {@code null}
-     * @throws UncheckedSQLException if acquiring a required database connection fails
+     * @throws UncheckedSQLException if direct (non-Spring) acquisition of a required database connection fails.
+     *         Spring acquisition failures instead propagate as {@code CannotGetJdbcConnectionException}.
      * @throws SQLException if preparing or configuring the SQL statement fails
      */
     @Beta

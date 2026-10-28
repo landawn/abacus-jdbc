@@ -277,7 +277,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Whether this query has been closed. Execution and other guarded operations reject this state;
-     * parameter-binding methods leave closed-statement checks to JDBC. The field is {@code volatile}
+     * most parameter-binding methods leave closed-statement checks to JDBC. The field is {@code volatile}
      * so asynchronous executions observe the state without locking.
      */
     volatile boolean isClosed = false;
@@ -291,8 +291,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * The transaction this query was prepared in, from a data source and on the transaction's connection, or {@code null}: it
-     * then runs only on the transaction's thread and, unless the transaction participates in a Spring-managed one, only until
-     * the transaction completes and releases its connection. Set by {@code JdbcUtil}.
+     * then runs only on the transaction's thread, and only until the transaction completes and releases its connection (for a
+     * transaction participating in a Spring-managed one, whose connection Spring keeps: until that Spring-managed transaction
+     * starts completing). Set by {@code JdbcUtil}.
      */
     volatile TransactionContext transaction;
 
@@ -386,7 +387,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param closeHandler a task to execute after this query is closed
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query is already closed
-     * @throws IllegalArgumentException if {@code closeHandler} is {@code null}
+     * @throws IllegalArgumentException if {@code closeHandler} is {@code null}; this query is then closed (running the handlers
+     *         already registered) before the exception is thrown
      */
     @SuppressWarnings("hiding")
     public This onClose(final Runnable closeHandler) throws IllegalStateException, IllegalArgumentException {
@@ -1984,7 +1986,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * <pre>{@code
      * String text = Files.readString(Path.of("large_text.txt"), StandardCharsets.UTF_8);
      * try (Reader reader = new StringReader(text)) {
-     *     query.setCharacterStream(1, reader, text.length()).execute();
+     *     query.setCharacterStream(1, reader, (long) text.length()).execute();   // the cast selects this overload
      * }
      * }</pre>
      *
@@ -3105,7 +3107,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets multiple parameters from a typed Collection starting from index 1.
-     * This method ensures type safety when setting parameters.
+     * Every element, including a {@code null} one, is bound through the Abacus {@link Type} of {@code type},
+     * not the type of the element's runtime class.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3376,7 +3379,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Sets multiple parameters from a typed Collection starting from the specified index.
-     * This method ensures type safety when setting parameters.
+     * Every element, including a {@code null} one, is bound through the Abacus {@link Type} of {@code type},
+     * not the type of the element's runtime class.
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3534,7 +3538,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setBooleanForIndices(true, 1, 3, 5, 7);
      * }</pre>
      *
-     * @param value the Boolean value to set
+     * @param value the Boolean value to set, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3561,7 +3565,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setIntForIndices(0, 2, 5, 8);
      * }</pre>
      *
-     * @param value the Integer value to set
+     * @param value the Integer value to set, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3626,7 +3630,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setLongForIndices(System.currentTimeMillis(), 2, 4, 6);
      * }</pre>
      *
-     * @param value the Long value to set
+     * @param value the Long value to set, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3652,7 +3656,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDoubleForIndices(0.0, 1, 3, 5, 7);
      * }</pre>
      *
-     * @param value the Double value to set
+     * @param value the Double value to set, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3678,7 +3682,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setStringForIndices("N/A", 2, 4, 6, 8);
      * }</pre>
      *
-     * @param value the String value to set
+     * @param value the String value to set, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3705,7 +3709,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDateForIndices(today, 1, 3, 5);
      * }</pre>
      *
-     * @param value the Date value to set
+     * @param value the Date value to set, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3732,7 +3736,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setDateForIndices(now, 2, 4, 6);
      * }</pre>
      *
-     * @param value the Date value to set
+     * @param value the Date value to set, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3759,7 +3763,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimeForIndices(noon, 1, 3, 5);
      * }</pre>
      *
-     * @param value the Time value to set
+     * @param value the Time value to set, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3786,7 +3790,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimeForIndices(time, 2, 4, 6);
      * }</pre>
      *
-     * @param value the Date value to set as Time
+     * @param value the Date value to set as Time, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3813,7 +3817,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestampForIndices(ts, 1, 3, 5, 7);
      * }</pre>
      *
-     * @param value the Timestamp value to set
+     * @param value the Timestamp value to set, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3840,7 +3844,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setTimestampForIndices(now, 2, 4, 6, 8);
      * }</pre>
      *
-     * @param value the Date value to set as Timestamp
+     * @param value the Date value to set as Timestamp, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalArgumentException if {@code parameterIndices} is null/empty or contains a non-positive index
@@ -3871,7 +3875,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * query.setObjectForIndices(defaultId, 1, 3, 5, 7);
      * }</pre>
      *
-     * @param value the Object value to set
+     * @param value the Object value to set as by {@link #setObject(int, Object)}, or {@code null} to set SQL {@code NULL}
      * @param parameterIndices the parameter positions to set
      * @return this AbstractQuery instance for method chaining
      * @throws IllegalStateException if this query is closed and a built-in stream or reader needs buffering
@@ -3880,7 +3884,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *         is closed, or the driver fails to bind the {@code value}; also if buffering fails, in which case this query is closed
      */
     @Beta
-    public This setObjectForIndices(final Object value, final int... parameterIndices) throws IllegalArgumentException, SQLException {
+    public This setObjectForIndices(final Object value, final int... parameterIndices) throws IllegalStateException, IllegalArgumentException, SQLException {
         checkParameterIndices(parameterIndices);
 
         if (parameterIndices.length > 1 && (value instanceof InputStream || value instanceof Reader)) {
@@ -4852,6 +4856,11 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * Configures this statement using a custom configuration function.
      * This allows for advanced statement configuration not covered by other methods.
      *
+     * <p>When this query is closed, it restores only the statement properties it changed through its own setters
+     * (such as {@link #setFetchSize(int)} and {@link #setQueryTimeout(int)}). A property changed only through
+     * {@code stmtSetter} keeps its new value, which a driver or pool that caches statements may carry over to
+     * later users of the same statement.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * final Throwables.Consumer<PreparedStatement, SQLException> commonConfig = stmt -> {
@@ -4890,6 +4899,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
 
     /**
      * Configures this statement using a BiConsumer that has access to both the query and statement.
+     *
+     * <p>Statement properties changed through this query's setters (as {@code q.setFetchSize(100)} below) are restored
+     * when this query is closed; a property changed only directly on the statement argument keeps its new value.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -7365,8 +7377,8 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A list of objects of the specified type, where each object represents a row in the result set.
      *         Returns an empty list if no rows are found.
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} is null; also if a returned row has an unmapped bean column or a scalar target has
-     *         other than one column
+     * @throws IllegalArgumentException if {@code targetType} is null or a bean class with invalid property metadata (this query is then
+     *         closed); also if a returned row has an unmapped bean column or a scalar target has other than one column
      * @throws SQLException if executing the query or reading the column labels or row values fails; also if closing a consumed result set fails
      * @see #list(Jdbc.RowMapper)
      * @see #stream(Class)
@@ -7376,7 +7388,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
 
-        return list(Jdbc.BiRowMapper.to(targetType));
+        return list(rowMapperOrClose(targetType));
     }
 
     /**
@@ -7394,8 +7406,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param maxResult the maximum number of results to return
      * @return A list of objects of the specified type, limited by maxResult
      * @throws IllegalStateException if this query is closed
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}, or {@code maxResult} is negative; also if a returned row has an
-     *         unmapped bean column or a scalar target has other than one column
+     * @throws IllegalArgumentException if {@code targetType} is {@code null} or a bean class with invalid property metadata, or
+     *         {@code maxResult} is negative (this query is then closed); also if a returned row has an unmapped bean column or a scalar
+     *         target has other than one column
      * @throws SQLException if executing the query or reading the column labels or row values fails; also if closing a consumed result set fails
      * @deprecated The result size should be limited on the database server side by SQL scripts (e.g., LIMIT clause).
      *             Use SQL's LIMIT/TOP/ROWNUM instead for better performance.
@@ -7406,7 +7419,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         checkArgNotNull(targetType, cs.targetType);
         checkArgument(maxResult >= 0, "'maxResult' can't be negative: " + maxResult);
 
-        return list(Jdbc.BiRowMapper.to(targetType), maxResult);
+        return list(rowMapperOrClose(targetType), maxResult);
     }
 
     /**
@@ -8423,8 +8436,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @param targetType the class to map each row to. Must not be {@code null}.
      * @return A lazy-evaluated Stream of the specified type
      * @throws IllegalStateException if this query is closed when the stream is created or before its deferred execution begins
-     * @throws IllegalArgumentException if {@code targetType} is {@code null}, or if stream consumption encounters
-     *         an unmapped bean column or a scalar target with other than one column
+     * @throws IllegalArgumentException if {@code targetType} is {@code null} or a bean class with invalid property metadata
+     *         (this query is then closed), or if stream consumption encounters an unmapped bean column or a scalar target
+     *         with other than one column
      * @throws UncheckedSQLException if executing or traversing the returned stream fails with a database access error,
      *         or mapping a row throws {@code SQLException}
      * @see #stream(Jdbc.RowMapper)
@@ -8435,7 +8449,27 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         assertNotClosed();
         checkArgNotNull(targetType, cs.targetType);
 
-        return stream(Jdbc.BiRowMapper.to(targetType));
+        return stream(rowMapperOrClose(targetType));
+    }
+
+    /**
+     * Creates the {@link Jdbc.BiRowMapper#to(Class)} row mapper for a {@code Class}-based result method, closing this query
+     * if that fails.
+     *
+     * @param <T> the target type
+     * @param targetType the class to map each row to
+     * @return the row mapper
+     * @throws IllegalArgumentException if {@code targetType} is a bean class with invalid property metadata; this query is then closed
+     */
+    final <T> Jdbc.BiRowMapper<T> rowMapperOrClose(final Class<? extends T> targetType) throws IllegalArgumentException {
+        try {
+            // Resolves bean metadata eagerly: an invalid bean class fails here, before execution (and before any stream exists
+            // that the caller could close), so release the query as for any other invalid argument.
+            return Jdbc.BiRowMapper.to(targetType);
+        } catch (final RuntimeException | Error primaryFailure) {
+            closeSuppressingFailure(primaryFailure);
+            throw primaryFailure;
+        }
     }
 
     /**
@@ -9941,7 +9975,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * set a fetch direction via {@link #setFetchDirection(FetchDirection)}, this method sets the
      * statement's fetch direction to {@link ResultSet#FETCH_FORWARD} before delegating to
      * {@link JdbcUtil#executeQuery(PreparedStatement)} (each call, until the user explicitly
-     * configures a fetch direction).</p>
+     * configures a fetch direction). Only {@code setFetchDirection(FetchDirection)} and
+     * {@code setFetchDirectionToForward()} count as explicit: a direction set directly on the statement (for example
+     * through {@code configureStatement}, or before the statement was wrapped) is overridden by this default.</p>
      *
      * <p>The returned {@code ResultSet} is owned by the caller and must be closed (typically
      * via try-with-resources) along with the surrounding cleanup performed by
@@ -10889,7 +10925,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if executing the statement fails, or the statement produces a {@code ResultSet}
      * @throws UnsupportedOperationException if the JDBC driver does not implement
      *         {@link java.sql.PreparedStatement#executeLargeUpdate()} (the JDBC 4.2 default implementation
-     *         throws it); use {@link #update()} with such a driver
+     *         throws it); use {@link #update()} with such a driver. The statement is not executed in that case, but as
+     *         after any execution attempt, the parameters of a non-callable statement are cleared, so bind them again
+     *         before calling {@code update()} on a query kept open with {@code closeAfterExecution(false)}
      * @see #update()
      * @see #largeBatchUpdate()
      */
@@ -10934,7 +10972,9 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws SQLException if executing the batch fails, including when any command in the batch fails
      * @throws UnsupportedOperationException if the JDBC driver does not implement
      *         {@link java.sql.Statement#executeLargeBatch()} (the JDBC 4.2 default implementation throws it);
-     *         use {@link #batchUpdate()} with such a driver
+     *         use {@link #batchUpdate()} with such a driver. The batch is not executed in that case, but its entries
+     *         are still cleared, so add them again before calling {@code batchUpdate()} on a query kept open with
+     *         {@code closeAfterExecution(false)}: on the same query it would otherwise run an empty batch
      * @see #batchUpdate()
      * @see #largeUpdate()
      */

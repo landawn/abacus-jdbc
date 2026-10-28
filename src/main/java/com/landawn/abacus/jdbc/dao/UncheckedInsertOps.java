@@ -114,7 +114,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
-     *         binding, or executing an INSERT statement fails
+     *         binding, or executing an INSERT statement fails. With more than one element, the transaction is begun first and a Spring
+     *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      * @see #batchSave(Collection, int)
      * @throws IllegalArgumentException if a batch row is {@code null} and the SQL has other than one parameter,
      *         or a batch entity lacks a property required by the named SQL parameters
@@ -148,7 +149,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
-     *         binding, or executing an INSERT statement fails
+     *         binding, or executing an INSERT statement fails. With more than one element, the transaction is begun first and a Spring
+     *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      */
     @Override
     void batchSave(final Collection<? extends T> entities, final int batchSize) throws IllegalArgumentException, IllegalStateException, UncheckedSQLException;
@@ -174,7 +176,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
-     *         binding, or executing an INSERT statement fails
+     *         binding, or executing an INSERT statement fails. With more than one element, the transaction is begun first and a Spring
+     *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      */
     @Override
     default void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave)
@@ -206,7 +209,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
-     *         binding, or executing an INSERT statement fails
+     *         binding, or executing an INSERT statement fails. With more than one element, the transaction is begun first and a Spring
+     *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      */
     @Override
     void batchSave(final Collection<? extends T> entities, final Collection<String> propNamesToSave, final int batchSize)
@@ -237,7 +241,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
-     *         binding, or executing an INSERT statement fails
+     *         binding, or executing an INSERT statement fails. With more than one element, the transaction is begun first and a Spring
+     *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      */
     @Beta
     @Override
@@ -274,7 +279,8 @@ sealed interface UncheckedInsertOps<T, TD extends UncheckedDaoBase<T, TD>> exten
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or preparing,
-     *         binding, or executing an INSERT statement fails
+     *         binding, or executing an INSERT statement fails. With more than one element, the transaction is begun first and a Spring
+     *         acquisition failure is not translated: it propagates as {@code CannotGetJdbcConnectionException} (see {@link UncheckedDao})
      */
     @Beta
     @Override

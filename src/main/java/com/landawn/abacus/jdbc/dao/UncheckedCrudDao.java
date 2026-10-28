@@ -127,9 +127,12 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @param entity the entity to insert or update (must not be {@code null})
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null}, or an existing row is updated and {@code entity}
-     *                                  has a property the loaded entity does not
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing the transaction scope (inside a
-     *         transaction) fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
+     *                                  has a non-ID property the loaded entity does not
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing the transaction scope (inside a transaction),
+     *         or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails, or looking up
+     *         an existing row or executing the required INSERT or UPDATE statement fails. A Spring acquisition failure of the
+     *         connection for the INSERT (outside a transaction, when no existing row is found) is not translated and propagates as
+     *         {@code CannotGetJdbcConnectionException}.
      * @throws DuplicateResultException if more than one record matches the entity's ID property(ies)
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
      *         {@link #upsert(Object, Condition)})
@@ -177,11 +180,15 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      *            (a spelling the entity's property lookup accepts, such as the column name, is resolved to the property name)
      * @return the saved entity (the input entity if it was newly inserted; otherwise the merged existing entity that was updated)
      * @throws IllegalArgumentException if {@code entity} is {@code null} or {@code matchPropNames} is {@code null} or empty,
-     *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class,
-     *                                  or an existing row is updated and {@code entity} has a property the loaded
+     *                                  or if any name in {@code matchPropNames} is not a readable property of the entity class
+     *                                  (a nested property path such as {@code "address.street"} is not accepted),
+     *                                  or an existing row is updated and {@code entity} has a non-ID property the loaded
      *                                  entity does not
-     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing the transaction scope (inside a
-     *         transaction) fails, or looking up an existing row or executing the required INSERT or UPDATE statement fails
+     * @throws UncheckedSQLException if acquiring a connection fails, starting or completing the transaction scope (inside a transaction),
+     *         or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails, or looking up
+     *         an existing row or executing the required INSERT or UPDATE statement fails. A Spring acquisition failure of the
+     *         connection for the INSERT (outside a transaction, when no existing row is found) is not translated and propagates as
+     *         {@code CannotGetJdbcConnectionException}.
      * @throws DuplicateResultException if more than one record matches the specified {@code matchPropNames}
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
      *         {@link #upsert(Object, Condition)})
@@ -195,13 +202,14 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
         N.checkArgNotNull(entity, cs.entity);
         N.checkArgNotEmpty(matchPropNames, cs.matchPropNames);
 
-        // Filters.allEqual reads values through the lenient bean-info lookup but renders the raw name into SQL, so a spelling
+        // The bean-info lookup that reads the values is lenient but the name is rendered into SQL as given, so a spelling
         // such as "FIRSTNAME" would read the right value yet reference a non-existent column.
         // WHY: a null match value renders IS NULL on purpose, the rule batchUpsert documents as well. An upsert matches by
         // values and must be repeatable; the by-id rule (DaoUtil.entityIdToCondition: a null component matches no row) would
         // insert a duplicate on every upsert of an entity holding null for a nullable key column, as most databases allow
-        // several NULLs in a unique column. For NOT NULL key columns both rules match no row.
-        final Condition cond = Filters.allEqual(entity, DaoUtil.toCanonicalPropNames(entity, matchPropNames));
+        // several NULLs in a unique column. For NOT NULL key columns both rules match no row. The other values are bound with
+        // their property types (see DaoUtil.typedAllEqual).
+        final Condition cond = DaoUtil.typedAllEqual(entity, DaoUtil.toCanonicalPropNames(entity, matchPropNames));
 
         return upsert(entity, cond);
     }
@@ -211,6 +219,8 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * condition; otherwise copies the non-{@code null} non-id properties from {@code entity} into the existing record
      * (loaded via {@link #findOnlyOne(Condition)}) and updates it. A {@code null} property of {@code entity}
      * keeps the existing value, so an upsert cannot clear a column to {@code NULL}.
+     * ID properties are never assigned by this update. A complete ID addresses the loaded row using its declared
+     * database types; if an ID component is {@code null}, the update reuses {@code cond}, since nullable IDs need not be unique.
      * This allows for upsert logic based on any criteria, not just ID fields.
      *
      * <p>Inside a transaction on the DAO's data source, the lookup and the write run in one transaction scope: a nested scope of
@@ -245,10 +255,12 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return the saved entity: the inserted {@code entity} when no existing record was found,
      *         or the loaded database entity (with non-{@code null} non-id properties copied from {@code entity}) when an existing record was updated
      * @throws IllegalArgumentException if {@code entity} or {@code cond} is {@code null}, or an existing row is updated
-     *                                  and {@code entity} has a property the loaded entity does not
+     *                                  and {@code entity} has a non-ID property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing the transaction scope (inside a transaction),
      *         or telling whether a transaction is active (from the auto-commit mode of a Spring-bound connection), fails, or looking up
-     *         an existing row or executing the required INSERT or UPDATE statement fails
+     *         an existing row or executing the required INSERT or UPDATE statement fails. A Spring acquisition failure of the
+     *         connection for the INSERT (outside a transaction, when no existing row is found) is not translated and propagates as
+     *         {@code CannotGetJdbcConnectionException}.
      * @throws DuplicateResultException if more than one record matches the specified condition
      * @throws IllegalStateException if the call runs inside a Spring-managed transaction it cannot participate in (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
@@ -290,9 +302,11 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or an existing row is updated
-     *                                  and an entity has a property the loaded entity does not
+     *                                  and an entity has a non-ID property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
-     *         existing row or executing the required INSERT or UPDATE statement fails
+     *         existing row or executing the required INSERT or UPDATE statement fails. A Spring acquisition failure is not translated
+     *         and propagates as {@code CannotGetJdbcConnectionException} when the call opens its transaction first (more than one
+     *         entity, outside a transaction), or when acquiring the connection for inserting new entities fails.
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
      *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
@@ -329,9 +343,11 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @return a list of saved entities (both inserted and updated), in the same iteration order as
      *         {@code entities}; an empty list if {@code entities} is {@code null} or empty
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element, or if {@code batchSize} is not positive,
-     *                                  or an existing row is updated and an entity has a property the loaded entity does not
+     *                                  or an existing row is updated and an entity has a non-ID property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
-     *         existing row or executing the required INSERT or UPDATE statement fails
+     *         existing row or executing the required INSERT or UPDATE statement fails. A Spring acquisition failure is not translated
+     *         and propagates as {@code CannotGetJdbcConnectionException} when the call opens its transaction first (more than one
+     *         entity, outside a transaction), or when acquiring the connection for inserting new entities fails.
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
      *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
@@ -387,9 +403,11 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  if {@code matchPropNames} is {@code null} or empty, or if the entities are nonempty
      *                                  and a name in {@code matchPropNames} is not a property of the entity class,
-     *                                  or an existing row is updated and an entity has a property the loaded entity does not
+     *                                  or an existing row is updated and an entity has a non-ID property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
-     *         existing row or executing the required INSERT or UPDATE statement fails
+     *         existing row or executing the required INSERT or UPDATE statement fails. A Spring acquisition failure is not translated
+     *         and propagates as {@code CannotGetJdbcConnectionException} when the call opens its transaction first (more than one
+     *         entity, outside a transaction), or when acquiring the connection for inserting new entities fails.
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
      *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
@@ -413,7 +431,9 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * supplied unique properties) and those that do not. New entities are inserted via
      * {@link #batchInsert(Collection, int)}; existing entities are updated by copying the non-{@code null}, non-id
      * (and non-unique-key) properties from the input entity into the loaded database entity and
-     * calling {@link #batchUpdate(Collection, int)}. The lookups and the writes run in one transaction scope inside a
+     * calling {@link #batchUpdate(Collection, int)} for rows whose ID components are all non-{@code null}.
+     * Rows with a {@code null} ID component are updated individually using the original match properties, excluding
+     * ID columns from the assignments; a nullable ID alone need not uniquely identify a row. The lookups and the writes run in one transaction scope inside a
      * transaction, as for {@link #upsert(Object, Condition)}, and, outside one, for more than one entity, as other DAO batch
      * operations do (they used to run apart: the lookups before it, each on a connection of its own, and the writes in a
      * transaction only when both inserts and updates were needed or either set was large); a single entity outside a
@@ -453,9 +473,11 @@ public non-sealed interface UncheckedCrudDao<T, ID, TD extends UncheckedCrudDao<
      * @throws IllegalArgumentException if {@code entities} contains a {@code null} element,
      *                                  if {@code matchPropNames} is {@code null}/empty, if {@code batchSize} is not positive,
      *                                  or if the entities are nonempty and a name in {@code matchPropNames} is not a property of the entity class,
-     *                                  or an existing row is updated and an entity has a property the loaded entity does not
+     *                                  or an existing row is updated and an entity has a non-ID property the loaded entity does not
      * @throws UncheckedSQLException if acquiring a connection fails, starting or completing an internally required transaction fails, or looking up an
-     *         existing row or executing the required INSERT or UPDATE statement fails
+     *         existing row or executing the required INSERT or UPDATE statement fails. A Spring acquisition failure is not translated
+     *         and propagates as {@code CannotGetJdbcConnectionException} when the call opens its transaction first (more than one
+     *         entity, outside a transaction), or when acquiring the connection for inserting new entities fails.
      * @throws IllegalStateException if more than one existing record matches one entity's unique key,
      *                              or if the call runs inside a Spring-managed transaction it cannot participate in: the ownership of the Spring connection
      *                              holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its

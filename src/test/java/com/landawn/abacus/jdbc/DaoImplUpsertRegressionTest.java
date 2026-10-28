@@ -20,7 +20,9 @@ import com.landawn.abacus.TestBase;
 import com.landawn.abacus.annotation.Id;
 import com.landawn.abacus.annotation.Table;
 import com.landawn.abacus.jdbc.dao.CrudDao;
+import com.landawn.abacus.jdbc.dao.Dao;
 import com.landawn.abacus.jdbc.dao.UncheckedCrudDao;
+import com.landawn.abacus.jdbc.dao.UncheckedDao;
 import com.landawn.abacus.query.Filters;
 import com.landawn.abacus.util.EntityId;
 
@@ -122,6 +124,26 @@ class DaoImplUpsertRegressionTest extends TestBase {
         assertEquals(2, dao.count(Filters.expr("1 = 1")));
     }
 
+    public interface PlainNullableDao extends Dao<NullableRow, PlainNullableDao> {
+    }
+
+    public interface UncheckedPlainNullableDao extends UncheckedDao<NullableRow, UncheckedPlainNullableDao> {
+    }
+
+    // The base Dao updated the matched row by its ID properties: `tenant_id = 1 AND row_id IS NULL` also matched row 'b'.
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void plainDaoUpsertOfANullIdRowUpdatesOnlyTheMatchedRow(final boolean unchecked) throws SQLException {
+        execute("CREATE TABLE nullable_row(tenant_id BIGINT, row_id BIGINT, match_key VARCHAR, payload VARCHAR)");
+        execute("INSERT INTO nullable_row VALUES(1,NULL,'a','old-a'),(1,NULL,'b','old-b')");
+        final Dao<NullableRow, ?> dao = unchecked ? JdbcUtil.createDao(UncheckedPlainNullableDao.class, ds) : JdbcUtil.createDao(PlainNullableDao.class, ds);
+
+        dao.upsert(row(1L, null, "a", "new-a"), List.of("matchKey"));
+
+        assertEquals(List.of("a/new-a", "b/old-b"),
+                dao.list(Filters.expr("1 = 1 ORDER BY match_key")).stream().map(it -> it.getMatchKey() + "/" + it.getPayload()).toList());
+    }
+
     // Exercise the split between nullable IDs, ordinary batch updates and inserts, across batch boundaries.
     @ParameterizedTest
     @ValueSource(booleans = { false, true })
@@ -191,6 +213,28 @@ class DaoImplUpsertRegressionTest extends TestBase {
         dao.upsert(row);
 
         assertEquals("new", dao.get(1L).get().getName());
+    }
+
+    public interface PlainIdentityDao extends Dao<IdentityRow, PlainIdentityDao> {
+    }
+
+    public interface UncheckedPlainIdentityDao extends UncheckedDao<IdentityRow, UncheckedPlainIdentityDao> {
+    }
+
+    // The base Dao's update assigned the ID column its current value, which a generated identity rejects.
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    void plainDaoUpsertNeverAssignsAGeneratedIdentity(final boolean unchecked) throws SQLException {
+        execute("CREATE TABLE identity_row(id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name VARCHAR)");
+        execute("INSERT INTO identity_row(name) VALUES('old')");
+        final Dao<IdentityRow, ?> dao = unchecked ? JdbcUtil.createDao(UncheckedPlainIdentityDao.class, ds) : JdbcUtil.createDao(PlainIdentityDao.class, ds);
+        final IdentityRow row = new IdentityRow();
+        row.setId(1L);
+        row.setName("new");
+
+        dao.upsert(row, Filters.eq("name", "old"));
+
+        assertEquals("new", dao.findOnlyOne(Filters.eq("id", 1L)).get().getName());
     }
 
     public enum Level {

@@ -532,7 +532,7 @@ public final class cs { // NOSONAR
      */
     public static final String charset = "charset";
     /**
-     * Parameter name for SQL query strings used by paging/streaming helpers.
+     * Parameter name for the SQL query whose result columns define a generated entity class.
      */
     public static final String query = "query";
     /**

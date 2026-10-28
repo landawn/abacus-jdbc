@@ -146,12 +146,23 @@ public class CrudReadOpsTest extends TestBase {
         return dao;
     }
 
+    // The parameters of a chunk condition, unwrapped: its id values are bound with their property types (DaoUtil.TypedParameter).
+    private static List<Object> idParams(final Condition cond) {
+        final List<Object> result = new ArrayList<>();
+
+        for (final Object param : cond.parameters()) {
+            result.add(param instanceof final DaoUtil.TypedParameter typedParameter ? typedParameter.value() : param);
+        }
+
+        return result;
+    }
+
     // Stubs list(selectPropNames, cond) to return one entity per id carried by the chunk condition.
     private static void stubListByChunkIds(final IdAnnotatedCrudDao dao) throws SQLException {
         Mockito.doAnswer(inv -> {
             final Condition cond = inv.getArgument(1);
             final List<IdAnnotatedEntity> result = new ArrayList<>();
-            for (final Object id : cond.parameters()) {
+            for (final Object id : idParams(cond)) {
                 result.add(new IdAnnotatedEntity((Long) id));
             }
             return result;
@@ -229,9 +240,9 @@ public class CrudReadOpsTest extends TestBase {
         final ArgumentCaptor<Condition> condCaptor = ArgumentCaptor.forClass(Condition.class);
         verify(dao, Mockito.times(3)).list(ArgumentMatchers.eq(List.of("id")), condCaptor.capture());
         final List<Condition> chunks = condCaptor.getAllValues();
-        assertEquals(List.of(1L, 2L), chunks.get(0).parameters());
-        assertEquals(List.of(3L, 4L), chunks.get(1).parameters());
-        assertEquals(List.of(5L), chunks.get(2).parameters());
+        assertEquals(List.of(1L, 2L), idParams(chunks.get(0)));
+        assertEquals(List.of(3L, 4L), idParams(chunks.get(1)));
+        assertEquals(List.of(5L), idParams(chunks.get(2)));
     }
 
     @Test
@@ -255,7 +266,7 @@ public class CrudReadOpsTest extends TestBase {
         assertEquals(List.of(1L, 2L), idsOf(result));
         final ArgumentCaptor<Condition> condCaptor = ArgumentCaptor.forClass(Condition.class);
         verify(dao, Mockito.times(1)).list(ArgumentMatchers.<Collection<String>> isNull(), condCaptor.capture());
-        assertEquals(List.of(1L, 2L), condCaptor.getValue().parameters());
+        assertEquals(List.of(1L, 2L), idParams(condCaptor.getValue()));
     }
 
     @Test
@@ -360,14 +371,14 @@ public class CrudReadOpsTest extends TestBase {
         Mockito.doReturn(CompositeIdEntity.class).when(dao).targetEntityClass();
         // One row per OR-branch of the chunk condition, whose parameters are the (tenantId, rowId) pairs.
         Mockito.doAnswer(inv -> {
-            final List<Object> params = ((Condition) inv.getArgument(1)).parameters();
+            final List<Object> params = idParams((Condition) inv.getArgument(1));
             final List<CompositeIdEntity> result = new ArrayList<>();
             for (int i = 0; i < params.size(); i += 2) {
                 result.add(new CompositeIdEntity((Long) params.get(i), (Long) params.get(i + 1)));
             }
             return result;
         }).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
-        Mockito.doAnswer(inv -> ((Condition) inv.getArgument(0)).parameters().size() / 2).when(dao).count(ArgumentMatchers.any(Condition.class));
+        Mockito.doAnswer(inv -> idParams((Condition) inv.getArgument(0)).size() / 2).when(dao).count(ArgumentMatchers.any(Condition.class));
 
         final List<CompositeId> ids = List.of(new CompositeId(1L, 2L), new CompositeId(3L, 4L), new CompositeId(1L, 2L));
 
@@ -471,14 +482,14 @@ public class CrudReadOpsTest extends TestBase {
         Mockito.doReturn(BinaryKeyEntity.class).when(dao).targetEntityClass();
         // One row per OR-branch of the chunk condition, whose parameters are the (tenantId, uid) pairs.
         Mockito.doAnswer(inv -> {
-            final List<Object> params = ((Condition) inv.getArgument(1)).parameters();
+            final List<Object> params = idParams((Condition) inv.getArgument(1));
             final List<BinaryKeyEntity> result = new ArrayList<>();
             for (int i = 0; i < params.size(); i += 2) {
                 result.add(new BinaryKeyEntity((Long) params.get(i), (byte[]) params.get(i + 1)));
             }
             return result;
         }).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
-        Mockito.doAnswer(inv -> ((Condition) inv.getArgument(0)).parameters().size() / 2).when(dao).count(ArgumentMatchers.any(Condition.class));
+        Mockito.doAnswer(inv -> idParams((Condition) inv.getArgument(0)).size() / 2).when(dao).count(ArgumentMatchers.any(Condition.class));
 
         // Separate but equal byte[] instances.
         final List<BinaryKeyId> ids = List.of(new BinaryKeyId(1L, new byte[] { 1, 2 }), new BinaryKeyId(3L, new byte[] { 3 }),
@@ -530,12 +541,12 @@ public class CrudReadOpsTest extends TestBase {
         // One row per id in the chunk's IN list.
         Mockito.doAnswer(inv -> {
             final List<BinaryIdEntity> result = new ArrayList<>();
-            for (final Object uid : ((Condition) inv.getArgument(1)).parameters()) {
+            for (final Object uid : idParams((Condition) inv.getArgument(1))) {
                 result.add(new BinaryIdEntity((byte[]) uid));
             }
             return result;
         }).when(dao).list(ArgumentMatchers.<Collection<String>> any(), ArgumentMatchers.any(Condition.class));
-        Mockito.doAnswer(inv -> ((Condition) inv.getArgument(0)).parameters().size()).when(dao).count(ArgumentMatchers.any(Condition.class));
+        Mockito.doAnswer(inv -> idParams((Condition) inv.getArgument(0)).size()).when(dao).count(ArgumentMatchers.any(Condition.class));
 
         final Set<byte[]> ids = new LinkedHashSet<>(List.of(new byte[] { 1, 2 }, new byte[] { 3 }, new byte[] { 1, 2 }));
         assertEquals(3, ids.size());
@@ -563,7 +574,7 @@ public class CrudReadOpsTest extends TestBase {
         // One row per OR-branch of the chunk condition (two parameters each).
         Mockito.doAnswer(inv -> {
             final List<BinaryKeyEntity> result = new ArrayList<>();
-            for (int i = 0, size = ((Condition) inv.getArgument(1)).parameters().size(); i < size; i += 2) {
+            for (int i = 0, size = idParams((Condition) inv.getArgument(1)).size(); i < size; i += 2) {
                 result.add(new BinaryKeyEntity());
             }
             return result;
@@ -585,7 +596,7 @@ public class CrudReadOpsTest extends TestBase {
         final BinaryKeyCrudDao dao = Mockito.mock(BinaryKeyCrudDao.class, Mockito.CALLS_REAL_METHODS);
         Mockito.doReturn(BinaryKeyEntity.class).when(dao).targetEntityClass();
         // One row per OR-branch of the chunk condition (two parameters each).
-        Mockito.doAnswer(inv -> ((Condition) inv.getArgument(0)).parameters().size() / 2).when(dao).count(ArgumentMatchers.any(Condition.class));
+        Mockito.doAnswer(inv -> idParams((Condition) inv.getArgument(0)).size() / 2).when(dao).count(ArgumentMatchers.any(Condition.class));
 
         final List mapIds = new ArrayList<>();
         for (int i = 0; i < JdbcUtil.DEFAULT_BATCH_SIZE; i++) {
@@ -605,7 +616,7 @@ public class CrudReadOpsTest extends TestBase {
         final CompositeIdCrudDao dao = Mockito.mock(CompositeIdCrudDao.class, Mockito.CALLS_REAL_METHODS);
         Mockito.doReturn(CompositeIdEntity.class).when(dao).targetEntityClass();
         Mockito.doAnswer(inv -> {
-            final List<Object> params = ((Condition) inv.getArgument(1)).parameters();
+            final List<Object> params = idParams((Condition) inv.getArgument(1));
             final List<CompositeIdEntity> result = new ArrayList<>();
             for (int i = 0; i < params.size(); i += 2) {
                 result.add(new CompositeIdEntity((Long) params.get(i), (Long) params.get(i + 1)));
@@ -664,7 +675,7 @@ public class CrudReadOpsTest extends TestBase {
 
         final ArgumentCaptor<Condition> condCaptor = ArgumentCaptor.forClass(Condition.class);
         verify(dao).list(ArgumentMatchers.<Collection<String>> any(), condCaptor.capture());
-        assertEquals(List.of(1L), condCaptor.getValue().parameters());
+        assertEquals(List.of(1L), idParams(condCaptor.getValue()));
 
         // Only null ids: nothing can match, so nothing is queried.
         assertEquals(0, dao.batchRefresh(List.of(unsaved)));
@@ -681,14 +692,14 @@ public class CrudReadOpsTest extends TestBase {
         }
         ids.add(0L); // duplicate: must not create a third chunk or be counted twice
 
-        Mockito.doAnswer(inv -> ((Condition) inv.getArgument(0)).parameters().size()).when(dao).count(ArgumentMatchers.any(Condition.class));
+        Mockito.doAnswer(inv -> idParams((Condition) inv.getArgument(0)).size()).when(dao).count(ArgumentMatchers.any(Condition.class));
 
         assertEquals(JdbcUtil.DEFAULT_BATCH_SIZE + 1, dao.count(ids));
 
         final ArgumentCaptor<Condition> condCaptor = ArgumentCaptor.forClass(Condition.class);
         verify(dao, Mockito.times(2)).count(condCaptor.capture());
-        assertEquals(JdbcUtil.DEFAULT_BATCH_SIZE, condCaptor.getAllValues().get(0).parameters().size());
-        assertEquals(1, condCaptor.getAllValues().get(1).parameters().size());
+        assertEquals(JdbcUtil.DEFAULT_BATCH_SIZE, idParams(condCaptor.getAllValues().get(0)).size());
+        assertEquals(1, idParams(condCaptor.getAllValues().get(1)).size());
     }
 
     @Test

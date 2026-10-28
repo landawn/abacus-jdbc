@@ -547,6 +547,77 @@ class JdbcUtilParameterBindingTest extends JdbcUtilTestSupport {
         verify(stmt).setNull(3, Types.INTEGER);
     }
 
+    // A bean class with a registered single-value Type is bound as one value when its only placeholder names none of its
+    // properties, but a single placeholder naming a nested property path binds that leaf, as NamedQuery does: the classifier
+    // looked only for a direct property, so "INSERT ... VALUES (:address.street)" stored the whole bean ("10 USD").
+    @Test
+    public void testSingleNestedPlaceholderOfCustomTypeBeanBindsTheLeaf() throws SQLException {
+        final org.h2.jdbcx.JdbcDataSource dataSource = new org.h2.jdbcx.JdbcDataSource();
+        dataSource.setURL("jdbc:h2:mem:jdbcutil_custom_type_nested_" + java.util.UUID.randomUUID());
+
+        try (Connection conn = dataSource.getConnection();
+             Statement statement = conn.createStatement()) {
+            statement.execute("CREATE TABLE price_row (id INT AUTO_INCREMENT PRIMARY KEY, street VARCHAR(32))");
+
+            JdbcUtil.executeUpdate(conn, "INSERT INTO price_row (street) VALUES (:address.street)", RegisteredPrice.of("10", "Main"));
+            JdbcUtil.executeBatchUpdate(conn, "INSERT INTO price_row (street) VALUES (:address.street)",
+                    List.of(RegisteredPrice.of("20", "Second"), RegisteredPrice.of("30", "Third")));
+            // No property is named by the placeholder: the bean is still bound as one value through its registered Type.
+            JdbcUtil.executeUpdate(conn, "INSERT INTO price_row (street) VALUES (:price)", RegisteredPrice.of("40", "Fourth"));
+
+            final List<String> streets = new java.util.ArrayList<>();
+
+            try (ResultSet rs = statement.executeQuery("SELECT street FROM price_row ORDER BY id")) {
+                while (rs.next()) {
+                    streets.add(rs.getString(1));
+                }
+            }
+
+            assertEquals(List.of("Main", "Second", "Third", "40 USD"), streets);
+        }
+    }
+
+    @org.junit.jupiter.api.BeforeAll
+    static void registerPriceType() {
+        com.landawn.abacus.type.TypeFactory.registerType(RegisteredPrice.class, price -> price.getAmount() + " USD", str -> {
+            final RegisteredPrice price = new RegisteredPrice();
+            price.setAmount(str.substring(0, str.indexOf(' ')));
+            return price;
+        });
+        org.junit.jupiter.api.Assertions.assertFalse(com.landawn.abacus.util.N.typeOf(RegisteredPrice.class).isBean());
+    }
+
+    // A bean class with a registered single-value Type, which also exposes a nested bean.
+    public static class RegisteredPrice {
+        private String amount;
+        private NamedQueryParameterBindingTest.NestedAddress address;
+
+        static RegisteredPrice of(final String amount, final String street) {
+            final RegisteredPrice price = new RegisteredPrice();
+            price.setAmount(amount);
+            final NamedQueryParameterBindingTest.NestedAddress address = new NamedQueryParameterBindingTest.NestedAddress();
+            address.setStreet(street);
+            price.setAddress(address);
+            return price;
+        }
+
+        public String getAmount() {
+            return amount;
+        }
+
+        public void setAmount(final String amount) {
+            this.amount = amount;
+        }
+
+        public NamedQueryParameterBindingTest.NestedAddress getAddress() {
+            return address;
+        }
+
+        public void setAddress(final NamedQueryParameterBindingTest.NestedAddress address) {
+            this.address = address;
+        }
+    }
+
     @Test
     public void testSetParameters_NamedBeanRejectsUnresolvableNestedPath() throws SQLException {
         for (final String name : List.of("address.country", "nothing.street", "addresses.street")) {

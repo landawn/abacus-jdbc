@@ -26,6 +26,11 @@ package com.landawn.abacus.jdbc;
  *       useful for identifying slow queries in production environments</li>
  * </ul>
  *
+ * <p>{@link JdbcUtil} keeps a separate per-thread instance for each mode and reads only that mode's
+ * fields from it, so the mode switch performed by {@link #setSqlLogEnabled(boolean, int)} or
+ * {@link #setSqlPerfLogThresholdMillis(long, int)} (which resets the other mode's field on the same
+ * instance) never turns off the other kind of logging.</p>
+ *
  * <p><b>Usage Examples:</b></p>
  * <pre>{@code
  * // Enable general SQL logging with a 1000-char limit

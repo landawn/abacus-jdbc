@@ -133,9 +133,10 @@ import com.landawn.abacus.util.RegExUtil;
  *            batch = true, batchSize = 500)
  *     List<Long> batchInsert(List<User> users) throws SQLException;
  *
- *     // SQL stored in an external mapper, referenced by id
+ *     // SQL stored in an external mapper, referenced by id; the single unannotated bean parameter
+ *     // supplies the mapped SQL's named parameters from its properties (@Bind would bind it as one value)
  *     @Query(id = "findUsersByComplexCriteria")
- *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria) throws SQLException;
+ *     List<User> findUsers(SearchCriteria criteria) throws SQLException;
  * }
  * }</pre>
  *
@@ -283,8 +284,9 @@ public @interface Query {
      * // In DAO interface
      * @SqlSource("user-queries.xml")
      * public interface UserDao extends CrudDao<User, Long, UserDao> {
+     *     // The single unannotated bean parameter supplies :status and :minAge from its properties
      *     @Query(id = "findUsersByComplexCriteria")
-     *     List<User> findUsers(@Bind("criteria") SearchCriteria criteria) throws SQLException;
+     *     List<User> findUsers(SearchCriteria criteria) throws SQLException;
      *
      *     @Query(id = "updateUserStatus")
      *     int updateStatus(@Bind("userId") Long userId, @Bind("status") String status) throws SQLException;
@@ -298,7 +300,7 @@ public @interface Query {
      * //   SELECT u.*, p.profile_data
      * //   FROM users u
      * //   LEFT JOIN profiles p ON u.id = p.user_id
-     * //   WHERE ...complex conditions...
+     * //   WHERE u.status = :status AND u.age >= :minAge
      * // </sql>
      * }</pre>
      *

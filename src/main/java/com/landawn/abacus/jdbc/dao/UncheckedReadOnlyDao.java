@@ -75,7 +75,7 @@ import com.landawn.abacus.exception.UncheckedSQLException;
  * java.util.stream.Stream.of(reportId1, reportId2, reportId3)
  *       .map(id -> dao.findFirst(Filters.eq("id", id)))
  *       .filter(result -> result.isPresent())
- *       .forEach(report -> System.out.println(report.get()));
+ *       .forEach(result -> System.out.println(result.get()));
  *
  * // All write operations are absent from the type and do not compile:
  * // dao.save(report);          // does not compile

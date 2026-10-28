@@ -162,8 +162,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      * @throws IllegalArgumentException if a batch row is {@code null} and the SQL has other than one parameter,
@@ -199,8 +199,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
@@ -232,8 +232,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */
@@ -271,8 +271,8 @@ sealed interface CrudUpdateOps<T, ID, TD extends DaoBase<T, TD>> extends UpdateO
      *         holder bound to the data source cannot be determined, or that transaction exposes its connection through a handle of its
      *         own while no JPA transaction owning it can be identified (see
      *         {@link com.landawn.abacus.jdbc.JdbcUtil#beginTransaction(javax.sql.DataSource)})
-     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails; on the Spring path,
-     *         acquisition failures propagate as {@code CannotGetJdbcConnectionException}, or starting or completing an internally required transaction fails
+     * @throws UncheckedSQLException if acquiring a required database connection outside Spring fails, or starting or completing an internally required
+     *         transaction fails; on the Spring path, acquisition failures propagate as {@code CannotGetJdbcConnectionException}
      * @throws SQLException if preparing, binding, or executing an UPDATE statement fails
      * @throws ArithmeticException if the total affected-row count overflows an {@code int}
      */

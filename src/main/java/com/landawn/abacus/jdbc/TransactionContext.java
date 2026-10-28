@@ -17,8 +17,10 @@ package com.landawn.abacus.jdbc;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -1549,12 +1551,20 @@ final class TransactionContext {
                 // Nothing was registered under the key while cmd ran but what cmd began: one still registered was never completed.
                 // WHY looked up whatever toRegister is: once cmd had completed this transaction too (nothing to register again),
                 // the transaction cmd left open was not noticed, and stayed registered on the (pooled) thread.
-                final IllegalStateException leakFailure = threadTransactionMap.get(_key) == null ? null
-                        : new IllegalStateException(
-                                "Another transaction is opened but not closed in 'SqlTransaction.callOutsideTransaction';" + " it has been rolled back"); //NOSONAR
+                IllegalStateException leakFailure = null;
 
-                if (leakFailure != null) {
-                    rollBackLeftOpen(leakFailure);
+                if (threadTransactionMap.get(_key) != null) {
+                    final List<Throwable> rollbackFailures = new ArrayList<>(1);
+                    final String outcome = rollBackLeftOpen(rollbackFailures);
+
+                    // WHY created after the rollback, worded after its outcome: it said "it has been rolled back" also when that
+                    // rollback (or the Spring mark) had failed, as the failure of a commit that exits a leaked scope used to.
+                    leakFailure = new IllegalStateException(
+                            "Another transaction is opened but not closed in 'SqlTransaction.callOutsideTransaction'; it " + outcome); //NOSONAR
+
+                    for (final Throwable rollbackFailure : rollbackFailures) {
+                        leakFailure.addSuppressed(rollbackFailure);
+                    }
                 }
 
                 if (toRegister != null) {
@@ -1582,12 +1592,17 @@ final class TransactionContext {
      * Rolls back the transactions registered under this transaction's key that a command run outside it left open (see
      * {@link #callOutsideTransaction(Throwables.Callable)}): each ends as by {@code rollbackIfNotCommitted()} of its outermost
      * scope, its nested scopes exited first; a participating one marks its Spring-managed transaction rollback-only. A failure
-     * is attached to {@code leakFailure}. WHY: reported only, such a transaction stayed registered in place of this one, so
-     * the work on the data source meant for this transaction joined it, and its connection stayed held on the (pooled) thread.
+     * is added to {@code failures}. WHY: reported only, such a transaction stayed registered in place of this one, so the work
+     * on the data source meant for this transaction joined it, and its connection stayed held on the (pooled) thread.
      *
-     * @param leakFailure the failure that reports the leak
+     * @param failures receives the failure of each rollback that throws
+     * @return what has become of them, to follow "it " in a message (see {@link #rollbackOutcome()}): that of the first one
+     *         whose rollback did not succeed, or else that of the first one
      */
-    private void rollBackLeftOpen(final IllegalStateException leakFailure) {
+    private String rollBackLeftOpen(final List<Throwable> failures) {
+        String outcome = null;
+        boolean outcomeIsFailure = false;
+
         for (TransactionContext leaked; (leaked = threadTransactionMap.get(_key)) != null;) {
             try {
                 final SqlTransaction outermost = leaked._openScopes.peekLast();
@@ -1596,12 +1611,22 @@ final class TransactionContext {
                     leaked.rollbackIfNotCommitted(outermost);
                 }
             } catch (final RuntimeException | Error e) {
-                leakFailure.addSuppressed(e);
+                failures.add(e);
             } finally {
                 // Removed whatever its rollback did, so that the loop ends: a transaction it hid, registered again, is next.
                 threadTransactionMap.remove(_key, leaked);
             }
+
+            // A rollback that failed is reported, not one that succeeded before it.
+            final boolean failed = leaked._status != Status.ROLLED_BACK;
+
+            if (outcome == null || failed && !outcomeIsFailure) {
+                outcome = leaked.rollbackOutcome();
+                outcomeIsFailure = failed;
+            }
         }
+
+        return outcome;
     }
 
     private static void throwUnchecked(final Throwable failure) {

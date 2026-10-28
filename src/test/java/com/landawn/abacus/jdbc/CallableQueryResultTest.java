@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -559,6 +560,21 @@ class CallableQueryResultTest extends CallableQueryTestSupport {
         com.landawn.abacus.util.Tuple.Tuple2<List<String>, Jdbc.OutParamResult> result = callableQuery.listAndGetOutParameters(String.class);
         assertNotNull(result);
         assertEquals(0, result._1.size());
+    }
+
+    // Regression: listAndGetOutParameters(Class) built the bean row mapper before execution and outside any cleanup, so a bean
+    // class with invalid property metadata threw and left the query open.
+    @Test
+    public void testListAndGetOutParameters_ByInvalidBeanClass_ClosesQuery() throws SQLException {
+        callableQuery.registerOutParameter(1, Types.INTEGER);
+
+        final IllegalArgumentException failure = assertThrows(IllegalArgumentException.class,
+                () -> callableQuery.listAndGetOutParameters(AbstractQueryStreamTest.BlankPaddedColumnBean.class));
+
+        assertTrue(failure.getMessage().contains("whitespace"));
+        assertTrue(callableQuery.isClosed);
+        verify(callableStatement, never()).execute();
+        verify(callableStatement).close();
     }
 
     // --- listAndGetOutParameters(RowMapper) - empty result set path (L2974 false branch) ---

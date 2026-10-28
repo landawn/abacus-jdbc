@@ -1047,6 +1047,26 @@ public class JoinInfoTest extends TestBase {
         assertTrue(sql.contains("SELECT"));
     }
 
+    // A many-to-many @JoinedBy spelling that the property lookup accepts (here upper case) must render the same columns
+    // as the canonical property names, as the direct-join plans do.
+    @Test
+    public void testManyToManyPlans_NonCanonicalPropertySpellingRendersCanonicalColumns() {
+        final JoinInfo canonical = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UserRoleUserEntity.class, "user_role_user_entity", "roles");
+        final JoinInfo upperCase = JoinInfo.getPropJoinInfo(UserRoleUserDao.class, UpperCaseJoinedByUserEntity.class, "upper_case_joined_by_user_entity",
+                "roles");
+
+        assertTrue(upperCase.isManyToManyJoin());
+
+        for (final Dsl dsl : List.of(PSC, Dsl.PAC, Dsl.PLC)) {
+            assertEquals(canonical.selectSqlPlan(dsl)._1.apply(null), upperCase.selectSqlPlan(dsl)._1.apply(null));
+            assertEquals(canonical.selectSqlPlan(dsl)._1.apply(List.of("name")), upperCase.selectSqlPlan(dsl)._1.apply(List.of("name")));
+            assertEquals(canonical.batchSelectSqlPlan(dsl)._1.apply(null, 2), upperCase.batchSelectSqlPlan(dsl)._1.apply(null, 2));
+            assertEquals(canonical.batchSelectSqlPlan(dsl)._1.apply(List.of("name"), 2), upperCase.batchSelectSqlPlan(dsl)._1.apply(List.of("name"), 2));
+            assertEquals(canonical.deleteSqlPlan(dsl)._1, upperCase.deleteSqlPlan(dsl)._1);
+            assertEquals(canonical.batchDeleteSqlPlan(dsl)._1.apply(2), upperCase.batchDeleteSqlPlan(dsl)._1.apply(2));
+        }
+    }
+
     // deleteSqlPlan throws on unsupported SqlBuilder (L845)
     @Test
     public void testGetDeleteSqlPlan_UnsupportedBuilder() {
@@ -2461,6 +2481,30 @@ final class UserRoleLink {
 
     public void setRoleId(final long roleId) {
         this.roleId = roleId;
+    }
+}
+
+// Same join as UserRoleUserEntity, spelled with property names in upper case.
+final class UpperCaseJoinedByUserEntity {
+    private long userId;
+
+    @JoinedBy("USERID = UserRoleLink.USERID, UserRoleLink.ROLEID = ROLEID")
+    private List<RoleLookupEntity> roles;
+
+    public long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(final long userId) {
+        this.userId = userId;
+    }
+
+    public List<RoleLookupEntity> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(final List<RoleLookupEntity> roles) {
+        this.roles = roles;
     }
 }
 
