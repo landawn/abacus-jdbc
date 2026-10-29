@@ -2583,17 +2583,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * @see #executeQuery()
      */
     private ResultSet executeQueryOrNull() throws SQLException {
-        if (!isFetchDirectionSet) {
-            // Mirror AbstractQuery.executeQuery(): capture the driver-default direction before
-            // mutating so closeStatement() can restore it. Without this, a pooled CallableStatement
-            // is silently left at FETCH_FORWARD when its prior caller had configured a different
-            // direction (e.g., FETCH_REVERSE on DB2 z/OS scrollable cursors).
-            if (defaultFetchDirection < 0) {
-                defaultFetchDirection = cstmt.getFetchDirection();
-            }
-
-            cstmt.setFetchDirection(ResultSet.FETCH_FORWARD);
-        }
+        setForwardFetchDirectionIfUnset();
 
         boolean ret = JdbcUtil.execute(cstmt);
         int updateCount = cstmt.getUpdateCount();
@@ -2617,6 +2607,27 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
         }
 
         return null;
+    }
+
+    /**
+     * Applies the default forward fetch direction while preserving the statement's original setting for close.
+     * Single-result reads and single-result extraction with OUT parameters share this setup even though their
+     * result-set ownership differs.
+     *
+     * @throws SQLException if reading or setting the statement's fetch direction fails
+     */
+    private void setForwardFetchDirectionIfUnset() throws SQLException {
+        if (!isFetchDirectionSet) {
+            // Mirror AbstractQuery.executeQuery(): capture the driver-default direction before
+            // mutating so closeStatement() can restore it. Without this, a pooled CallableStatement
+            // is silently left at FETCH_FORWARD when its prior caller had configured a different
+            // direction (e.g., FETCH_REVERSE on DB2 z/OS scrollable cursors).
+            if (defaultFetchDirection < 0) {
+                defaultFetchDirection = cstmt.getFetchDirection();
+            }
+
+            cstmt.setFetchDirection(ResultSet.FETCH_FORWARD);
+        }
     }
 
     /**
@@ -3151,6 +3162,10 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
      * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
      *
+     * <p>MySQL Connector/J streaming results are read to their end before advancing. Remaining results are also
+     * discarded if extraction fails; any discard failure is suppressed on the extraction failure. Connector/J rejects
+     * streaming when OUT parameters are registered, but this method also supports calls with no registered OUT parameters.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * Tuple2<Dataset, Jdbc.OutParamResult> result = query.queryAndGetOutParameters();
@@ -3194,6 +3209,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
      * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
      *
+     * <p>With MySQL Connector/J streaming, returning early from the extractor still reads the unread rows and remaining
+     * results. Errors encountered while reading them propagate. Remaining results are also discarded if extraction fails;
+     * any discard failure is suppressed on the extraction failure. Connector/J rejects streaming when OUT parameters are
+     * registered, but this method also supports calls with no registered OUT parameters.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Extract to a custom summary object
@@ -3228,14 +3248,18 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
+        ObjIteratorEx<ResultSet> iter = null;
         Throwable primaryFailure = null;
 
         try {
+            setForwardFetchDirectionIfUnset();
+            iter = JdbcUtil.iterateAllResultSets(cstmt, JdbcUtil.execute(cstmt), true);
             R result = null;
-            final ResultSet rs = executeQueryOrNull();
 
-            if (rs != null) {
-                result = JdbcUtil.extractAndCloseResultSet(rs, resultExtractor);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                // The iterator owns streaming cleanup even when extraction fails. An ordinary wrapper would close
+                // Connector/J's result before discovering its successor, losing later results or procedure errors.
+                result = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor);
                 drainRemainingResultsForOutParams();
             }
 
@@ -3244,7 +3268,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             primaryFailure = e;
             throw e;
         } finally {
-            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -3258,6 +3282,11 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * <p>Update counts that precede the first result set are skipped, and any result sets and update counts
      * that follow it are discarded before the OUT parameters are read, because some drivers (notably SQL Server
      * and Oracle) only finalize OUT parameter values once all results have been consumed.</p>
+     *
+     * <p>With MySQL Connector/J streaming, returning early from the extractor still reads the unread rows and remaining
+     * results. Errors encountered while reading them propagate. Remaining results are also discarded if extraction fails;
+     * any discard failure is suppressed on the extraction failure. Connector/J rejects streaming when OUT parameters are
+     * registered, but this method also supports calls with no registered OUT parameters.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -3294,14 +3323,17 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
 
         checkArgNotNull(resultExtractor, cs.resultExtractor);
 
+        ObjIteratorEx<ResultSet> iter = null;
         Throwable primaryFailure = null;
 
         try {
+            setForwardFetchDirectionIfUnset();
+            iter = JdbcUtil.iterateAllResultSets(cstmt, JdbcUtil.execute(cstmt), true);
             R result = null;
-            final ResultSet rs = executeQueryOrNull();
 
-            if (rs != null) {
-                result = JdbcUtil.extractAndCloseResultSet(rs, resultExtractor);
+            if (JdbcUtil.hasNextResultSet(iter)) {
+                // Retain the iterator's streaming cleanup and error ownership, including after a partial extraction.
+                result = JdbcUtil.extractAndCloseResultSet(JdbcUtil.nextResultSet(iter), resultExtractor);
                 drainRemainingResultsForOutParams();
             }
 
@@ -3310,7 +3342,7 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
             primaryFailure = e;
             throw e;
         } finally {
-            closeAllResultsAndQueryIfAllowed(null, primaryFailure);
+            closeAllResultsAndQueryIfAllowed(iter, primaryFailure);
         }
     }
 
@@ -4523,17 +4555,12 @@ public final class CallableQuery extends AbstractQuery<CallableStatement, Callab
      * parameter values become reliably available. Per JDBC spec, OUT params produced by a
      * stored procedure are only guaranteed to be final once all results have been processed —
      * SQL Server and Oracle in particular will report null/stale OUT values if extra result sets
-     * or update counts remain in the call's buffer.
+     * or update counts remain in the call's buffer. MySQL Connector/J streaming results are each read
+     * to their end first, without which the connection rejects every later statement.
      *
-     * @throws SQLException if advancing through or closing the remaining results fails
+     * @throws SQLException if reading, advancing through or closing the remaining results fails
      */
     private void drainRemainingResultsForOutParams() throws SQLException {
-        // getMoreResults() returns true when the next result is a ResultSet (auto-closing the
-        // prior one), false when next is an update count OR there are no more results. To
-        // distinguish those two "false" cases, also check getUpdateCount() != -1. Loop until
-        // both conditions report "nothing left".
-        while (cstmt.getMoreResults() || cstmt.getUpdateCount() != -1) {
-            // empty loop body — we only need to advance past every remaining result
-        }
+        JdbcUtil.discardRemainingResults(cstmt, JdbcUtil.usesMySqlStreamingResults(cstmt));
     }
 }

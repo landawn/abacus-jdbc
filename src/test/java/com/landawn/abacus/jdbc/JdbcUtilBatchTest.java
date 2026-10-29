@@ -13,8 +13,11 @@ import static org.mockito.Mockito.when;
 
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +28,128 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.landawn.abacus.exception.UncheckedSQLException;
 
 class JdbcUtilBatchTest extends JdbcUtilTestSupport {
+
+    @ParameterizedTest(name = "wide named batch: route={0}, repeatedNames={1}")
+    @CsvSource({ "prepare,false", "call,false", "execute,false", "large,false", "prepare,true", "call,true", "execute,true", "large,true" })
+    void wideNamedBatchLayoutsBindEveryValueForEachRow(final String route, final boolean repeatedNames) throws SQLException {
+        final List<String> names = new ArrayList<>();
+        final Map<String, String> first = new LinkedHashMap<>();
+        final Map<String, String> second = new LinkedHashMap<>();
+
+        for (int i = 0; i < 64; i++) {
+            final String name = "column_" + i;
+            names.add(name);
+            first.put(name, "first-" + i);
+            second.put(name, "second-" + i);
+        }
+
+        if (repeatedNames) {
+            // Repeat in reverse order so positional binding cannot accidentally pass by reusing
+            // the first half's order, and use different row values to detect stale row caching.
+            for (int i = 63; i >= 0; i--) {
+                names.add("column_" + i);
+            }
+        }
+
+        final List<String> placeholders = new ArrayList<>();
+        for (final String name : names) {
+            placeholders.add(":" + name);
+        }
+
+        final String parameters = String.join(", ", placeholders);
+        final String sql = route.equals("call") ? "{call test_proc(" + parameters + ")}" : "INSERT INTO sample VALUES (" + parameters + ")";
+        final List<Map<String, String>> rows = List.of(first, second);
+        final java.sql.PreparedStatement stmt = route.equals("call") ? mockCallableStatement : mockPreparedStatement;
+        when(stmt.executeBatch()).thenReturn(new int[] { 1, 1 });
+        when(stmt.executeLargeBatch()).thenReturn(new long[] { 1, 1 });
+
+        switch (route) {
+            case "prepare" -> assertSame(stmt, JdbcUtil.prepareBatchStmt(mockConnection, sql, rows));
+            case "call" -> assertSame(stmt, JdbcUtil.prepareBatchCall(mockConnection, sql, rows));
+            case "execute" -> assertEquals(2, JdbcUtil.executeBatchUpdate(mockConnection, sql, rows, 2));
+            case "large" -> assertEquals(2L, JdbcUtil.executeLargeBatchUpdate(mockConnection, sql, rows, 2));
+            default -> throw new AssertionError(route);
+        }
+
+        final org.mockito.InOrder bindings = org.mockito.Mockito.inOrder(stmt);
+        for (final Map<String, String> row : rows) {
+            for (int i = 0; i < names.size(); i++) {
+                bindings.verify(stmt).setString(i + 1, row.get(names.get(i)));
+            }
+            bindings.verify(stmt).addBatch();
+        }
+        verify(stmt, org.mockito.Mockito.times(2)).addBatch();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "prepare", "call", "execute", "large" })
+    void namedBatchLayoutReuseKeepsGetterValuesAndPositionalRowsSeparate(final String route) throws SQLException {
+        final CountingBatchBean first = new CountingBatchBean("first");
+        final CountingBatchBean second = new CountingBatchBean("second");
+        final List<?> rows = Arrays.asList(first, java.util.Map.of("value", "map"), second, new Object[] { "left", "right" });
+        final java.sql.PreparedStatement stmt = route.equals("call") ? mockCallableStatement : mockPreparedStatement;
+        final String sql = route.equals("call") ? "{call test_proc(:value, :value)}" : "INSERT INTO sample VALUES (:value, :value)";
+        when(stmt.executeBatch()).thenReturn(new int[] { 1, 1 });
+        when(stmt.executeLargeBatch()).thenReturn(new long[] { 1, 1 });
+
+        switch (route) {
+            case "prepare" -> assertSame(stmt, JdbcUtil.prepareBatchStmt(mockConnection, sql, rows));
+            case "call" -> assertSame(stmt, JdbcUtil.prepareBatchCall(mockConnection, sql, rows));
+            case "execute" -> assertEquals(4, JdbcUtil.executeBatchUpdate(mockConnection, sql, rows, 2));
+            case "large" -> assertEquals(4L, JdbcUtil.executeLargeBatchUpdate(mockConnection, sql, rows, 2));
+            default -> throw new AssertionError(route);
+        }
+
+        final org.mockito.InOrder bindings = org.mockito.Mockito.inOrder(stmt);
+        for (final String[] row : new String[][] { { "first1", "first1" }, { "map", "map" }, { "second1", "second1" }, { "left", "right" } }) {
+            bindings.verify(stmt).setString(1, row[0]);
+            bindings.verify(stmt).setString(2, row[1]);
+            bindings.verify(stmt).addBatch();
+        }
+        assertEquals(1, first.reads);
+        assertEquals(1, second.reads);
+    }
+
+    @Test
+    void namedBatchLayoutReuseKeepsRepeatedStreamsScopedToEachRow() throws SQLException {
+        try (java.sql.Connection conn = java.sql.DriverManager.getConnection("jdbc:h2:mem:batch_stream_layout_" + java.util.UUID.randomUUID());
+             Statement stmt = conn.createStatement()) {
+            stmt.execute("CREATE TABLE sample (a BLOB, b BLOB)");
+            final byte[] first = { 1, 2, 3 };
+            final byte[] second = { 4, 5 };
+            final List<?> rows = List.of(java.util.Map.of("value", new java.io.ByteArrayInputStream(first)),
+                    java.util.Map.of("value", new java.io.ByteArrayInputStream(second)));
+            assertEquals(2, JdbcUtil.executeBatchUpdate(conn, "INSERT INTO sample VALUES (:value, :value)", rows, 1));
+            try (java.sql.ResultSet rs = stmt.executeQuery("SELECT a, b FROM sample ORDER BY OCTET_LENGTH(a) DESC")) {
+                for (final byte[] expected : new byte[][] { first, second }) {
+                    assertTrue(rs.next());
+                    assertArrayEquals(expected, rs.getBytes(1));
+                    assertArrayEquals(expected, rs.getBytes(2));
+                }
+                org.junit.jupiter.api.Assertions.assertFalse(rs.next());
+            }
+        }
+    }
+
+    public static final class CountingBatchBean {
+        private String prefix;
+        private int reads;
+
+        public CountingBatchBean() {
+        }
+
+        CountingBatchBean(final String value) {
+            prefix = value;
+        }
+
+        public String getValue() {
+            return prefix + ++reads;
+        }
+
+        public void setValue(final String value) {
+            prefix = value;
+        }
+    }
 
     @Test
     public void testBatchPreparationPreservesFailureWhenClosingAlsoFails() throws SQLException {

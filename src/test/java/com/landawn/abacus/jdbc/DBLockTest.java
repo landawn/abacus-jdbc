@@ -731,7 +731,7 @@ public class DBLockTest extends TestBase {
         assertEquals(1, targetCodePool(fixture.lock).size());
         assertTrue(fixture.lock.unlock("close-failure", code));
         assertTrue(targetCodePool(fixture.lock).isEmpty());
-        verify(fixture.connection, times(3)).close();
+        verify(fixture.connection, times(2)).close();
     }
 
     // TODO: L207 — tableExists returns false after creation (defensive; createTableIfNotExists +

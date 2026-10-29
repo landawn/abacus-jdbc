@@ -37,6 +37,48 @@ import org.mockito.Mockito;
 class ResultSetProxyTest extends ResultSetProxyTestSupport {
 
     @Test
+    void streamingCloseReadsToEndOnceAndLeavesDelegateOpen() throws SQLException {
+        final ResultSet delegate = mock(ResultSet.class);
+        when(delegate.next()).thenReturn(true, true, false);
+        final ResultSetProxy proxy = ResultSetProxy.wrap(delegate, true);
+
+        assertFalse(proxy.isClosed());
+        proxy.close();
+        proxy.close();
+
+        // Connector/J fails to close a streamed result while the next one streams; the statement releases it.
+        verify(delegate, Mockito.times(3)).next();
+        verify(delegate, Mockito.never()).close();
+        assertTrue(proxy.isClosed());
+    }
+
+    @Test
+    void streamingClosePropagatesReadFailureWithoutClosingDelegate() throws SQLException {
+        final ResultSet delegate = mock(ResultSet.class);
+        final SQLException readFailure = new SQLException("read failed");
+        when(delegate.next()).thenThrow(readFailure);
+        final ResultSetProxy proxy = ResultSetProxy.wrap(delegate, true);
+
+        assertSame(readFailure, assertThrows(SQLException.class, proxy::close));
+        proxy.close();
+
+        verify(delegate).next();
+        verify(delegate, Mockito.never()).close();
+        assertTrue(proxy.isClosed());
+    }
+
+    @Test
+    void streamingCloseDoesNotReadAnAlreadyClosedDelegate() throws SQLException {
+        final ResultSet delegate = mock(ResultSet.class);
+        when(delegate.isClosed()).thenReturn(true);
+
+        ResultSetProxy.wrap(delegate, true).close();
+
+        verify(delegate, Mockito.never()).next();
+        verify(delegate, Mockito.never()).close();
+    }
+
+    @Test
     void testWrap_UnwrapsImplementedInterfaceToProxy() throws SQLException {
         ResultSet delegate = Mockito.mock(ResultSet.class);
 

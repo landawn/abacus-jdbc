@@ -2994,7 +2994,8 @@ public final class Jdbc {
              * </p>
              *
              * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be used concurrently.
-             * The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.</p>
+             * The {@link DisposableObjArray} passed to {@code finisher} is valid only during the finisher invocation;
+             * its values are cleared afterward and the array is reused for later rows. Copy any values that must be retained.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -3044,11 +3045,15 @@ public final class Jdbc {
                             }
                         }
 
-                        for (int i = 0; i < rsColumnCount; i++) {
-                            outputRow[i] = rsColumnGetters[i].get(rs, i + 1);
-                        }
+                        try {
+                            for (int i = 0; i < rsColumnCount; i++) {
+                                outputRow[i] = rsColumnGetters[i].get(rs, i + 1);
+                            }
 
-                        return finisher.apply(output);
+                            return finisher.apply(output);
+                        } finally {
+                            N.fill(outputRow, null);
+                        }
                     }
                 };
             }
@@ -3062,7 +3067,8 @@ public final class Jdbc {
              * </p>
              *
              * <p><b>&#9888; Warning:</b> The returned mapper is stateful and must not be used concurrently.
-             * The {@link DisposableObjArray} passed to {@code finisher} is reused for later rows; copy any values that must be retained.</p>
+             * The {@link DisposableObjArray} passed to {@code finisher} is valid only during the finisher invocation;
+             * its values are cleared afterward and the array is reused for later rows. Copy any values that must be retained.</p>
              *
              * <p><b>Usage Examples:</b></p>
              * <pre>{@code
@@ -3117,11 +3123,15 @@ public final class Jdbc {
                             }
                         }
 
-                        for (int i = 0; i < rsColumnCount; i++) {
-                            outputRow[i] = rsColumnGetters[i].get(rs, i + 1);
-                        }
+                        try {
+                            for (int i = 0; i < rsColumnCount; i++) {
+                                outputRow[i] = rsColumnGetters[i].get(rs, i + 1);
+                            }
 
-                        return finisher.apply(columnLabels, output);
+                            return finisher.apply(columnLabels, output);
+                        } finally {
+                            N.fill(outputRow, null);
+                        }
                     }
                 };
             }
@@ -4154,21 +4164,25 @@ public final class Jdbc {
 
                     final int columnCount = outputValuesForRowExtractor.length;
 
-                    rowExtractor.accept(rs, outputValuesForRowExtractor);
+                    try {
+                        rowExtractor.accept(rs, outputValuesForRowExtractor);
 
-                    final Map<String, Object> result = mapSupplier.apply(columnCount);
+                        final Map<String, Object> result = mapSupplier.apply(columnCount);
 
-                    String columnName = null;
+                        String columnName = null;
 
-                    for (int i = 0; i < columnCount; i++) {
-                        columnName = columnLabels.get(i);
+                        for (int i = 0; i < columnCount; i++) {
+                            columnName = columnLabels.get(i);
 
-                        if (entryFilter.test(columnName, outputValuesForRowExtractor[i])) {
-                            result.put(columnName, outputValuesForRowExtractor[i]);
+                            if (entryFilter.test(columnName, outputValuesForRowExtractor[i])) {
+                                result.put(columnName, outputValuesForRowExtractor[i]);
+                            }
                         }
-                    }
 
-                    return result;
+                        return result;
+                    } finally {
+                        N.fill(outputValuesForRowExtractor, null);
+                    }
                 }
             };
         }
@@ -4318,15 +4332,19 @@ public final class Jdbc {
 
                     final int columnCount = outputValuesForRowExtractor.length;
 
-                    rowExtractor.accept(rs, outputValuesForRowExtractor);
+                    try {
+                        rowExtractor.accept(rs, outputValuesForRowExtractor);
 
-                    final Map<String, Object> result = N.newHashMap(columnCount);
+                        final Map<String, Object> result = N.newHashMap(columnCount);
 
-                    for (int i = 0; i < columnCount; i++) {
-                        result.put(columnLabels.get(i), outputValuesForRowExtractor[i]);
+                        for (int i = 0; i < columnCount; i++) {
+                            result.put(columnLabels.get(i), outputValuesForRowExtractor[i]);
+                        }
+
+                        return result;
+                    } finally {
+                        N.fill(outputValuesForRowExtractor, null);
                     }
-
-                    return result;
                 }
             };
         }
@@ -4398,15 +4416,19 @@ public final class Jdbc {
 
                     final int columnCount = keyNames.length;
 
-                    rowExtractor.accept(rs, outputValuesForRowExtractor);
+                    try {
+                        rowExtractor.accept(rs, outputValuesForRowExtractor);
 
-                    final Map<String, Object> result = mapSupplier.apply(columnCount);
+                        final Map<String, Object> result = mapSupplier.apply(columnCount);
 
-                    for (int i = 0; i < columnCount; i++) {
-                        result.put(keyNames[i], outputValuesForRowExtractor[i]);
+                        for (int i = 0; i < columnCount; i++) {
+                            result.put(keyNames[i], outputValuesForRowExtractor[i]);
+                        }
+
+                        return result;
+                    } finally {
+                        N.fill(outputValuesForRowExtractor, null);
                     }
-
-                    return result;
                 }
             };
         }
@@ -5412,7 +5434,9 @@ public final class Jdbc {
          *
          * <p><b>Warning:</b> The returned {@code RowConsumer} is stateful and reuses an internal buffer.
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
-         * Do not store references to it. This consumer must not be shared between threads or used in parallel streams.
+         * The buffer's references are cleared after each row is processed, including when reading a column or invoking the consumer fails.
+         * Within the callback, copy any values that must be retained after it returns; do not store the reusable view.
+         * This consumer must not be shared between threads or used in parallel streams.
          * It can be reused with another {@code ResultSet}; the buffer is re-created when the column count changes.
          * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
          * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
@@ -5456,11 +5480,15 @@ public final class Jdbc {
                         }
                     }
 
-                    for (int i = 0; i < columnCount; i++) {
-                        output[i] = JdbcUtil.getColumnValue(rs, i + 1);
-                    }
+                    try {
+                        for (int i = 0; i < columnCount; i++) {
+                            output[i] = JdbcUtil.getColumnValue(rs, i + 1);
+                        }
 
-                    consumer.accept(disposable);
+                        consumer.accept(disposable);
+                    } finally {
+                        N.fill(output, null);
+                    }
                 }
             };
         }
@@ -5472,6 +5500,8 @@ public final class Jdbc {
          *
          * <p><b>Warning:</b> The returned {@code RowConsumer} is stateful and reuses an internal buffer.
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
+         * The buffer's references are cleared after each row is processed, including when reading a column or invoking the consumer fails.
+         * Within the callback, copy any values that must be retained after it returns; do not store the reusable view.
          * This consumer must not be shared between threads or used in parallel streams.
          * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
          * and the cached metadata is rebuilt when they differ.
@@ -5551,11 +5581,15 @@ public final class Jdbc {
                         layout.bind(rs, columnLabels);
                     }
 
-                    for (int i = 0; i < columnCount; i++) {
-                        output[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
-                    }
+                    try {
+                        for (int i = 0; i < columnCount; i++) {
+                            output[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
+                        }
 
-                    consumer.accept(disposable);
+                        consumer.accept(disposable);
+                    } finally {
+                        N.fill(output, null);
+                    }
                 }
             };
         }
@@ -5654,7 +5688,9 @@ public final class Jdbc {
          *
          * <p><b>Warning:</b> The returned {@code BiRowConsumer} is stateful and reuses an internal buffer.
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
-         * Do not store references to it. This consumer must not be shared between threads or used in parallel streams.
+         * The buffer's references are cleared after each row is processed, including when reading a column or invoking the consumer fails.
+         * Within the callback, copy any values that must be retained after it returns; do not store the reusable view.
+         * This consumer must not be shared between threads or used in parallel streams.
          * It can be reused with another {@code ResultSet}; the buffer is re-created when the column count changes.
          * A {@code ResultSet} object that a driver reuses across executions of one {@code Statement} (as sqlite-jdbc does) counts as the
          * same result set; create a new instance per query there (see the {@link Jdbc} class documentation).</p>
@@ -5684,11 +5720,15 @@ public final class Jdbc {
                         layout.bind(rs, columnCount);
                     }
 
-                    for (int i = 0; i < columnCount; i++) {
-                        output[i] = JdbcUtil.getColumnValue(rs, i + 1);
-                    }
+                    try {
+                        for (int i = 0; i < columnCount; i++) {
+                            output[i] = JdbcUtil.getColumnValue(rs, i + 1);
+                        }
 
-                    consumer.accept(columnLabels, disposable);
+                        consumer.accept(columnLabels, disposable);
+                    } finally {
+                        N.fill(output, null);
+                    }
                 }
             };
         }
@@ -5700,6 +5740,8 @@ public final class Jdbc {
          *
          * <p><b>Warning:</b> The returned {@code BiRowConsumer} is stateful and reuses an internal buffer.
          * The provided {@code DisposableObjArray} is only valid within the scope of the consumer's lambda.
+         * The buffer's references are cleared after each row is processed, including when reading a column or invoking the consumer fails.
+         * Within the callback, copy any values that must be retained after it returns; do not store the reusable view.
          * This consumer must not be shared between threads or used in parallel streams.
          * It can be reused with another {@code ResultSet}: the column labels are compared once per {@code ResultSet},
          * and the cached metadata is rebuilt when they differ.
@@ -5778,11 +5820,15 @@ public final class Jdbc {
                         layout.bind(rs, columnLabels);
                     }
 
-                    for (int i = 0; i < columnCount; i++) {
-                        output[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
-                    }
+                    try {
+                        for (int i = 0; i < columnCount; i++) {
+                            output[i] = columnTypes[i] == null ? JdbcUtil.getColumnValue(rs, i + 1) : columnTypes[i].get(rs, i + 1);
+                        }
 
-                    consumer.accept(columnLabels, disposable);
+                        consumer.accept(columnLabels, disposable);
+                    } finally {
+                        N.fill(output, null);
+                    }
                 }
             };
         }

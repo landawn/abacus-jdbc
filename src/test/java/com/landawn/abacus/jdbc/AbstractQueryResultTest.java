@@ -285,15 +285,15 @@ class AbstractQueryResultTest extends AbstractQueryTestSupport {
     public void testQuery2ResultSetsDrainsTrailingResultsWhenStatementIsReusable() throws SQLException {
         final ResultSet rs1 = Mockito.mock(ResultSet.class);
         final ResultSet rs2 = Mockito.mock(ResultSet.class);
-        final ResultSet rs3 = Mockito.mock(ResultSet.class);
         final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
         when(rs1.getMetaData()).thenReturn(metadata);
         when(rs2.getMetaData()).thenReturn(metadata);
         when(metadata.getColumnCount()).thenReturn(0);
         when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2, rs3);
-        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, true);
-        when(preparedStatement.getMoreResults()).thenReturn(false);
+        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2);
+        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true);
+        // The third result is first reached during cleanup. A second advance closes it in the driver.
+        when(preparedStatement.getMoreResults()).thenReturn(true, false);
         when(preparedStatement.getUpdateCount()).thenReturn(-1);
         query.closeAfterExecution(false);
 
@@ -301,23 +301,23 @@ class AbstractQueryResultTest extends AbstractQueryTestSupport {
 
         assertEquals("first", result._1);
         assertEquals("second", result._2);
-        verify(rs3).close();
-        verify(preparedStatement).getMoreResults();
+        verify(rs1).close();
+        verify(rs2).close();
+        verify(preparedStatement, Mockito.times(2)).getMoreResults();
+        verify(preparedStatement).getMoreResults(Statement.KEEP_CURRENT_RESULT);
         verify(preparedStatement, never()).close();
     }
 
     @Test
     public void testQuery2ResultSetsPreservesExtractorFailureWhenDrainFails() throws SQLException {
         final ResultSet rs1 = Mockito.mock(ResultSet.class);
-        final ResultSet rs2 = Mockito.mock(ResultSet.class);
         final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
         final SQLException extractorFailure = new SQLException("extractor failed");
         final SQLException drainFailure = new SQLException("drain failed");
         when(rs1.getMetaData()).thenReturn(metadata);
         when(metadata.getColumnCount()).thenReturn(0);
         when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2);
-        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true);
+        when(preparedStatement.getResultSet()).thenReturn(rs1);
         when(preparedStatement.getMoreResults()).thenThrow(drainFailure);
         query.closeAfterExecution(false);
 
@@ -327,7 +327,8 @@ class AbstractQueryResultTest extends AbstractQueryTestSupport {
 
         assertSame(extractorFailure, thrown);
         assertArrayEquals(new Throwable[] { drainFailure }, thrown.getSuppressed());
-        verify(rs2).close();
+        verify(rs1).close();
+        verify(preparedStatement, never()).getMoreResults(Statement.KEEP_CURRENT_RESULT);
         verify(preparedStatement).getMoreResults();
         verify(preparedStatement, never()).close();
     }
@@ -337,16 +338,15 @@ class AbstractQueryResultTest extends AbstractQueryTestSupport {
         final ResultSet rs1 = Mockito.mock(ResultSet.class);
         final ResultSet rs2 = Mockito.mock(ResultSet.class);
         final ResultSet rs3 = Mockito.mock(ResultSet.class);
-        final ResultSet rs4 = Mockito.mock(ResultSet.class);
         final ResultSetMetaData metadata = Mockito.mock(ResultSetMetaData.class);
         when(rs1.getMetaData()).thenReturn(metadata);
         when(rs2.getMetaData()).thenReturn(metadata);
         when(rs3.getMetaData()).thenReturn(metadata);
         when(metadata.getColumnCount()).thenReturn(0);
         when(preparedStatement.execute()).thenReturn(true);
-        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2, rs3, rs4);
-        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, true, true);
-        when(preparedStatement.getMoreResults()).thenReturn(false);
+        when(preparedStatement.getResultSet()).thenReturn(rs1, rs2, rs3);
+        when(preparedStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenReturn(true, true);
+        when(preparedStatement.getMoreResults()).thenReturn(true, false);
         when(preparedStatement.getUpdateCount()).thenReturn(-1);
         query.closeAfterExecution(false);
 
@@ -356,8 +356,11 @@ class AbstractQueryResultTest extends AbstractQueryTestSupport {
         assertEquals("first", result._1);
         assertEquals("second", result._2);
         assertEquals("third", result._3);
-        verify(rs4).close();
-        verify(preparedStatement).getMoreResults();
+        verify(rs1).close();
+        verify(rs2).close();
+        verify(rs3).close();
+        verify(preparedStatement, Mockito.times(2)).getMoreResults();
+        verify(preparedStatement, Mockito.times(2)).getMoreResults(Statement.KEEP_CURRENT_RESULT);
         verify(preparedStatement, never()).close();
     }
 

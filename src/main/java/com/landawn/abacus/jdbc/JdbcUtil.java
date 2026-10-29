@@ -5740,8 +5740,10 @@ public final class JdbcUtil {
         final PreparedStatement stmt = prepareStatement(conn, parsedSql);
 
         try {
+            final int[] firstIndexes = firstIndexesOfRepeatedNames(parsedSql.namedParameters());
+
             for (final Object parameters : parametersList) {
-                setParameters(parsedSql, stmt, N.asArray(parameters));
+                setParameters(parsedSql, stmt, N.asArray(parameters), firstIndexes, true);
                 stmt.addBatch();
             }
         } catch (final SQLException | RuntimeException | Error e) {
@@ -5776,8 +5778,10 @@ public final class JdbcUtil {
         final CallableStatement stmt = prepareCallable(conn, parsedSql);
 
         try {
+            final int[] firstIndexes = firstIndexesOfRepeatedNames(parsedSql.namedParameters());
+
             for (final Object parameters : parametersList) {
-                setParameters(parsedSql, stmt, N.asArray(parameters));
+                setParameters(parsedSql, stmt, N.asArray(parameters), firstIndexes, true);
                 stmt.addBatch();
             }
         } catch (final SQLException | RuntimeException | Error e) {
@@ -6463,13 +6467,14 @@ public final class JdbcUtil {
             stmt = prepareStatement(conn, parsedSql);
 
             final Object[] parameters = new Object[1];
+            final int[] firstIndexes = firstIndexesOfRepeatedNames(parsedSql.namedParameters());
             int res = 0;
             int idx = 0;
 
             for (final Object parameter : listOfParameters) {
                 parameters[0] = parameter;
 
-                setParameters(parsedSql, stmt, parameters);
+                setParameters(parsedSql, stmt, parameters, firstIndexes, true);
                 stmt.addBatch();
 
                 if (++idx % batchSize == 0) {
@@ -6830,13 +6835,14 @@ public final class JdbcUtil {
             stmt = prepareStatement(conn, parsedSql);
 
             final Object[] parameters = new Object[1];
+            final int[] firstIndexes = firstIndexesOfRepeatedNames(parsedSql.namedParameters());
             long res = 0;
             int idx = 0;
 
             for (final Object parameter : listOfParameters) {
                 parameters[0] = parameter;
 
-                setParameters(parsedSql, stmt, parameters);
+                setParameters(parsedSql, stmt, parameters, firstIndexes, true);
                 stmt.addBatch();
 
                 if (++idx % batchSize == 0) {
@@ -7597,6 +7603,13 @@ public final class JdbcUtil {
      */
     static void setParameters(final ParsedSql parsedSql, final PreparedStatement stmt, final Object[] parameters)
             throws IllegalArgumentException, SQLException {
+        setParameters(parsedSql, stmt, parameters, null, false);
+    }
+
+    // A null resolved layout means there are no repeated names. Keep that distinct from the single-row path,
+    // which analyzes names only if it actually binds an entity/map. Batch callers analyze the immutable SQL once.
+    private static void setParameters(final ParsedSql parsedSql, final PreparedStatement stmt, final Object[] parameters, final int[] batchFirstIndexes,
+            final boolean firstIndexesResolved) throws IllegalArgumentException, SQLException {
         final int parameterCount = parsedSql.parameterCount();
 
         if (parameterCount == 0) {
@@ -7617,7 +7630,7 @@ public final class JdbcUtil {
             parameterValues = new Object[parameterCount];
             parameterTypes = new Type[parameterCount];
             final BeanInfo entityInfo = Beans.isBeanClass(cls) || Beans.isRecordClass(cls) ? ParserUtil.getBeanInfo(cls) : null;
-            final int[] firstIndexes = firstIndexesOfRepeatedNames(namedParameters);
+            final int[] firstIndexes = firstIndexesResolved ? batchFirstIndexes : firstIndexesOfRepeatedNames(namedParameters);
             Map<String, Integer> repeatedStreams = null;
 
             for (int i = 0; i < parameterCount; i++) {
@@ -8532,15 +8545,21 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to extract from. It is closed before this method returns.
      * @param resultExtractor The extractor that produces the result from the {@link ResultSet}.
      * @return The extraction result.
-     * @throws SQLException if the supplied result extractor throws an SQL exception.
+     * @throws SQLException if the supplied result extractor throws an SQL exception, or closing a MySQL streaming
+     *         multiple-result set reads an error the statement raised after the rows read.
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link ResultSet}, which would be closed before it could be used.
      */
     static <R> R extractAndCloseResultSet(final ResultSet rs, final ResultExtractor<? extends R> resultExtractor)
             throws SQLException, UnsupportedOperationException {
+        Throwable extractionFailure = null;
+
         try {
             return checkNotResultSet(resultExtractor.apply(rs));
+        } catch (final SQLException | RuntimeException | Error e) {
+            extractionFailure = e;
+            throw e;
         } finally {
-            closeQuietly(rs);
+            closeExtractedResultSet(rs, extractionFailure);
         }
     }
 
@@ -8552,15 +8571,51 @@ public final class JdbcUtil {
      * @param rs The {@link ResultSet} to extract from. It is closed before this method returns.
      * @param resultExtractor The extractor that produces the result from the {@link ResultSet} and its column labels.
      * @return The extraction result.
-     * @throws SQLException if reading column metadata or the supplied result extractor throws an SQL exception.
+     * @throws SQLException if reading column metadata or the supplied result extractor throws an SQL exception, or closing a
+     *         MySQL streaming multiple-result set reads an error the statement raised after the rows read.
      * @throws UnsupportedOperationException if {@code resultExtractor} returns a {@link ResultSet}, which would be closed before it could be used.
      */
     static <R> R extractAndCloseResultSet(final ResultSet rs, final BiResultExtractor<? extends R> resultExtractor)
             throws SQLException, UnsupportedOperationException {
+        Throwable extractionFailure = null;
+
         try {
             return checkNotResultSet(resultExtractor.apply(rs, getColumnLabels(rs)));
+        } catch (final SQLException | RuntimeException | Error e) {
+            extractionFailure = e;
+            throw e;
         } finally {
+            closeExtractedResultSet(rs, extractionFailure);
+        }
+    }
+
+    /**
+     * Closes a result set after extraction. Closing a MySQL streaming multiple-result wrapper (see
+     * {@link ResultSetProxy#wrap(ResultSet, boolean)}) reads the rows the extractor left unread, and that read can meet an
+     * error the statement raised after them, such as a stored procedure's {@code SIGNAL}. Such a failure is thrown if the
+     * extraction succeeded, or added as suppressed to the extraction failure, so a failed statement does not look
+     * successful. Other result sets are closed quietly.
+     *
+     * @param rs The result set to close.
+     * @param extractionFailure The failure of the extraction, or {@code null} if it succeeded.
+     * @throws SQLException if reading or closing a MySQL streaming multiple-result wrapper fails after a successful extraction.
+     */
+    private static void closeExtractedResultSet(final ResultSet rs, final Throwable extractionFailure) throws SQLException {
+        if (!(rs instanceof final ResultSetProxy proxy && proxy.readsToEndOnClose())) {
             closeQuietly(rs);
+            return;
+        }
+
+        try {
+            rs.close();
+        } catch (final SQLException | RuntimeException | Error e) {
+            if (extractionFailure == null) {
+                throw e;
+            }
+
+            if (e != extractionFailure) {
+                extractionFailure.addSuppressed(e);
+            }
         }
     }
 
@@ -9339,6 +9394,12 @@ public final class JdbcUtil {
      * This is useful when executing stored procedures that return multiple result sets.
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
      *
+     * <p>When connection metadata identifies MySQL Connector/J and the statement uses forward-only, read-only
+     * streaming with {@code fetchSize = Integer.MIN_VALUE}, each result is read to its end before the next one, and
+     * closing the returned stream reads every remaining result: Connector/J rejects every later statement on the
+     * connection until all streamed results are read. Short-circuiting traversal therefore does not avoid those reads.
+     * An error the statement raises while they are read is thrown, from closing the stream if traversal has stopped.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * try (CallableStatement stmt = conn.prepareCall("{call sp_get_multiple_results()}")) {
@@ -9370,6 +9431,13 @@ public final class JdbcUtil {
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
      * Closing the returned stream closes the statement's current result set if the stream has not delivered it to
      * the extractor (traversal stopped early, or never started); it does not close {@code stmt}.
+     *
+     * <p>When connection metadata identifies MySQL Connector/J and the statement uses forward-only, read-only
+     * streaming with {@code fetchSize = Integer.MIN_VALUE}, each result is read to its end before the next one, and
+     * closing the returned stream reads every remaining result: Connector/J rejects every later statement on the
+     * connection until all streamed results are read. Returning early from the extractor or short-circuiting traversal
+     * therefore does not avoid those reads. An error the statement raises while they are read is thrown, from closing
+     * the stream if traversal has stopped.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9418,6 +9486,13 @@ public final class JdbcUtil {
      * It's the user's responsibility to close the input {@code stmt} after the stream is finished.
      * Closing the returned stream closes the statement's current result set if the stream has not delivered it to
      * the extractor (traversal stopped early, or never started); it does not close {@code stmt}.
+     *
+     * <p>When connection metadata identifies MySQL Connector/J and the statement uses forward-only, read-only
+     * streaming with {@code fetchSize = Integer.MIN_VALUE}, each result is read to its end before the next one, and
+     * closing the returned stream reads every remaining result: Connector/J rejects every later statement on the
+     * connection until all streamed results are read. Returning early from the extractor or short-circuiting traversal
+     * therefore does not avoid those reads. An error the statement raises while they are read is thrown, from closing
+     * the stream if traversal has stopped.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -9469,29 +9544,61 @@ public final class JdbcUtil {
     /**
      * Creates an {@link ObjIteratorEx} over all result sets of an executed {@link Statement} (for stored
      * procedures or statements returning multiple result sets). Closing the iterator closes any result
-     * set it advanced to but did not deliver.
+     * set it advanced to but did not deliver; for MySQL Connector/J streaming results, it instead reads past
+     * every remaining result.
      *
      * <p>The iterator propagates database access failures as {@link UncheckedSQLException}; calling
      * {@code next()} after exhaustion throws {@link NoSuchElementException}.</p>
      *
-     * <p>When the driver reports that it supports multiple open results, a delivered result set stays open while the
-     * iterator advances ({@link Statement#KEEP_CURRENT_RESULT}). Otherwise (e.g. Microsoft SQL Server, or a driver that
-     * rejects {@code KEEP_CURRENT_RESULT} with {@link java.sql.SQLFeatureNotSupportedException}), the iterator instead
-     * advances on the following {@code hasNext()}/{@code next()} call, which closes the previously delivered result
-     * set; it must therefore be fully consumed before the iterator is used again. Any other failure while advancing is
-     * propagated.</p>
+     * <p>Advancement is deferred until the following {@code hasNext()}/{@code next()} call so that the caller can consume
+     * the delivered result first. When the driver reports support for multiple open results, advancement uses
+     * {@link Statement#KEEP_CURRENT_RESULT}. Otherwise (e.g. Microsoft SQL Server, or a driver that rejects that option
+     * with {@link java.sql.SQLFeatureNotSupportedException}), advancement closes the previously delivered result set.
+     * Streaming drivers may drain unread rows even with {@code KEEP_CURRENT_RESULT}; consume those rows before requesting
+     * another result. Already-closed results are advanced with
+     * {@link Statement#CLOSE_CURRENT_RESULT} instead of being kept in the driver's open-result tracking.
+     * Any other failure while advancing is propagated; an already delivered result remains the caller's responsibility.</p>
+     *
+     * <p>MySQL Connector/J, identified through connection metadata, streams the results of a forward-only, read-only
+     * statement with {@code fetchSize = Integer.MIN_VALUE} one at a time. It cannot close a streamed result while the
+     * statement streams the next one, and it rejects every later statement on the connection until all of them are read.
+     * Closing a delivered result therefore only reads its unread rows (see {@link ResultSetProxy#wrap(ResultSet, boolean)}),
+     * advancing reads the delivered result to its end and releases it with {@link Statement#CLOSE_CURRENT_RESULT}, and
+     * closing the iterator reads every remaining result. Once no results remain, the last streamed result is closed,
+     * which restores the session's {@code net_write_timeout} that Connector/J raises while streaming. A failure while
+     * reading, which can be an error the statement raised after the rows already read, is propagated, also by
+     * {@code closeResource()}, unless the statement is already closed.</p>
      *
      * @param stmt The executed {@link Statement} to extract result sets from.
      * @param isFirstResultSet Whether the statement's first result is a result set.
      * @return An {@link ObjIteratorEx} over the statement's result sets.
      */
     static ObjIteratorEx<ResultSet> iterateAllResultSets(final Statement stmt, final boolean isFirstResultSet) { //NOSONAR
+        return iterateAllResultSets(stmt, isFirstResultSet, false);
+    }
+
+    /**
+     * Creates a result iterator with optional recovery from a driver's false result-set claim. Single-result
+     * {@link CallableQuery} reads historically advance past such a claim even when the update count is {@code -1},
+     * so their OUT-parameter variants retain that behavior while sharing streaming cleanup with this iterator.
+     *
+     * @param stmt the executed statement
+     * @param isFirstResultSet whether execution reported a result set
+     * @param advancePastNullResultSet whether a claimed but absent result set should be skipped unconditionally
+     * @return an iterator with the same result ownership and cleanup rules as {@link #iterateAllResultSets(Statement, boolean)}
+     */
+    static ObjIteratorEx<ResultSet> iterateAllResultSets(final Statement stmt, final boolean isFirstResultSet, final boolean advancePastNullResultSet) { //NOSONAR
         return new ObjIteratorEx<>() {
-            private final Holder<ResultSet> resultSetHolder = new Holder<>();
+            private final Holder<ResultSetProxy> resultSetHolder = new Holder<>();
             private boolean isNextResultSet = isFirstResultSet;
             private boolean noMoreResult = false;
-            // null until the first next(): whether advancing with KEEP_CURRENT_RESULT is used.
+            // null until the first advance: whether KEEP_CURRENT_RESULT is used.
             private Boolean useKeepCurrentResult = null;
+            // null until first needed: whether MySQL Connector/J streams the statement's results.
+            private Boolean mySqlStreaming = null;
+            private ResultSetProxy previouslyDelivered = null;
+            // The streamed result most recently advanced past; its driver result is closed once no results remain.
+            private ResultSetProxy lastStreamedResult = null;
             private boolean advancePending = false;
 
             /**
@@ -9504,23 +9611,53 @@ public final class JdbcUtil {
                 if (resultSetHolder.isNull() && !noMoreResult) {
                     try {
                         if (advancePending) {
-                            // Deferred advance (driver without KEEP_CURRENT_RESULT support, see next()): this closes
-                            // the result set delivered by the previous next() call.
                             advancePending = false;
-                            isNextResultSet = stmt.getMoreResults();
+                            final ResultSetProxy previous = previouslyDelivered;
+                            previouslyDelivered = null;
+
+                            if (Boolean.TRUE.equals(mySqlStreaming)) {
+                                // Closing the delivered wrapper reads it to its end but leaves the driver result open:
+                                // Connector/J cannot close it while streaming the next one. Advancing releases it.
+                                previous.close();
+                                lastStreamedResult = previous;
+                                isNextResultSet = stmt.getMoreResults();
+                            } else {
+                                if (useKeepCurrentResult == null) {
+                                    useKeepCurrentResult = supportsMultipleOpenResults(stmt);
+                                }
+
+                                if (useKeepCurrentResult && !isResultSetClosed(previous)) {
+                                    try {
+                                        isNextResultSet = stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT);
+                                    } catch (final java.sql.SQLFeatureNotSupportedException e) {
+                                        // Only an explicit unsupported-feature failure permits a retry with CLOSE_CURRENT_RESULT.
+                                        useKeepCurrentResult = false;
+                                        isNextResultSet = stmt.getMoreResults();
+                                    }
+                                } else {
+                                    isNextResultSet = stmt.getMoreResults();
+                                }
+                            }
                         }
 
                         while (true) {
                             if (isNextResultSet) {
+                                final boolean streaming = isMySqlStreaming();
                                 final ResultSet currentRs = stmt.getResultSet();
                                 isNextResultSet = false;
 
                                 if (currentRs != null) {
                                     // Wrapped for parity with single-ResultSet reads (executeQuery): consumers see
                                     // normalized values (Oracle TIMESTAMP -> java.sql.Timestamp, materialized LOBs).
-                                    resultSetHolder.setValue(ResultSetProxy.wrap(currentRs));
+                                    resultSetHolder.setValue(ResultSetProxy.wrap(currentRs, streaming));
                                     break;
                                 }
+
+                                if (advancePastNullResultSet) {
+                                    isNextResultSet = stmt.getMoreResults();
+                                    continue;
+                                }
+
                                 // Result-set claim was wrong (driver returned null, meaning the current
                                 // result is actually an update count or no result). Fall through to the
                                 // update-count check below: a real update count advances via getMoreResults();
@@ -9529,6 +9666,7 @@ public final class JdbcUtil {
                                 isNextResultSet = stmt.getMoreResults();
                             } else {
                                 noMoreResult = true;
+                                closeLastStreamedResult();
 
                                 break;
                             }
@@ -9539,6 +9677,20 @@ public final class JdbcUtil {
                 }
 
                 return resultSetHolder.isNotNull();
+            }
+
+            // Nothing streams once no results remain, so closing no longer fails, and it restores the session setting
+            // (net_write_timeout) that Connector/J raises while streaming. The results are complete: only log a failure.
+            private void closeLastStreamedResult() {
+                if (lastStreamedResult != null) {
+                    try {
+                        lastStreamedResult.closeDelegate();
+                    } catch (final SQLException e) {
+                        logger.warn(e, "Failed to close the last streamed ResultSet");
+                    }
+
+                    lastStreamedResult = null;
+                }
             }
 
             /**
@@ -9553,69 +9705,147 @@ public final class JdbcUtil {
                     throw new NoSuchElementException(InternalUtil.ERROR_MSG_FOR_NO_SUCH_EX);
                 }
 
-                final ResultSet rs = resultSetHolder.getAndSet(null);
+                final ResultSetProxy rs = resultSetHolder.getAndSet(null);
 
-                if (useKeepCurrentResult == null) {
-                    // KEEP_CURRENT_RESULT is optional (the SQL Server driver, for example, always rejects it). Decide from
-                    // the driver's declared capability up front instead of reinterpreting a failed call afterwards: a
-                    // genuine failure (timeout, lost connection) must never be mistaken for "unsupported" and swallowed.
-                    useKeepCurrentResult = supportsMultipleOpenResults(stmt);
-                }
-
-                if (useKeepCurrentResult) {
-                    try {
-                        isNextResultSet = stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT);
-                        return rs;
-                    } catch (final java.sql.SQLFeatureNotSupportedException e) {
-                        // The driver claims support but explicitly rejects the feature: use the deferred advance below.
-                        useKeepCurrentResult = false;
-                    } catch (final SQLException e) {
-                        // The caller never received `rs`, so they cannot close it. Release it
-                        // here instead of leaking it to be cleaned up when the statement closes.
-                        closeQuietly(rs);
-                        throw new UncheckedSQLException(e);
-                    }
-                }
-
-                // Without KEEP_CURRENT_RESULT, advancing (getMoreResults()) would close `rs` before delivery, so defer the
-                // advance to the next hasNext().
-
-                // `rs` is still the statement's current result: advancing now would close it before delivery.
+                // Even KEEP_CURRENT_RESULT can drain a streaming cursor (Connector/J does this). Give the caller the
+                // current result before asking the driver for another one, regardless of its multiple-open-results support.
                 isNextResultSet = false;
+                previouslyDelivered = rs;
                 advancePending = true;
 
                 return rs;
             }
 
+            private boolean isMySqlStreaming() {
+                if (mySqlStreaming == null) {
+                    mySqlStreaming = usesMySqlStreamingResults(stmt);
+                }
+
+                return mySqlStreaming;
+            }
+
             private boolean isClosed = false;
 
+            /**
+             * {@inheritDoc}
+             *
+             * @throws UncheckedSQLException if reading the remaining MySQL Connector/J streaming results fails, for example
+             *         because the statement raised an error after the results read so far.
+             */
             @Override
-            public void closeResource() {
+            public void closeResource() throws UncheckedSQLException {
                 if (isClosed) {
                     return;
                 }
 
                 isClosed = true;
+                SQLException readFailure = null;
 
-                if (resultSetHolder.isNotNull()) {
-                    JdbcUtil.closeQuietly(resultSetHolder.getAndSet(null));
-                } else if (isNextResultSet && !noMoreResult) {
-                    // next() advances with KEEP_CURRENT_RESULT before returning the prior result set.
-                    // If traversal stops at that point, the newly-current result set has not yet
-                    // been put in resultSetHolder and would otherwise remain open until the caller
-                    // eventually closes the Statement.
-                    try {
+                try {
+                    if (!noMoreResult && isMySqlStreaming()) {
+                        // Closing the statement does not read the remaining streamed results, and Connector/J rejects every
+                        // later statement on the connection until they are read. An undelivered or delivered result is the
+                        // statement's current result, so the discard reads it too. A closed statement has nothing left.
+                        resultSetHolder.setValue(null);
+
+                        if (!stmt.isClosed()) {
+                            try {
+                                discardRemainingResults(stmt, true);
+                            } catch (final SQLException e) {
+                                // Unlike a close failure, this can be an error the statement itself raised after the results
+                                // read so far (e.g. a procedure's SIGNAL): logging it would make a failed call look successful.
+                                readFailure = e;
+                            }
+                        }
+                    } else if (resultSetHolder.isNotNull()) {
+                        JdbcUtil.closeQuietly(resultSetHolder.getAndSet(null));
+                    } else if (isNextResultSet && !noMoreResult) {
+                        // The current result has not been fetched/delivered, including a never-consumed iterator.
                         JdbcUtil.closeQuietly(stmt.getResultSet());
-                    } catch (final SQLException e) {
-                        logger.warn(e, "Failed to close unconsumed ResultSet while closing result-set iterator");
                     }
+                } catch (final SQLException e) {
+                    logger.warn(e, "Failed to close unconsumed ResultSet while closing result-set iterator");
+                } finally {
+                    isNextResultSet = false;
+                    previouslyDelivered = null;
+                    // Superseded by the discard, which closes the last result it reads.
+                    lastStreamedResult = null;
+                    advancePending = false;
+                    noMoreResult = true;
                 }
 
-                isNextResultSet = false;
-                advancePending = false;
-                noMoreResult = true;
+                if (readFailure != null) {
+                    throw new UncheckedSQLException(readFailure);
+                }
             }
         };
+    }
+
+    /**
+     * Advances {@code stmt} past its current and all remaining results. With {@code readEachResult}, each result set is
+     * first read to its end: MySQL Connector/J rejects every later statement on the connection until all streamed
+     * results are read, its own advance does not finish reading the last one, and closing the statement reads none.
+     * The last result set read is then closed, restoring the session setting ({@code net_write_timeout}) that
+     * Connector/J raises while streaming; a failure to close it is only logged.
+     *
+     * @param stmt The executed statement whose results are discarded.
+     * @param readEachResult Whether to read each result set to its end before advancing past it.
+     * @throws SQLException if reading or advancing past a result fails.
+     */
+    static void discardRemainingResults(final Statement stmt, final boolean readEachResult) throws SQLException {
+        ResultSet lastRead = null;
+
+        do {
+            final ResultSet rs = readEachResult ? stmt.getResultSet() : null;
+
+            if (rs != null) {
+                while (rs.next()) {
+                    // Discard unread rows without materializing their column values.
+                }
+
+                lastRead = rs;
+            }
+            // getMoreResults() is false both for an update count and for no more results; only the latter has -1.
+        } while (stmt.getMoreResults() || stmt.getUpdateCount() != -1);
+
+        // Closing a streamed result fails while a later one streams, but nothing streams once no results remain.
+        closeQuietly(lastRead);
+    }
+
+    /**
+     * Returns whether MySQL Connector/J streams the results of {@code stmt} one at a time: a forward-only, read-only
+     * statement with {@code fetchSize = Integer.MIN_VALUE}. Failing to tell is reported as {@code false}.
+     *
+     * @param stmt The statement to check.
+     * @return {@code true} if Connector/J, identified through connection metadata, streams the statement's results.
+     */
+    static boolean usesMySqlStreamingResults(final Statement stmt) {
+        try {
+            if (stmt.getFetchSize() != Integer.MIN_VALUE || stmt.getResultSetType() != ResultSet.TYPE_FORWARD_ONLY
+                    || stmt.getResultSetConcurrency() != ResultSet.CONCUR_READ_ONLY) {
+                return false;
+            }
+
+            // The sentinel alone is not driver identification. Connection metadata also works through pool wrappers,
+            // and avoids linking this utility to optional Connector/J classes. Unknown drivers keep their normal close.
+            final Connection conn = stmt.getConnection();
+            final DatabaseMetaData metadata = conn == null ? null : conn.getMetaData();
+            final String driverName = metadata == null ? null : metadata.getDriverName();
+            // Connector/J 8.0 and later report "MySQL Connector/J"; 5.1 and 6.0 report "MySQL Connector Java".
+            return "MySQL Connector/J".equals(driverName) || "MySQL Connector Java".equals(driverName);
+        } catch (final SQLException | UnsupportedOperationException | AbstractMethodError e) {
+            logger.debug(e, "Failed to identify Connector/J streaming results; retaining normal ResultSet close behavior");
+            return false;
+        }
+    }
+
+    private static boolean isResultSetClosed(final ResultSet rs) throws SQLException {
+        try {
+            return rs != null && rs.isClosed();
+        } catch (final java.sql.SQLFeatureNotSupportedException | UnsupportedOperationException | AbstractMethodError e) {
+            // Older drivers may lack this optional observation; retain the existing KEEP behavior in that case.
+            return false;
+        }
     }
 
     /**

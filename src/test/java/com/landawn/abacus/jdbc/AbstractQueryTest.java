@@ -314,6 +314,7 @@ class AbstractQueryTest extends AbstractQueryTestSupport {
             when(statement.execute()).thenReturn(true);
             when(statement.getResultSet()).thenReturn(rs);
             when(statement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(readFailure);
+            when(rs.getMetaData()).thenReturn(Mockito.mock(ResultSetMetaData.class));
 
             try (Stream<String> results = withColumnLabels ? streamQuery.streamAllResultSets((Jdbc.BiResultExtractor<String>) (result, labels) -> "value")
                     : streamQuery.streamAllResultSets((Jdbc.ResultExtractor<String>) result -> "value")) {

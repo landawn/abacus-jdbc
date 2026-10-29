@@ -6102,8 +6102,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Note:</b> When {@code closeAfterExecution(false)} has been set, any trailing results beyond
      * the two consumed here are drained before this method returns so the statement can be safely
-     * reused. If that drain fails, the drain exception is added as a suppressed exception to the
-     * primary failure when the query itself failed, or thrown when the query otherwise succeeded.</p>
+     * reused. With MySQL Connector/J's forward-only, read-only streaming ({@code fetchSize = Integer.MIN_VALUE}),
+     * unread rows and trailing results are also read when the statement will be closed after execution.
+     * A failure while draining is added as a suppressed exception to an existing query failure,
+     * or thrown when the query otherwise succeeded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -6123,7 +6125,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code resultExtractor1} or {@code resultExtractor2} is {@code null}
      * @throws SQLException if executing the statement, retrieving a result set or its column labels, or draining the remaining results
-     *         (when this query is kept open) fails, or a result extractor throws {@code SQLException}
+     *         fails, or a result extractor throws {@code SQLException}
      * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      */
     @Beta
@@ -6171,8 +6173,10 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      *
      * <p><b>Note:</b> When {@code closeAfterExecution(false)} has been set, any trailing results beyond
      * the three consumed here are drained before this method returns so the statement can be safely
-     * reused. If that drain fails, the drain exception is added as a suppressed exception to the
-     * primary failure when the query itself failed, or thrown when the query otherwise succeeded.</p>
+     * reused. With MySQL Connector/J's forward-only, read-only streaming ({@code fetchSize = Integer.MIN_VALUE}),
+     * unread rows and trailing results are also read when the statement will be closed after execution.
+     * A failure while draining is added as a suppressed exception to an existing query failure,
+     * or thrown when the query otherwise succeeded.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -6196,7 +6200,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code resultExtractor1}, {@code resultExtractor2}, or {@code resultExtractor3} is {@code null}
      * @throws SQLException if executing the statement, retrieving a result set or its column labels, or draining the remaining results
-     *         (when this query is kept open) fails, or a result extractor throws {@code SQLException}
+     *         fails, or a result extractor throws {@code SQLException}
      * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      */
     @Beta
@@ -6259,7 +6263,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @return A list of {@code Dataset} objects, one for each ResultSet returned by the query
      * @throws IllegalStateException if this query is closed
      * @throws SQLException if executing the statement, retrieving any of its result sets, or reading one into a {@code Dataset} fails, or
-     *         draining the remaining results (when this query is kept open) fails
+     *         draining the remaining results fails
      * @see #queryAllResultSets(ResultExtractor)
      * @see #streamAllResultSets()
      */
@@ -6291,7 +6295,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code resultExtractor} is null
      * @throws SQLException if executing the statement or retrieving any of its result sets fails, {@code resultExtractor} throws
-     *         {@code SQLException}, or draining the remaining results (when this query is kept open) fails
+     *         {@code SQLException}, or draining the remaining results fails
      * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see #streamAllResultSets(ResultExtractor)
      */
@@ -6348,7 +6352,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code resultExtractor} is null
      * @throws SQLException if executing the statement or retrieving any of its result sets or their column labels fails,
-     *         {@code resultExtractor} throws {@code SQLException}, or draining the remaining results (when this query is kept open) fails
+     *         {@code resultExtractor} throws {@code SQLException}, or draining the remaining results fails
      * @throws UnsupportedOperationException if an invoked result extractor returns a {@link ResultSet}
      * @see #streamAllResultSets(BiResultExtractor)
      */
@@ -7814,7 +7818,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalArgumentException if {@code targetType} is null; also if a returned row has an unmapped bean column or a scalar target has
      *         other than one column
      * @throws SQLException if executing the statement, retrieving any of its result sets, or reading their column labels or row values fails,
-     *         or draining the remaining results (when this query is kept open) fails
+     *         or draining the remaining results fails
      * @see #listAllResultSets(Jdbc.RowMapper)
      */
     public <T> List<List<T>> listAllResultSets(final Class<? extends T> targetType) throws IllegalStateException, IllegalArgumentException, SQLException {
@@ -7872,7 +7876,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code rowMapper} is null
      * @throws SQLException if executing the statement or retrieving or advancing through any of its result sets fails, {@code rowMapper}
-     *         throws {@code SQLException}, or draining the remaining results (when this query is kept open) fails
+     *         throws {@code SQLException}, or draining the remaining results fails
      * @see Jdbc.RowMapper
      */
     public <T> List<List<T>> listAllResultSets(final Jdbc.RowMapper<? extends T> rowMapper)
@@ -7932,7 +7936,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is null
      * @throws SQLException if executing the statement or retrieving or advancing through any of its result sets fails, {@code rowFilter}
-     *         or {@code rowMapper} throws {@code SQLException}, or draining the remaining results (when this query is kept open) fails
+     *         or {@code rowMapper} throws {@code SQLException}, or draining the remaining results fails
      */
     public <T> List<List<T>> listAllResultSets(final Jdbc.RowFilter rowFilter, final Jdbc.RowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
@@ -7994,8 +7998,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code rowMapper} is null
      * @throws SQLException if executing the statement, retrieving any of its result sets or their column labels, or advancing through
-     *         their rows fails, {@code rowMapper} throws {@code SQLException}, or draining the remaining results (when this query is kept
-     *         open) fails
+     *         their rows fails, {@code rowMapper} throws {@code SQLException}, or draining the remaining results fails
      * @see Jdbc.BiRowMapper
      */
     public <T> List<List<T>> listAllResultSets(final Jdbc.BiRowMapper<? extends T> rowMapper)
@@ -8062,8 +8065,7 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
      * @throws IllegalStateException if this query is closed
      * @throws IllegalArgumentException if {@code rowFilter} or {@code rowMapper} is null
      * @throws SQLException if executing the statement, retrieving any of its result sets or their column labels, or advancing through
-     *         their rows fails, {@code rowFilter} or {@code rowMapper} throws {@code SQLException}, or draining the remaining results (when
-     *         this query is kept open) fails
+     *         their rows fails, {@code rowFilter} or {@code rowMapper} throws {@code SQLException}, or draining the remaining results fails
      */
     public <T> List<List<T>> listAllResultSets(final Jdbc.BiRowFilter rowFilter, final Jdbc.BiRowMapper<? extends T> rowMapper)
             throws IllegalStateException, IllegalArgumentException, SQLException {
@@ -8963,6 +8965,18 @@ public abstract class AbstractQuery<Stmt extends PreparedStatement, This extends
         try {
             if (iter != null) {
                 iter.closeResource();
+            }
+        } catch (final UncheckedSQLException cleanupFailure) {
+            // Reading the remaining MySQL streaming results failed; unwrapped like JdbcUtil.hasNextResultSet.
+            final SQLException readFailure = cleanupFailure.getCause();
+
+            if (cleanupPrimary == null) {
+                cleanupPrimary = readFailure;
+                throw readFailure;
+            }
+
+            if (readFailure != cleanupPrimary) {
+                cleanupPrimary.addSuppressed(readFailure);
             }
         } catch (final RuntimeException | Error cleanupFailure) {
             if (cleanupPrimary == null) {

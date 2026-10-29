@@ -5,7 +5,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.AdditionalAnswers.delegatesTo;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -16,6 +21,7 @@ import static org.mockito.Mockito.when;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -26,6 +32,10 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.InOrder;
 
 import com.landawn.abacus.exception.UncheckedSQLException;
 
@@ -49,6 +59,7 @@ public class JdbcCodeGenerationMetadataTest extends JdbcCodeGenerationUtilTestSu
         assertTrue(source.contains("private String status;"), source);
         verify(databaseMetaData).getPrimaryKeys(null, null, "order_history");
         verify(preparedStatement, never()).executeQuery();
+        verify(preparedStatement, never()).setMaxRows(anyInt());
         verify(preparedStatement).close();
         verify(connection, never()).close();
         verifyNoInteractions(resultSet);
@@ -58,10 +69,81 @@ public class JdbcCodeGenerationMetadataTest extends JdbcCodeGenerationUtilTestSu
     void nullPreparedMetadataFallsBackAndClosesResultSet() throws Exception {
         setupFullGenerateEntityClassMock();
         assertTrue(JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", QUERY).contains("private long id;"));
-        verify(preparedStatement).executeQuery();
+        final InOrder execution = inOrder(preparedStatement);
+        execution.verify(preparedStatement).setMaxRows(1);
+        execution.verify(preparedStatement).executeQuery();
         verify(resultSet).close();
         verify(preparedStatement).close();
         verify(connection, never()).close();
+    }
+
+    @Test
+    void unsupportedRowLimitsRetainExecutionFallback() throws Exception {
+        for (final Throwable unsupported : List.of(new SQLFeatureNotSupportedException("maxRows"), new UnsupportedOperationException("maxRows"),
+                new AbstractMethodError("maxRows"))) {
+            reset(preparedStatement);
+            setupFullGenerateEntityClassMock();
+            when(preparedStatement.executeQuery()).thenReturn(resultSet);
+            doThrow(unsupported).when(preparedStatement).setMaxRows(1);
+
+            final String source = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", QUERY);
+
+            assertTrue(source.contains("private long id;"), source);
+            verify(preparedStatement).executeQuery();
+            verify(preparedStatement).close();
+        }
+        verify(resultSet, times(3)).close();
+        verify(connection, never()).close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "0A000", "0A001" })
+    void unsupportedRowLimitSqlStateRetainsExecutionFallback(final String sqlState) throws Exception {
+        setupFullGenerateEntityClassMock();
+        doThrow(new SQLException("driver rejected the row limit", sqlState)).when(preparedStatement).setMaxRows(1);
+
+        final String source = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", QUERY);
+
+        assertTrue(source.contains("private long id;"), source);
+        final InOrder execution = inOrder(preparedStatement);
+        execution.verify(preparedStatement).setMaxRows(1);
+        execution.verify(preparedStatement).executeQuery();
+        verify(resultSet).close();
+        verify(preparedStatement).close();
+        verify(connection, never()).close();
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = { "08006", "42000", "HY000" })
+    void rowLimitSqlFailureRemainsPrimaryAfterDescribeFailure(final String sqlState) throws Exception {
+        final SQLException describeFailure = new SQLException("metadata unavailable");
+        final SQLException limitFailure = new SQLException("setMaxRows not supported", sqlState);
+        when(preparedStatement.getMetaData()).thenThrow(describeFailure);
+        doThrow(limitFailure).when(preparedStatement).setMaxRows(1);
+
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class,
+                () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", QUERY));
+
+        assertSame(limitFailure, thrown.getCause());
+        assertEquals(1, limitFailure.getSuppressed().length);
+        assertSame(describeFailure, limitFailure.getSuppressed()[0]);
+        verify(preparedStatement, never()).executeQuery();
+        verify(preparedStatement).close();
+        verifyNoInteractions(resultSet);
+        verify(connection, never()).close();
+    }
+
+    @Test
+    void unrelatedRowLimitFailuresAreNotSwallowed() throws Exception {
+        for (final Throwable failure : List.of(new IllegalStateException("driver state"), new LinkageError("driver linkage"))) {
+            reset(preparedStatement);
+            doThrow(failure).when(preparedStatement).setMaxRows(1);
+
+            assertSame(failure, assertThrows(failure.getClass(), () -> JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", QUERY)));
+            verify(preparedStatement, never()).executeQuery();
+            verify(preparedStatement).close();
+        }
     }
 
     @Test
@@ -124,7 +206,9 @@ public class JdbcCodeGenerationMetadataTest extends JdbcCodeGenerationUtilTestSu
         String source = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "order_history", QUERY);
         assertTrue(source.contains("private long id;"), source);
         assertTrue(source.contains("private String status;"), source);
+        verify(preparedStatement).setMaxRows(1);
         verify(preparedStatement).executeQuery();
+        verify(resultSet, never()).next();
         verify(resultSet).close();
 
         // One column without a concrete class is enough: the executed metadata is used for every column.
@@ -327,6 +411,31 @@ public class JdbcCodeGenerationMetadataTest extends JdbcCodeGenerationUtilTestSu
                     "SELECT count_row(X) AS id FROM SYSTEM_RANGE(1, 10000)", new JdbcCodeGenerationUtil.EntityCodeConfig().setIdFields(List.of("id")));
             assertTrue(source.contains("private long id;"), source);
             assertEquals(0, EVALUATED_ROWS.get(), "Generating source only needs metadata, not evaluation of SELECT rows");
+        }
+    }
+
+    @Test
+    void h2ExecutionFallbackEvaluatesAtMostFirstRow() throws Exception {
+        final String query = "SELECT count_row(X) AS id FROM SYSTEM_RANGE(1, 10000)";
+        try (Connection realConnection = DriverManager.getConnection("jdbc:h2:mem:metadata_fallback_" + System.nanoTime());
+             Statement statement = realConnection.createStatement()) {
+            statement.execute("CREATE ALIAS count_row FOR 'com.landawn.abacus.jdbc.JdbcCodeGenerationMetadataTest.countRow'");
+            try (PreparedStatement realStatement = realConnection.prepareStatement(query)) {
+                final PreparedStatement fallbackStatement = mock(PreparedStatement.class, delegatesTo(realStatement));
+                doReturn(null).when(fallbackStatement).getMetaData();
+                when(connection.prepareStatement(query)).thenReturn(fallbackStatement);
+                EVALUATED_ROWS.set(0);
+
+                final String source = JdbcCodeGenerationUtil.generateEntityClassByQuery(connection, "generated_entity", query,
+                        new JdbcCodeGenerationUtil.EntityCodeConfig().setIdFields(List.of("id")));
+
+                assertTrue(source.contains("private long id;"), source);
+                assertEquals(1, EVALUATED_ROWS.get(), "The metadata fallback needs at most the first row, not all 10,000 rows");
+                verify(fallbackStatement).setMaxRows(1);
+                verify(fallbackStatement).executeQuery();
+                assertTrue(realStatement.isClosed());
+                assertFalse(realConnection.isClosed());
+            }
         }
     }
 }

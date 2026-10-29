@@ -51,6 +51,23 @@ import com.landawn.abacus.util.u.Optional;
  * other threads they would run outside it, each on a connection of its own, and miss its uncommitted writes); outside one,
  * on the executor.</p>
  *
+ * <p>The inherited join-enrichment stream overloads keep the parent query's connection open while
+ * loading each batch's join entities. Outside a transaction that binds the connection, join
+ * queries need additional available connection pool capacity. A single-connection pool cannot serve
+ * both queries, and concurrent parent streams can exhaust a larger pool. Limit concurrent streams
+ * or reserve capacity for join queries; batching does not release the parent connection. The same
+ * requirement applies to the inherited single-class, class-collection and all-join stream overloads.</p>
+ *
+ * <p>Inside a transaction that binds the parent connection, join queries reuse that connection.
+ * The driver must support another statement while the parent result remains open; for example,
+ * Connector/J's {@code Integer.MIN_VALUE} streaming mode can reject this. Increasing pool capacity
+ * does not resolve this same-connection restriction.</p>
+ *
+ * <p>Choose driver-supported buffering that permits another active statement, materialize parents
+ * and close their cursor before loading joins, or explicitly use paging or a server-side join.
+ * The inherited stream methods do not select those alternatives automatically. Close returned streams
+ * with try-with-resources.</p>
+ *
  * <p><b>Connection acquisition failures:</b> with Spring connection acquisition enabled, Spring reports every failure to
  * obtain a connection as an unchecked runtime exception. Join entities are loaded through a DAO created for the
  * join entity class on the same data source, or through this DAO if there is none. An unchecked DAO translates such an

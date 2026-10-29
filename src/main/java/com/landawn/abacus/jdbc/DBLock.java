@@ -622,13 +622,10 @@ public final class DBLock implements AutoCloseable {
         logger.debug("Trying to acquire DB lock(target={}, liveTime={}, timeout={}, retryInterval={})", target, liveTime, timeout, retryInterval);
 
         do {
-            removeExpiredLock(target);
-            now = Dates.currentTimestamp();
-
             boolean acquired = false;
 
             try {
-                acquired = executeLockUpdate(lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0;
+                acquired = tryAcquireLock(target, hostName, code, liveTime);
             } catch (final Exception e) {
                 if (logger.isDebugEnabled()) {
                     logger.debug(e, "Failed to acquire DB lock(target={}, attempt={})", target, attempts + 1);
@@ -716,22 +713,71 @@ public final class DBLock implements AutoCloseable {
     }
 
     /**
-     * Deletes the expired or stale lock row for the given target, if one exists, so that the
-     * target can be locked again. An exception is logged and suppressed so it does not abort the
-     * acquisition; an {@link Error} (for example a driver {@link LinkageError}) propagates.
+     * Deletes an expired or stale row and attempts to insert the new lock using the same owned
+     * auto-commit connection. If cleanup fails, the insertion still gets an independent attempt
+     * with a fresh connection. Every connection is released before returning to the retry loop.
      *
-     * @param target the lock target whose expired lock should be removed.
+     * @param target the lock target
+     * @param hostName the current host name
+     * @param code the new ownership code
+     * @param liveTime the lock lease duration
+     * @return whether the new lock row was inserted
+     * @throws SQLException if obtaining the insertion connection or inserting the lock fails
      */
-    private void removeExpiredLock(final String target) {
+    @SuppressWarnings("deprecation")
+    private boolean tryAcquireLock(final String target, final String hostName, final String code, final long liveTime) throws SQLException {
+        Connection conn = removeExpiredLock(target);
+
         try {
             final Timestamp now = Dates.currentTimestamp();
 
-            if ((executeLockUpdate(removeExpiredLockSQL, target, now, Dates.addMilliseconds(now, -MAX_IDLE_TIME)) > 0) && logger.isInfoEnabled()) {
+            if (conn == null) {
+                conn = openLockConnection();
+            }
+
+            return JdbcUtil.executeUpdate(conn, lockSQL, hostName, target, code, LOCKED, expiryTimestamp(now, liveTime), now, now) > 0;
+        } finally {
+            // The INSERT is committed independently of the caller's transaction. A normal close
+            // failure must not turn a successful insertion into a retry of an unregistered lock.
+            JdbcUtil.closeQuietly(conn);
+        }
+    }
+
+    /**
+     * Deletes the expired or stale lock row for the given target, if one exists, so that the
+     * target can be locked again. On success, transfers the owned auto-commit connection to the
+     * insertion attempt. On an exception, the connection is closed and the failure logged and suppressed;
+     * an {@link Error} (for example a driver {@link LinkageError}) propagates.
+     *
+     * @param target the lock target whose expired lock should be removed.
+     * @return the connection to reuse and close, or {@code null} if cleanup failed
+     */
+    @SuppressWarnings("deprecation")
+    private Connection removeExpiredLock(final String target) {
+        Connection conn = null;
+        boolean reusable = false;
+
+        try {
+            final Timestamp now = Dates.currentTimestamp();
+            conn = openLockConnection();
+
+            if ((JdbcUtil.executeUpdate(conn, removeExpiredLockSQL, target, now, Dates.addMilliseconds(now, -MAX_IDLE_TIME)) > 0) && logger.isInfoEnabled()) {
                 logger.info("Removed expired DB lock(target={})", target);
             }
+
+            reusable = true;
+            return conn;
         } catch (final Exception e) {
             if (logger.isWarnEnabled()) {
                 logger.warn(e, "Failed to remove expired DB lock(target={})", target);
+            }
+
+            return null;
+        } finally {
+            if (!reusable) {
+                // A failed statement may have left its connection unusable. Do not pass it to
+                // the INSERT, which must remain possible even when expired-row cleanup fails.
+                JdbcUtil.closeQuietly(conn);
             }
         }
     }

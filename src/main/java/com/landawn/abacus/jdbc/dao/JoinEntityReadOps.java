@@ -440,6 +440,22 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * the specified type is found, an {@link IllegalArgumentException} is thrown during stream consumption.
      * This is a beta API and may change in a future release.
      *
+     * <p>The parent query keeps its connection open while each batch's join queries run. Outside a
+     * transaction that binds the connection, those queries need additional available connection
+     * pool capacity. A single-connection pool cannot serve both queries; concurrent parent streams can
+     * exhaust a larger pool in the same way. Limit concurrent streams or reserve capacity for join
+     * queries. Batching does not release the parent connection between batches.</p>
+     *
+     * <p>Inside a transaction that binds the parent connection, join queries reuse that connection.
+     * The driver must support another statement while the parent result remains open; for example,
+     * Connector/J's {@code Integer.MIN_VALUE} streaming mode can reject this. Increasing pool capacity
+     * does not resolve this same-connection restriction.</p>
+     *
+     * <p>Choose driver-supported buffering that permits another active statement, materialize parents
+     * and close their cursor before loading joins, or explicitly use paging or a server-side join.
+     * This method does not select those alternatives automatically. Close the returned stream with
+     * try-with-resources.</p>
+     *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
      * // Stream all users and load their orders, processing in batches
@@ -484,6 +500,23 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * found for one of the specified types, an {@link IllegalArgumentException} is thrown during stream consumption.
      * If {@code joinEntityClasses} is {@code null} or empty, the underlying entity stream is returned unmodified.
      * This is a beta API and may change in a future release.
+     *
+     * <p>When join entities are requested, the parent query keeps its connection open while each
+     * batch's join queries run. Outside a transaction that binds the connection, those queries
+     * need additional available connection pool capacity. A single-connection pool cannot serve both
+     * queries; concurrent parent streams can exhaust a larger pool in the same way. Limit concurrent
+     * streams or reserve capacity for join queries.
+     * Batching does not release the parent connection between batches.</p>
+     *
+     * <p>Inside a transaction that binds the parent connection, join queries reuse that connection.
+     * The driver must support another statement while the parent result remains open; for example,
+     * Connector/J's {@code Integer.MIN_VALUE} streaming mode can reject this. Increasing pool capacity
+     * does not resolve this same-connection restriction.</p>
+     *
+     * <p>Choose driver-supported buffering that permits another active statement, materialize parents
+     * and close their cursor before loading joins, or explicitly use paging or a server-side join.
+     * This method does not select those alternatives automatically. Close the returned stream with
+     * try-with-resources.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code
@@ -534,6 +567,23 @@ sealed interface JoinEntityReadOps<T, TD extends DaoBase<T, TD>> extends JoinEnt
      * while loading join entities during stream consumption is wrapped as an {@link UncheckedSQLException}.
      * When {@code includeAllJoinEntities} is {@code false}, the underlying entity stream is returned without modification.
      * This is a beta API and may change in a future release.
+     *
+     * <p>When {@code includeAllJoinEntities} is {@code true}, the parent query keeps its connection
+     * open while each batch's join queries run. Outside a transaction that binds the connection,
+     * those queries need additional available connection pool capacity. A single-connection pool cannot
+     * serve both queries; concurrent parent streams can exhaust a larger pool in the same way. Limit
+     * concurrent streams or reserve capacity for join queries. Batching does not release the parent
+     * connection between batches.</p>
+     *
+     * <p>Inside a transaction that binds the parent connection, join queries reuse that connection.
+     * The driver must support another statement while the parent result remains open; for example,
+     * Connector/J's {@code Integer.MIN_VALUE} streaming mode can reject this. Increasing pool capacity
+     * does not resolve this same-connection restriction.</p>
+     *
+     * <p>Choose driver-supported buffering that permits another active statement, materialize parents
+     * and close their cursor before loading joins, or explicitly use paging or a server-side join.
+     * This method does not select those alternatives automatically. Close the returned stream with
+     * try-with-resources.</p>
      *
      * <p><b>Usage Examples:</b></p>
      * <pre>{@code

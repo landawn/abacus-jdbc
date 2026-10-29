@@ -31,6 +31,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.SQLFeatureNotSupportedException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -408,8 +409,8 @@ public final class JdbcCodeGenerationUtil {
      *        camel case, for example {@code user_profile} becomes {@code UserProfile}), it is emitted as the {@code @Table} name, and primary
      *        keys are looked up under it, following the database's case folding for unquoted names, if it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
-     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
-     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
+     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata, requesting at most
+     *         one row when the driver supports {@code setMaxRows}. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
      *         empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
@@ -440,8 +441,8 @@ public final class JdbcCodeGenerationUtil {
      *        case, for example {@code user_profile} becomes {@code UserProfile}); primary keys are looked up under it, following the database's
      *        case folding for unquoted names, when no configured id field matches a generated field and it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
-     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
-     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
+     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata, requesting at most
+     *         one row when the driver supports {@code setMaxRows}. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code ds} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
@@ -480,8 +481,8 @@ public final class JdbcCodeGenerationUtil {
      *        camel case, for example {@code user_profile} becomes {@code UserProfile}), it is emitted as the {@code @Table} name, and primary
      *        keys are looked up under it, following the database's case folding for unquoted names, if it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
-     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
-     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
+     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata, requesting at most
+     *         one row when the driver supports {@code setMaxRows}. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
      *         empty, or if a generated class or field name is not a valid Java identifier or collides with another generated or imported name
@@ -513,8 +514,8 @@ public final class JdbcCodeGenerationUtil {
      *        case, for example {@code user_profile} becomes {@code UserProfile}); primary keys are looked up under it, following the database's
      *        case folding for unquoted names, when no configured id field matches a generated field and it names an existing table
      * @param query the SQL query describing the generated columns. Prepared-statement metadata is used without executing the query when the
-     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata. A predicate such as
-     *         {@code WHERE 1 = 0} avoids fetching rows on that fallback path
+     *         driver reports the type of every column before execution; otherwise the query is executed to obtain metadata, requesting at most
+     *         one row when the driver supports {@code setMaxRows}. A predicate such as {@code WHERE 1 = 0} avoids fetching rows on that fallback path
      * @param config the configuration for customizing the generated entity class. If {@code null}, default configuration is used
      * @return the generated entity class as a string containing the complete Java source code
      * @throws IllegalArgumentException if {@code conn} is {@code null}, {@code entityName} is {@code null} or blank, {@code query} is {@code null} or
@@ -553,8 +554,23 @@ public final class JdbcCodeGenerationUtil {
                 return generateEntityClass(entityName, null, metadata, conn, config);
             }
 
-            try (ResultSet rs = stmt.executeQuery()) {
-                return generateEntityClass(entityName, rs, config);
+            try {
+                try {
+                    // A first row may be needed for dynamic column types, but no subsequent rows are used.
+                    stmt.setMaxRows(1);
+                } catch (final SQLException e) {
+                    final String sqlState = e.getSQLState();
+                    if (!(e instanceof SQLFeatureNotSupportedException) && (sqlState == null || !sqlState.startsWith("0A"))) {
+                        throw e;
+                    }
+                    // SQLState class 0A also explicitly identifies an unsupported feature in legacy drivers.
+                } catch (final UnsupportedOperationException | AbstractMethodError e) {
+                    // Keep the execution fallback for drivers without row-limit support. Other failures must propagate.
+                }
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    return generateEntityClass(entityName, rs, config);
+                }
             } catch (final SQLException | UncheckedSQLException e) {
                 // The failure of the executed path stays primary, also when the query ran and a later step (column or
                 // primary-key metadata, closing the result set) failed: a describe failure is often only a driver

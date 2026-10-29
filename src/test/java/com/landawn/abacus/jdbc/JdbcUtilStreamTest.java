@@ -234,7 +234,7 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
     }
 
     @Test
-    public void testStreamAllResultSets_EarlyCloseClosesPrefetchedResultSet() throws SQLException {
+    public void testStreamAllResultSets_EarlyCloseDoesNotPrefetchAnotherResultSet() throws SQLException {
         final ResultSet secondResultSet = mock(ResultSet.class);
 
         when(mockStatement.getResultSet()).thenReturn(mockResultSet, secondResultSet);
@@ -248,7 +248,8 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
         }
 
         verify(mockResultSet).close();
-        verify(secondResultSet).close();
+        verify(mockStatement, never()).getMoreResults(Statement.KEEP_CURRENT_RESULT);
+        verifyNoInteractions(secondResultSet);
         verify(mockStatement, never()).close();
     }
 
@@ -307,7 +308,8 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
     }
 
     // A timeout from getMoreResults(KEEP_CURRENT_RESULT) on a driver that declares multiple-open-result support, or
-    // whose capability is unknown, is a real failure: it propagates and the undelivered result set is closed.
+    // whose capability is unknown, is a real failure: it propagates on the following demand. The delivered result
+    // belongs to the caller, so the iterator must not close it on that failure.
     @Test
     public void testIterateAllResultSets_KeepCurrentResultTimeoutIsNeverTreatedAsUnsupported() throws SQLException {
         final java.sql.SQLTimeoutException timeout = new java.sql.SQLTimeoutException("query timed out");
@@ -316,15 +318,21 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
 
         // Capability unknown (no connection).
         when(mockStatement.getConnection()).thenReturn(null);
-        assertSame(timeout, assertThrows(UncheckedSQLException.class, JdbcUtil.iterateAllResultSets(mockStatement, true)::next).getCause());
+        final ObjIteratorEx<ResultSet> unknownCapability = JdbcUtil.iterateAllResultSets(mockStatement, true);
+        unknownCapability.next();
+        assertSame(timeout, assertThrows(UncheckedSQLException.class, unknownCapability::hasNext).getCause());
+        unknownCapability.closeResource();
 
         // Capability declared.
         when(mockStatement.getConnection()).thenReturn(mockConnection);
         when(mockConnection.getMetaData()).thenReturn(mockDatabaseMetaData);
         when(mockDatabaseMetaData.supportsMultipleOpenResults()).thenReturn(true);
-        assertSame(timeout, assertThrows(UncheckedSQLException.class, JdbcUtil.iterateAllResultSets(mockStatement, true)::next).getCause());
+        final ObjIteratorEx<ResultSet> declaredCapability = JdbcUtil.iterateAllResultSets(mockStatement, true);
+        declaredCapability.next();
+        assertSame(timeout, assertThrows(UncheckedSQLException.class, declaredCapability::hasNext).getCause());
+        declaredCapability.closeResource();
 
-        verify(mockResultSet, org.mockito.Mockito.times(2)).close();
+        verify(mockResultSet, never()).close();
         verify(mockStatement, never()).getMoreResults();
     }
 
@@ -361,19 +369,21 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
 
     @Test
     @Tag("2025")
-    public void testIterateAllResultSets_NextClosesResultSetIfGetMoreResultsThrows() throws SQLException {
+    public void testIterateAllResultSets_AdvanceFailureLeavesDeliveredResultWithCaller() throws SQLException {
         // hasNext() pulls the first ResultSet into the holder via stmt.getResultSet().
         when(mockStatement.getResultSet()).thenReturn(mockResultSet);
-        // next() removes it from the holder and calls stmt.getMoreResults(KEEP_CURRENT_RESULT)
-        // to advance. If that call fails, the caller never receives the ResultSet, so the iterator
-        // must close it itself rather than leaking it until the statement is closed.
+        // next() delivers the result without advancing. A failure on the next demand must not close the result
+        // that the caller now owns, even if iterator cleanup follows the failure.
         when(mockStatement.getMoreResults(Statement.KEEP_CURRENT_RESULT)).thenThrow(new SQLException("driver error during getMoreResults"));
 
         com.landawn.abacus.util.stream.ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(mockStatement, true);
         try {
             assertTrue(iter.hasNext(), "first ResultSet should be available");
-            UncheckedSQLException ex = assertThrows(UncheckedSQLException.class, iter::next);
+            final ResultSet delivered = iter.next();
+            UncheckedSQLException ex = assertThrows(UncheckedSQLException.class, iter::hasNext);
             assertNotNull(ex.getCause());
+            verify(mockResultSet, never()).close();
+            delivered.close();
             verify(mockResultSet).close();
         } finally {
             iter.closeResource();
@@ -396,8 +406,7 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
         verify(mockResultSet, never()).close();
     }
 
-    // A driver that supports multiple open results reports a real failure: the undelivered result set is closed and
-    // the failure is propagated.
+    // A driver that supports multiple open results reports a real failure on advancing after delivery.
     @Test
     public void testIterateAllResultSets_KeepCurrentResultFailureOnDriverSupportingMultipleOpenResults_Propagates() throws SQLException {
         final SQLException failure = new SQLException("deadlock");
@@ -408,8 +417,10 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
 
         final com.landawn.abacus.util.stream.ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(mockStatement, true);
 
-        assertSame(failure, assertThrows(UncheckedSQLException.class, iter::next).getCause());
-        verify(mockResultSet).close();
+        assertNotNull(iter.next());
+        assertSame(failure, assertThrows(UncheckedSQLException.class, iter::hasNext).getCause());
+        iter.closeResource();
+        verify(mockResultSet, never()).close();
         verify(mockStatement, never()).getMoreResults();
     }
 
@@ -426,10 +437,12 @@ class JdbcUtilStreamTest extends JdbcUtilTestSupport {
 
         final com.landawn.abacus.util.stream.ObjIteratorEx<ResultSet> iter = JdbcUtil.iterateAllResultSets(mockStatement, true);
 
-        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, iter::next);
+        assertNotNull(iter.next());
+        final UncheckedSQLException thrown = assertThrows(UncheckedSQLException.class, iter::hasNext);
         assertSame(failure, thrown.getCause());
         assertEquals(0, failure.getSuppressed().length);
-        verify(mockResultSet).close();
+        iter.closeResource();
+        verify(mockResultSet, never()).close();
         verify(mockStatement, never()).getMoreResults();
     }
 

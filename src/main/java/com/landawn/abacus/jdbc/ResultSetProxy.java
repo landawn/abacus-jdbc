@@ -67,12 +67,14 @@ import com.landawn.abacus.util.N;
  * </ul>
  *
  * <p><b>Method Delegation:</b></p>
- * <p>All standard {@link ResultSet} methods are transparently delegated to the underlying
+ * <p>With default wrapping, all standard {@link ResultSet} methods are transparently delegated to the underlying
  * ResultSet instance without modification. Only the {@link #getObject(int)} and
  * {@link #getObject(String)} methods provide enhanced functionality with Oracle-specific
  * type conversion and performance optimization through caching. The {@code java.sql.Wrapper}
  * methods ({@link #unwrap(Class)} and {@link #isWrapperFor(Class)}) are the only other
  * exception: they first consider the proxy itself before consulting the delegate.</p>
+ * <p>Multiple-result traversal of MySQL Connector/J streaming results instead makes {@link #close()} read the
+ * unread rows and leave releasing the result to its statement (see {@link #wrap(ResultSet, boolean)}).</p>
  *
  * <p>This delegation pattern allows the proxy to be used as a drop-in replacement for any
  * {@link ResultSet} without requiring changes to existing JDBC code. Methods such as {@code next()},
@@ -136,6 +138,16 @@ final class ResultSetProxy implements ResultSet {
     private final ResultSet delegate;
 
     /**
+     * Whether {@link #close()} reads the remaining rows and leaves the delegate open; see {@link #wrap(ResultSet, boolean)}.
+     */
+    private boolean readToEndOnClose;
+
+    /**
+     * Whether {@link #close()} has been called on a wrapper that leaves its delegate open.
+     */
+    private boolean closed;
+
+    /**
      * Constructs a new ResultSetProxy wrapping the specified ResultSet.
      * The proxy will enhance the performance of {@code getObject()} calls through caching
      * while transparently delegating all other operations to the underlying ResultSet.
@@ -161,6 +173,31 @@ final class ResultSetProxy implements ResultSet {
      */
     static ResultSetProxy wrap(ResultSet rs) {
         return (rs == null) ? null : new ResultSetProxy(rs);
+    }
+
+    /**
+     * Creates a ResultSetProxy for one result of a multiple-result iteration. The opt-in is used for the results of a
+     * MySQL Connector/J statement that streams them ({@code fetchSize = Integer.MIN_VALUE}): Connector/J cannot close
+     * one streamed result while its statement streams the next (the close fails and discards that result's rows), and
+     * it rejects every later statement on the connection until all streamed results are read.
+     *
+     * <p>When enabled, the first {@link #close()} call marks this wrapper closed and, if the delegate is still open,
+     * advances it to the end without reading column values, but leaves the delegate open: the iteration releases it by
+     * advancing the statement, and closes the last one through {@link #closeDelegate()} once no results remain.
+     * A failure while reading is propagated, and later {@code close()} calls do nothing.
+     * {@link #isClosed()} reports {@code true} after the first call; other methods keep delegating.</p>
+     *
+     * @param rs the ResultSet to wrap, may be {@code null}
+     * @param readToEndOnClose whether closing reads the unread rows and leaves the delegate open;
+     *        {@code false} preserves the behavior of {@link #wrap(ResultSet)}
+     * @return a new ResultSetProxy wrapping the ResultSet, or {@code null} if rs is {@code null}
+     */
+    static ResultSetProxy wrap(final ResultSet rs, final boolean readToEndOnClose) {
+        final ResultSetProxy result = wrap(rs);
+        if (result != null) {
+            result.readToEndOnClose = readToEndOnClose;
+        }
+        return result;
     }
 
     /**
@@ -209,12 +246,46 @@ final class ResultSetProxy implements ResultSet {
 
     /**
      * Releases this ResultSet object's database and JDBC resources immediately.
-     * Delegates to the underlying ResultSet.
+     * Delegates to the underlying ResultSet, except for a MySQL streaming multiple-result wrapper
+     * (see {@link #wrap(ResultSet, boolean)}), which reads the unread rows and leaves releasing the delegate to its statement.
      *
-     * @throws SQLException if the driver fails while executing {@code close} on the wrapped result set
+     * @throws SQLException if reading unread streaming rows or closing the wrapped result set fails
      */
     @Override
     public void close() throws SQLException {
+        if (!readToEndOnClose) {
+            delegate.close();
+        } else if (!closed) {
+            closed = true;
+
+            // Closing the delegate would fail and discard the rows of the next streamed result. Once this one is read to
+            // its end, the statement can advance past it and release it.
+            if (!delegate.isClosed()) {
+                while (delegate.next()) {
+                    // Discard unread rows without materializing their column values.
+                }
+            }
+        }
+    }
+
+    /**
+     * Returns whether {@link #close()} reads the unread rows and leaves the delegate open (see {@link #wrap(ResultSet, boolean)}).
+     * Such a close can meet an error the statement raised after those rows, so callers must not close it quietly.
+     *
+     * @return {@code true} for a MySQL streaming multiple-result wrapper
+     */
+    boolean readsToEndOnClose() {
+        return readToEndOnClose;
+    }
+
+    /**
+     * Closes the wrapped result set even if {@link #close()} leaves it open (see {@link #wrap(ResultSet, boolean)}).
+     * The multiple-result iteration calls this for its last streamed result once the statement has no more results:
+     * nothing streams any longer, and closing restores the session setting Connector/J changes while streaming.
+     *
+     * @throws SQLException if closing the wrapped result set fails
+     */
+    void closeDelegate() throws SQLException {
         delegate.close();
     }
 
@@ -2506,14 +2577,16 @@ final class ResultSetProxy implements ResultSet {
     }
 
     /**
-     * Retrieves whether this ResultSet object has been closed. Delegates to the underlying {@link ResultSet}.
+     * Retrieves whether this ResultSet object has been closed. Delegates to the underlying {@link ResultSet}, except
+     * that a MySQL streaming multiple-result wrapper (see {@link #wrap(ResultSet, boolean)}) is closed once its
+     * {@link #close()} has been called, although its statement releases the delegate later.
      *
      * @return {@code true} if this ResultSet object is closed; {@code false} if it is still open
      * @throws SQLException if the driver fails while executing {@code isClosed} on the wrapped result set
      */
     @Override
     public boolean isClosed() throws SQLException {
-        return delegate.isClosed();
+        return closed || delegate.isClosed();
     }
 
     /**
