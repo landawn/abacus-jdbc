@@ -151,6 +151,14 @@ class JdbcUtilColumnConverterLifecycleTest {
 
     public static final class ChildLoadedJdbcUtilProbe {
         public static void main(final String[] args) throws Exception {
+            // Initialize the application class loader's copy first, as a hosting application does: bringing this
+            // library up initializes the process-wide logging backend and the shared stream/executor pools, and those
+            // create threads the JVM keeps for its whole life (shutdown hooks, the JUL Logging-Cleaner). A thread
+            // created while a class of the child loader is on the stack captures that loader's protection domain in its
+            // inherited access control context, which keeps the loader reachable whatever this library caches; a
+            // redeployed web application starts with that infrastructure already initialized.
+            Class.forName(JdbcUtil.class.getName(), true, JdbcUtil.class.getClassLoader());
+
             awaitCollection(readThroughChildLoadedJdbcUtil(), "Reading a bootstrap-class value retains the loader of a child-loaded JdbcUtil");
 
             System.out.println("CHILD-LOADED JDBCUTIL PROBE PASSED");
